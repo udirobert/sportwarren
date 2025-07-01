@@ -1,27 +1,27 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { ApolloProvider } from '@apollo/client';
-import { SmartNavigation } from './components/adaptive/SmartNavigation';
-import { SmartOnboarding } from './components/onboarding/SmartOnboarding';
-import { AdaptiveDashboard } from './components/adaptive/AdaptiveDashboard';
-import { MatchTracker } from './pages/MatchTracker';
-import { PlayerStats } from './pages/PlayerStats';
-import { Squad } from './pages/Squad';
-import { Community } from './pages/Community';
-import { Achievements } from './pages/Achievements';
-import { SquadDAO } from './components/algorand/SquadDAO';
-import { MatchVerification } from './components/algorand/MatchVerification';
-import { GlobalChallenges } from './components/algorand/GlobalChallenges';
-import { PlayerReputation } from './components/algorand/PlayerReputation';
-import { AlgorandWallet } from './components/algorand/AlgorandWallet';
-import { apolloClient } from './lib/apollo-client';
-import { useSocket } from './hooks/useSocket';
-import { useUserPreferences } from './hooks/useUserPreferences';
+import React, { useState } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { ApolloProvider } from "@apollo/client";
+import { SmartNavigation } from "./components/adaptive/SmartNavigation";
+import { SmartOnboarding } from "./components/onboarding/SmartOnboarding";
+import { AdaptiveDashboard } from "./components/adaptive/AdaptiveDashboard";
+import { MatchTracker } from "./pages/MatchTracker";
+import { PlayerStats } from "./pages/PlayerStats";
+import { Squad } from "./pages/Squad";
+import { Community } from "./pages/Community";
+import { Achievements } from "./pages/Achievements";
+// import { SquadDAO } from './components/algorand/SquadDAO';
+import { MatchVerification } from "./components/algorand/MatchVerification";
+import { GlobalChallenges } from "./components/algorand/GlobalChallenges";
+import { PlayerReputation } from "./components/algorand/PlayerReputation";
+// import { AlgorandWallet } from './components/algorand/AlgorandWallet';
+import { apolloClient } from "./lib/apollo-client";
+import { useSocket } from "./hooks/useSocket";
+import { useUserPreferences } from "./hooks/useUserPreferences";
 
 function AppContent() {
   const { preferences, isLoading } = useUserPreferences();
   const [showOnboarding, setShowOnboarding] = useState(false);
-  
+
   // Initialize socket connection
   useSocket();
 

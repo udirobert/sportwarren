@@ -1,6 +1,4 @@
 import algosdk from 'algosdk';
-import { get
- } from '@algorandfoundation/algokit-utils';
 
 // Configuration for Algorand TestNet
 const algodClient = new algosdk.Algodv2(
@@ -52,12 +50,12 @@ export const getAccountInfo = async (address: string) => {
 
     return {
       address: accountInfo.address,
-      balance: algosdk.microAlgosToAlgos(accountInfo.amount),
+      balance: algosdk.microalgosToAlgos(accountInfo.amount),
       network: {
         network: 'TestNet', // Or dynamically determine from status
-        lastRound: status['last-round'],
-        timeSinceLastRound: status['time-since-last-round'],
-        catchupTime: status['catchup-time'],
+        lastRound: status.lastRound,
+        timeSinceLastRound: status.timeSinceLastRound,
+        catchupTime: status.catchupTime,
         health: health.message,
       },
       assets: accountInfo.assets, // Include ASA information
@@ -74,7 +72,7 @@ export const getAccountTransactions = async (address: string, limit: number = 10
     return response.transactions.map((txn: any) => ({
       id: txn.id,
       type: txn['tx-type'], // 'pay', 'acfg', 'axfer', 'afrz', 'appl'
-      amount: txn['payment-transaction'] ? algosdk.microAlgosToAlgos(txn['payment-transaction'].amount) : 0,
+      amount: txn['payment-transaction'] ? algosdk.microalgosToAlgos(txn['payment-transaction'].amount) : 0,
       from: txn.sender,
       to: txn['payment-transaction'] ? txn['payment-transaction'].receiver : txn.sender, // Adjust 'to' for non-payment txns
       timestamp: new Date(txn['round-time'] * 1000), // Convert Unix timestamp to Date
