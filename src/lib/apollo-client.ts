@@ -89,6 +89,67 @@ export const apolloClient = new ApolloClient({
           },
         },
       },
+      SquadDAO: {
+        fields: {
+          proposals: {
+            merge(existing = [], incoming) {
+              return incoming;
+            },
+          },
+          members: {
+            merge(existing = [], incoming) {
+              return incoming;
+            },
+          },
+        },
+      },
+      ReputationProfile: {
+        fields: {
+          skillRatings: {
+            merge(existing = [], incoming) {
+              return incoming;
+            },
+          },
+          achievements: {
+            merge(existing = [], incoming) {
+              return incoming;
+            },
+          },
+          endorsements: {
+            merge(existing = [], incoming) {
+              return incoming;
+            },
+          },
+        },
+      },
+      GlobalChallenge: {
+        fields: {
+          participants: {
+            merge(existing = [], incoming) {
+              return incoming;
+            },
+          },
+          leaderboard: {
+            merge(existing = [], incoming) {
+              return incoming;
+            },
+          },
+        },
+      },
+      MarketplaceItem: {
+        fields: {
+          bids: {
+            merge(existing = [], incoming) {
+              return incoming;
+            },
+          },
+          transactions: {
+            merge(existing = [], incoming) {
+              return incoming;
+            },
+          },
+        },
+      },
     },
   }),
   defaultOptions: {

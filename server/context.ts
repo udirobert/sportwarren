@@ -6,7 +6,7 @@ import { SocketService } from './services/socket.js';
 import { CommunicationBridge } from './services/communication/bridge.js';
 import { VoiceProcessingService } from './services/ai/voice.js';
 import { ComputerVisionService } from './services/ai/vision.js';
-import { Web3Service } from './services/blockchain/web3.js';
+import { AlgorandService } from './services/blockchain/algorand.js';
 import { EventStreamService } from './services/events/kafka.js';
 
 export interface Context {
@@ -25,7 +25,7 @@ export interface Context {
     communicationBridge?: CommunicationBridge;
     voiceService?: VoiceProcessingService;
     visionService?: ComputerVisionService;
-    web3Service?: Web3Service;
+    algorandService?: AlgorandService;
     eventStreamService?: EventStreamService;
   };
 }
@@ -40,7 +40,7 @@ export async function createContext({ req, services }: {
     communicationBridge?: CommunicationBridge;
     voiceService?: VoiceProcessingService;
     visionService?: ComputerVisionService;
-    web3Service?: Web3Service;
+    algorandService?: AlgorandService;
     eventStreamService?: EventStreamService;
   };
 }): Promise<Context> {

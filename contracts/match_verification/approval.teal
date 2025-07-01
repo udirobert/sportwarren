@@ -1,0 +1,431 @@
+#pragma version 6
+txn ApplicationID
+int 0
+==
+bnz main_l21
+txn OnCompletion
+int OptIn
+==
+bnz main_l20
+txn OnCompletion
+int NoOp
+==
+bnz main_l10
+txn OnCompletion
+int DeleteApplication
+==
+bnz main_l9
+txn OnCompletion
+int UpdateApplication
+==
+bnz main_l8
+int 1
+bnz main_l7
+err
+main_l7:
+int 0
+return
+main_l8:
+txn Sender
+byte "oracle_creator"
+app_global_get
+==
+assert
+int 1
+return
+main_l9:
+txn Sender
+byte "oracle_creator"
+app_global_get
+==
+assert
+int 1
+return
+main_l10:
+txn ApplicationArgs 0
+byte "submit_match"
+==
+bnz main_l19
+txn ApplicationArgs 0
+byte "verify_match"
+==
+bnz main_l18
+txn ApplicationArgs 0
+byte "dispute_match"
+==
+bnz main_l17
+txn ApplicationArgs 0
+byte "update_reputation"
+==
+bnz main_l16
+err
+main_l16:
+txn NumAppArgs
+int 3
+==
+assert
+txn Sender
+byte "oracle_creator"
+app_global_get
+==
+assert
+txn ApplicationArgs 1
+txn ApplicationArgs 2
+btoi
+txn ApplicationArgs 1
+byte "user_reputation"
+app_local_get
++
+dup
+int 0
+<
+bnz main_l15
+txn ApplicationArgs 1
+byte "user_reputation"
+app_local_put
+b main_l14
+main_l15:
+pop
+txn ApplicationArgs 1
+byte "user_reputation"
+int 0
+app_local_put
+main_l14:
+byte "Reputation updated for: "
+txn ApplicationArgs 1
+concat
+log
+int 1
+return
+main_l17:
+txn NumAppArgs
+int 3
+==
+assert
+txn ApplicationArgs 1
+btoi
+store 1
+byte "match_submitter_"
+load 1
+itob
+concat
+app_global_get
+byte ""
+!=
+assert
+byte "disputed_"
+load 1
+itob
+concat
+byte "_"
+concat
+txn Sender
+concat
+store 2
+load 2
+app_global_get
+int 0
+==
+assert
+txn Sender
+byte "user_reputation"
+app_local_get
+store 3
+load 3
+byte "reputation_threshold"
+app_global_get
+>=
+assert
+load 3
+store 4
+load 2
+load 4
+app_global_put
+byte "match_disputes_"
+load 1
+itob
+concat
+store 5
+load 5
+app_global_get
+store 6
+load 5
+load 6
+load 4
++
+app_global_put
+byte "dispute_reason_"
+load 1
+itob
+concat
+byte "_"
+concat
+txn Sender
+concat
+txn ApplicationArgs 2
+app_global_put
+byte "dispute_evidence_"
+load 1
+itob
+concat
+byte "_"
+concat
+txn Sender
+concat
+txn ApplicationArgs 3
+app_global_put
+byte "match_disputes_"
+load 1
+itob
+concat
+app_global_get
+int 200
+>=
+bnz main_l13
+b main_l12
+main_l13:
+byte "match_status_"
+load 1
+itob
+concat
+byte "disputed"
+app_global_put
+main_l12:
+byte "Match disputed by: "
+txn Sender
+concat
+log
+int 1
+return
+main_l18:
+txn NumAppArgs
+int 3
+==
+assert
+txn ApplicationArgs 1
+btoi
+store 7
+byte "match_submitter_"
+load 7
+itob
+concat
+app_global_get
+byte ""
+!=
+assert
+byte "match_status_"
+load 7
+itob
+concat
+app_global_get
+byte "pending"
+==
+assert
+byte "verified_"
+load 7
+itob
+concat
+byte "_"
+concat
+txn Sender
+concat
+store 8
+load 8
+app_global_get
+int 0
+==
+assert
+txn Sender
+byte "user_reputation"
+app_local_get
+store 9
+load 9
+byte "reputation_threshold"
+app_global_get
+>=
+assert
+load 9
+txn ApplicationArgs 2
+btoi
++
+store 10
+load 8
+load 10
+app_global_put
+byte "match_verifications_"
+load 7
+itob
+concat
+store 11
+load 11
+app_global_get
+store 12
+load 11
+load 12
+load 10
++
+app_global_put
+txn Sender
+byte "verification_count"
+txn Sender
+byte "verification_count"
+app_local_get
+int 1
++
+app_local_put
+byte "match_verifications_"
+load 7
+itob
+concat
+app_global_get
+byte "min_verifications"
+app_global_get
+int 100
+*
+>=
+bnz main_l11
+byte "match_status_"
+load 7
+itob
+concat
+byte "pending"
+app_global_put
+b main_l10_end
+main_l11:
+byte "match_status_"
+load 7
+itob
+concat
+byte "verified"
+app_global_put
+main_l10_end:
+byte "Match verified by: "
+txn Sender
+concat
+log
+int 1
+return
+main_l19:
+txn NumAppArgs
+int 6
+==
+assert
+txn Sender
+byte "user_reputation"
+app_local_get
+byte "reputation_threshold"
+app_global_get
+>=
+assert
+byte "match_counter"
+byte "match_counter"
+app_global_get
+int 1
++
+app_global_put
+byte "match_counter"
+app_global_get
+store 13
+byte "match_submitter_"
+load 13
+itob
+concat
+txn Sender
+app_global_put
+byte "match_home_team_"
+load 13
+itob
+concat
+txn ApplicationArgs 1
+app_global_put
+byte "match_away_team_"
+load 13
+itob
+concat
+txn ApplicationArgs 2
+app_global_put
+byte "match_home_score_"
+load 13
+itob
+concat
+txn ApplicationArgs 3
+btoi
+app_global_put
+byte "match_away_score_"
+load 13
+itob
+concat
+txn ApplicationArgs 4
+btoi
+app_global_put
+byte "match_metadata_"
+load 13
+itob
+concat
+txn ApplicationArgs 5
+app_global_put
+byte "match_timestamp_"
+load 13
+itob
+concat
+global LatestTimestamp
+app_global_put
+byte "match_status_"
+load 13
+itob
+concat
+byte "pending"
+app_global_put
+byte "match_verifications_"
+load 13
+itob
+concat
+int 0
+app_global_put
+byte "match_disputes_"
+load 13
+itob
+concat
+int 0
+app_global_put
+byte "Match submitted with ID: "
+load 13
+itob
+concat
+log
+int 1
+return
+main_l20:
+txn NumAppArgs
+int 0
+==
+assert
+txn Sender
+byte "user_reputation"
+int 100
+app_local_put
+txn Sender
+byte "verification_count"
+int 0
+app_local_put
+int 1
+return
+main_l21:
+txn ApplicationID
+int 0
+==
+assert
+byte "oracle_creator"
+txn Sender
+app_global_put
+byte "match_counter"
+int 0
+app_global_put
+byte "min_verifications"
+int 3
+app_global_put
+byte "reputation_threshold"
+int 50
+app_global_put
+int 1
+return

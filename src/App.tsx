@@ -9,6 +9,11 @@ import { PlayerStats } from './pages/PlayerStats';
 import { Squad } from './pages/Squad';
 import { Community } from './pages/Community';
 import { Achievements } from './pages/Achievements';
+import { SquadDAO } from './components/algorand/SquadDAO';
+import { MatchVerification } from './components/algorand/MatchVerification';
+import { GlobalChallenges } from './components/algorand/GlobalChallenges';
+import { PlayerReputation } from './components/algorand/PlayerReputation';
+import { AlgorandWallet } from './components/algorand/AlgorandWallet';
 import { apolloClient } from './lib/apollo-client';
 import { useSocket } from './hooks/useSocket';
 import { useUserPreferences } from './hooks/useUserPreferences';
@@ -50,6 +55,11 @@ function AppContent() {
           <Route path="/squad" element={<Squad />} />
           <Route path="/community" element={<Community />} />
           <Route path="/achievements" element={<Achievements />} />
+          <Route path="/dao" element={<SquadDAO />} />
+          <Route path="/verification" element={<MatchVerification />} />
+          <Route path="/challenges" element={<GlobalChallenges />} />
+          <Route path="/reputation" element={<PlayerReputation />} />
+          <Route path="/wallet" element={<AlgorandWallet />} />
         </Routes>
       </main>
     </div>

@@ -1,0 +1,321 @@
+#pragma version 6
+txn ApplicationID
+int 0
+==
+bnz main_l21
+txn OnCompletion
+int OptIn
+==
+bnz main_l20
+txn OnCompletion
+int NoOp
+==
+bnz main_l10
+txn OnCompletion
+int DeleteApplication
+==
+bnz main_l9
+txn OnCompletion
+int UpdateApplication
+==
+bnz main_l8
+int 1
+bnz main_l7
+err
+main_l7:
+int 0
+return
+main_l8:
+txn Sender
+byte "creator"
+app_global_get
+==
+assert
+int 1
+return
+main_l9:
+txn Sender
+byte "creator"
+app_global_get
+==
+assert
+int 1
+return
+main_l10:
+txna ApplicationArgs 0
+byte "create_proposal"
+==
+bnz main_l19
+txna ApplicationArgs 0
+byte "vote"
+==
+bnz main_l15
+txna ApplicationArgs 0
+byte "execute_proposal"
+==
+bnz main_l14
+err
+main_l14:
+txn NumAppArgs
+int 1
+==
+assert
+txna ApplicationArgs 0
+btoi
+store 5
+byte "prop_end_"
+load 5
+itob
+concat
+app_global_get
+int 0
+!=
+assert
+global Round
+byte "prop_end_"
+load 5
+itob
+concat
+app_global_get
+>
+assert
+byte "prop_for_"
+load 5
+itob
+concat
+app_global_get
+store 6
+byte "prop_against_"
+load 5
+itob
+concat
+app_global_get
+store 7
+load 6
+load 7
+>
+assert
+byte "prop_executed_"
+load 5
+itob
+concat
+int 1
+app_global_put
+byte "Proposal executed successfully!"
+log
+int 1
+return
+main_l15:
+txn NumAppArgs
+int 2
+==
+assert
+txna ApplicationArgs 0
+btoi
+store 1
+txna ApplicationArgs 1
+btoi
+store 2
+txn Sender
+byte "user_token_balance"
+app_local_get
+int 0
+>
+assert
+byte "prop_start_"
+load 1
+itob
+concat
+app_global_get
+int 0
+!=
+assert
+global Round
+byte "prop_start_"
+load 1
+itob
+concat
+app_global_get
+>=
+assert
+global Round
+byte "prop_end_"
+load 1
+itob
+concat
+app_global_get
+<=
+assert
+byte "voted_on_"
+load 1
+itob
+concat
+store 4
+txn Sender
+load 4
+app_local_get
+int 0
+==
+assert
+txn Sender
+byte "user_token_balance"
+app_local_get
+store 3
+load 2
+int 1
+==
+bnz main_l18
+byte "prop_against_"
+load 1
+itob
+concat
+byte "prop_against_"
+load 1
+itob
+concat
+app_global_get
+load 3
++
+app_global_put
+main_l17:
+txn Sender
+byte "voted_on_"
+load 1
+itob
+concat
+int 1
+app_local_put
+int 1
+return
+main_l18:
+byte "prop_for_"
+load 1
+itob
+concat
+byte "prop_for_"
+load 1
+itob
+concat
+app_global_get
+load 3
++
+app_global_put
+b main_l17
+main_l19:
+txn NumAppArgs
+int 3
+==
+assert
+txn Sender
+byte "user_token_balance"
+app_local_get
+int 0
+>
+assert
+byte "proposal_counter"
+byte "proposal_counter"
+app_global_get
+int 1
++
+app_global_put
+byte "proposal_counter"
+app_global_get
+store 0
+byte "prop_desc_"
+load 0
+itob
+concat
+txna ApplicationArgs 0
+app_global_put
+byte "prop_start_"
+load 0
+itob
+concat
+txna ApplicationArgs 1
+btoi
+app_global_put
+byte "prop_end_"
+load 0
+itob
+concat
+txna ApplicationArgs 2
+btoi
+app_global_put
+byte "prop_for_"
+load 0
+itob
+concat
+int 0
+app_global_put
+byte "prop_against_"
+load 0
+itob
+concat
+int 0
+app_global_put
+int 1
+return
+main_l20:
+txn NumAppArgs
+int 0
+==
+assert
+txn Sender
+byte "user_token_balance"
+int 0
+app_local_put
+itxn_begin
+int axfer
+itxn_field TypeEnum
+byte "governance_token_id"
+app_global_get
+itxn_field XferAsset
+txn Sender
+itxn_field AssetReceiver
+int 100
+itxn_field AssetAmount
+global CurrentApplicationAddress
+itxn_field Sender
+int 0
+itxn_field Fee
+itxn_submit
+int 1
+return
+main_l21:
+txn ApplicationID
+int 0
+==
+assert
+byte "creator"
+txn Sender
+app_global_put
+byte "proposal_counter"
+int 0
+app_global_put
+itxn_begin
+int acfg
+itxn_field TypeEnum
+int 1000000
+itxn_field ConfigAssetTotal
+int 0
+itxn_field ConfigAssetDecimals
+byte "SDAO"
+itxn_field ConfigAssetUnitName
+byte "SquadDAO Token"
+itxn_field ConfigAssetName
+global CurrentApplicationAddress
+itxn_field ConfigAssetManager
+global CurrentApplicationAddress
+itxn_field ConfigAssetReserve
+global CurrentApplicationAddress
+itxn_field ConfigAssetFreeze
+global CurrentApplicationAddress
+itxn_field ConfigAssetClawback
+int 0
+itxn_field Fee
+itxn_submit
+byte "governance_token_id"
+itxn CreatedAssetID
+app_global_put
+int 1
+return

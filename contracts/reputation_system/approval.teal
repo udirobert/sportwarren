@@ -1,0 +1,588 @@
+#pragma version 6
+txn ApplicationID
+int 0
+==
+bnz main_l25
+txn OnCompletion
+int OptIn
+==
+bnz main_l24
+txn OnCompletion
+int NoOp
+==
+bnz main_l10
+txn OnCompletion
+int DeleteApplication
+==
+bnz main_l9
+txn OnCompletion
+int UpdateApplication
+==
+bnz main_l8
+int 1
+bnz main_l7
+err
+main_l7:
+int 0
+return
+main_l8:
+txn Sender
+byte "system_creator"
+app_global_get
+==
+assert
+int 1
+return
+main_l9:
+txn Sender
+byte "system_creator"
+app_global_get
+==
+assert
+int 1
+return
+main_l10:
+txn ApplicationArgs 0
+byte "update_skill"
+==
+bnz main_l23
+txn ApplicationArgs 0
+byte "endorse_player"
+==
+bnz main_l22
+txn ApplicationArgs 0
+byte "verify_achievement"
+==
+bnz main_l21
+txn ApplicationArgs 0
+byte "professional_scout"
+==
+bnz main_l20
+txn ApplicationArgs 0
+byte "transfer_reputation"
+==
+bnz main_l19
+err
+main_l19:
+txn NumAppArgs
+int 2
+==
+assert
+txn ApplicationArgs 2
+btoi
+store 1
+txn Sender
+byte "player_reputation"
+app_local_get
+load 1
+>=
+assert
+txn Sender
+byte "player_reputation"
+txn Sender
+byte "player_reputation"
+app_local_get
+load 1
+-
+app_local_put
+txn ApplicationArgs 1
+byte "player_reputation"
+txn ApplicationArgs 1
+byte "player_reputation"
+app_local_get
+load 1
++
+app_local_put
+itxn_begin
+int axfer
+itxn_field TypeEnum
+byte "reputation_token_id"
+app_global_get
+itxn_field XferAsset
+txn Sender
+itxn_field AssetSender
+txn ApplicationArgs 1
+itxn_field AssetReceiver
+load 1
+int 1000
+*
+itxn_field AssetAmount
+int 0
+itxn_field Fee
+itxn_submit
+byte "Reputation transferred: "
+load 1
+itob
+concat
+log
+int 1
+return
+main_l20:
+txn NumAppArgs
+int 4
+==
+assert
+txn Sender
+byte "system_creator"
+app_global_get
+==
+assert
+txn ApplicationArgs 3
+btoi
+store 2
+load 2
+int 500
+*
+store 3
+byte "scout_interest_"
+txn ApplicationArgs 1
+concat
+byte "_"
+concat
+txn Sender
+concat
+txn ApplicationArgs 2
+byte "_"
+concat
+load 2
+itob
+concat
+byte "_"
+concat
+global LatestTimestamp
+itob
+concat
+byte "_"
+concat
+txn ApplicationArgs 4
+concat
+app_global_put
+txn ApplicationArgs 1
+byte "professional_score"
+txn ApplicationArgs 1
+byte "professional_score"
+app_local_get
+load 3
++
+app_local_put
+txn ApplicationArgs 1
+byte "player_reputation"
+txn ApplicationArgs 1
+byte "player_reputation"
+app_local_get
+load 3
++
+app_local_put
+itxn_begin
+int axfer
+itxn_field TypeEnum
+byte "reputation_token_id"
+app_global_get
+itxn_field XferAsset
+txn ApplicationArgs 1
+itxn_field AssetReceiver
+load 3
+int 1000
+*
+itxn_field AssetAmount
+global CurrentApplicationAddress
+itxn_field AssetSender
+int 0
+itxn_field Fee
+itxn_submit
+byte "Professional interest registered for: "
+txn ApplicationArgs 1
+concat
+log
+int 1
+return
+main_l21:
+txn NumAppArgs
+int 4
+==
+assert
+txn Sender
+byte "system_creator"
+app_global_get
+==
+assert
+txn ApplicationArgs 3
+btoi
+store 4
+int 100
+load 4
+*
+store 5
+byte "achievement_"
+txn ApplicationArgs 1
+concat
+byte "_"
+concat
+txn ApplicationArgs 2
+concat
+global LatestTimestamp
+itob
+byte "_"
+concat
+txn ApplicationArgs 3
+concat
+byte "_"
+concat
+txn ApplicationArgs 4
+concat
+app_global_put
+txn ApplicationArgs 1
+byte "player_reputation"
+txn ApplicationArgs 1
+byte "player_reputation"
+app_local_get
+load 5
++
+app_local_put
+txn ApplicationArgs 1
+byte "player_skill_points"
+txn ApplicationArgs 1
+byte "player_skill_points"
+app_local_get
+load 5
++
+app_local_put
+itxn_begin
+int axfer
+itxn_field TypeEnum
+byte "reputation_token_id"
+app_global_get
+itxn_field XferAsset
+txn ApplicationArgs 1
+itxn_field AssetReceiver
+load 5
+int 1000
+*
+itxn_field AssetAmount
+global CurrentApplicationAddress
+itxn_field AssetSender
+int 0
+itxn_field Fee
+itxn_submit
+itxn_begin
+int axfer
+itxn_field TypeEnum
+byte "skill_token_id"
+app_global_get
+itxn_field XferAsset
+txn ApplicationArgs 1
+itxn_field AssetReceiver
+load 5
+int 1000
+*
+itxn_field AssetAmount
+global CurrentApplicationAddress
+itxn_field AssetSender
+int 0
+itxn_field Fee
+itxn_submit
+byte "Achievement verified: "
+txn ApplicationArgs 2
+concat
+log
+int 1
+return
+main_l22:
+txn NumAppArgs
+int 4
+==
+assert
+txn Sender
+txn ApplicationArgs 1
+!=
+assert
+txn Sender
+byte "player_reputation"
+app_local_get
+store 6
+load 6
+int 500
+>=
+assert
+load 6
+int 100
+/
+store 7
+byte "endorsement_"
+txn ApplicationArgs 1
+concat
+byte "_"
+concat
+txn ApplicationArgs 2
+concat
+byte "_"
+concat
+txn Sender
+concat
+txn ApplicationArgs 3
+btoi
+itob
+byte "_"
+concat
+global LatestTimestamp
+itob
+concat
+byte "_"
+concat
+txn ApplicationArgs 4
+concat
+app_global_put
+txn ApplicationArgs 1
+byte "endorsement_count"
+txn ApplicationArgs 1
+byte "endorsement_count"
+app_local_get
+int 1
++
+app_local_put
+load 7
+int 5
+*
+store 8
+txn ApplicationArgs 1
+byte "player_reputation"
+txn ApplicationArgs 1
+byte "player_reputation"
+app_local_get
+load 8
++
+app_local_put
+itxn_begin
+int axfer
+itxn_field TypeEnum
+byte "reputation_token_id"
+app_global_get
+itxn_field XferAsset
+txn ApplicationArgs 1
+itxn_field AssetReceiver
+load 8
+int 1000
+*
+itxn_field AssetAmount
+global CurrentApplicationAddress
+itxn_field AssetSender
+int 0
+itxn_field Fee
+itxn_submit
+byte "Player endorsed: "
+txn ApplicationArgs 1
+concat
+log
+int 1
+return
+main_l23:
+txn NumAppArgs
+int 4
+==
+assert
+txn ApplicationArgs 1
+store 9
+txn ApplicationArgs 2
+btoi
+store 10
+load 10
+int 0
+>=
+assert
+load 10
+int 100
+<=
+assert
+txn Sender
+byte "skill_"
+load 9
+concat
+load 10
+app_local_put
+txn Sender
+byte "skill_verified_"
+load 9
+concat
+global LatestTimestamp
+app_local_put
+txn Sender
+byte "skill_verifier_"
+load 9
+concat
+txn ApplicationArgs 3
+app_local_put
+txn Sender
+byte "skill_evidence_"
+load 9
+concat
+txn ApplicationArgs 4
+app_local_put
+load 10
+int 10
+*
+store 11
+txn Sender
+byte "player_skill_points"
+txn Sender
+byte "player_skill_points"
+app_local_get
+load 11
++
+app_local_put
+itxn_begin
+int axfer
+itxn_field TypeEnum
+byte "skill_token_id"
+app_global_get
+itxn_field XferAsset
+txn Sender
+itxn_field AssetReceiver
+load 11
+int 1000
+*
+itxn_field AssetAmount
+global CurrentApplicationAddress
+itxn_field AssetSender
+int 0
+itxn_field Fee
+itxn_submit
+byte "Skill updated: "
+load 9
+concat
+byte " = "
+concat
+load 10
+itob
+concat
+log
+int 1
+return
+main_l24:
+txn NumAppArgs
+int 0
+==
+assert
+txn Sender
+byte "player_reputation"
+int 1000
+app_local_put
+txn Sender
+byte "player_skill_points"
+int 0
+app_local_put
+txn Sender
+byte "verification_count"
+int 0
+app_local_put
+txn Sender
+byte "endorsement_count"
+int 0
+app_local_put
+txn Sender
+byte "professional_score"
+int 0
+app_local_put
+itxn_begin
+int axfer
+itxn_field TypeEnum
+byte "reputation_token_id"
+app_global_get
+itxn_field XferAsset
+txn Sender
+itxn_field AssetReceiver
+int 1000000
+itxn_field AssetAmount
+global CurrentApplicationAddress
+itxn_field AssetSender
+int 0
+itxn_field Fee
+itxn_submit
+itxn_begin
+int axfer
+itxn_field TypeEnum
+byte "skill_token_id"
+app_global_get
+itxn_field XferAsset
+txn Sender
+itxn_field AssetReceiver
+int 0
+itxn_field AssetAmount
+global CurrentApplicationAddress
+itxn_field AssetSender
+int 0
+itxn_field Fee
+itxn_submit
+byte "total_players"
+byte "total_players"
+app_global_get
+int 1
++
+app_global_put
+int 1
+return
+main_l25:
+txn ApplicationID
+int 0
+==
+assert
+byte "system_creator"
+txn Sender
+app_global_put
+byte "total_players"
+int 0
+app_global_put
+byte "verification_threshold"
+int 3
+app_global_put
+itxn_begin
+int acfg
+itxn_field TypeEnum
+int 1000000000
+itxn_field ConfigAssetTotal
+int 6
+itxn_field ConfigAssetDecimals
+byte "REP"
+itxn_field ConfigAssetUnitName
+byte "SportWarren Reputation"
+itxn_field ConfigAssetName
+global CurrentApplicationAddress
+itxn_field ConfigAssetManager
+global CurrentApplicationAddress
+itxn_field ConfigAssetReserve
+global CurrentApplicationAddress
+itxn_field ConfigAssetFreeze
+global CurrentApplicationAddress
+itxn_field ConfigAssetClawback
+int 0
+itxn_field Fee
+itxn_submit
+byte "reputation_token_id"
+itxn CreatedAssetID
+app_global_put
+itxn_begin
+int acfg
+itxn_field TypeEnum
+int 1000000000
+itxn_field ConfigAssetTotal
+int 6
+itxn_field ConfigAssetDecimals
+byte "SKILL"
+itxn_field ConfigAssetUnitName
+byte "SportWarren Skill Points"
+itxn_field ConfigAssetName
+global CurrentApplicationAddress
+itxn_field ConfigAssetManager
+global CurrentApplicationAddress
+itxn_field ConfigAssetReserve
+global CurrentApplicationAddress
+itxn_field ConfigAssetFreeze
+global CurrentApplicationAddress
+itxn_field ConfigAssetClawback
+int 0
+itxn_field Fee
+itxn_submit
+byte "skill_token_id"
+itxn CreatedAssetID
+app_global_put
+int 1
+return

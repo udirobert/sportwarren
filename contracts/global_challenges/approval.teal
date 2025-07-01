@@ -1,0 +1,660 @@
+#pragma version 6
+txn ApplicationID
+int 0
+==
+bnz main_l21
+txn OnCompletion
+int OptIn
+==
+bnz main_l20
+txn OnCompletion
+int NoOp
+==
+bnz main_l10
+txn OnCompletion
+int DeleteApplication
+==
+bnz main_l9
+txn OnCompletion
+int UpdateApplication
+==
+bnz main_l8
+int 1
+bnz main_l7
+err
+main_l7:
+int 0
+return
+main_l8:
+txn Sender
+byte "platform_creator"
+app_global_get
+==
+assert
+int 1
+return
+main_l9:
+txn Sender
+byte "platform_creator"
+app_global_get
+==
+assert
+int 1
+return
+main_l10:
+txn ApplicationArgs 0
+byte "create_challenge"
+==
+bnz main_l19
+txn ApplicationArgs 0
+byte "join_challenge"
+==
+bnz main_l18
+txn ApplicationArgs 0
+byte "submit_progress"
+==
+bnz main_l17
+txn ApplicationArgs 0
+byte "verify_progress"
+==
+bnz main_l16
+txn ApplicationArgs 0
+byte "finalize_challenge"
+==
+bnz main_l15
+txn ApplicationArgs 0
+byte "distribute_prizes"
+==
+bnz main_l14
+err
+main_l14:
+txn NumAppArgs
+int 3
+==
+assert
+txn ApplicationArgs 0
+btoi
+store 1
+txn ApplicationArgs 1
+store 2
+txn ApplicationArgs 2
+btoi
+store 3
+txn Sender
+byte "platform_creator"
+app_global_get
+==
+assert
+byte "challenge_status_"
+load 1
+itob
+concat
+app_global_get
+byte "finalized"
+==
+assert
+load 3
+byte "platform_fee_rate"
+app_global_get
+*
+int 100
+/
+store 4
+load 3
+load 4
+-
+store 5
+byte "challenge_winner_"
+load 1
+itob
+concat
+load 2
+app_global_put
+byte "challenge_prize_distributed_"
+load 1
+itob
+concat
+load 5
+app_global_put
+load 2
+byte "user_total_winnings"
+load 2
+byte "user_total_winnings"
+app_local_get
+load 5
++
+app_local_put
+byte "Prize distributed for challenge: "
+load 1
+itob
+concat
+log
+int 1
+return
+main_l15:
+txn NumAppArgs
+int 1
+==
+assert
+txn ApplicationArgs 0
+btoi
+store 6
+txn Sender
+byte "platform_creator"
+app_global_get
+==
+txn Sender
+byte "challenge_creator_"
+load 6
+itob
+concat
+app_global_get
+==
+||
+assert
+global Round
+byte "challenge_end_"
+load 6
+itob
+concat
+app_global_get
+>
+assert
+byte "challenge_status_"
+load 6
+itob
+concat
+app_global_get
+byte "active"
+==
+assert
+byte "challenge_status_"
+load 6
+itob
+concat
+byte "finalized"
+app_global_put
+byte "challenge_finalized_"
+load 6
+itob
+concat
+global LatestTimestamp
+app_global_put
+byte "active_challenges"
+byte "active_challenges"
+app_global_get
+int 1
+-
+app_global_put
+byte "Challenge finalized: "
+load 6
+itob
+concat
+log
+int 1
+return
+main_l16:
+txn NumAppArgs
+int 3
+==
+assert
+txn ApplicationArgs 0
+btoi
+store 7
+txn ApplicationArgs 1
+store 8
+txn ApplicationArgs 2
+btoi
+store 9
+txn Sender
+byte "user_reputation_score"
+app_local_get
+store 10
+load 10
+int 1000
+>=
+assert
+byte "participant_"
+load 7
+itob
+concat
+byte "_"
+concat
+load 8
+concat
+app_global_get
+int 1
+==
+assert
+byte "verification_"
+load 7
+itob
+concat
+byte "_"
+concat
+load 8
+concat
+byte "_"
+concat
+txn Sender
+concat
+load 9
+app_global_put
+load 9
+int 1
+==
+bnz main_l13
+b main_l12
+main_l13:
+byte "participant_verified_"
+load 7
+itob
+concat
+byte "_"
+concat
+load 8
+concat
+byte "participant_verified_"
+load 7
+itob
+concat
+byte "_"
+concat
+load 8
+concat
+app_global_get
+int 1
++
+app_global_put
+main_l12:
+byte "Progress verified for challenge: "
+load 7
+itob
+concat
+log
+int 1
+return
+main_l17:
+txn NumAppArgs
+int 3
+==
+assert
+txn ApplicationArgs 0
+btoi
+store 11
+txn ApplicationArgs 1
+btoi
+store 12
+txn ApplicationArgs 2
+store 13
+byte "participant_"
+load 11
+itob
+concat
+byte "_"
+concat
+txn Sender
+concat
+app_global_get
+int 1
+==
+assert
+byte "challenge_status_"
+load 11
+itob
+concat
+app_global_get
+byte "active"
+==
+assert
+global Round
+byte "challenge_end_"
+load 11
+itob
+concat
+app_global_get
+<=
+assert
+load 12
+byte "participant_score_"
+load 11
+itob
+concat
+byte "_"
+concat
+txn Sender
+concat
+app_global_get
+>
+bnz main_l11
+b main_l10_end
+main_l11:
+byte "participant_score_"
+load 11
+itob
+concat
+byte "_"
+concat
+txn Sender
+concat
+load 12
+app_global_put
+byte "participant_evidence_"
+load 11
+itob
+concat
+byte "_"
+concat
+txn Sender
+concat
+load 13
+app_global_put
+byte "participant_last_update_"
+load 11
+itob
+concat
+byte "_"
+concat
+txn Sender
+concat
+global LatestTimestamp
+app_global_put
+main_l10_end:
+byte "Progress submitted for challenge: "
+load 11
+itob
+concat
+log
+int 1
+return
+main_l18:
+txn NumAppArgs
+int 1
+==
+assert
+txn ApplicationArgs 0
+btoi
+store 14
+byte "challenge_status_"
+load 14
+itob
+concat
+app_global_get
+byte "active"
+==
+assert
+global Round
+byte "challenge_end_"
+load 14
+itob
+concat
+app_global_get
+<=
+assert
+txn Sender
+byte "user_reputation_score"
+app_local_get
+store 15
+byte "challenge_min_rep_"
+load 14
+itob
+concat
+app_global_get
+store 16
+load 15
+load 16
+>=
+assert
+byte "challenge_participants_"
+load 14
+itob
+concat
+app_global_get
+store 17
+byte "challenge_max_part_"
+load 14
+itob
+concat
+app_global_get
+store 18
+load 17
+load 18
+<
+assert
+byte "participant_"
+load 14
+itob
+concat
+byte "_"
+concat
+txn Sender
+concat
+app_global_get
+int 0
+==
+assert
+byte "participant_"
+load 14
+itob
+concat
+byte "_"
+concat
+txn Sender
+concat
+int 1
+app_global_put
+byte "participant_score_"
+load 14
+itob
+concat
+byte "_"
+concat
+txn Sender
+concat
+int 0
+app_global_put
+byte "participant_verified_"
+load 14
+itob
+concat
+byte "_"
+concat
+txn Sender
+concat
+int 0
+app_global_put
+byte "challenge_participants_"
+load 14
+itob
+concat
+load 17
+int 1
++
+app_global_put
+txn Sender
+byte "user_challenges_joined"
+txn Sender
+byte "user_challenges_joined"
+app_local_get
+int 1
++
+app_local_put
+byte "User joined challenge: "
+load 14
+itob
+concat
+log
+int 1
+return
+main_l19:
+txn NumAppArgs
+int 8
+==
+assert
+txn Sender
+byte "platform_creator"
+app_global_get
+==
+txn Sender
+byte "user_reputation_score"
+app_local_get
+int 5000
+>=
+||
+assert
+byte "challenge_counter"
+byte "challenge_counter"
+app_global_get
+int 1
++
+app_global_put
+byte "challenge_counter"
+app_global_get
+store 19
+txn ApplicationArgs 3
+btoi
+store 20
+txn ApplicationArgs 4
+btoi
+store 21
+txn ApplicationArgs 5
+btoi
+store 22
+txn ApplicationArgs 6
+btoi
+store 23
+byte "challenge_title_"
+load 19
+itob
+concat
+txn ApplicationArgs 0
+app_global_put
+byte "challenge_desc_"
+load 19
+itob
+concat
+txn ApplicationArgs 1
+app_global_put
+byte "challenge_type_"
+load 19
+itob
+concat
+txn ApplicationArgs 2
+app_global_put
+byte "challenge_prize_"
+load 19
+itob
+concat
+load 20
+app_global_put
+byte "challenge_min_rep_"
+load 19
+itob
+concat
+load 21
+app_global_put
+byte "challenge_max_part_"
+load 19
+itob
+concat
+load 22
+app_global_put
+byte "challenge_sponsor_"
+load 19
+itob
+concat
+txn ApplicationArgs 7
+app_global_put
+byte "challenge_creator_"
+load 19
+itob
+concat
+txn Sender
+app_global_put
+byte "challenge_start_"
+load 19
+itob
+concat
+global Round
+app_global_put
+byte "challenge_end_"
+load 19
+itob
+concat
+global Round
+load 23
++
+app_global_put
+byte "challenge_participants_"
+load 19
+itob
+concat
+int 0
+app_global_put
+byte "challenge_status_"
+load 19
+itob
+concat
+byte "active"
+app_global_put
+byte "total_prize_pool"
+byte "total_prize_pool"
+app_global_get
+load 20
++
+app_global_put
+byte "active_challenges"
+byte "active_challenges"
+app_global_get
+int 1
++
+app_global_put
+byte "Challenge created with ID: "
+load 19
+itob
+concat
+log
+int 1
+return
+main_l20:
+txn NumAppArgs
+int 1
+==
+assert
+txn Sender
+byte "user_challenges_joined"
+int 0
+app_local_put
+txn Sender
+byte "user_total_winnings"
+int 0
+app_local_put
+txn Sender
+byte "user_reputation_score"
+txn ApplicationArgs 0
+btoi
+app_local_put
+int 1
+return
+main_l21:
+txn ApplicationID
+int 0
+==
+assert
+byte "platform_creator"
+txn Sender
+app_global_put
+byte "challenge_counter"
+int 0
+app_global_put
+byte "total_prize_pool"
+int 0
+app_global_put
+byte "active_challenges"
+int 0
+app_global_put
+byte "platform_fee_rate"
+int 5
+app_global_put
+int 1
+return
