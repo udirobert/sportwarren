@@ -25,7 +25,7 @@ export const Card: React.FC<CardProps> = ({
     <div 
       className={`
         bg-white rounded-xl border border-gray-200 shadow-sm
-        ${hover ? 'hover:shadow-lg hover:border-gray-300 active:shadow-xl transition-all duration-200 touch-manipulation' : ''}
+        ${hover ? 'hover:shadow-xl hover:border-gray-300 hover:-translate-y-1 active:shadow-2xl active:translate-y-0 transition-all duration-300 touch-manipulation' : 'transition-all duration-200'}
         ${onClick ? 'cursor-pointer select-none' : ''}
         ${paddingClasses[padding]}
         ${className}

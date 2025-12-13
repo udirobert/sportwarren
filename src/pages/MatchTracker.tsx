@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Card } from '../components/common/Card';
+import { Button } from '../components/common/Button';
 import { Target, Users, Clock, MapPin, Plus, Mic, Camera, FileText, Minus } from 'lucide-react';
 
 export const MatchTracker: React.FC = () => {
@@ -51,7 +52,7 @@ export const MatchTracker: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto px-3 md:px-6 py-4 md:py-6 space-y-4 md:space-y-6">
       {/* Match Header */}
-      <Card>
+      <Card className="animate-fade-in-up">
         <div className="text-center space-y-3 md:space-y-4">
           <div className="flex items-center justify-center space-x-3 md:space-x-4 text-sm md:text-base">
             <div className="flex items-center space-x-1 md:space-x-2">
@@ -82,39 +83,55 @@ export const MatchTracker: React.FC = () => {
           {/* Score Control Buttons */}
           <div className="grid grid-cols-2 gap-3 md:gap-4">
             <div className="space-y-2">
-              <button
+              <Button
                 onClick={() => addGoal('home')}
-                className="w-full flex items-center justify-center space-x-2 bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700 active:bg-green-800 transition-colors touch-manipulation"
+                variant="success"
+                size="lg"
+                fullWidth
+                icon={Plus}
+                iconPosition="left"
+                className="shadow-lg shadow-green-500/30"
               >
-                <Plus className="w-4 h-4" />
-                <span className="text-sm md:text-base">Home Goal</span>
-              </button>
-              <button
+                Home Goal
+              </Button>
+              <Button
                 onClick={() => removeGoal('home')}
                 disabled={homeScore === 0}
-                className="w-full flex items-center justify-center space-x-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 active:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors touch-manipulation text-sm"
+                variant="ghost"
+                size="sm"
+                fullWidth
+                icon={Minus}
+                iconPosition="left"
+                animate={false}
               >
-                <Minus className="w-3 h-3" />
-                <span>Remove</span>
-              </button>
+                Remove
+              </Button>
             </div>
             
             <div className="space-y-2">
-              <button
+              <Button
                 onClick={() => addGoal('away')}
-                className="w-full flex items-center justify-center space-x-2 bg-red-600 text-white px-4 py-3 rounded-lg hover:bg-red-700 active:bg-red-800 transition-colors touch-manipulation"
+                variant="danger"
+                size="lg"
+                fullWidth
+                icon={Plus}
+                iconPosition="left"
+                className="shadow-lg shadow-red-500/30"
               >
-                <Plus className="w-4 h-4" />
-                <span className="text-sm md:text-base">Away Goal</span>
-              </button>
-              <button
+                Away Goal
+              </Button>
+              <Button
                 onClick={() => removeGoal('away')}
                 disabled={awayScore === 0}
-                className="w-full flex items-center justify-center space-x-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 active:bg-gray-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors touch-manipulation text-sm"
+                variant="ghost"
+                size="sm"
+                fullWidth
+                icon={Minus}
+                iconPosition="left"
+                animate={false}
               >
-                <Minus className="w-3 h-3" />
-                <span>Remove</span>
-              </button>
+                Remove
+              </Button>
             </div>
           </div>
         </div>
@@ -122,37 +139,68 @@ export const MatchTracker: React.FC = () => {
 
       {/* Quick Actions */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <Card padding="sm" hover onClick={() => addEvent('goal', 'Marcus Johnson', 'Quick goal logged')}>
-          <button className="w-full text-center space-y-2 touch-manipulation">
-            <Target className="w-6 h-6 md:w-8 md:h-8 text-orange-600 mx-auto" />
-            <div className="text-xs md:text-sm font-medium text-gray-900">Goal</div>
-          </button>
+        <Card 
+          padding="sm" 
+          hover 
+          onClick={() => addEvent('goal', 'Marcus Johnson', 'Quick goal logged')}
+          className="stagger-item animate-scale-in group cursor-pointer border-2 border-transparent hover:border-orange-400"
+        >
+          <div className="w-full text-center space-y-2 touch-manipulation">
+            <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-xl flex items-center justify-center mx-auto shadow-lg group-hover:shadow-orange-500/50 group-hover:scale-110 transition-all duration-300">
+              <Target className="w-6 h-6 md:w-8 md:h-8 text-white" />
+            </div>
+            <div className="text-xs md:text-sm font-semibold text-gray-900">Goal</div>
+          </div>
         </Card>
 
-        <Card padding="sm" hover onClick={() => addEvent('assist', 'Jamie Thompson', 'Assist recorded')}>
-          <button className="w-full text-center space-y-2 touch-manipulation">
-            <Users className="w-6 h-6 md:w-8 md:h-8 text-blue-600 mx-auto" />
-            <div className="text-xs md:text-sm font-medium text-gray-900">Assist</div>
-          </button>
+        <Card 
+          padding="sm" 
+          hover 
+          onClick={() => addEvent('assist', 'Jamie Thompson', 'Assist recorded')}
+          className="stagger-item animate-scale-in group cursor-pointer border-2 border-transparent hover:border-blue-400"
+        >
+          <div className="w-full text-center space-y-2 touch-manipulation">
+            <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto shadow-lg group-hover:shadow-blue-500/50 group-hover:scale-110 transition-all duration-300">
+              <Users className="w-6 h-6 md:w-8 md:h-8 text-white" />
+            </div>
+            <div className="text-xs md:text-sm font-semibold text-gray-900">Assist</div>
+          </div>
         </Card>
 
-        <Card padding="sm" hover>
+        <Card 
+          padding="sm" 
+          hover
+          className={`stagger-item animate-scale-in group cursor-pointer border-2 ${isRecording ? 'border-red-400 bg-red-50' : 'border-transparent'} hover:border-green-400`}
+        >
           <button
             onClick={() => setIsRecording(!isRecording)}
             className="w-full text-center space-y-2 touch-manipulation"
           >
-            <Mic className={`w-6 h-6 md:w-8 md:h-8 mx-auto ${isRecording ? 'text-red-600 animate-pulse' : 'text-green-600'}`} />
-            <div className="text-xs md:text-sm font-medium text-gray-900">
+            <div className={`w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br rounded-xl flex items-center justify-center mx-auto shadow-lg group-hover:scale-110 transition-all duration-300 ${
+              isRecording 
+                ? 'from-red-500 to-red-600 shadow-red-500/50 animate-pulse' 
+                : 'from-green-500 to-green-600 group-hover:shadow-green-500/50'
+            }`}>
+              <Mic className="w-6 h-6 md:w-8 md:h-8 text-white" />
+            </div>
+            <div className="text-xs md:text-sm font-semibold text-gray-900">
               {isRecording ? 'Recording...' : 'Voice Log'}
             </div>
           </button>
         </Card>
 
-        <Card padding="sm" hover onClick={() => addEvent('photo', 'System', 'Photo captured')}>
-          <button className="w-full text-center space-y-2 touch-manipulation">
-            <Camera className="w-6 h-6 md:w-8 md:h-8 text-purple-600 mx-auto" />
-            <div className="text-xs md:text-sm font-medium text-gray-900">Photo</div>
-          </button>
+        <Card 
+          padding="sm" 
+          hover 
+          onClick={() => addEvent('photo', 'System', 'Photo captured')}
+          className="stagger-item animate-scale-in group cursor-pointer border-2 border-transparent hover:border-purple-400"
+        >
+          <div className="w-full text-center space-y-2 touch-manipulation">
+            <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl flex items-center justify-center mx-auto shadow-lg group-hover:shadow-purple-500/50 group-hover:scale-110 transition-all duration-300">
+              <Camera className="w-6 h-6 md:w-8 md:h-8 text-white" />
+            </div>
+            <div className="text-xs md:text-sm font-semibold text-gray-900">Photo</div>
+          </div>
         </Card>
       </div>
 

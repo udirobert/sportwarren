@@ -143,20 +143,20 @@ export const SmartNavigation: React.FC = () => {
   return (
     <>
       {/* Desktop Navigation */}
-      <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
+      <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 w-full">
-          <div className="flex items-center justify-between h-16">
+          <div className="flex items-center justify-between h-16 animate-fade-in-down">
             <Link 
               to="/" 
               className="flex items-center space-x-3 group"
               onClick={() => handleNavClick('/')}
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-green-700 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-transform">
+              <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-green-700 rounded-xl flex items-center justify-center transform group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 shadow-lg group-hover:shadow-green-500/50">
                 <Target className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">SportWarren</h1>
-                <p className="text-xs text-gray-600">Track your legend</p>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-gray-900 to-green-700 bg-clip-text text-transparent">SportWarren</h1>
+                <p className="text-xs text-gray-600 font-medium">Track your legend</p>
               </div>
             </Link>
 
@@ -167,22 +167,22 @@ export const SmartNavigation: React.FC = () => {
                     key={path}
                     to={path}
                     onClick={() => handleNavClick(path)}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 transform hover:scale-105 ${
                       isActive(path)
-                        ? 'bg-green-600 text-white shadow-lg shadow-green-600/25'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        ? 'bg-gradient-to-r from-green-600 to-green-700 text-white shadow-lg shadow-green-600/30'
+                        : 'text-gray-700 hover:bg-gray-100 hover:shadow-md'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
-                    <span className="font-medium text-sm">{label}</span>
+                    <Icon className={`w-4 h-4 ${isActive(path) ? 'animate-pulse' : ''}`} />
+                    <span className="font-semibold text-sm">{label}</span>
                   </Link>
                 ))}
                 
                 {/* Quick Action Button for Organizers */}
                 {preferences.primaryRole === 'organizer' && (
-                  <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                  <button className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 transition-all transform hover:scale-105 shadow-lg hover:shadow-blue-500/50">
                     <Plus className="w-4 h-4" />
-                    <span className="font-medium text-sm">Quick Log</span>
+                    <span className="font-semibold text-sm">Quick Log</span>
                   </button>
                 )}
               </div>
@@ -199,13 +199,13 @@ export const SmartNavigation: React.FC = () => {
           <div className="flex items-center justify-between h-14">
             <Link 
               to="/" 
-              className="flex items-center space-x-2 touch-manipulation"
+              className="flex items-center space-x-2 touch-manipulation group"
               onClick={() => handleNavClick('/')}
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center shadow-md group-active:scale-95 transition-transform">
                 <Target className="w-5 h-5 text-white" />
               </div>
-              <h1 className="text-lg font-bold text-gray-900">SportWarren</h1>
+              <h1 className="text-lg font-bold bg-gradient-to-r from-gray-900 to-green-700 bg-clip-text text-transparent">SportWarren</h1>
             </Link>
 
             <button
@@ -247,7 +247,7 @@ export const SmartNavigation: React.FC = () => {
       </nav>
 
       {/* Mobile Bottom Navigation - Adaptive */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-gray-200 safe-area-pb">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-gray-200 safe-area-pb shadow-2xl">
         <div className={`grid gap-1 p-2 ${
           visibleNavItems.length <= 4 ? 'grid-cols-4' : 
           visibleNavItems.length <= 5 ? 'grid-cols-5' : 'grid-cols-6'
@@ -257,16 +257,18 @@ export const SmartNavigation: React.FC = () => {
               key={path}
               to={path}
               onClick={() => handleNavClick(path)}
-              className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all touch-manipulation min-h-[3.5rem] ${
+              className={`flex flex-col items-center justify-center p-2 rounded-xl transition-all duration-300 touch-manipulation min-h-[3.5rem] ${
                 isActive(path)
-                  ? 'text-green-600 bg-green-50 scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100'
+                  ? 'text-green-600 bg-gradient-to-br from-green-50 to-green-100 scale-105 shadow-lg shadow-green-500/20'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100 active:scale-95'
               }`}
             >
-              <Icon className={`w-5 h-5 mb-1 transition-transform ${
-                isActive(path) ? 'scale-110' : ''
+              <Icon className={`w-5 h-5 mb-1 transition-all duration-300 ${
+                isActive(path) ? 'scale-125 animate-bounce-gentle' : ''
               }`} />
-              <span className="text-xs font-medium leading-tight text-center">{label}</span>
+              <span className={`text-xs font-medium leading-tight text-center ${
+                isActive(path) ? 'font-semibold' : ''
+              }`}>{label}</span>
             </Link>
           ))}
         </div>

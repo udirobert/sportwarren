@@ -31,32 +31,42 @@ export const StatCard: React.FC<StatCardProps> = ({
   return (
     <div 
       className={`
-        bg-white rounded-xl border border-gray-200 shadow-sm 
-        hover:shadow-md active:shadow-lg transition-all duration-200 
+        bg-white rounded-xl border border-gray-200 shadow-md 
+        hover:shadow-xl hover:-translate-y-1 active:shadow-2xl active:translate-y-0 
+        transition-all duration-300 
         p-4 md:p-6 touch-manipulation
+        relative overflow-hidden group
         ${onClick ? 'cursor-pointer select-none' : ''}
       `}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
     >
-      <div className="flex items-center justify-between">
+      {/* Background gradient effect */}
+      <div className={`absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity duration-300 ${
+        color === 'green' ? 'from-green-400 to-green-600' :
+        color === 'blue' ? 'from-blue-400 to-blue-600' :
+        color === 'orange' ? 'from-orange-400 to-orange-600' :
+        'from-purple-400 to-purple-600'
+      }`}></div>
+
+      <div className="relative flex items-center justify-between">
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-600 mb-1 truncate">{title}</p>
-          <p className="text-xl md:text-2xl font-bold text-gray-900 mb-2 break-words">{value}</p>
+          <p className="text-sm font-semibold text-gray-600 mb-2 truncate uppercase tracking-wide">{title}</p>
+          <p className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 break-words">{value}</p>
           {trend && (
             <div className={`flex items-center text-xs md:text-sm ${
               trend.positive ? 'text-green-600' : 'text-red-600'
             }`}>
-              <span className="font-medium">
-                {trend.positive ? '+' : ''}{trend.value}%
+              <span className="font-bold">
+                {trend.positive ? '↑' : '↓'} {trend.value}%
               </span>
               <span className="ml-1 text-gray-500 hidden sm:inline">vs last month</span>
             </div>
           )}
         </div>
-        <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ml-3 ${colorClasses[color]}`}>
-          <Icon className="w-5 h-5 md:w-6 md:h-6" />
+        <div className={`w-12 h-12 md:w-14 md:h-14 rounded-xl flex items-center justify-center flex-shrink-0 ml-3 shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 ${colorClasses[color]}`}>
+          <Icon className="w-6 h-6 md:w-7 md:h-7" />
         </div>
       </div>
     </div>

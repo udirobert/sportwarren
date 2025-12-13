@@ -15,6 +15,8 @@ import { MatchVerification } from "./components/algorand/MatchVerification";
 import { GlobalChallenges } from "./components/algorand/GlobalChallenges";
 import { PlayerReputation } from "./components/algorand/PlayerReputation";
 // import { AlgorandWallet } from './components/algorand/AlgorandWallet';
+import { LoadingScreen } from "./components/common/LoadingScreen";
+import { BrandStory } from "./components/common/BrandStory";
 import { apolloClient } from "./lib/apollo-client";
 import { useSocket } from "./hooks/useSocket";
 import { useUserPreferences } from "./hooks/useUserPreferences";
@@ -28,16 +30,7 @@ function AppContent() {
 
   // Show loading state
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <div className="w-8 h-8 bg-white rounded-lg"></div>
-          </div>
-          <p className="text-gray-600">Loading SportWarren...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   // Show onboarding for new users
@@ -46,8 +39,9 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50 to-blue-50">
       <SmartNavigation />
+      <BrandStory />
       <main className="pb-20 md:pb-0">
         <Routes>
           <Route path="/" element={<AdaptiveDashboard />} />

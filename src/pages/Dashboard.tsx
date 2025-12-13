@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '../components/common/Card';
 import { StatCard } from '../components/common/StatCard';
+import { HeroSection } from '../components/common/HeroSection';
 import { Target, Users, Trophy, TrendingUp, Calendar, MapPin, Clock, Star, Zap, Shield } from 'lucide-react';
 
 export const Dashboard: React.FC = () => {
@@ -58,45 +59,46 @@ export const Dashboard: React.FC = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 space-y-6 md:space-y-8">
-      {/* Welcome Header */}
-      <div className="text-center mb-6 md:mb-8">
-        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
-          Welcome back, <span className="text-green-600">Marcus</span>
-        </h1>
-        <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto px-2">
-          Ready to build your legend? Your squad has been busy while you were away.
-        </p>
-      </div>
+      {/* Hero Section */}
+      <HeroSection userName="Marcus" matchesPlayed={24} winRate={67} />
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 lg:gap-6">
-        <StatCard
-          title="Season Goals"
-          value={18}
-          icon={Target}
-          trend={{ value: 12, positive: true }}
-          color="green"
-        />
-        <StatCard
-          title="Assists"
-          value={11}
-          icon={Users}
-          trend={{ value: 8, positive: true }}
-          color="blue"
-        />
-        <StatCard
-          title="Matches Played"
-          value={24}
-          icon={Trophy}
-          color="orange"
-        />
-        <StatCard
-          title="Win Rate"
-          value="67%"
-          icon={TrendingUp}
-          trend={{ value: 5, positive: true }}
-          color="purple"
-        />
+        <div className="stagger-item animate-fade-in-up">
+          <StatCard
+            title="Season Goals"
+            value={18}
+            icon={Target}
+            trend={{ value: 12, positive: true }}
+            color="green"
+          />
+        </div>
+        <div className="stagger-item animate-fade-in-up">
+          <StatCard
+            title="Assists"
+            value={11}
+            icon={Users}
+            trend={{ value: 8, positive: true }}
+            color="blue"
+          />
+        </div>
+        <div className="stagger-item animate-fade-in-up">
+          <StatCard
+            title="Matches Played"
+            value={24}
+            icon={Trophy}
+            color="orange"
+          />
+        </div>
+        <div className="stagger-item animate-fade-in-up">
+          <StatCard
+            title="Win Rate"
+            value="67%"
+            icon={TrendingUp}
+            trend={{ value: 5, positive: true }}
+            color="purple"
+          />
+        </div>
       </div>
 
       {/* Main Content Grid */}
@@ -203,70 +205,80 @@ export const Dashboard: React.FC = () => {
       </div>
 
       {/* Quick Actions */}
-      <Card>
-        <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4 md:mb-6">Quick Actions</h2>
+      <Card className="animate-fade-in-up">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
+          <h2 className="text-lg md:text-xl font-bold text-gray-900">Quick Actions</h2>
+          <span className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">Get Started</span>
+        </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-          <button className="flex flex-col items-center space-y-2 md:space-y-3 p-4 md:p-6 border border-gray-200 rounded-lg hover:border-green-300 hover:bg-green-50 active:border-green-400 active:bg-green-100 transition-all group touch-manipulation">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-green-600 rounded-xl flex items-center justify-center group-hover:scale-110 group-active:scale-105 transition-transform">
-              <Target className="w-5 h-5 md:w-6 md:h-6 text-white" />
+          <button className="flex flex-col items-center space-y-2 md:space-y-3 p-4 md:p-6 border-2 border-gray-200 rounded-xl hover:border-green-500 hover:bg-green-50 hover:shadow-lg active:border-green-600 active:bg-green-100 transition-all duration-300 group touch-manipulation transform hover:scale-105 active:scale-95">
+            <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-green-600 to-green-700 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg group-hover:shadow-green-500/50">
+              <Target className="w-6 h-6 md:w-7 md:h-7 text-white" />
             </div>
-            <span className="font-medium text-gray-900 text-sm md:text-base">Log Match</span>
+            <span className="font-semibold text-gray-900 text-sm md:text-base">Log Match</span>
+            <span className="text-xs text-gray-500">Track your game</span>
           </button>
 
-          <button className="flex flex-col items-center space-y-2 md:space-y-3 p-4 md:p-6 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 active:border-blue-400 active:bg-blue-100 transition-all group touch-manipulation">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-blue-600 rounded-xl flex items-center justify-center group-hover:scale-110 group-active:scale-105 transition-transform">
-              <Users className="w-5 h-5 md:w-6 md:h-6 text-white" />
+          <button className="flex flex-col items-center space-y-2 md:space-y-3 p-4 md:p-6 border-2 border-gray-200 rounded-xl hover:border-blue-500 hover:bg-blue-50 hover:shadow-lg active:border-blue-600 active:bg-blue-100 transition-all duration-300 group touch-manipulation transform hover:scale-105 active:scale-95">
+            <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg group-hover:shadow-blue-500/50">
+              <Users className="w-6 h-6 md:w-7 md:h-7 text-white" />
             </div>
-            <span className="font-medium text-gray-900 text-sm md:text-base">Check Squad</span>
+            <span className="font-semibold text-gray-900 text-sm md:text-base">Check Squad</span>
+            <span className="text-xs text-gray-500">Manage team</span>
           </button>
 
-          <button className="flex flex-col items-center space-y-2 md:space-y-3 p-4 md:p-6 border border-gray-200 rounded-lg hover:border-orange-300 hover:bg-orange-50 active:border-orange-400 active:bg-orange-100 transition-all group touch-manipulation">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-orange-600 rounded-xl flex items-center justify-center group-hover:scale-110 group-active:scale-105 transition-transform">
-              <Zap className="w-5 h-5 md:w-6 md:h-6 text-white" />
+          <button className="flex flex-col items-center space-y-2 md:space-y-3 p-4 md:p-6 border-2 border-gray-200 rounded-xl hover:border-orange-500 hover:bg-orange-50 hover:shadow-lg active:border-orange-600 active:bg-orange-100 transition-all duration-300 group touch-manipulation transform hover:scale-105 active:scale-95">
+            <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-orange-600 to-orange-700 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg group-hover:shadow-orange-500/50">
+              <Zap className="w-6 h-6 md:w-7 md:h-7 text-white" />
             </div>
-            <span className="font-medium text-gray-900 text-sm md:text-base">View Stats</span>
+            <span className="font-semibold text-gray-900 text-sm md:text-base">View Stats</span>
+            <span className="text-xs text-gray-500">Analyze performance</span>
           </button>
 
-          <button className="flex flex-col items-center space-y-2 md:space-y-3 p-4 md:p-6 border border-gray-200 rounded-lg hover:border-purple-300 hover:bg-purple-50 active:border-purple-400 active:bg-purple-100 transition-all group touch-manipulation">
-            <div className="w-10 h-10 md:w-12 md:h-12 bg-purple-600 rounded-xl flex items-center justify-center group-hover:scale-110 group-active:scale-105 transition-transform">
-              <Shield className="w-5 h-5 md:w-6 md:h-6 text-white" />
+          <button className="flex flex-col items-center space-y-2 md:space-y-3 p-4 md:p-6 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:bg-purple-50 hover:shadow-lg active:border-purple-600 active:bg-purple-100 transition-all duration-300 group touch-manipulation transform hover:scale-105 active:scale-95">
+            <div className="w-12 h-12 md:w-14 md:h-14 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg group-hover:shadow-purple-500/50">
+              <Shield className="w-6 h-6 md:w-7 md:h-7 text-white" />
             </div>
-            <span className="font-medium text-gray-900 text-sm md:text-base">Rivalries</span>
+            <span className="font-semibold text-gray-900 text-sm md:text-base">Rivalries</span>
+            <span className="text-xs text-gray-500">Challenge teams</span>
           </button>
         </div>
       </Card>
 
       {/* Squad Activity Feed */}
-      <Card>
-        <h2 className="text-lg md:text-xl font-bold text-gray-900 mb-4 md:mb-6">Squad Activity</h2>
+      <Card className="animate-fade-in-up">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
+          <h2 className="text-lg md:text-xl font-bold text-gray-900">Squad Activity</h2>
+          <span className="text-xs text-green-600 bg-green-100 px-3 py-1 rounded-full font-medium animate-pulse">Live</span>
+        </div>
         <div className="space-y-3 md:space-y-4">
-          <div className="flex items-start space-x-3 md:space-x-4 p-3 md:p-4 bg-green-50 rounded-lg">
-            <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+          <div className="stagger-item animate-slide-in-left flex items-start space-x-3 md:space-x-4 p-3 md:p-4 bg-gradient-to-r from-green-50 to-transparent rounded-lg border-l-4 border-green-500 hover:shadow-md transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+            <div className="w-3 h-3 bg-green-500 rounded-full mt-2 flex-shrink-0 animate-pulse"></div>
             <div className="flex-1 min-w-0">
               <p className="text-gray-900 text-sm md:text-base">
-                <span className="font-semibold">Jamie Thompson</span> scored a hat-trick against 
+                <span className="font-semibold text-green-700">Jamie Thompson</span> scored a hat-trick against 
                 <span className="font-semibold"> Park Rangers</span> 🔥
               </p>
               <p className="text-xs md:text-sm text-gray-600 mt-1">2 hours ago</p>
             </div>
           </div>
 
-          <div className="flex items-start space-x-3 md:space-x-4 p-3 md:p-4 bg-blue-50 rounded-lg">
-            <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+          <div className="stagger-item animate-slide-in-left flex items-start space-x-3 md:space-x-4 p-3 md:p-4 bg-gradient-to-r from-blue-50 to-transparent rounded-lg border-l-4 border-blue-500 hover:shadow-md transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+            <div className="w-3 h-3 bg-blue-500 rounded-full mt-2 flex-shrink-0 animate-pulse"></div>
             <div className="flex-1 min-w-0">
               <p className="text-gray-900 text-sm md:text-base">
-                <span className="font-semibold">Sarah Martinez</span> unlocked the 
-                <span className="font-semibold">"Clean Sheet Hero"</span> achievement
+                <span className="font-semibold text-blue-700">Sarah Martinez</span> unlocked the 
+                <span className="font-semibold">"Clean Sheet Hero"</span> achievement 🏆
               </p>
               <p className="text-xs md:text-sm text-gray-600 mt-1">5 hours ago</p>
             </div>
           </div>
 
-          <div className="flex items-start space-x-3 md:space-x-4 p-3 md:p-4 bg-orange-50 rounded-lg">
-            <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
+          <div className="stagger-item animate-slide-in-left flex items-start space-x-3 md:space-x-4 p-3 md:p-4 bg-gradient-to-r from-orange-50 to-transparent rounded-lg border-l-4 border-orange-500 hover:shadow-md transition-all duration-300 hover:scale-[1.02] cursor-pointer">
+            <div className="w-3 h-3 bg-orange-500 rounded-full mt-2 flex-shrink-0 animate-pulse"></div>
             <div className="flex-1 min-w-0">
               <p className="text-gray-900 text-sm md:text-base">
-                <span className="font-semibold">Sunday Legends</span> challenged your squad to a 
+                <span className="font-semibold text-orange-700">Sunday Legends</span> challenged your squad to a 
                 <span className="font-semibold">revenge match</span> 🥊
               </p>
               <p className="text-xs md:text-sm text-gray-600 mt-1">1 day ago</p>

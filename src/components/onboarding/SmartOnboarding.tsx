@@ -228,13 +228,25 @@ export const SmartOnboarding: React.FC<{ onComplete: () => void }> = ({ onComple
 
   if (isCompleting) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-        <Card className="max-w-md w-full text-center">
-          <div className="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Check className="w-8 h-8 text-white" />
+      <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex items-center justify-center p-4">
+        <Card className="max-w-md w-full text-center animate-scale-in-bounce">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-20 h-20 bg-green-400 rounded-full animate-ping opacity-30"></div>
+            </div>
+            <div className="relative w-16 h-16 bg-gradient-to-br from-green-600 to-green-700 rounded-full flex items-center justify-center mx-auto shadow-2xl">
+              <Check className="w-8 h-8 text-white animate-scale-in-bounce" />
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">All set!</h2>
-          <p className="text-gray-600">We're personalizing your SportWarren experience...</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">All set! 🎉</h2>
+          <p className="text-gray-600 mb-4">We're personalizing your SportWarren experience...</p>
+          <div className="w-48 h-1 bg-gray-200 rounded-full mx-auto overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-green-500 to-blue-500 rounded-full animate-shimmer" 
+                 style={{ 
+                   backgroundSize: '200% 100%',
+                   width: '100%'
+                 }}></div>
+          </div>
         </Card>
       </div>
     );
@@ -244,31 +256,42 @@ export const SmartOnboarding: React.FC<{ onComplete: () => void }> = ({ onComple
   const Icon = step.icon;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-50 to-blue-50 flex items-center justify-center p-4">
-      <Card className="max-w-2xl w-full">
+    <div className="min-h-screen bg-gradient-to-br from-green-50 via-blue-50 to-purple-50 flex items-center justify-center p-4">
+      <Card className="max-w-2xl w-full animate-fade-in-up">
         {/* Progress indicator */}
         <div className="flex items-center justify-between mb-8">
           {ONBOARDING_STEPS.map((_, index) => (
-            <div
-              key={index}
-              className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                index <= currentStep
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-200 text-gray-500'
-              }`}
-            >
-              {index < currentStep ? <Check className="w-4 h-4" /> : index + 1}
-            </div>
+            <React.Fragment key={index}>
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${
+                  index <= currentStep
+                    ? 'bg-gradient-to-br from-green-600 to-green-700 text-white shadow-lg scale-110'
+                    : 'bg-gray-200 text-gray-500'
+                }`}
+              >
+                {index < currentStep ? <Check className="w-5 h-5 animate-scale-in-bounce" /> : index + 1}
+              </div>
+              {index < ONBOARDING_STEPS.length - 1 && (
+                <div className={`flex-1 h-1 mx-2 rounded-full transition-all duration-500 ${
+                  index < currentStep ? 'bg-gradient-to-r from-green-600 to-green-700' : 'bg-gray-200'
+                }`}></div>
+              )}
+            </React.Fragment>
           ))}
         </div>
 
         {/* Step content */}
-        <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-            <Icon className="w-8 h-8 text-white" />
+        <div className="text-center mb-8 animate-fade-in-up">
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-20 h-20 bg-green-400 rounded-2xl animate-pulse opacity-20"></div>
+            </div>
+            <div className="relative w-16 h-16 bg-gradient-to-br from-green-600 to-green-700 rounded-2xl flex items-center justify-center mx-auto shadow-xl">
+              <Icon className="w-8 h-8 text-white" />
+            </div>
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">{step.title}</h2>
-          <p className="text-gray-600">{step.description}</p>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-3">{step.title}</h2>
+          <p className="text-gray-600 text-lg">{step.description}</p>
         </div>
 
         {/* Questions */}
@@ -283,13 +306,18 @@ export const SmartOnboarding: React.FC<{ onComplete: () => void }> = ({ onComple
                     <button
                       key={option}
                       onClick={() => handleAnswer(question.id, option)}
-                      className={`w-full text-left p-3 rounded-lg border transition-colors ${
+                      className={`w-full text-left p-4 rounded-xl border-2 transition-all duration-300 transform hover:scale-[1.02] ${
                         answers[question.id] === option
-                          ? 'border-green-600 bg-green-50 text-green-900'
-                          : 'border-gray-200 hover:border-gray-300'
+                          ? 'border-green-600 bg-gradient-to-r from-green-50 to-green-100 text-green-900 shadow-lg shadow-green-500/20'
+                          : 'border-gray-200 hover:border-green-300 hover:shadow-md'
                       }`}
                     >
-                      {option}
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{option}</span>
+                        {answers[question.id] === option && (
+                          <Check className="w-5 h-5 text-green-600 animate-scale-in-bounce" />
+                        )}
+                      </div>
                     </button>
                   ))}
                 </div>
@@ -345,11 +373,11 @@ export const SmartOnboarding: React.FC<{ onComplete: () => void }> = ({ onComple
         </div>
 
         {/* Navigation */}
-        <div className="flex justify-between mt-8">
+        <div className="flex justify-between mt-8 pt-6 border-t border-gray-200">
           <button
             onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
             disabled={currentStep === 0}
-            className="px-4 py-2 text-gray-600 disabled:opacity-50"
+            className="px-6 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             Back
           </button>
@@ -357,10 +385,10 @@ export const SmartOnboarding: React.FC<{ onComplete: () => void }> = ({ onComple
           <button
             onClick={handleNext}
             disabled={!step.questions.every(q => answers[q.id] !== undefined)}
-            className="flex items-center space-x-2 bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center space-x-2 bg-gradient-to-r from-green-600 to-green-700 text-white px-8 py-3 rounded-lg hover:from-green-700 hover:to-green-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-300 font-semibold"
           >
-            <span>{currentStep === ONBOARDING_STEPS.length - 1 ? 'Complete' : 'Next'}</span>
-            <ChevronRight className="w-4 h-4" />
+            <span>{currentStep === ONBOARDING_STEPS.length - 1 ? 'Complete Setup' : 'Continue'}</span>
+            <ChevronRight className="w-5 h-5" />
           </button>
         </div>
       </Card>
