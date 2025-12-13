@@ -966,6 +966,119 @@ export const typeDefs = `#graphql
     userAddress: String!
   }
 
+  # Player Analytics Types
+  type PlayerAnalytics {
+    id: ID!
+    userId: ID!
+    position: String!
+    overallScore: Float!
+    comparisonRating: String!
+    metrics: [PerformanceMetric!]!
+    strengths: [AnalyticsInsight!]!
+    areasForImprovement: [AnalyticsInsight!]!
+    updatedAt: DateTime!
+  }
+
+  type PerformanceMetric {
+    name: String!
+    playerValue: Float!
+    proValue: Float!
+    score: Float!
+    difference: Float!
+    percentageOfPro: Float!
+  }
+
+  type AnalyticsInsight {
+    metric: String!
+    score: Float!
+    message: String!
+  }
+
+  type MatchPrediction {
+    id: ID!
+    matchId: ID
+    teamStats: JSON!
+    opponentStats: JSON!
+    probabilities: PredictionProbabilities!
+    predictedScore: PredictedScore!
+    confidence: Float!
+    strengthComparison: StrengthComparison!
+    keyFactors: [String!]!
+    createdAt: DateTime!
+  }
+
+  type PredictionProbabilities {
+    win: Float!
+    draw: Float!
+    lose: Float!
+  }
+
+  type PredictedScore {
+    home: Int!
+    away: Int!
+  }
+
+  type StrengthComparison {
+    team: Float!
+    opponent: Float!
+    difference: Float!
+  }
+
+  type VideoAnalysis {
+    id: ID!
+    userId: ID!
+    videoUrl: String!
+    playersDetected: Int!
+    analytics: VideoAnalyticsData!
+    highlights: [VideoHighlight!]!
+    processingStatus: VideoProcessingStatus!
+    createdAt: DateTime!
+  }
+
+  type VideoAnalyticsData {
+    fieldCoverage: Float!
+    formation: FormationData!
+    teamCompactness: Float!
+    playerDensity: Float!
+  }
+
+  type FormationData {
+    formation: String!
+    lines: Int!
+    confidence: Float!
+  }
+
+  type VideoHighlight {
+    frame: Int!
+    timestamp: Int!
+    type: String!
+    description: String!
+  }
+
+  enum VideoProcessingStatus {
+    PENDING
+    PROCESSING
+    COMPLETED
+    FAILED
+  }
+
+  input AnalyzePerformanceInput {
+    userId: ID!
+    position: String!
+    playerData: JSON!
+  }
+
+  input PredictMatchInput {
+    matchId: ID
+    teamStats: JSON!
+    opponentStats: JSON!
+  }
+
+  input AnalyzeVideoInput {
+    userId: ID!
+    videoUrl: String!
+  }
+
   type Query {
     me: User
     squad(id: ID!): Squad
@@ -1029,6 +1142,13 @@ export const typeDefs = `#graphql
     userMarketplaceTransactions(userAddress: String!): [MarketplaceTransaction!]!
     marketplaceBids(itemId: ID!): [MarketplaceBid!]!
     userMarketplaceBids(userAddress: String!): [MarketplaceBid!]!
+    
+    # Player Analytics Queries
+    playerAnalytics(userId: ID!): PlayerAnalytics
+    matchPrediction(matchId: ID, teamStats: JSON, opponentStats: JSON): MatchPrediction
+    videoAnalysis(id: ID!): VideoAnalysis
+    videoAnalyses(userId: ID!): [VideoAnalysis!]!
+    proBenchmarks(position: String): JSON!
   }
 
   type Mutation {
@@ -1079,6 +1199,11 @@ export const typeDefs = `#graphql
     createMarketplaceCollection(input: CreateMarketplaceCollectionInput!): MarketplaceCollection!
     addToFavorites(input: AddToFavoritesInput!): MarketplaceItem!
     removeFromFavorites(input: AddToFavoritesInput!): MarketplaceItem!
+    
+    # Player Analytics Mutations
+    analyzePerformance(input: AnalyzePerformanceInput!): PlayerAnalytics!
+    predictMatch(input: PredictMatchInput!): MatchPrediction!
+    analyzeVideo(input: AnalyzeVideoInput!): VideoAnalysis!
   }
 
   type Subscription {

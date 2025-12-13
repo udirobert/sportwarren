@@ -115,6 +115,11 @@ SportWarren leverages Algorand's fast, secure, and sustainable blockchain to cre
 ### AI & Advanced Features
 - **OpenAI Integration** for voice processing
 - **Computer Vision** for match photo analysis
+- **Player Analytics** with Roboflow Rapid + SAM3
+  - Real-time player performance analysis
+  - Pro comparison and benchmarking
+  - Match outcome prediction
+  - Video analysis and technique coaching
 - **Multi-platform Communication** (WhatsApp, Telegram, XMTP)
 - **Event Streaming** with Kafka
 
@@ -160,18 +165,26 @@ cd sportwarren
 npm install
 ```
 
-3. Set up environment variables:
+3. Set up Python analytics service:
+```bash
+npm run setup:analytics
+```
+
+4. Set up environment variables:
 ```bash
 cp .env.example .env
 # Edit .env with your configuration
 ```
 
-4. Start the development servers:
+5. Start the development servers:
 ```bash
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173` with the GraphQL API at `http://localhost:4000/graphql`.
+The application will be available at:
+- Frontend: `http://localhost:5173`
+- GraphQL API: `http://localhost:4000/graphql`
+- Analytics Service: `http://localhost:5001`
 
 ### Environment Variables
 
@@ -192,6 +205,13 @@ ALGORAND_PRIVATE_KEY=your-algorand-private-key
 
 # AI Services
 OPENAI_API_KEY=your-openai-api-key
+
+# Player Analytics
+ROBOFLOW_API_KEY=your-roboflow-api-key
+ROBOFLOW_WORKSPACE=sportwarren
+ROBOFLOW_MODEL=football-player-detection
+ANALYTICS_SERVICE_URL=http://localhost:5001
+ANALYTICS_PORT=5001
 
 # Communication
 TELEGRAM_BOT_TOKEN=your-telegram-bot-token

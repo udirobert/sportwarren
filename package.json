@@ -4,9 +4,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\" \"npm run dev:analytics\"",
     "dev:client": "vite",
     "dev:server": "tsx watch server/index.ts",
+    "dev:analytics": "python3 server/services/ai/player-analytics.py",
     "build": "vite build",
     "build:server": "tsc -p server/tsconfig.json",
     "lint": "eslint .",
@@ -16,7 +17,8 @@
     "deploy:contracts:testnet": "ALGORAND_NETWORK=testnet tsx scripts/deploy-contracts.ts",
     "deploy:contracts:mainnet": "ALGORAND_NETWORK=mainnet tsx scripts/deploy-contracts.ts",
     "verify:contracts": "tsx scripts/verify-contracts.ts",
-    "test:contracts": "tsx scripts/test-contracts.ts"
+    "test:contracts": "tsx scripts/test-contracts.ts",
+    "setup:analytics": "bash scripts/setup-analytics.sh"
   },
   "dependencies": {
     "@algorandfoundation/algokit-utils": "^9.1.1",
@@ -30,11 +32,13 @@
     "algosdk": "^3.3.1",
     "apollo-server-express": "^3.12.1",
     "aws-sdk": "^2.1550.0",
+    "axios": "^1.6.5",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "ethers": "^6.10.0",
     "express": "^4.18.2",
+    "form-data": "^4.0.0",
     "graphql": "^16.8.1",
     "graphql-subscriptions": "^2.0.0",
     "graphql-ws": "^5.14.3",
