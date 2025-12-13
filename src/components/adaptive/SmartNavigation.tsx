@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Target, BarChart3, Users, Trophy, MessageCircle, Menu, X, Plus } from 'lucide-react';
+import { Home, Target, BarChart3, Users, Trophy, MessageCircle, Menu, X, Plus, Activity } from 'lucide-react';
 import { useUserPreferences } from '../../hooks/useUserPreferences';
 import { ContextualHelp } from './ContextualHelp';
 
@@ -32,6 +32,14 @@ export const SmartNavigation: React.FC = () => {
       label: 'Stats', 
       priority: 80,
       unlockLevel: 'basic' as const,
+    },
+    { 
+      path: '/analytics', 
+      icon: Activity, 
+      label: 'Analytics', 
+      priority: 75,
+      unlockLevel: 'intermediate' as const,
+      showCondition: () => preferences.uiComplexity !== 'simple',
     },
     { 
       path: '/squad', 

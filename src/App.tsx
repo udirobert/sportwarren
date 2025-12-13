@@ -6,6 +6,7 @@ import { SmartOnboarding } from "./components/onboarding/SmartOnboarding";
 import { AdaptiveDashboard } from "./components/adaptive/AdaptiveDashboard";
 import { MatchTracker } from "./pages/MatchTracker";
 import { PlayerStats } from "./pages/PlayerStats";
+import { PlayerAnalytics } from "./pages/PlayerAnalytics";
 import { Squad } from "./pages/Squad";
 import { Community } from "./pages/Community";
 import { Achievements } from "./pages/Achievements";
@@ -52,14 +53,15 @@ function AppContent() {
           <Route path="/" element={<AdaptiveDashboard />} />
           <Route path="/match" element={<MatchTracker />} />
           <Route path="/stats" element={<PlayerStats />} />
+          <Route path="/analytics" element={<PlayerAnalytics />} />
           <Route path="/squad" element={<Squad />} />
           <Route path="/community" element={<Community />} />
           <Route path="/achievements" element={<Achievements />} />
-          <Route path="/dao" element={<SquadDAO />} />
+          {/* <Route path="/dao" element={<SquadDAO />} /> */}
           <Route path="/verification" element={<MatchVerification />} />
           <Route path="/challenges" element={<GlobalChallenges />} />
           <Route path="/reputation" element={<PlayerReputation />} />
-          <Route path="/wallet" element={<AlgorandWallet />} />
+          {/* <Route path="/wallet" element={<AlgorandWallet />} /> */}
         </Routes>
       </main>
     </div>
