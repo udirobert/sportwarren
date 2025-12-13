@@ -46,6 +46,64 @@ export const resolvers = {
       return context.services.dbService.getLeaderboard(squadId, type);
     },
 
+    // Player Analytics Queries
+    playerAnalytics: async (_: any, { userId }: { userId: string }, context: Context) => {
+      // This would fetch stored analytics or trigger new analysis
+      return null; // Placeholder
+    },
+
+    matchPrediction: async (
+      _: any,
+      { matchId, teamStats, opponentStats }: { matchId?: string; teamStats?: any; opponentStats?: any },
+      context: Context
+    ) => {
+      return null; // Placeholder
+    },
+
+    videoAnalysis: async (_: any, { id }: { id: string }, context: Context) => {
+      return null; // Placeholder
+    },
+
+    videoAnalyses: async (_: any, { userId }: { userId: string }, context: Context) => {
+      return []; // Placeholder
+    },
+
+    proBenchmarks: async (_: any, { position }: { position?: string }, context: Context) => {
+      const benchmarks = {
+        striker: {
+          shot_accuracy: 0.75,
+          avg_speed: 28.5,
+          distance_per_match: 10.5,
+          sprint_count: 45,
+          successful_dribbles: 0.68,
+          positioning_score: 8.5,
+        },
+        midfielder: {
+          pass_accuracy: 0.88,
+          avg_speed: 26.8,
+          distance_per_match: 11.8,
+          sprint_count: 38,
+          successful_dribbles: 0.65,
+          positioning_score: 8.2,
+        },
+        defender: {
+          tackle_success: 0.82,
+          avg_speed: 25.2,
+          distance_per_match: 10.2,
+          sprint_count: 32,
+          aerial_duels: 0.74,
+          positioning_score: 8.7,
+        },
+        goalkeeper: {
+          save_percentage: 0.72,
+          reaction_time: 0.35,
+          distribution_accuracy: 0.76,
+          positioning_score: 9.0,
+        },
+      };
+      return position ? benchmarks[position as keyof typeof benchmarks] : benchmarks;
+    },
+
     // DAO Queries
     squadDAO: async (_: any, { id }: { id: string }, context: Context) => {
       return context.services.dbService.getSquadDAOById(id);
