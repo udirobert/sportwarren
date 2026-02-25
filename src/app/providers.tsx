@@ -6,6 +6,7 @@ import { SmartNavigation } from "../components/adaptive/SmartNavigation";
 import { useSocket } from "../hooks/useSocket";
 import { useUserPreferences } from "../hooks/useUserPreferences";
 import { SmartOnboarding } from "../components/onboarding/SmartOnboarding";
+import { WalletProvider } from "@/contexts/WalletContext";
 import { useState } from "react";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -33,13 +34,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <ApolloProvider client={apolloClient}>
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50">
-        <SmartNavigation />
-        <main className="pb-20 md:pb-0">
-          {children}
-        </main>
-      </div>
-    </ApolloProvider>
+    <WalletProvider>
+      <ApolloProvider client={apolloClient}>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50">
+          <SmartNavigation />
+          <main className="pb-20 md:pb-0">
+            {children}
+          </main>
+        </div>
+      </ApolloProvider>
+    </WalletProvider>
   );
 }

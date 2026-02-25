@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { useDashboardData } from '@/hooks/useDashboardData';
 import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Shield, Star, Sparkles } from 'lucide-react';
 
 interface DashboardWidget {
@@ -16,6 +17,13 @@ interface DashboardWidget {
 
 export const AdaptiveDashboard: React.FC = () => {
   const { preferences, trackFeatureUsage } = useUserPreferences();
+  
+  // Get user address from wallet or auth
+  const userAddress = typeof window !== 'undefined' 
+    ? localStorage.getItem('userAddress') || undefined
+    : undefined;
+  
+  const { stats, loading } = useDashboardData(userAddress);
 
   // Define all possible widgets
   const allWidgets: DashboardWidget[] = useMemo(() => [
@@ -28,28 +36,28 @@ export const AdaptiveDashboard: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <StatCard
             title="Goals"
-            value={18}
+            value={loading ? '...' : stats?.goals || 0}
             icon={Target}
             color="green"
             onClick={() => trackFeatureUsage('stats-goals')}
           />
           <StatCard
             title="Assists"
-            value={11}
+            value={loading ? '...' : stats?.assists || 0}
             icon={Users}
             color="blue"
             onClick={() => trackFeatureUsage('stats-assists')}
           />
           <StatCard
             title="Matches"
-            value={24}
+            value={loading ? '...' : stats?.matches || 0}
             icon={Trophy}
             color="orange"
             onClick={() => trackFeatureUsage('stats-matches')}
           />
           <StatCard
             title="Rating"
-            value="8.2"
+            value={loading ? '...' : stats?.rating || '0.0'}
             icon={Star}
             color="purple"
             onClick={() => trackFeatureUsage('stats-rating')}
@@ -65,24 +73,30 @@ export const AdaptiveDashboard: React.FC = () => {
       component: (
         <Card>
           <h2 className="text-lg font-bold text-gray-900 mb-4">Recent Matches</h2>
-          <div className="space-y-3">
-            {[
-              { opponent: 'Red Lions FC', result: 'W 4-2', date: '2025-01-13' },
-              { opponent: 'Sunday Legends', result: 'L 1-3', date: '2025-01-06' },
-            ].map((match, index) => (
-              <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                <div>
-                  <h3 className="font-medium text-gray-900">{match.opponent}</h3>
-                  <p className="text-sm text-gray-600">{match.date}</p>
+          {loading ? (
+            <div className="text-center py-8 text-gray-500">Loading matches...</div>
+          ) : stats?.recentMatches && stats.recentMatches.length > 0 ? (
+            <div className="space-y-3">
+              {stats.recentMatches.map((match, index) => (
+                <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                  <div>
+                    <h3 className="font-medium text-gray-900">{match.opponent}</h3>
+                    <p className="text-sm text-gray-600">{match.date}</p>
+                  </div>
+                  <span className={`font-bold ${
+                    match.result.startsWith('W') ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {match.result}
+                  </span>
                 </div>
-                <span className={`font-bold ${
-                  match.result.startsWith('W') ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {match.result}
-                </span>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Trophy className="w-12 h-12 mx-auto mb-2 text-gray-300" />
+              <p>No matches yet. Start your season!</p>
+            </div>
+          )}
         </Card>
       ),
     },
@@ -200,7 +214,7 @@ export const AdaptiveDashboard: React.FC = () => {
         </Card>
       ),
     },
-  ], [preferences, trackFeatureUsage]);
+  ], [preferences, trackFeatureUsage, stats, loading]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {
