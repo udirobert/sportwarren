@@ -45,9 +45,9 @@ npm run dev
 │  │ 🤖 Agent     │                           │ ⚽ FIFA       │   │
 │  │    Economy   │◄────── User Choice ──────►│    Official  │   │
 │  │ • ERC-8004   │                           │ • State      │   │
-│  │ • TEE/Intel  │                           │   Proofs     │   │
-│  │ • AWM Cross  │                           │ • Match      │   │
-│  │   -subnet    │                           │   Oracles    │   │
+│  │ • Kite AI    │                           │   Proofs     │   │
+│  │ • Chainlink  │                           │ • Match      │   │
+│  │ • AWM Cross  │                           │   Oracles    │   │
 │  │ • DeFi/MeV   │                           │ • Reputation │   │
 │  └──────────────┘                           └──────────────┘   │
 │         └────────────┬───────────────────────────┘              │
@@ -63,9 +63,10 @@ npm run dev
 
 | Operation | Default Chain | Why |
 |-----------|---------------|-----|
-| Match Verification | Algorand | FIFA data, $0.001 fees |
+| Match Verification | Algorand | FIFA data, $0.001 fees, Chainlink oracles |
 | Player Reputation | Algorand | Official credibility |
-| AI Agents | Avalanche | ERC-8004, TEE security |
+| AI Agents | Avalanche | ERC-8004, Kite AI passports |
+| Agent Payments | Avalanche | Kite stablecoin rails |
 | Treasury/DeFi | Avalanche | Liquidity, yield |
 | Squad DAO | User Choice | Flexibility |
 
@@ -92,11 +93,14 @@ npm run dev
 ### AI & Agents
 - **Player Analytics** - Roboflow + SAM3, pro benchmarking, match prediction
 - **AI Agents** - Squad Manager, Match Analyst, Treasury Manager (ERC-8004)
+- **Kite AI Integration** - 17.8M+ agent passports, stablecoin payments
+- **Agent Marketplace** - Discover and deploy agents from Kite Agent Store
 - **Multi-Platform** - WhatsApp, Telegram, XMTP integration
 
 ### Blockchain
 - **Algorand** - FIFA partnership, State Proofs, low fees (~$0.001)
-- **Avalanche** - 1,600+ agents, TEE security, EVM compatibility
+- **Avalanche** - 1,600+ agents, Kite AI, EVM compatibility
+- **Chainlink Oracles** - Weather/location verification for match credibility
 - **Cross-Chain** - AWM + State Proofs for seamless operations
 
 ---
@@ -123,7 +127,10 @@ npm run dev
 | **Backend** | Next.js API Routes, PostgreSQL, Redis, Socket.IO |
 | **Algorand** | algosdk v3.x, TEAL contracts, State Proofs |
 | **Avalanche** | Viem + Wagmi, Foundry + Solidity, ERC-8004, AWM |
-| **AI** | OpenAI, LangChain, Roboflow, Computer Vision |
+| **AI Agents** | OpenAI, LangChain, ERC-8004, Kite AI Passports |
+| **Agent Infra** | Kite AI (identity, payments, marketplace) |
+| **Oracles** | Chainlink (weather, location, sports data) |
+| **Computer Vision** | Roboflow, SAM3 |
 
 ---
 

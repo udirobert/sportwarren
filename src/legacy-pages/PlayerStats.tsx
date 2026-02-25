@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from '@/components/common/Card';
+import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/common/StatCard';
 import { Target, Users, Trophy, Shield, TrendingUp, Award, Star, Zap } from 'lucide-react';
 

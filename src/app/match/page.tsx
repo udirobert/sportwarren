@@ -1,7 +1,7 @@
 "use client";
 
-import { MatchTracker } from "@/legacy-pages/MatchTracker";
+import { MatchVerification } from "@/components/match/MatchVerification";
 
 export default function MatchPage() {
-  return <MatchTracker />;
+  return <MatchVerification />;
 }

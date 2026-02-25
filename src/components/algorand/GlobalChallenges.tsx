@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/common/Card';
+import { Card } from '@/components/ui/Card';
 import { Trophy, Globe, Coins, Users, Calendar, Target, Star, Crown, Award } from 'lucide-react';
 
 interface GlobalChallenge {

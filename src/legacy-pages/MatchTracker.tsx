@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card } from '@/components/common/Card';
+import { Card } from '@/components/ui/Card';
 import { Target, Users, Clock, MapPin, Plus, Mic, Camera, FileText, Minus } from 'lucide-react';
 
 export const MatchTracker: React.FC = () => {

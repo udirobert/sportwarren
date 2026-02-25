@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { X, Trophy, Users, Target, Zap } from 'lucide-react';
-import { Card } from './Card';
-import { Button } from './Button';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 
 export const BrandStory: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);

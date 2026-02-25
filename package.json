@@ -16,6 +16,9 @@
     "deploy:contracts:mainnet": "ALGORAND_NETWORK=mainnet tsx scripts/deploy-contracts.ts",
     "verify:contracts": "tsx scripts/verify-contracts.ts",
     "test:contracts": "tsx scripts/test-contracts.ts",
+    "test:chainlink": "tsx scripts/test-chainlink.ts",
+    "test:kite": "tsx scripts/test-kite.ts",
+    "test:verification": "tsx scripts/test-verification.ts",
     "setup:analytics": "bash scripts/setup-analytics.sh"
   },
   "dependencies": {
