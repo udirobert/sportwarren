@@ -73,13 +73,13 @@ export const AlgorandWallet: React.FC = () => {
     setError(null);
     
     try {
-      const address = await connectAlgorandWallet();
-      if (address) {
-        await fetchWalletInfo(address);
+      const result = await connectAlgorandWallet();
+      if (result.address) {
+        await fetchWalletInfo(result.address);
         setIsConnected(true);
-        localStorage.setItem('algorand_connected_address', address);
+        localStorage.setItem('algorand_connected_address', result.address);
       } else {
-        setError('Failed to connect wallet. No address returned.');
+        setError(result.error || 'Failed to connect wallet. No address returned.');
       }
     } catch (err) {
       setError('Failed to connect wallet. Please try again.');

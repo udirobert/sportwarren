@@ -1,14 +1,51 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Trophy, Zap, Shield, Users, Target, TrendingUp, Sparkles } from 'lucide-react';
+import { WalletConnectModal } from './WalletConnectModal';
+import { useWallet } from '@/contexts/WalletContext';
 
 interface HeroSectionProps {
-  onGetStarted: () => void;
+  onGetStarted?: () => void;
+}
+
+interface PlatformStats {
+  totalPlayers: number;
+  totalMatches: number;
+  totalAgents: number;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
+  const [stats, setStats] = useState<PlatformStats>({
+    totalPlayers: 0,
+    totalMatches: 0,
+    totalAgents: 0,
+  });
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const { connected } = useWallet();
+
+  useEffect(() => {
+    fetch('/api/platform/stats')
+      .then(res => res.json())
+      .then(data => setStats(data))
+      .catch(() => {
+        setStats({
+          totalPlayers: 0,
+          totalMatches: 0,
+          totalAgents: 0,
+        });
+      });
+  }, []);
+
+  const handleGetStarted = () => {
+    if (connected) {
+      onGetStarted?.();
+    } else {
+      setShowWalletModal(true);
+    }
+  };
+
   return (
     <div className="relative overflow-hidden bg-gradient-to-br from-green-50 via-white to-blue-50">
       {/* Hero Content */}
@@ -37,7 +74,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
             <Button
-              onClick={onGetStarted}
+              onClick={handleGetStarted}
               className="bg-green-600 hover:bg-green-700 text-white px-8 py-4 text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all"
             >
               <Zap className="w-5 h-5 mr-2" />
@@ -55,15 +92,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
           <div className="flex items-center justify-center space-x-8 text-sm text-gray-600">
             <div className="flex items-center space-x-2">
               <Users className="w-4 h-4 text-green-600" />
-              <span><strong className="text-gray-900">10,000+</strong> players</span>
+              <span><strong className="text-gray-900">{stats.totalPlayers.toLocaleString()}+</strong> players</span>
             </div>
             <div className="flex items-center space-x-2">
               <Trophy className="w-4 h-4 text-green-600" />
-              <span><strong className="text-gray-900">5,000+</strong> matches verified</span>
+              <span><strong className="text-gray-900">{stats.totalMatches.toLocaleString()}+</strong> matches verified</span>
             </div>
             <div className="flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-green-600" />
-              <span><strong className="text-gray-900">500+</strong> AI agents</span>
+              <span><strong className="text-gray-900">{stats.totalAgents.toLocaleString()}+</strong> AI agents</span>
             </div>
           </div>
         </div>
@@ -165,6 +202,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
           </div>
         </div>
       </div>
+
+      <WalletConnectModal isOpen={showWalletModal} onClose={() => setShowWalletModal(false)} />
     </div>
   );
 };

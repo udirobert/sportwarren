@@ -7,17 +7,20 @@ import { Button } from '@/components/ui/Button';
 
 export const BrandStory: React.FC = () => {
   const [isVisible, setIsVisible] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   useEffect(() => {
     const hasSeenStory = localStorage.getItem('hasSeenBrandStory');
     if (!hasSeenStory) {
-      setTimeout(() => setIsVisible(true), 1000);
+      setIsVisible(true);
     }
   }, []);
 
   const handleClose = () => {
     setIsVisible(false);
-    localStorage.setItem('hasSeenBrandStory', 'true');
+    if (dontShowAgain) {
+      localStorage.setItem('hasSeenBrandStory', 'true');
+    }
   };
 
   if (!isVisible) return null;
@@ -121,9 +124,18 @@ export const BrandStory: React.FC = () => {
             >
               Start Building Your Legend
             </Button>
-            <p className="text-sm text-gray-500 mt-4">
-              Join thousands of players tracking their journey
-            </p>
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <input
+                type="checkbox"
+                id="dontShowAgain"
+                checked={dontShowAgain}
+                onChange={(e) => setDontShowAgain(e.target.checked)}
+                className="w-4 h-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+              />
+              <label htmlFor="dontShowAgain" className="text-sm text-gray-500 cursor-pointer">
+                Don't show this again
+              </label>
+            </div>
           </div>
         </div>
       </Card>

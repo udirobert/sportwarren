@@ -9,7 +9,7 @@ import {
   getTrustTierColor, 
   getTrustTierIcon,
   TRUST_TIER_WEIGHTS 
-} from '@/lib/match';
+} from '@/lib/match/verification';
 
 interface MatchConsensusProps {
   match: MatchResult;

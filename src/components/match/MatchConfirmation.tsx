@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Check, X, AlertTriangle, Shield, Users } from 'lucide-react';
 import type { MatchResult } from '@/types';
-import { getMatchStatusDisplay, canVerifyMatch } from '@/lib/match';
+import { getMatchStatusDisplay, canVerifyMatch } from '@/lib/match/verification';
 
 interface MatchConfirmationProps {
   match: MatchResult;
