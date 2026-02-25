@@ -1,6 +1,6 @@
 # SportWarren Roadmap
 
-**Multi-Phase Migration Plan | 2026 Timeline**
+**Multi-Phase Plan | 2026 Timeline**
 
 ---
 
@@ -63,15 +63,14 @@
 
 ---
 
-### Phase 5: FIFA + Launch (Q4 2026) | 4-6 weeks
-- [ ] Integrate FIFA data oracles (Algorand)
-- [ ] Build World Cup 2026 promotional features
+### Phase 5: Launch (Q4 2026) | 4-6 weeks
+- [ ] Build fictional league system (unlicensed teams)
 - [ ] Launch dual-chain tournament system
-- [ ] Activate official FIFA partnership
+- [ ] Community features (Option Files for custom names)
 - [ ] Marketing campaign
 - [ ] Public mainnet launch
 
-**Deliverables:** FIFA integration, World Cup features, public launch
+**Deliverables:** Launch with fictional names, World Cup 2026 timing, public launch
 
 ---
 
@@ -102,7 +101,6 @@
 - [ ] 1,000+ squads created
 - [ ] 5,000+ matches verified on-chain
 - [ ] 100+ AI agents deployed
-- [ ] FIFA partnership activation successful
 
 ---
 
@@ -131,7 +129,7 @@
 | Development complexity 2x | Start with Algorand-only MVP, add Avalanche Phase 2 |
 | User confusion (which chain?) | Smart defaults + clear UX guidance |
 | Cross-chain security | Use verified protocols, security audits |
-| FIFA partnership restrictions | Legal review, compliance check |
+| Licensing costs | Start with fictional names (PES approach) |
 | Agent economy immaturity | Build on proven primitives (ERC-8004, TEE) |
 | Timeline slip | Agile sprints, MVP focus |
 
@@ -149,7 +147,7 @@
 - Development: $500K - $1M
 - Infrastructure: $5K - $10K/month
 - Security audits: $50K - $100K
-- Marketing (World Cup launch): $200K - $500K
+- Marketing: $200K - $500K
 
 ---
 

@@ -6,7 +6,7 @@
 - Real-time match logging with voice and photo capture
 - AI-powered event recognition and statistics
 - Multi-platform data synchronization
-- **Blockchain:** Verified on Algorand for FIFA credibility
+- **Blockchain:** Verified on Algorand for immutability
 
 ### 👥 Adaptive Community Hub
 - Squad management with dynamic roles
@@ -96,11 +96,10 @@ Leverages Avalanche ERC-8004 and TEE for autonomous football management.
 ## Dual-Chain Benefits
 
 ### Algorand Advantages
-- ✅ **FIFA Partnership** - Official blockchain, World Cup 2026
 - ✅ **State Proofs** - Quantum-safe verifiable data (Falcon signatures)
 - ✅ **Low Fees** - ~$0.001 per transaction
 - ✅ **Fast Finality** - 4.5 seconds
-- ✅ **FIFA Ecosystem** - 50K+ holders, $10M+ volume
+- ✅ **Proven Track Record** - FIFA Collect ran here (2022-2025)
 
 ### Avalanche Advantages
 - ✅ **1,600+ Deployed Agents** - Proven agentic infrastructure
@@ -146,5 +145,14 @@ Unified interface (`src/lib/blockchain/`) allowing seamless interaction with bot
 - **Key Management:** Multi-sig for treasury, hardware wallets
 
 ---
+
+## Licensing Approach
+
+**Fictional Names Strategy** (PES/Pro Evolution Soccer model):
+- Use city references + colors (e.g., "Manchester Reds")
+- Generic league names (e.g., "Premier Sunday League")
+- Fictional player names with real stats
+- Users can edit names locally
+- Negotiate real licenses post-validation
 
 **See Also:** [Architecture](./ARCHITECTURE.md) | [Development](./DEVELOPMENT.md) | [Roadmap](./ROADMAP.md)
