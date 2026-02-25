@@ -1,14 +1,14 @@
 # SportWarren Architecture
 
-**Dual-Chain Agentic Platform | Algorand (FIFA) + Avalanche (Agents)**
+**Dual-Chain Platform | Algorand + Avalanche**
 
 ---
 
 ## Vision: Championship Manager Meets Web3
 
-SportWarren is the **first agentic football platform** combining:
-- **FIFA Official Partnership** (Algorand) - World Cup 2026 integration
-- **1,600+ AI Agent Ecosystem** (Avalanche) - Autonomous squad management  
+SportWarren is an **agentic football platform** combining:
+- **Algorand** - Match verification, reputation, low fees
+- **Avalanche** - AI agents, DeFi, cross-chain tournaments  
 - **Dual-Chain Architecture** - Best of both worlds, user choice
 
 ```
@@ -19,15 +19,15 @@ SportWarren is the **first agentic football platform** combining:
 │  │   AVALANCHE  │                           │   ALGORAND   │   │
 │  │   Subnet     │                           │   Mainnet    │   │
 │  ├──────────────┤                           ├──────────────┤   │
-│  │ 🤖 Agent     │                           │ ⚽ FIFA       │   │
-│  │    Economy   │◄────── User Choice ──────►│    Official  │   │
-│  │              │        Layer              │    Data      │   │
+│  │ 🤖 Agent     │                           │ ⚽ Match      │   │
+│  │    Economy   │◄────── User Choice ──────►│    Verify    │   │
+│  │              │        Layer              │    Reputation│   │
 │  │ • ERC-8004   │                           │ • State      │   │
 │  │ • TEE/Intel  │                           │   Proofs     │   │
-│  │   TDX        │                           │ • Match      │   │
-│  │ • AWM Cross  │                           │   Oracles    │   │
-│  │   -subnet    │                           │ • Reputation │   │
-│  │ • DeFi/MeV   │                           │   System     │   │
+│  │   TDX        │                           │ • Low Fees   │   │
+│  │ • AWM Cross  │                           │ • Fast       │   │
+│  │   -subnet    │                           │   Finality   │   │
+│  │ • DeFi/MeV   │                           │              │   │
 │  │   agents     │                           │              │   │
 │  └──────────────┘                           └──────────────┘   │
 │         │                                        │              │
@@ -50,8 +50,7 @@ SportWarren is the **first agentic football platform** combining:
 
 | Feature | Algorand | Avalanche |
 |---------|----------|-----------|
-| **Purpose** | FIFA data, match verification, reputation | AI agents, DeFi, cross-chain tournaments |
-| **Partnership** | ✅ Official FIFA (World Cup 2026) | ❌ |
+| **Purpose** | Match verification, reputation | AI agents, DeFi, tournaments |
 | **Agentic Primitives** | ❌ | ✅ ERC-8004, TEE, 1,600+ agents |
 | **Cross-Chain** | State Proofs (Falcon signatures) | AWM (Warp Messaging) |
 | **Fees** | ~$0.001 | ~$0.01 |
@@ -63,7 +62,7 @@ SportWarren is the **first agentic football platform** combining:
 ```
 Traditional Sports Apps:    Single-chain or no blockchain
 Your Competitors:           Maybe Ethereum L2
-SportWarren:                Dual-chain + Agentic + FIFA Official
+SportWarren:                Dual-chain + Agentic
                             ↑
                             This is defensible
 ```
@@ -74,8 +73,8 @@ SportWarren:                Dual-chain + Agentic + FIFA Official
 
 | Operation | Default Chain | Rationale |
 |-----------|---------------|-----------|
-| Match Verification | Algorand | FIFA data integrity, low fees |
-| Player Reputation | Algorand | Official credibility |
+| Match Verification | Algorand | Low fees, fast finality |
+| Player Reputation | Algorand | Immutable, cost-effective |
 | Squad DAO Governance | User Choice | EVM vs. fee preference |
 | Agent Trading/DeFi | Avalanche | Liquidity, MEV opportunities |
 | Cross-Squad Tournaments | Dual-Chain | AWM + State Proofs |
@@ -132,9 +131,9 @@ interface BlockchainProvider {
          ▼                              ▼
 ┌──────────────────┐          ┌──────────────────┐
 │ Algorand Network │          │ Avalanche Network│
-│ • FIFA Data      │          │ • ERC-8004       │
-│ • State Proofs   │          │ • AWM Messaging  │
-│ • Match Oracles  │          │ • DeFi/MeV       │
+│ • State Proofs   │          │ • ERC-8004       │
+│ • Match Oracles  │          │ • AWM Messaging  │
+│ • Low Fees       │          │ • DeFi/MeV       │
 └──────────────────┘          └──────────────────┘
 ```
 
@@ -178,5 +177,21 @@ interface BlockchainProvider {
 - **Both:** Security audits before mainnet
 
 ---
+
+## Licensing Strategy
+
+SportWarren uses **fictional team and player names** (the "PES approach"):
+
+| Real Example | Our Approach |
+|--------------|--------------|
+| Manchester United | "Manchester Reds" or "Theatre of Dreams FC" |
+| Liverpool | "Merseyside Reds" or "Anfield Road" |
+| Premier League | "Premier Sunday League" |
+
+**Why this works:**
+- City names, colors, and generic terms aren't trademarked
+- PES/Pro Evolution Soccer used this strategy for 20+ years
+- Users can edit names locally (Option Files)
+- Negotiate real licenses after validation
 
 **See Also:** [Development](./DEVELOPMENT.md) | [Roadmap](./ROADMAP.md) | [Features](./FEATURES.md)
