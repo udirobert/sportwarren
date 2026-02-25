@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '../common/Card';
+import { Card } from '@/components/common/Card';
 import { Shield, Check, X, Clock, Users, AlertCircle, Trophy } from 'lucide-react';
 
 interface MatchResult {

@@ -144,15 +144,15 @@ class ContractDeployer {
 
   private async waitForTransaction(txId: string) {
     const status = await this.algodClient.status().do();
-    let lastRound = status["last-round"];
+    let lastRound = status.lastRound;
 
     while (true) {
       const pendingInfo = await this.algodClient
         .pendingTransactionInformation(txId)
         .do();
       if (
-        pendingInfo["confirmed-round"] !== null &&
-        pendingInfo["confirmed-round"] > 0
+        pendingInfo.confirmedRound != null &&
+        pendingInfo.confirmedRound > 0
       ) {
         return pendingInfo;
       }

@@ -1,0 +1,45 @@
+"use client";
+
+import { ApolloProvider } from "@apollo/client";
+import { apolloClient } from "../lib/apollo-client";
+import { SmartNavigation } from "../components/adaptive/SmartNavigation";
+import { useSocket } from "../hooks/useSocket";
+import { useUserPreferences } from "../hooks/useUserPreferences";
+import { SmartOnboarding } from "../components/onboarding/SmartOnboarding";
+import { useState } from "react";
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  const { preferences, isLoading } = useUserPreferences();
+  const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Initialize socket connection
+  useSocket();
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+            <div className="w-8 h-8 bg-white rounded-lg"></div>
+          </div>
+          <p className="text-gray-600">Loading SportWarren...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!preferences.usagePatterns.completedOnboarding || showOnboarding) {
+    return <SmartOnboarding onComplete={() => setShowOnboarding(false)} />;
+  }
+
+  return (
+    <ApolloProvider client={apolloClient}>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50">
+        <SmartNavigation />
+        <main className="pb-20 md:pb-0">
+          {children}
+        </main>
+      </div>
+    </ApolloProvider>
+  );
+}

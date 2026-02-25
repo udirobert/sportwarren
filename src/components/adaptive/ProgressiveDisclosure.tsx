@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Info, Sparkles } from 'lucide-react';
-import { useUserPreferences } from '../../hooks/useUserPreferences';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 
 interface ProgressiveDisclosureProps {
   children: React.ReactNode;
@@ -61,7 +61,12 @@ export const ProgressiveDisclosure: React.FC<ProgressiveDisclosureProps> = ({
           </div>
           <span className="text-sm font-medium">Feature locked</span>
           {description && (
-            <Info className="w-4 h-4 text-gray-400" title={description} />
+            <div className="group relative">
+              <Info className="w-4 h-4 text-gray-400 cursor-help" />
+              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                {description}
+              </div>
+            </div>
           )}
         </div>
         {unlockCondition && (

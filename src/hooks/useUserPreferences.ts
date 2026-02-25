@@ -62,6 +62,7 @@ export function useUserPreferences() {
   // Load preferences from storage
   useEffect(() => {
     const loadPreferences = async () => {
+      if (typeof window === 'undefined') return;
       try {
         const stored = localStorage.getItem('sportwarren_preferences');
         if (stored) {
@@ -82,7 +83,9 @@ export function useUserPreferences() {
   const savePreferences = useCallback((newPreferences: Partial<UserPreferences>) => {
     const updated = { ...preferences, ...newPreferences };
     setPreferences(updated);
-    localStorage.setItem('sportwarren_preferences', JSON.stringify(updated));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('sportwarren_preferences', JSON.stringify(updated));
+    }
   }, [preferences]);
 
   // Track feature usage

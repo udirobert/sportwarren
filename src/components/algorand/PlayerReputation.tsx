@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '../common/Card';
+import { Card } from '@/components/common/Card';
 import { User, Shield, Trophy, Target, Users, Star, TrendingUp, Award, CheckCircle } from 'lucide-react';
 
 interface PlayerReputation {

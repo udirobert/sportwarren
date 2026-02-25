@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card } from '../common/Card';
+import { Card } from '@/components/common/Card';
 import { Wallet, Link, Copy, ExternalLink, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
-import { connectAlgorandWallet, getAccountInfo, getAccountTransactions } from '../../lib/algorand';
+import { connectAlgorandWallet, getAccountInfo, getAccountTransactions } from '@/lib/algorand';
 
 interface WalletInfo {
   address: string;
   balance: number;
   network: {
     network: string;
-    lastRound: number;
-    timeSinceLastRound: number;
-    catchupTime: number;
+    lastRound: bigint;
+    timeSinceLastRound: bigint;
+    catchupTime: bigint;
     health: string; // Added health from getAccountInfo
   };
   assets: any[]; // Added assets from getAccountInfo

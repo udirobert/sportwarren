@@ -201,13 +201,13 @@ export const resolvers = {
 
       try {
         // Deploy the DAO smart contract
-        const appId = await context.services.algorandService.deploySquadDAO();
+        const appId = await context.services.algorandService!.deploySquadDAO();
         if (!appId) {
           throw new Error('Failed to deploy DAO smart contract');
         }
 
         // Get DAO info from blockchain
-        const daoInfo = await context.services.algorandService.getSquadDAOInfo();
+        const daoInfo = await context.services.algorandService!.getSquadDAOInfo();
         if (!daoInfo) {
           throw new Error('Failed to get DAO info from blockchain');
         }
@@ -238,7 +238,7 @@ export const resolvers = {
 
       try {
         // Opt in to the DAO smart contract
-        const success = await context.services.algorandService.optInToSquadDAO(input.userAddress);
+        const success = await context.services.algorandService!.optInToSquadDAO(input.userAddress);
         if (!success) {
           throw new Error('Failed to opt in to DAO smart contract');
         }
@@ -267,13 +267,13 @@ export const resolvers = {
 
       try {
         // Get current round and calculate end round
-        const networkStatus = await context.services.algorandService.getNetworkStatus();
+        const networkStatus = await context.services.algorandService!.getNetworkStatus();
         const startRound = networkStatus.lastRound + 10; // Start in 10 rounds
         const endRound = startRound + input.durationRounds;
 
         // Create proposal on blockchain
-        const success = await context.services.algorandService.createProposal(
-          input.userAddress || context.services.algorandService.getWalletAddress(),
+        const success = await context.services.algorandService!.createProposal(
+          input.userAddress || context.services.algorandService!.getWalletAddress(),
           input.description,
           startRound,
           endRound
@@ -286,7 +286,7 @@ export const resolvers = {
         // Create proposal record in database
         const proposal = await context.services.dbService.createProposal(
           input.daoId,
-          input.userAddress || context.services.algorandService.getWalletAddress(),
+          input.userAddress || context.services.algorandService!.getWalletAddress(),
           input.description,
           input.type,
           startRound,
@@ -312,7 +312,7 @@ export const resolvers = {
       try {
         // Vote on blockchain
         const voteType = input.voteType === 'FOR' ? 1 : 0;
-        const success = await context.services.algorandService.voteOnProposal(
+        const success = await context.services.algorandService!.voteOnProposal(
           input.userAddress,
           input.proposalId,
           voteType
@@ -323,7 +323,7 @@ export const resolvers = {
         }
 
         // Get user's voting power
-        const tokenBalance = await context.services.algorandService.getUserTokenBalance(input.userAddress);
+        const tokenBalance = await context.services.algorandService!.getUserTokenBalance(input.userAddress);
 
         // Create vote record in database
         const vote = await context.services.dbService.createVote(
@@ -335,7 +335,7 @@ export const resolvers = {
         );
 
         // Update proposal vote counts
-        const proposals = await context.services.algorandService.getProposals();
+        const proposals = await context.services.algorandService!.getProposals();
         const proposal = proposals.find(p => p.id === input.proposalId);
         if (proposal) {
           await context.services.dbService.updateProposalVotes(
@@ -363,8 +363,8 @@ export const resolvers = {
 
       try {
         // Execute proposal on blockchain
-        const success = await context.services.algorandService.executeProposal(
-          context.services.algorandService.getWalletAddress(),
+        const success = await context.services.algorandService!.executeProposal(
+          context.services.algorandService!.getWalletAddress(),
           proposalId
         );
 

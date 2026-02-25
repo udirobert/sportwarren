@@ -7,7 +7,7 @@ class SocketService {
   connect(): void {
     if (this.socket?.connected) return;
 
-    this.socket = io(import.meta.env.VITE_SOCKET_URL || 'http://localhost:4000', {
+    this.socket = io(process.env.NEXT_PUBLIC_SOCKET_URL || 'http://localhost:4000', {
       transports: ['websocket'],
       autoConnect: true,
     });

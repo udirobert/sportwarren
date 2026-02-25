@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
-import { Card } from '../common/Card';
-import { StatCard } from '../common/StatCard';
-import { ProgressiveDisclosure } from './ProgressiveDisclosure';
-import { useUserPreferences } from '../../hooks/useUserPreferences';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Shield, Star } from 'lucide-react';
+import { Card } from '@/components/common/Card';
+import { StatCard } from '@/components/common/StatCard';
+import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Shield, Star, Sparkles } from 'lucide-react';
 
 interface DashboardWidget {
   id: string;

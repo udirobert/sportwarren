@@ -1,11 +1,14 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Home, Target, BarChart3, Users, Trophy, MessageCircle, Menu, X, Plus, Activity } from 'lucide-react';
-import { useUserPreferences } from '../../hooks/useUserPreferences';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { ContextualHelp } from './ContextualHelp';
 
 export const SmartNavigation: React.FC = () => {
-  const location = useLocation();
+  const pathname = usePathname();
   const { preferences, trackFeatureUsage } = useUserPreferences();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -73,8 +76,7 @@ export const SmartNavigation: React.FC = () => {
     // Check unlock level
     const levelMatch = 
       item.unlockLevel === 'basic' ||
-      (item.unlockLevel === 'intermediate' && preferences.uiComplexity !== 'simple') ||
-      (item.unlockLevel === 'advanced' && preferences.uiComplexity === 'advanced');
+      (item.unlockLevel === 'intermediate' && preferences.uiComplexity !== 'simple');
 
     // Check show condition
     const conditionMatch = !item.showCondition || item.showCondition();
@@ -95,7 +97,7 @@ export const SmartNavigation: React.FC = () => {
     return b.priority - a.priority;
   });
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => pathname === path;
 
   // Handle scroll effect
   useEffect(() => {
@@ -109,7 +111,7 @@ export const SmartNavigation: React.FC = () => {
   // Close mobile menu when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
-  }, [location.pathname]);
+  }, [pathname]);
 
   // Track navigation usage
   const handleNavClick = (path: string) => {
@@ -147,7 +149,7 @@ export const SmartNavigation: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6 w-full">
           <div className="flex items-center justify-between h-16">
             <Link 
-              to="/" 
+              href="/" 
               className="flex items-center space-x-3 group"
               onClick={() => handleNavClick('/')}
             >
@@ -165,7 +167,7 @@ export const SmartNavigation: React.FC = () => {
                 {visibleNavItems.slice(1).map(({ path, icon: Icon, label }) => (
                   <Link
                     key={path}
-                    to={path}
+                    href={path}
                     onClick={() => handleNavClick(path)}
                     className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
                       isActive(path)
@@ -198,7 +200,7 @@ export const SmartNavigation: React.FC = () => {
         <div className="px-4">
           <div className="flex items-center justify-between h-14">
             <Link 
-              to="/" 
+              href="/" 
               className="flex items-center space-x-2 touch-manipulation"
               onClick={() => handleNavClick('/')}
             >
@@ -229,7 +231,7 @@ export const SmartNavigation: React.FC = () => {
               {visibleNavItems.slice(1).map(({ path, icon: Icon, label }) => (
                 <Link
                   key={path}
-                  to={path}
+                  href={path}
                   onClick={() => handleNavClick(path)}
                   className={`flex items-center space-x-3 p-4 rounded-xl transition-all touch-manipulation ${
                     isActive(path)
@@ -255,7 +257,7 @@ export const SmartNavigation: React.FC = () => {
           {visibleNavItems.map(({ path, icon: Icon, label }) => (
             <Link
               key={path}
-              to={path}
+              href={path}
               onClick={() => handleNavClick(path)}
               className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all touch-manipulation min-h-[3.5rem] ${
                 isActive(path)

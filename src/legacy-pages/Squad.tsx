@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card } from '../components/common/Card';
+import { Card } from '@/components/common/Card';
 import { Users, Star, Target, TrendingUp, Calendar, MapPin, Plus, Settings } from 'lucide-react';
 
 export const Squad: React.FC = () => {
