@@ -1,197 +1,214 @@
 # SportWarren Architecture
 
-**Dual-Chain Platform | Algorand + Avalanche**
+**Phygital Football Platform | Real World + Championship Manager Layer**
 
 ---
 
-## Vision: Championship Manager Meets Web3
+## Vision: Championship Manager Meets Pokémon Go
 
-SportWarren is an **agentic football platform** combining:
-- **Algorand** - Match verification, reputation, low fees
-- **Avalanche** - AI agents, DeFi, cross-chain tournaments  
-- **Dual-Chain Architecture** - Best of both worlds, user choice
+SportWarren creates a **parallel season** where your real Sunday league matches drive a Championship Manager-style game layer.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SportWarren Agentic Platform                  │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐                           ┌──────────────┐   │
-│  │   AVALANCHE  │                           │   ALGORAND   │   │
-│  │   Subnet     │                           │   Mainnet    │   │
-│  ├──────────────┤                           ├──────────────┤   │
-│  │ 🤖 Agent     │                           │ ⚽ Match      │   │
-│  │    Economy   │◄────── User Choice ──────►│    Verify    │   │
-│  │              │        Layer              │    Reputation│   │
-│  │ • ERC-8004   │                           │ • State      │   │
-│  │ • TEE/Intel  │                           │   Proofs     │   │
-│  │   TDX        │                           │ • Low Fees   │   │
-│  │ • AWM Cross  │                           │ • Fast       │   │
-│  │   -subnet    │                           │   Finality   │   │
-│  │ • DeFi/MeV   │                           │              │   │
-│  │   agents     │                           │              │   │
-│  └──────────────┘                           └──────────────┘   │
-│         │                                        │              │
-│         └────────────┬───────────────────────────┘              │
-│                      │                                          │
-│         ┌────────────▼────────────┐                             │
-│         │   Next.js Abstraction   │                             │
-│         │         Layer           │                             │
-│         ├─────────────────────────┤                             │
-│         │ • Chain-agnostic UI     │                             │
-│         │ • Agent orchestration   │                             │
-│         │ • User preference mgmt  │                             │
-│         └─────────────────────────┘                             │
-└─────────────────────────────────────────────────────────────────┘
+Real World Match                    SportWarren Layer
+────────────────                    ─────────────────
+Play 90 minutes        →            Result verified on-chain
+Score 2 goals          →            Shooting XP + Attribute boost
+Win 3-2 vs rivals      →            Derby victory + Form boost
+Team coordination      →            Squad chemistry + Morale
+Physical fitness       →            Stamina regen rate
+
+←───────────────────────────────────
+Agent suggests tactics for next match
+Scout recommends formation change
+Rivalry rematch scheduled
+Treasury reward distributed
 ```
+
+**The Flywheel:** Real performance → Game rewards → Better tools/strategy → Improved real performance
 
 ---
 
-## Dual-Chain Strategy
+## Core Loop: The Parallel Season
+
+### Weekly Cycle
+
+| Day | Real World | SportWarren Layer |
+|-----|-----------|-------------------|
+| Mon-Wed | Training, fitness | Stamina regen, training mini-games, agent analysis |
+| Thu-Fri | Squad coordination | Tactics setup, scout reports, transfer offers |
+| Sat/Sun | **MATCH DAY** | Live tracking, real-time input, verification |
+| Mon | Rest, recover | Results finalized, XP/rewards distributed, form updates |
+
+### Real World → Game Mechanics
+
+| Real Action | Game Impact |
+|-------------|-------------|
+| Goals scored | Shooting attribute XP |
+| Assists | Passing attribute XP |
+| Clean sheets | Defending attribute XP |
+| Distance run | Stamina/pace XP |
+| Match difficulty | XP multiplier |
+| Regular attendance | Squad chemistry bonus |
+| Social activity | Team morale boost |
+| 3+ matches vs same team | Derby activated (XP bonuses) |
+
+### Game → Real World Incentives
+
+| In-Game Signal | Drives Real Action |
+|----------------|-------------------|
+| Stamina low | "Go for a run to regenerate faster" |
+| Chemistry down | "Organize a team social" |
+| Scout recommends position change | "Try playing CAM this weekend" |
+| Derby upcoming | "Schedule the rematch" |
+| Agent suggests tactic | "Try 3-5-2 formation" |
+
+---
+
+## Dual-Chain as Feature Tiers
+
+Both chains give you the full core app. Each unlocks exclusive features.
 
 | Feature | Algorand | Avalanche |
 |---------|----------|-----------|
-| **Purpose** | Match verification, reputation | AI agents, DeFi, tournaments |
-| **Agentic Primitives** | ❌ | ✅ ERC-8004, TEE, 1,600+ agents |
-| **Cross-Chain** | State Proofs (Falcon signatures) | AWM (Warp Messaging) |
-| **Fees** | ~$0.001 | ~$0.01 |
-| **Finality** | 4.5s | <1s |
-| **EVM Compatibility** | ❌ | ✅ Full |
+| Match verification | ✅ Primary (fast, cheap) | ✅ Supported |
+| Reputation tokens | ✅ Primary (soulbound) | ✅ Supported |
+| Squad DAO | ✅ Supported | ✅ Primary (EVM governance) |
+| AI Agents | ❌ | ✅ Exclusive (ERC-8004) |
+| Scout/Tactics Agents | ❌ | ✅ Exclusive |
+| DeFi treasury | ❌ | ✅ Exclusive |
+| Cross-chain tournaments | Both | Both |
 
-### Competitive Moat
-
-```
-Traditional Sports Apps:    Single-chain or no blockchain
-Your Competitors:           Maybe Ethereum L2
-SportWarren:                Dual-chain + Agentic
-                            ↑
-                            This is defensible
-```
-
----
-
-## Chain Selection Strategy
-
-| Operation | Default Chain | Rationale |
-|-----------|---------------|-----------|
-| Match Verification | Algorand | Low fees, fast finality |
-| Player Reputation | Algorand | Immutable, cost-effective |
-| Squad DAO Governance | User Choice | EVM vs. fee preference |
-| Agent Trading/DeFi | Avalanche | Liquidity, MEV opportunities |
-| Cross-Squad Tournaments | Dual-Chain | AWM + State Proofs |
-| AI Agent Operations | Avalanche | ERC-8004, TEE infrastructure |
+**User journey:** Start on either chain. Algorand = verification + reputation. Avalanche = add AI agents + treasury management. Power users bridge both.
 
 ---
 
 ## System Architecture
 
-### Chain Abstraction Layer
-
-```typescript
-// src/lib/blockchain/interface.ts
-interface BlockchainProvider {
-  chain: 'AVALANCHE' | 'ALGORAND';
-  
-  // Identity & Agents
-  connectWallet(): Promise<WalletConnection>;
-  createAgentIdentity(params: AgentParams): Promise<AgentId>;
-  
-  // Squad DAO Operations
-  deploySquadDAO(params: DAOParams): Promise<DeploymentResult>;
-  createProposal(params: ProposalParams): Promise<TxHash>;
-  vote(params: VoteParams): Promise<boolean>;
-  
-  // Match Operations
-  submitMatchResult(match: MatchData): Promise<TxHash>;
-  verifyMatch(matchId: string, verifier: string): Promise<boolean>;
-  
-  // Agent-Specific
-  executeAgentAction(action: AgentAction): Promise<TxHash>;
-  getAgentState(agentId: string): Promise<AgentState>;
-}
-```
-
-### Data Flow
-
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                   Next.js 14 Application                     │
 ├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────────────────────────────────────┐          │
-│  │       Chain Abstraction Layer                 │          │
-│  │  BlockchainProvider Interface                 │          │
-│  └──────────────────────────────────────────────┘          │
-│         │                              │                    │
-│         ▼                              ▼                    │
-│  ┌──────────────┐            ┌──────────────┐              │
-│  │ Algorand     │            │ Avalanche    │              │
-│  │ (algosdk v3) │            │ (Viem/Wagmi) │              │
-│  └──────────────┘            └──────────────┘              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │   Match      │  │   Squad      │  │   Championship   │  │
+│  │   Capture    │  │   Management │  │   Manager Layer  │  │
+│  │              │  │              │  │                  │  │
+│  │ • Photo/voice│  │ • DAO votes  │  │ • Tactics        │  │
+│  │ • Consensus  │  │ • Transfers  │  │ • Scout reports  │  │
+│  │ • GPS/time   │  │ • Treasury   │  │ • Form tracking  │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+│         │                  │                   │            │
+│         └──────────────────┼───────────────────┘            │
+│                            ▼                               │
+│              ┌─────────────────────────┐                   │
+│              │   Chain Abstraction     │                   │
+│              │   (useWallet, etc)      │                   │
+│              └─────────────────────────┘                   │
+│                     │            │                         │
+│         ┌───────────┘            └───────────┐             │
+│         ▼                                    ▼             │
+│  ┌──────────────┐                   ┌──────────────┐      │
+│  │   Algorand   │                   │   Avalanche  │      │
+│  │   • Verify   │◄────── Bridge ───►│   • Agents   │      │
+│  │   • Reputation│                  │   • Treasury │      │
+│  │   • Low fees │                   │   • DeFi     │      │
+│  └──────────────┘                   └──────────────┘      │
 └─────────────────────────────────────────────────────────────┘
-         │                              │
-         ▼                              ▼
-┌──────────────────┐          ┌──────────────────┐
-│ Algorand Network │          │ Avalanche Network│
-│ • State Proofs   │          │ • ERC-8004       │
-│ • Match Oracles  │          │ • AWM Messaging  │
-│ • Low Fees       │          │ • DeFi/MeV       │
-└──────────────────┘          └──────────────────┘
 ```
 
 ---
 
-## Tech Stack
+## Verification Mechanic (Critical)
 
-### Frontend
-- **Framework:** Next.js 14 (App Router)
-- **Styling:** Tailwind CSS + shadcn/ui
-- **State:** Zustand + TanStack Query
-- **Wallets:** RainbowKit (Avalanche) + Pera Wallet (Algorand)
+**Consensus Model:**
+1. Both teams submit result independently
+2. Match within 15 mins + same location = auto-confirm
+3. Discrepancy = escalate to witness/arbiter
+4. Disputed result = stake slashed for false reporter
 
-### Blockchain
-| Chain | Contracts | Frontend | Cross-Chain |
-|-------|-----------|----------|-------------|
-| **Algorand** | TEAL (existing) | algosdk v3.x | State Proofs |
-| **Avalanche** | Foundry + Solidity 0.8.x | Viem + Wagmi | AWM |
-
-### Backend & AI
-- **API:** Next.js API Routes
-- **Indexing:** The Graph + Algorand Indexer
-- **Agents:** LangChain + ERC-8004 + TEE
+**Anti-fraud signals:**
+- GPS + timestamp metadata
+- Photo/voice logs (optional but weighted)
+- Squad reputation score (established teams trusted more)
+- Third-party witness option
 
 ---
 
-## Security
+## Championship Manager Layer
 
-### Cross-Chain Security
-- **Avalanche → Avalanche:** AWM (native protocol)
-- **Algorand → External:** State Proofs (quantum-safe Falcon signatures)
-- **Application Layer:** Tournament synchronization
+### Between Real Matches
 
-### Agent Security
-- **TEE (Intel TDX):** Hardware-isolated execution
-- **ERC-8004:** Verifiable agent identity
+**Tactics:**
+- Set formation for next real match
+- Agent recommends based on opponent scout report
+- Squad votes on approach (DAO)
 
-### Smart Contracts
-- **Algorand:** TEAL best practices
-- **Avalanche:** Foundry tests, OpenZeppelin
-- **Both:** Security audits before mainnet
+**Scouting:**
+- Browse local players by on-chain reputation
+- View attributes, recent form, strengths/weaknesses
+- Make transfer offers (backed by treasury)
+
+**Squad Management:**
+- Manage real teammates' positions
+- Handle injuries (synced from real life)
+- Rotate squad based on form/fitness
+
+**Finances:**
+- Match fees, tournament winnings → treasury
+- Upgrade facilities → training bonuses
+- Custom kit design
+
+---
+
+## The Viral Loop
+
+```
+1. Play real match
+        ↓
+2. Log in SportWarren (both teams confirm)
+        ↓
+3. Stats update, attributes improve, share highlight
+        ↓
+4. Teammates see progress, rivals see challenge
+        ↓
+5. "We need to beat them" / "I want that for my squad"
+        ↓
+6. New match arranged, new users onboarded
+        ↓
+7. Season builds, rivalries form, stakes increase
+        ↓
+8. Repeat with deeper engagement
+```
 
 ---
 
 ## Licensing Strategy
 
-SportWarren uses **fictional team and player names** (the "PES approach"):
+**Fictional Names (PES Model):**
 
-| Real Example | Our Approach |
-|--------------|--------------|
-| Manchester United | "Manchester Reds" or "Theatre of Dreams FC" |
-| Liverpool | "Merseyside Reds" or "Anfield Road" |
-| Premier League | "Premier Sunday League" |
+| Real | SportWarren |
+|------|-------------|
+| Manchester United | Manchester Reds |
+| Liverpool | Merseyside Reds |
+| Premier League | Premier Sunday League |
 
-**Why this works:**
-- City names, colors, and generic terms aren't trademarked
-- PES/Pro Evolution Soccer used this strategy for 20+ years
-- Users can edit names locally (Option Files)
-- Negotiate real licenses after validation
+- City names, colors = not trademarked
+- Community-editable (Option Files)
+- Real licenses negotiable post-traction
 
-**See Also:** [Development](./DEVELOPMENT.md) | [Roadmap](./ROADMAP.md) | [Features](./FEATURES.md)
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 14, Tailwind, shadcn/ui |
+| State | Zustand, TanStack Query |
+| Wallets | RainbowKit (Avax), Pera (Algo) |
+| Algorand | algosdk v3, TEAL contracts |
+| Avalanche | Viem/Wagmi, Foundry, Solidity |
+| AI | LangChain, ERC-8004, TEE |
+| Comms | WhatsApp/Telegram bots, XMTP |
+
+---
+
+**See Also:** [Features](./FEATURES.md) | [Roadmap](./ROADMAP.md) | [Development](./DEVELOPMENT.md)
