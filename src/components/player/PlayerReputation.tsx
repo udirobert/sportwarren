@@ -1,39 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/common/Card';
+import { Card } from '@/components/ui/Card';
 import { User, Shield, Trophy, Target, Users, Star, TrendingUp, Award, CheckCircle } from 'lucide-react';
+import type { PlayerAttributes as PlayerReputationData, SkillRating, Achievement, CareerHighlight } from '@/types';
 
-interface PlayerReputation {
-  address: string;
-  playerName: string;
-  totalMatches: number;
-  totalGoals: number;
-  totalAssists: number;
-  reputationScore: number;
-  verifiedStats: boolean;
-  skillRatings: SkillRating[];
-  achievements: Achievement[];
-  endorsements: Endorsement[];
-  careerHighlights: CareerHighlight[];
-  professionalInterest: ProfessionalInterest[];
-}
-
-interface SkillRating {
-  skill: string;
-  rating: number;
-  maxRating: number;
-  verified: boolean;
-  lastUpdated: Date;
-}
-
-interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  dateEarned: Date;
-  rarity: 'common' | 'rare' | 'epic' | 'legendary';
-  verified: boolean;
-}
-
+// Extended types for UI display
 interface Endorsement {
   endorser: string;
   endorserRole: 'teammate' | 'opponent' | 'coach' | 'referee';
@@ -41,14 +11,6 @@ interface Endorsement {
   rating: number;
   comment: string;
   date: Date;
-  verified: boolean;
-}
-
-interface CareerHighlight {
-  title: string;
-  description: string;
-  date: Date;
-  matchId?: string;
   verified: boolean;
 }
 
@@ -61,13 +23,13 @@ interface ProfessionalInterest {
 }
 
 export const PlayerReputation: React.FC = () => {
-  const [playerReputation, setPlayerReputation] = useState<PlayerReputation | null>(null);
+  const [playerReputation, setPlayerReputation] = useState<PlayerReputationData | null>(null);
   const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'achievements' | 'endorsements' | 'scouts'>('overview');
   const [loading, setLoading] = useState(false);
 
   // Mock data for demonstration
   useEffect(() => {
-    const mockReputation: PlayerReputation = {
+    const mockReputation: PlayerReputationData = {
       address: 'ADDR1234567890ABCDEF',
       playerName: 'Marcus Johnson',
       totalMatches: 47,
@@ -75,14 +37,16 @@ export const PlayerReputation: React.FC = () => {
       totalAssists: 22,
       reputationScore: 8750,
       verifiedStats: true,
-      skillRatings: [
-        { skill: 'Shooting', rating: 87, maxRating: 100, verified: true, lastUpdated: new Date('2025-01-10') },
-        { skill: 'Passing', rating: 82, maxRating: 100, verified: true, lastUpdated: new Date('2025-01-08') },
-        { skill: 'Dribbling', rating: 79, maxRating: 100, verified: true, lastUpdated: new Date('2025-01-05') },
-        { skill: 'Defending', rating: 65, maxRating: 100, verified: true, lastUpdated: new Date('2025-01-03') },
-        { skill: 'Physical', rating: 84, maxRating: 100, verified: true, lastUpdated: new Date('2025-01-01') },
-        { skill: 'Mental', rating: 88, maxRating: 100, verified: true, lastUpdated: new Date('2024-12-28') },
+      skills: [
+        { skill: 'shooting', rating: 87, xp: 850, xpToNextLevel: 1000, maxRating: 99, verified: true, lastUpdated: new Date('2025-01-10'), history: [85, 86, 86, 87, 87] },
+        { skill: 'passing', rating: 82, xp: 720, xpToNextLevel: 1000, maxRating: 99, verified: true, lastUpdated: new Date('2025-01-08'), history: [80, 81, 81, 82, 82] },
+        { skill: 'dribbling', rating: 79, xp: 650, xpToNextLevel: 1000, maxRating: 99, verified: true, lastUpdated: new Date('2025-01-05'), history: [78, 78, 79, 79, 79] },
+        { skill: 'defending', rating: 65, xp: 420, xpToNextLevel: 1000, maxRating: 99, verified: true, lastUpdated: new Date('2025-01-03'), history: [64, 64, 65, 65, 65] },
+        { skill: 'physical', rating: 84, xp: 780, xpToNextLevel: 1000, maxRating: 99, verified: true, lastUpdated: new Date('2025-01-01'), history: [83, 83, 84, 84, 84] },
+        { skill: 'pace', rating: 76, xp: 580, xpToNextLevel: 1000, maxRating: 99, verified: true, lastUpdated: new Date('2024-12-28'), history: [75, 76, 76, 76, 76] },
       ],
+      form: { current: 2, history: [7.5, 8.0, 8.5, 8.0, 8.5], trend: 'up' },
+      xp: { level: 12, totalXP: 12500, seasonXP: 3200, nextLevelXP: 15000 },
       achievements: [
         {
           id: 'hat_trick_hero',
@@ -140,6 +104,7 @@ export const PlayerReputation: React.FC = () => {
       ],
       careerHighlights: [
         {
+          id: 'highlight_001',
           title: 'Perfect Hat-trick vs Red Lions',
           description: 'Scored with left foot, right foot, and header in a 4-1 victory',
           date: new Date('2025-01-13'),
@@ -147,12 +112,14 @@ export const PlayerReputation: React.FC = () => {
           verified: true,
         },
         {
+          id: 'highlight_002',
           title: 'Season Top Scorer',
           description: 'Finished as the league\'s top scorer with 25 goals',
           date: new Date('2024-12-20'),
           verified: true,
         },
         {
+          id: 'highlight_003',
           title: 'Derby Winner',
           description: 'Scored the decisive goal in the 89th minute against rivals',
           date: new Date('2024-11-15'),
@@ -358,7 +325,7 @@ export const PlayerReputation: React.FC = () => {
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Skill Ratings</h3>
           <div className="grid md:grid-cols-2 gap-6">
-            {playerReputation.skillRatings.map((skill) => (
+            {playerReputation.skills.map((skill) => (
               <div key={skill.skill} className="space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="font-medium text-gray-900">{skill.skill}</span>
@@ -418,7 +385,7 @@ export const PlayerReputation: React.FC = () => {
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Player Endorsements</h3>
           <div className="space-y-4">
-            {playerReputation.endorsements.map((endorsement, index) => (
+            {playerReputation.endorsements?.map((endorsement, index) => (
               <div key={index} className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center space-x-3">
@@ -450,7 +417,7 @@ export const PlayerReputation: React.FC = () => {
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Professional Scout Interest</h3>
           <div className="space-y-4">
-            {playerReputation.professionalInterest.map((interest, index) => (
+            {playerReputation.professionalInterest?.map((interest, index) => (
               <div key={index} className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center space-x-3">

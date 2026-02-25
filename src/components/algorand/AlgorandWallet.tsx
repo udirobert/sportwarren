@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Card } from '@/components/common/Card';
+import { Card } from '@/components/ui/Card';
 import { Wallet, Link, Copy, ExternalLink, RefreshCw, AlertCircle, CheckCircle } from 'lucide-react';
 import { connectAlgorandWallet, getAccountInfo, getAccountTransactions } from '@/lib/algorand';
 

@@ -12,6 +12,8 @@
 - [ ] Voice + photo capture during matches
 - [ ] Consensus verification (both teams confirm)
 - [ ] GPS + timestamp anti-fraud
+- [ ] Chainlink weather oracle integration
+- [ ] Chainlink location oracle integration
 - [ ] Dispute resolution with witness/arbiter
 - [ ] On-chain storage (Algorand)
 
@@ -48,10 +50,13 @@
 - [ ] RainbowKit wallet connection
 
 ### AI Agents (Avalanche Exclusive)
+- [ ] Kite AI agent passport registration
 - [ ] Squad Manager agent (tactics, rotation)
 - [ ] Scout agent (opponent analysis)
 - [ ] Fitness agent (training suggestions)
 - [ ] Social agent (morale management)
+- [ ] Kite stablecoin payment rails
+- [ ] Agent marketplace integration
 
 ### Economy
 - [ ] Match fees → treasury
@@ -115,21 +120,26 @@
 - [ ] 100 squads created
 - [ ] 500 matches verified
 - [ ] 80% verification consensus rate
+- [ ] 50+ Chainlink oracle verifications
 
 ### Phase 2 (Agents)
 - [ ] 30% of users on Avalanche (agents)
 - [ ] 50 squads with active treasury
 - [ ] 10,000 AI agent interactions
+- [ ] 100+ agents registered with Kite AI passports
 
 ### Phase 3 (Viral)
 - [ ] 5,000 MAU
 - [ ] 1,000 rivalry relationships
 - [ ] 500 shared highlight cards/month
+- [ ] 10+ agents listed in Kite Agent Store
 
 ### Phase 4 (Scale)
 - [ ] 10,000 MAU
 - [ ] 100 cross-chain tournaments
 - [ ] 50,000 matches verified total
+- [ ] 1,000+ Chainlink oracle verifications
+- [ ] 500+ active Kite AI agents
 
 ---
 

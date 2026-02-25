@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card } from '@/components/common/Card';
+import { Card } from '@/components/ui/Card';
 import { Trophy, Target, Users, Shield, Star, Zap, Crown, Award, Lock } from 'lucide-react';
 
 export const Achievements: React.FC = () => {

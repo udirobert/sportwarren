@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Card } from '@/components/common/Card';
+import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';

@@ -85,51 +85,80 @@ Both chains give you the full core app. Each unlocks exclusive features.
 ## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                   Next.js 14 Application                     │
-├─────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │   Match      │  │   Squad      │  │   Championship   │  │
-│  │   Capture    │  │   Management │  │   Manager Layer  │  │
-│  │              │  │              │  │                  │  │
-│  │ • Photo/voice│  │ • DAO votes  │  │ • Tactics        │  │
-│  │ • Consensus  │  │ • Transfers  │  │ • Scout reports  │  │
-│  │ • GPS/time   │  │ • Treasury   │  │ • Form tracking  │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
-│         │                  │                   │            │
-│         └──────────────────┼───────────────────┘            │
-│                            ▼                               │
-│              ┌─────────────────────────┐                   │
-│              │   Chain Abstraction     │                   │
-│              │   (useWallet, etc)      │                   │
-│              └─────────────────────────┘                   │
-│                     │            │                         │
-│         ┌───────────┘            └───────────┐             │
-│         ▼                                    ▼             │
-│  ┌──────────────┐                   ┌──────────────┐      │
-│  │   Algorand   │                   │   Avalanche  │      │
-│  │   • Verify   │◄────── Bridge ───►│   • Agents   │      │
-│  │   • Reputation│                  │   • Treasury │      │
-│  │   • Low fees │                   │   • DeFi     │      │
-│  └──────────────┘                   └──────────────┘      │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Next.js 14 Application                          │
+├─────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐          │
+│  │   Match      │  │   Squad      │  │   Championship   │          │
+│  │   Capture    │  │   Management │  │   Manager Layer  │          │
+│  │              │  │              │  │                  │          │
+│  │ • Photo/voice│  │ • DAO votes  │  │ • Tactics        │          │
+│  │ • Consensus  │  │ • Transfers  │  │ • Scout reports  │          │
+│  │ • GPS/time   │  │ • Treasury   │  │ • Form tracking  │          │
+│  │ • Chainlink  │  │ • Kite AI    │  │ • AI agents      │          │
+│  └──────────────┘  └──────────────┘  └──────────────────┘          │
+│         │                  │                   │                    │
+│         └──────────────────┼───────────────────┘                    │
+│                            ▼                                        │
+│              ┌─────────────────────────┐                            │
+│              │   Chain Abstraction     │                            │
+│              │   (useWallet, etc)      │                            │
+│              └─────────────────────────┘                            │
+│                     │            │                                  │
+│         ┌───────────┴────────────┴───────────┐                      │
+│         ▼                                    ▼                      │
+│  ┌──────────────┐                   ┌──────────────┐               │
+│  │   Algorand   │                   │   Avalanche  │               │
+│  │   • Verify   │◄────── Bridge ───►│   • Agents   │               │
+│  │   • Reputation│                  │   • Treasury │               │
+│  │   • Low fees │                   │   • DeFi     │               │
+│  └──────┬───────┘                   └──────┬───────┘               │
+│         │                                  │                        │
+│         │  ┌──────────────────────────────┐│                        │
+│         └─►│   Chainlink Oracles          ││                        │
+│            │   • Weather verification     ││                        │
+│            │   • Location data            ││                        │
+│            │   • External APIs            ││                        │
+│            └──────────────────────────────┘│                        │
+│                                            │                        │
+│            ┌───────────────────────────────┘                        │
+│            │   Kite AI Agent Layer                                  │
+│            │   • Agent identity (passports)                         │
+│            │   • Stablecoin payments                                │
+│            │   • Agent marketplace                                  │
+│            │   • Cross-chain agent ops                              │
+│            └────────────────────────────────                        │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## Verification Mechanic (Critical)
 
-**Consensus Model:**
+**Enhanced Consensus Model with Chainlink:**
 1. Both teams submit result independently
-2. Match within 15 mins + same location = auto-confirm
-3. Discrepancy = escalate to witness/arbiter
-4. Disputed result = stake slashed for false reporter
+2. Chainlink oracles verify external signals:
+   - Weather conditions at match time/location
+   - GPS coordinates validation
+   - Third-party sports API data (if available)
+3. Match within 15 mins + same location + oracle confirmation = auto-confirm
+4. Discrepancy = escalate to witness/arbiter
+5. Disputed result = stake slashed for false reporter
 
-**Anti-fraud signals:**
+**Multi-Layer Anti-fraud:**
 - GPS + timestamp metadata
 - Photo/voice logs (optional but weighted)
 - Squad reputation score (established teams trusted more)
+- Chainlink weather oracle (confirms match conditions)
+- Chainlink location oracle (validates GPS authenticity)
 - Third-party witness option
+
+**Why Chainlink:**
+- Adds external credibility to match verification
+- Prevents GPS spoofing with cross-referenced data
+- Weather data confirms match actually happened
+- Grant reviewers recognize the infrastructure
+- Decentralized oracle network = no single point of failure
 
 ---
 
@@ -206,7 +235,10 @@ Both chains give you the full core app. Each unlocks exclusive features.
 | Wallets | RainbowKit (Avax), Pera (Algo) |
 | Algorand | algosdk v3, TEAL contracts |
 | Avalanche | Viem/Wagmi, Foundry, Solidity |
-| AI | LangChain, ERC-8004, TEE |
+| AI Agents | LangChain, ERC-8004, TEE, Kite AI |
+| Agent Identity | Kite AI Passports (17.8M+ issued) |
+| Agent Payments | Kite AI stablecoin rails |
+| Oracles | Chainlink (weather, location, sports data) |
 | Comms | WhatsApp/Telegram bots, XMTP |
 
 ---

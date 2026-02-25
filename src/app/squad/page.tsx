@@ -1,7 +1,7 @@
 "use client";
 
-import { Squad } from "@/legacy-pages/Squad";
+import { SquadDAO } from "@/components/squad/SquadDAO";
 
 export default function SquadPage() {
-  return <Squad />;
+  return <SquadDAO />;
 }

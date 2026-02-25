@@ -13,6 +13,7 @@ Your real Sunday league season and your SportWarren season run simultaneously. R
 - **Photo capture:** Goal celebrations, lineups, scoreboards
 - **GPS + timestamp:** Automatic location and time verification
 - **Consensus confirmation:** Both teams submit results independently
+- **Chainlink oracles:** External data validation for credibility
 
 ### Verification Tiers
 | Tier | Method | Trust Score |
@@ -20,12 +21,31 @@ Your real Sunday league season and your SportWarren season run simultaneously. R
 | Bronze | Self-reported | Low |
 | Silver | Both teams confirm | Medium |
 | Gold | Both teams + photo/voice | High |
-| Platinum | Witness/arbiter present | Maximum |
+| Platinum | Both teams + Chainlink oracle | Maximum |
+| Diamond | Full verification + witness | Absolute |
+
+### Chainlink Oracle Integration
+**Weather Oracle:**
+- Confirms weather conditions at match time/location
+- Prevents fake match submissions
+- Cross-references with meteorological data
+
+**Location Oracle:**
+- Validates GPS coordinates authenticity
+- Prevents GPS spoofing
+- Confirms match venue legitimacy
+
+**Sports Data Oracle (Future):**
+- Integration with local league APIs
+- Official fixture verification
+- Tournament bracket validation
 
 ### On-Chain Result
 - Match hash stored on Algorand (fast, cheap)
+- Chainlink oracle data stored as proof
 - Disputed results escalate to community arbitration
 - False reporting = reputation penalty + stake slashed
+- Oracle-verified matches = higher reputation rewards
 
 ---
 
@@ -106,29 +126,47 @@ Your real Sunday league season and your SportWarren season run simultaneously. R
 
 ## AI Agents (Avalanche Exclusive)
 
+**Powered by Kite AI Infrastructure:**
+
+All SportWarren agents are registered with Kite AI passports, enabling:
+- Cryptographic agent identity verification
+- Cross-platform agent portability
+- Stablecoin-based agent payments
+- Access to Kite's 1.7B+ agent interactions network
+
 ### Squad Manager Agent
 - Analyzes your real results vs tactics
 - Suggests formation changes
 - Manages squad rotation
 - "Your 4-4-2 works at home but not away — try 4-2-3-1"
+- **Kite Identity:** Verified agent passport with reputation score
 
 ### Scout Agent
 - Watches match logs + AI vision
 - Identifies squad weaknesses
 - Recommends transfer targets
 - Opponent analysis before derbies
+- **Kite Identity:** Accesses Kite Agent Store for enhanced scouting data
 
 ### Fitness Agent
 - Syncs with Strava/Apple Health (optional)
 - Manages player condition
 - Suggests training focus
 - "Marcus hasn't trained — stamina penalty this weekend"
+- **Kite Payments:** Micro-payments for premium health integrations
 
 ### Social Agent
 - Monitors squad chat activity
 - Suggests socials when morale drops
 - Organizes end-of-season events
 - Tracks team cohesion metrics
+- **Kite Marketplace:** Discoverable in Kite Agent Store
+
+**Agent Economics:**
+- Agents earn stablecoins for successful recommendations
+- Users pay micro-fees for premium agent features
+- Agent reputation tracked via Kite passports
+- Cross-squad agent sharing via Kite marketplace
 
 ---
 

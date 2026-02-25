@@ -1,26 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '@/components/common/Card';
-import { Shield, Check, X, Clock, Users, AlertCircle, Trophy } from 'lucide-react';
-
-interface MatchResult {
-  id: string;
-  homeTeam: string;
-  awayTeam: string;
-  homeScore: number;
-  awayScore: number;
-  submitter: string;
-  timestamp: Date;
-  verifications: Verification[];
-  status: 'pending' | 'verified' | 'disputed';
-  requiredVerifications: number;
-}
-
-interface Verification {
-  verifier: string;
-  verified: boolean;
-  timestamp: Date;
-  role: 'player' | 'referee' | 'spectator';
-}
+import { Card } from '@/components/ui/Card';
+import { Shield, Check, X, Clock, Users, AlertCircle, Trophy, Camera, Mic, MapPin } from 'lucide-react';
+import type { MatchResult, Verification, MatchStatus, TrustTier } from '@/types';
 
 interface PlayerStats {
   playerId: string;
@@ -48,29 +29,37 @@ export const MatchVerification: React.FC = () => {
         homeScore: 3,
         awayScore: 1,
         submitter: 'Marcus Johnson',
+        submitterTeam: 'home',
         timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000), // 2 hours ago
         verifications: [
           {
             verifier: 'Jamie Thompson',
+            verifierAddress: 'ADDR_JAMIE_123',
             verified: true,
             timestamp: new Date(Date.now() - 1.5 * 60 * 60 * 1000),
             role: 'player',
+            trustTier: 'gold',
           },
           {
             verifier: 'Sarah Martinez',
+            verifierAddress: 'ADDR_SARAH_456',
             verified: true,
             timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
             role: 'player',
+            trustTier: 'silver',
           },
           {
             verifier: 'Referee Mike',
+            verifierAddress: 'ADDR_MIKE_789',
             verified: true,
             timestamp: new Date(Date.now() - 30 * 60 * 1000),
             role: 'referee',
+            trustTier: 'platinum',
           },
         ],
         status: 'verified',
         requiredVerifications: 3,
+        trustScore: 95,
       },
       {
         id: 'match_002',
@@ -79,17 +68,21 @@ export const MatchVerification: React.FC = () => {
         homeScore: 2,
         awayScore: 2,
         submitter: 'Emma Wilson',
+        submitterTeam: 'home',
         timestamp: new Date(Date.now() - 30 * 60 * 1000), // 30 minutes ago
         verifications: [
           {
             verifier: 'Alex Chen',
+            verifierAddress: 'ADDR_ALEX_321',
             verified: true,
             timestamp: new Date(Date.now() - 20 * 60 * 1000),
             role: 'player',
+            trustTier: 'bronze',
           },
         ],
         status: 'pending',
         requiredVerifications: 3,
+        trustScore: 30,
       },
       {
         id: 'match_003',
@@ -98,23 +91,29 @@ export const MatchVerification: React.FC = () => {
         homeScore: 1,
         awayScore: 4,
         submitter: 'Ryan Murphy',
+        submitterTeam: 'away',
         timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000), // 4 hours ago
         verifications: [
           {
             verifier: 'Marcus Johnson',
+            verifierAddress: 'ADDR_MARCUS_654',
             verified: false,
             timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-            role: 'player',
+            role: 'captain',
+            trustTier: 'gold',
           },
           {
             verifier: 'Jamie Thompson',
+            verifierAddress: 'ADDR_JAMIE_123',
             verified: false,
             timestamp: new Date(Date.now() - 2.5 * 60 * 60 * 1000),
             role: 'player',
+            trustTier: 'gold',
           },
         ],
         status: 'disputed',
         requiredVerifications: 3,
+        trustScore: 10,
       },
     ];
 
@@ -155,9 +154,11 @@ export const MatchVerification: React.FC = () => {
       // In production, this would submit a verification transaction to Algorand
       const newVerification: Verification = {
         verifier: 'Current User',
+        verifierAddress: userAddress,
         verified,
         timestamp: new Date(),
-        role: 'player',
+        role: 'captain',
+        trustTier: 'gold',
       };
 
       setMatches(matches.map(match => {
