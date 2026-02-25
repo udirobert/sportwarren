@@ -1,124 +1,153 @@
 # SportWarren Roadmap
 
-**Multi-Phase Plan | 2026 Timeline**
+**Phygital Football Platform | Real World + Championship Manager**
 
 ---
 
-## Implementation Roadmap
+## Phase 1: Core Loop (Q1-Q2 2026) | 10-12 weeks
 
-### Phase 1: Next.js Foundation (Q1 2026) | 6-8 weeks
-- [x] Migrate from Vite/React to Next.js 14 (App Router)
-- [x] Set up unified API routes (`src/app/api`)
-- [x] Configure SSR-safe hooks and state management
-- [ ] Build chain abstraction layer interface
-- [ ] Implement chain selection UI component
-- [ ] Port existing Algorand integration
+**Goal:** Working parallel season — real matches drive game state
 
-**Deliverables:** Working Next.js app, API routes functional, deployment pipeline updated
+### Match Verification
+- [ ] Voice + photo capture during matches
+- [ ] Consensus verification (both teams confirm)
+- [ ] GPS + timestamp anti-fraud
+- [ ] Dispute resolution with witness/arbiter
+- [ ] On-chain storage (Algorand)
 
----
+### Player Attributes
+- [ ] 6 core stats (shooting, passing, defending, pace, stamina, physical)
+- [ ] XP system tied to verified match data
+- [ ] Form rating (last 5 matches)
+- [ ] Soulbound reputation tokens
 
-### Phase 2: Avalanche Integration (Q2 2026) | 6-8 weeks
-- [ ] Set up Foundry development environment
-- [ ] Rewrite `SquadDAO.sol` (ERC-8004 compatible)
-- [ ] Rewrite `MatchVerification.sol` (Oracle-based)
-- [ ] Rewrite `Reputation.sol` (Soulbound tokens)
-- [ ] Rewrite `GlobalChallenges.sol` (Cross-chain tournaments)
-- [ ] Write Foundry tests for all contracts
-- [ ] Integrate Viem + Wagmi
-- [ ] Add RainbowKit for wallet connections
-- [ ] Deploy to Fuji testnet
-- [ ] Security audit for Avalanche contracts
+### Squad Management
+- [ ] Create squad, invite teammates
+- [ ] Basic DAO (captain, voting)
+- [ ] Squad chemistry system
+- [ ] Match history dashboard
 
-**Deliverables:** 4 Solidity contracts deployed, testnet verified, wallet integration complete
+### Championship Manager Layer
+- [ ] Tactics setup for next match
+- [ ] Basic scout reports
+- [ ] Formation recommendations
+- [ ] Squad rotation tools
 
----
-
-### Phase 3: Chain Abstraction (Q2-Q3 2026) | 8-10 weeks
-- [ ] Implement `BlockchainProvider` unified interface
-- [ ] Create Algorand provider (algosdk)
-- [ ] Create Avalanche provider (Viem)
-- [ ] Build chain-agnostic wallet connector
-- [ ] Create unified hooks (`useWallet`, `useBlockchain`)
-- [ ] Add cross-chain messaging (AWM + State Proofs)
-- [ ] Build cross-chain tournament system
-- [ ] Test cross-chain operations
-
-**Deliverables:** Chain abstraction layer, unified hooks, cross-chain messaging tested
+**Deliverables:** Users can verify matches, earn attributes, manage squads, set tactics
 
 ---
 
-### Phase 4: Agentic Features (Q3 2026) | 8-12 weeks
-- [ ] Implement ERC-8004 agent identity standard
-- [ ] Set up TEE (Intel TDX) infrastructure
-- [ ] Integrate LangChain for agent orchestration
-- [ ] Create squad management agent
-- [ ] Build match analysis agent
-- [ ] Implement treasury yield agent
-- [ ] Add autonomous match verification agent
-- [ ] Build agent dashboard UI
-- [ ] Set up agent marketplace
+## Phase 2: Agents & Economy (Q2-Q3 2026) | 10-12 weeks
 
-**Deliverables:** ERC-8004 agents deployed, TEE infrastructure, 3+ agent types, agent dashboard
+**Goal:** AI agents + treasury make the game strategic
+
+### Avalanche Integration
+- [ ] Foundry setup, Solidity contracts
+- [ ] SquadDAO with governance
+- [ ] Treasury management
+- [ ] RainbowKit wallet connection
+
+### AI Agents (Avalanche Exclusive)
+- [ ] Squad Manager agent (tactics, rotation)
+- [ ] Scout agent (opponent analysis)
+- [ ] Fitness agent (training suggestions)
+- [ ] Social agent (morale management)
+
+### Economy
+- [ ] Match fees → treasury
+- [ ] Facility upgrades
+- [ ] Transfer market (basic)
+- [ ] Kit customization
+
+**Deliverables:** Avalanche users get AI agents + treasury. Algorand users get verification + reputation.
 
 ---
 
-### Phase 5: Launch (Q4 2026) | 4-6 weeks
-- [ ] Build fictional league system (unlicensed teams)
-- [ ] Launch dual-chain tournament system
-- [ ] Community features (Option Files for custom names)
-- [ ] Marketing campaign
-- [ ] Public mainnet launch
+## Phase 3: Viral Features (Q3 2026) | 8-10 weeks
 
-**Deliverables:** Launch with fictional names, World Cup 2026 timing, public launch
+**Goal:** Make it shareable, discoverable, addictive
+
+### Rivalries
+- [ ] Derby detection (3+ matches vs same team)
+- [ ] Rivalry history tracking
+- [ ] Derby XP bonuses
+- [ ] Banter system
+
+### Discovery
+- [ ] Local leaderboards
+- [ ] Nearby squads finder
+- [ ] Friendly match arrangement
+- [ ] Territory control (win at rival grounds)
+
+### Social
+- [ ] Shareable highlight cards
+- [ ] Attribute progression posts
+- [ ] Season stats infographics
+- [ ] Trophy cabinet
+
+**Deliverables:** Users share moments, discover local rivals, build season narratives
 
 ---
 
-## Smart Contract Migration
+## Phase 4: Scale (Q4 2026) | 6-8 weeks
 
-| Contract | Algorand (TEAL) | Avalanche (Solidity) | Complexity |
-|----------|-----------------|---------------------|------------|
-| Squad DAO | ✅ Exists | 🔄 Rewrite needed | Medium |
-| Match Verification | ✅ Exists | 🔄 Rewrite needed | Medium-High |
-| Reputation System | ✅ Exists | 🔄 Rewrite needed | Medium |
-| Global Challenges | ✅ Exists | 🔄 Rewrite needed | High |
+**Goal:** Cross-chain tournaments + advanced features
 
-**Note:** Using Foundry for Avalanche contracts - better testing, matches TypeScript workflow.
+### Cross-Chain
+- [ ] Bridge reputation between chains
+- [ ] Cross-squad tournaments
+- [ ] Unified leaderboards
+- [ ] Chain-agnostic matchmaking
+
+### Advanced
+- [ ] AI vision for automatic stat extraction
+- [ ] Health app integrations (Strava, Apple Health)
+- [ ] Advanced scout reports with heat maps
+- [ ] Full transfer market
+
+**Deliverables:** Power users bridge chains. Casual users stay on one. Everyone competes.
 
 ---
 
 ## Success Metrics
 
-### Technical Metrics
-- [ ] 100% page migration to Next.js
-- [ ] < 3s page load time (Core Web Vitals)
-- [ ] 95%+ test coverage for smart contracts
-- [ ] Zero critical security vulnerabilities
-- [ ] 99.9% uptime post-launch
+### Phase 1 (Core Loop)
+- [ ] 100 squads created
+- [ ] 500 matches verified
+- [ ] 80% verification consensus rate
 
-### Business Metrics (6 months post-launch)
-- [ ] 10,000+ MAU
-- [ ] 1,000+ squads created
-- [ ] 5,000+ matches verified on-chain
-- [ ] 100+ AI agents deployed
+### Phase 2 (Agents)
+- [ ] 30% of users on Avalanche (agents)
+- [ ] 50 squads with active treasury
+- [ ] 10,000 AI agent interactions
+
+### Phase 3 (Viral)
+- [ ] 5,000 MAU
+- [ ] 1,000 rivalry relationships
+- [ ] 500 shared highlight cards/month
+
+### Phase 4 (Scale)
+- [ ] 10,000 MAU
+- [ ] 100 cross-chain tournaments
+- [ ] 50,000 matches verified total
 
 ---
 
-## Current Issues & Tasks
+## User Story: Marcus
 
-### High Priority
-- **Avalanche Contracts:** Initializing Foundry, porting DAO logic to Solidity
-- **API Migration:** Moving remaining Express services to Next.js API Routes
-- **Chain Abstraction:** Defining shared interface for Algo/Avax operations
-
-### Medium Priority
-- **AI Analytics:** Enhancing SAM3 segmentation for player tracking
-- **Mobile UX:** PWA optimization for match capture
-
-### Completed ✅
-- [x] Algorand SDK v3 migration
-- [x] Next.js 14 App Router skeleton and core pages
-- [x] Project reorganization and documentation cleanup
+> Marcus, 24, plays Sunday league in Manchester. His squad uses SportWarren.
+>
+> **Saturday:** His real match ends 3-2. He logs it, co-captain confirms. His 2 goals boost his shooting attribute from 67 to 71. The app generates a highlight card he shares.
+>
+> **Sunday:** His Scout Agent analyzes the opponent for next week — recommends 4-2-3-1 formation. The squad votes and approves.
+>
+> **Tuesday:** Fitness Agent notes he hasn't trained — suggests a run to regenerate stamina. He logs a 5k, stamina bonus unlocked.
+>
+> **Thursday:** Transfer offer comes in from a rival squad. DAO votes to reject. Squad chemistry rises.
+>
+> **Next Saturday:** Using the recommended formation, they win 2-0. Clean sheet bonus. Derby victory (it's their 4th match vs this team). Double XP.
+>
+> **End of season:** Marcus has 47 verified goals across 3 seasons. His reputation profile is portable. His squad won the local virtual league. Real trophies + virtual trophies.
 
 ---
 
@@ -126,29 +155,11 @@
 
 | Risk | Mitigation |
 |------|------------|
-| Development complexity 2x | Start with Algorand-only MVP, add Avalanche Phase 2 |
-| User confusion (which chain?) | Smart defaults + clear UX guidance |
-| Cross-chain security | Use verified protocols, security audits |
-| Licensing costs | Start with fictional names (PES approach) |
-| Agent economy immaturity | Build on proven primitives (ERC-8004, TEE) |
-| Timeline slip | Agile sprints, MVP focus |
+| Verification gaming | Consensus + stake slashing + reputation penalties |
+| User confusion (dual-chain) | Clear feature tier messaging, start on one chain |
+| AI agent over-promising | Start simple, expand capabilities gradually |
+| Low engagement | Focus on rivalry + season narrative hooks |
 
 ---
 
-## Resource Requirements
-
-### Development Team
-- 2-3 Full-stack developers (Next.js + TypeScript)
-- 1-2 Blockchain developers (Solidity + TEAL)
-- 1 AI/ML engineer (LangChain + agents)
-- 1 DevOps engineer (deployment + monitoring)
-
-### Budget Estimate (6 months)
-- Development: $500K - $1M
-- Infrastructure: $5K - $10K/month
-- Security audits: $50K - $100K
-- Marketing: $200K - $500K
-
----
-
-**See Also:** [Architecture](./ARCHITECTURE.md) | [Development Guide](./DEVELOPMENT.md)
+**See Also:** [Architecture](./ARCHITECTURE.md) | [Features](./FEATURES.md) | [Development](./DEVELOPMENT.md)

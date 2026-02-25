@@ -1,158 +1,222 @@
 # SportWarren Features
 
-## Core Platform Features
+## The Parallel Season
 
-### 🏆 Smart Match Tracking
-- Real-time match logging with voice and photo capture
-- AI-powered event recognition and statistics
-- Multi-platform data synchronization
-- **Blockchain:** Verified on Algorand for immutability
-
-### 👥 Adaptive Community Hub
-- Squad management with dynamic roles
-- Rivalry tracking and banter systems
-- Local and global leaderboards
-- **Blockchain:** Squad DAO governance (user's chain choice)
-
-### 🎯 Achievement System
-- Progressive skill-based achievements
-- Seasonal challenges and competitions
-- Performance analytics and insights
-- **Blockchain:** Soulbound tokens on Avalanche
+Your real Sunday league season and your SportWarren season run simultaneously. Real matches drive the game. The game enhances your real season.
 
 ---
 
-## AI Player Analytics
+## Match Verification
 
-Combines **Roboflow Rapid** (detection) and **SAM3** (segmentation) for real-time performance insights.
+### Real-World Capture
+- **Voice logging:** Dictate match events as they happen
+- **Photo capture:** Goal celebrations, lineups, scoreboards
+- **GPS + timestamp:** Automatic location and time verification
+- **Consensus confirmation:** Both teams submit results independently
 
-### Capabilities
-- **Pro Benchmarking:** Compare accuracy, speed, positioning vs. professionals
-- **Match Prediction:** Win/loss/draw probabilities based on team form
-- **Formation Detection:** Tactical analysis of compactness and field coverage
-- **Video Analysis:** Frame-by-frame player movement tracking
+### Verification Tiers
+| Tier | Method | Trust Score |
+|------|--------|-------------|
+| Bronze | Self-reported | Low |
+| Silver | Both teams confirm | Medium |
+| Gold | Both teams + photo/voice | High |
+| Platinum | Witness/arbiter present | Maximum |
 
-### Tech Stack
-- **Python Service:** `server/services/ai/player-analytics.py` (Flask)
-- **Computer Vision:** Roboflow for player detection, SAM3 for segmentation
-- **Frontend:** React dashboard with interactive metrics
+### On-Chain Result
+- Match hash stored on Algorand (fast, cheap)
+- Disputed results escalate to community arbitration
+- False reporting = reputation penalty + stake slashed
 
 ---
 
-## AI Agents
+## Player Attributes
 
-Leverages Avalanche ERC-8004 and TEE for autonomous football management.
+### Core Stats (Evolve Through Play)
+| Attribute | Real-World Driver | Game Impact |
+|-----------|------------------|-------------|
+| Shooting | Goals scored | Finishing quality in sims |
+| Passing | Assists | Build-up play effectiveness |
+| Defending | Clean sheets, tackles | Defensive solidity |
+| Pace | Sprint speed, distance | Counter-attack threat |
+| Stamina | Minutes played, fitness | Late-game performance |
+| Physical | Duels won, aerials | Strength in challenges |
 
-### Agent Types
+### Form System
+- Last 5 real matches = current form rating
+- Hot streak = attribute boost, confidence bonus
+- Cold streak = agent suggests changes, training focus
 
-| Agent | Purpose | Chain | Complexity |
-|-------|---------|-------|------------|
-| **Squad Manager** | Team selection, tactics | Avalanche | Medium |
-| **Match Analyst** | Performance insights | Both | High |
-| **Scout** | Player recruitment | Both | Medium |
-| **Treasury Manager** | Yield farming, DeFi | Avalanche | High |
-| **Match Verifier** | Autonomous verification | Algorand | Low |
-| **Tournament Organizer** | Cross-chain tournaments | Both | High |
+### Reputation
+- Soulbound token (non-transferable)
+- Earned through verified matches only
+- Portable across any platform using SportWarren
 
-### Implementation
-- **Identity:** ERC-8004 agent-gated identity standard
-- **Security:** TEE (Intel TDX) for tamper-proof execution
-- **Orchestration:** LangChain for workflow management
-- **UI:** Agent dashboard with performance tracking
+---
+
+## Squad Management
+
+### Your Real Team, In-Game
+- All your actual teammates, with fictional club name
+- Positions, formations, tactics
+- Chemistry based on real attendance and social activity
+
+### DAO Governance
+| Decision | Voting Power |
+|----------|-------------|
+| Tactics for next match | Captain + vice-captain |
+| Transfer offers | Squad majority |
+| Treasury spending | Squad majority |
+| Kit design | Open vote |
+
+### Squad Chemistry
+- Regular attendance = chemistry bonus
+- WhatsApp/Telegram activity = morale boost
+- Social events organized = "club culture" trait
+- New player integration = chemistry penalty (temporary)
+
+---
+
+## Championship Manager Layer
+
+### Tactics
+- Set formation for upcoming real matches
+- Agent recommends based on opponent scout report
+- Squad votes on approach
+- Post-match: tactic effectiveness analysis
+
+### Scouting
+- Browse local players by reputation
+- View attributes, recent form, heat maps
+- Identify weaknesses in upcoming opponents
+- Make transfer offers (treasury-backed)
+
+### Transfer Market
+- Scout real players from rival squads
+- Loan requests to other local teams
+- Free agents (players not in verified squads)
+- Transfer window aligned with real season
+
+### Finances
+- Match fees → treasury
+- Tournament winnings → treasury
+- Facility upgrades → training bonuses
+- Kit customization
+
+---
+
+## AI Agents (Avalanche Exclusive)
+
+### Squad Manager Agent
+- Analyzes your real results vs tactics
+- Suggests formation changes
+- Manages squad rotation
+- "Your 4-4-2 works at home but not away — try 4-2-3-1"
+
+### Scout Agent
+- Watches match logs + AI vision
+- Identifies squad weaknesses
+- Recommends transfer targets
+- Opponent analysis before derbies
+
+### Fitness Agent
+- Syncs with Strava/Apple Health (optional)
+- Manages player condition
+- Suggests training focus
+- "Marcus hasn't trained — stamina penalty this weekend"
+
+### Social Agent
+- Monitors squad chat activity
+- Suggests socials when morale drops
+- Organizes end-of-season events
+- Tracks team cohesion metrics
+
+---
+
+## Rivalries
+
+### Derby Activation
+- Play same team 3+ times = rivalry unlocked
+- Real banter drives in-game trash talk
+- Rematch scheduling = anticipation XP boost
+- Cross-season rivalry history tracked
+
+### Rivalry Bonuses
+- Win derby = double XP for all players
+- Derby hat-trick = rare achievement minted
+- Clean sheet in derby = defensive reputation boost
+- Rivalry record visible to all local squads
+
+---
+
+## Season Structure
+
+### Real Season (10-20 matches)
+- Local league fixtures
+- Cup runs
+- Friendlies arranged via app
+- All verified on-chain
+
+### SportWarren Season (parallel)
+- Same fixtures drive narrative
+- Virtual "what if" scenarios
+- End-of-season awards
+- Promotion/relegation in virtual leagues
+
+### Crossover Events
+- Real cup final → Special in-game tournament
+- Real injury → Player unavailable in-game
+- New player joins → Scout them in-game
+- End of real season → Full stats retrospective
+
+---
+
+## Viral Mechanics
+
+### Shareable Moments
+- Match highlight cards (auto-generated)
+- Attribute progression: "Shooting 67 → 71!"
+- Derby victory timeline
+- Season stats infographic
+
+### Local Discovery
+- "Best striker in Hackney Marshes" leaderboard
+- Nearby squads looking for friendlies
+- Territory control (win at rival's ground)
+- Local tournament announcements
+
+### Social Proof
+- Squad profile with verified match history
+- Individual player cards with attributes
+- Rivalry records
+- Trophy cabinet
 
 ---
 
 ## Blockchain Integration
 
-### Algorand SDK v3.x (Completed ✅)
+### Algorand (Primary)
+- Match verification (fast, cheap)
+- Reputation tokens (soulbound)
+- Squad registry
 
-**Migration Completed:**
-- Replaced `makeApplicationCreateTxn` → `makeApplicationCreateTxnFromObject`
-- Updated property access: `application-index` → `applicationIndex`
-- Migrated utilities: `microAlgosToAlgos` → `microalgosToAlgos`
-- Fixed all type definitions and response parsing
+### Avalanche (Premium)
+- AI agents (ERC-8004)
+- Treasury management (DeFi)
+- Advanced governance
 
-**Smart Contracts (TEAL):**
-- `squad_dao/` - Squad governance
-- `match_verification/` - Match result consensus
-- `reputation_system/` - Player reputation tokens
-- `global_challenges/` - Tournament management
-
-### Avalanche Integration (Phase 2)
-
-**Smart Contracts (Solidity + Foundry):**
-- `SquadDAO.sol` - ERC-8004 compatible governance
-- `MatchVerification.sol` - Oracle-based verification
-- `Reputation.sol` - Soulbound reputation tokens
-- `GlobalChallenges.sol` - Cross-chain tournaments
-
-**Frontend Integration:**
-- Viem + Wagmi for EVM interactions
-- RainbowKit for wallet connections
-- Foundry for contract testing
+### Both Chains
+- Cross-squad tournaments
+- Shared leaderboards
+- Bridgeable reputation
 
 ---
 
-## Dual-Chain Benefits
+## Communication
 
-### Algorand Advantages
-- ✅ **State Proofs** - Quantum-safe verifiable data (Falcon signatures)
-- ✅ **Low Fees** - ~$0.001 per transaction
-- ✅ **Fast Finality** - 4.5 seconds
-- ✅ **Proven Track Record** - FIFA Collect ran here (2022-2025)
-
-### Avalanche Advantages
-- ✅ **1,600+ Deployed Agents** - Proven agentic infrastructure
-- ✅ **ERC-8004** - Agent-gated identity standard
-- ✅ **TEE (Intel TDX)** - Hardware-isolated agent execution
-- ✅ **AWM** - Native cross-subnet messaging
-- ✅ **EVM Compatibility** - Access to Ethereum tooling
-- ✅ **DeFi Liquidity** - Larger TVL for yield opportunities
+- **WhatsApp/Telegram bots:** Match reminders, results, stats
+- **XMTP:** Web3 native messaging between squads
+- **In-app:** Squad chat, transfer negotiations, banter
 
 ---
 
-## Communication & Integration
-
-### Multi-Platform Support
-- **WhatsApp** - Match notifications, squad updates
-- **Telegram** - Bot commands, community management
-- **XMTP** - Web3 native messaging
-
-### Event Streaming
-- **Kafka** - Real-time event processing
-- **Socket.IO** - Live match updates
-- **GraphQL Subscriptions** - Real-time data sync
-
----
-
-## Technical Highlights
-
-### Chain Abstraction Layer
-Unified interface (`src/lib/blockchain/`) allowing seamless interaction with both chains:
-- Single `connectWallet()` for both chains
-- Chain-agnostic `createProposal()`, `submitMatch()`, `executeAgentAction()`
-- Smart defaults with user override capability
-
-### Cross-Chain Messaging
-- **Avalanche → Avalanche:** AWM (Avalanche Warp Messaging)
-- **Algorand → External:** State Proofs with Falcon signatures
-- **Application Layer:** Tournament synchronization across chains
-
-### Security
-- **Smart Contracts:** Audited TEAL and Solidity patterns
-- **Agent Execution:** TEE hardware isolation
-- **Cross-Chain:** Verified messaging protocols only
-- **Key Management:** Multi-sig for treasury, hardware wallets
-
----
-
-## Licensing Approach
-
-**Fictional Names Strategy** (PES/Pro Evolution Soccer model):
-- Use city references + colors (e.g., "Manchester Reds")
-- Generic league names (e.g., "Premier Sunday League")
-- Fictional player names with real stats
-- Users can edit names locally
-- Negotiate real licenses post-validation
-
-**See Also:** [Architecture](./ARCHITECTURE.md) | [Development](./DEVELOPMENT.md) | [Roadmap](./ROADMAP.md)
+**See Also:** [Architecture](./ARCHITECTURE.md) | [Roadmap](./ROADMAP.md) | [Development](./DEVELOPMENT.md)
