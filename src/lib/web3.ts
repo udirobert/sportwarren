@@ -2,7 +2,7 @@ import { createConfig, http } from 'wagmi';
 import { polygon, polygonMumbai } from 'wagmi/chains';
 import { injected, walletConnect } from 'wagmi/connectors';
 
-const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || 'your-project-id';
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'your-project-id';
 
 export const config = createConfig({
   chains: [polygon, polygonMumbai],

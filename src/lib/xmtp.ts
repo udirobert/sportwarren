@@ -22,7 +22,7 @@ export class XMTPClient {
       }
 
       this.client = await Client.create(this.wallet, {
-        env: import.meta.env.PROD ? 'production' : 'dev',
+        env: process.env.NODE_ENV === 'production' ? 'production' : 'dev',
       });
 
       console.log('✅ XMTP client initialized');

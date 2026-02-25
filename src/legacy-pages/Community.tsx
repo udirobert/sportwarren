@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Card } from '../components/common/Card';
+import { Card } from '@/components/common/Card';
 import { MessageCircle, Trophy, Users, Flame, Target, Shield, Crown, Star } from 'lucide-react';
 
 export const Community: React.FC = () => {

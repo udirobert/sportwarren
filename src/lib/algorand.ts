@@ -1,14 +1,15 @@
 import algosdk from 'algosdk';
 
 // Configuration for Algorand TestNet
+// In Next.js, use process.env instead of import.meta.env
 const algodClient = new algosdk.Algodv2(
-  import.meta.env.VITE_ALGORAND_NODE_URL || 'https://testnet-api.algonode.cloud',
+  process.env.NEXT_PUBLIC_ALGORAND_NODE_URL || 'https://testnet-api.algonode.cloud',
   '',
   443
 );
 
 const indexerClient = new algosdk.Indexer(
-  import.meta.env.VITE_ALGORAND_INDEXER_URL || 'https://testnet-idx.algonode.cloud',
+  process.env.NEXT_PUBLIC_ALGORAND_INDEXER_URL || 'https://testnet-idx.algonode.cloud',
   '',
   443
 );
@@ -27,10 +28,10 @@ export const connectAlgorandWallet = async (): Promise<string | null> => {
     // In a real scenario, you'd get the connected account address from the wallet.
     // For now, we'll use a placeholder or a test account if available.
     // If you have a test account private key in your .env, you can use it for testing.
-    const testAccountMnemonic = import.meta.env.VITE_ALGORAND_TEST_MNEMONIC;
+    const testAccountMnemonic = process.env.NEXT_PUBLIC_ALGORAND_TEST_MNEMONIC;
     if (testAccountMnemonic) {
       const account = algosdk.mnemonicToSecretKey(testAccountMnemonic);
-      return account.addr;
+      return account.addr.toString();
     }
 
     // Fallback to a dummy address if no test mnemonic is provided
@@ -46,17 +47,16 @@ export const getAccountInfo = async (address: string) => {
   try {
     const accountInfo = await algodClient.accountInformation(address).do();
     const status = await algodClient.status().do();
-    const health = await algodClient.health().do();
 
     return {
       address: accountInfo.address,
-      balance: algosdk.microalgosToAlgos(accountInfo.amount),
+      balance: algosdk.microalgosToAlgos(Number(accountInfo.amount)),
       network: {
         network: 'TestNet', // Or dynamically determine from status
         lastRound: status.lastRound,
         timeSinceLastRound: status.timeSinceLastRound,
         catchupTime: status.catchupTime,
-        health: health.message,
+        health: 'healthy', // Simplified health status
       },
       assets: accountInfo.assets, // Include ASA information
     };

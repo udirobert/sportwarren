@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { Card } from "../common/Card";
+import { Card } from "@/components/common/Card";
 import { Users, Vote, Trophy, Plus, Check, X, Clock } from "lucide-react";
 
 interface SquadDAOInfo {

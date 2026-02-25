@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { HelpCircle, X, Lightbulb, ArrowRight } from 'lucide-react';
-import { useUserPreferences } from '../../hooks/useUserPreferences';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 
 interface HelpTip {
   id: string;

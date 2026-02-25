@@ -1,6 +1,6 @@
 import React from 'react';
-import { Card } from '../components/common/Card';
-import { StatCard } from '../components/common/StatCard';
+import { Card } from '@/components/common/Card';
+import { StatCard } from '@/components/common/StatCard';
 import { Target, Users, Trophy, Shield, TrendingUp, Award, Star, Zap } from 'lucide-react';
 
 export const PlayerStats: React.FC = () => {

@@ -6,13 +6,13 @@ import { createClient } from 'graphql-ws';
 
 // HTTP link for queries and mutations
 const httpLink = createHttpLink({
-  uri: import.meta.env.VITE_GRAPHQL_URL || 'http://localhost:4000/graphql',
+  uri: process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:4000/graphql',
 });
 
 // WebSocket link for subscriptions
 const wsLink = new GraphQLWsLink(
   createClient({
-    url: import.meta.env.VITE_GRAPHQL_WS_URL || 'ws://localhost:4000/graphql',
+    url: process.env.NEXT_PUBLIC_GRAPHQL_WS_URL || 'ws://localhost:4000/graphql',
     connectionParams: () => {
       const token = localStorage.getItem('auth_token');
       return {

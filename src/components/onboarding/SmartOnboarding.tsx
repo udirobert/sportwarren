@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card } from '../common/Card';
-import { useUserPreferences } from '../../hooks/useUserPreferences';
+import { Card } from '@/components/common/Card';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { Target, Users, Trophy, Settings, ChevronRight, Check } from 'lucide-react';
 
 interface OnboardingStep {

@@ -1,9 +1,12 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Home, Target, BarChart3, Users, Trophy, MessageCircle, Menu, X } from 'lucide-react';
 
 export const Navigation: React.FC = () => {
-  const location = useLocation();
+  const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -16,7 +19,7 @@ export const Navigation: React.FC = () => {
     { path: '/achievements', icon: Trophy, label: 'Achievements' },
   ];
 
-  const isActive = (path: string) => location.pathname === path;
+  const isActive = (path: string) => pathname === path;
 
   // Handle scroll effect for mobile header
   useEffect(() => {
@@ -30,7 +33,7 @@ export const Navigation: React.FC = () => {
   // Close mobile menu when route changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
-  }, [location.pathname]);
+  }, [pathname]);
 
   // Prevent body scroll when mobile menu is open
   useEffect(() => {
@@ -50,7 +53,7 @@ export const Navigation: React.FC = () => {
       <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-6 w-full">
           <div className="flex items-center justify-between h-16">
-            <Link to="/" className="flex items-center space-x-3 group">
+            <Link href="/" className="flex items-center space-x-3 group">
               <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-green-700 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-transform">
                 <Target className="w-6 h-6 text-white" />
               </div>
@@ -64,7 +67,7 @@ export const Navigation: React.FC = () => {
               {navItems.slice(1).map(({ path, icon: Icon, label }) => (
                 <Link
                   key={path}
-                  to={path}
+                  href={path}
                   className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
                     isActive(path)
                       ? 'bg-green-600 text-white shadow-lg shadow-green-600/25'
@@ -86,7 +89,7 @@ export const Navigation: React.FC = () => {
       } border-b border-gray-200`}>
         <div className="px-4">
           <div className="flex items-center justify-between h-14">
-            <Link to="/" className="flex items-center space-x-2 touch-manipulation">
+            <Link href="/" className="flex items-center space-x-2 touch-manipulation">
               <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center">
                 <Target className="w-5 h-5 text-white" />
               </div>
@@ -114,7 +117,7 @@ export const Navigation: React.FC = () => {
               {navItems.slice(1).map(({ path, icon: Icon, label }) => (
                 <Link
                   key={path}
-                  to={path}
+                  href={path}
                   className={`flex items-center space-x-3 p-4 rounded-xl transition-all touch-manipulation ${
                     isActive(path)
                       ? 'bg-green-600 text-white shadow-lg'
@@ -136,7 +139,7 @@ export const Navigation: React.FC = () => {
           {navItems.map(({ path, icon: Icon, label }) => (
             <Link
               key={path}
-              to={path}
+              href={path}
               className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all touch-manipulation min-h-[3.5rem] ${
                 isActive(path)
                   ? 'text-green-600 bg-green-50 scale-105'

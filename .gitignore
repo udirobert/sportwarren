@@ -1,21 +1,21 @@
+# Node.js
+node_modules/
+dist/
+dist-ssr/
+*.local
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
-yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
 # Editor directories and files
-.vscode/*
+.vscode/
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
 *.suo
 *.ntvs*
@@ -23,8 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
-.env.local
-.env.production
+.env.*
+!.env.example
 
 # Deployment files
 deployment-*.json
@@ -56,6 +56,31 @@ ehthumbs.db
 *.goal
 sandbox/
 algorand-sandbox/
+*_approval.teal
+*_clear_state.teal
+
+# Python
+__pycache__/
+*.py[cod]
+*.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
 # IDE and editor files
 *.swp
@@ -79,5 +104,11 @@ junit.xml
 # Build artifacts
 build/
 out/
+.next/
 *.tgz
 *.tar.gz
+
+# Bolt
+.bolt/
+.junie
+.bolt
