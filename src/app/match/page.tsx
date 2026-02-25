@@ -2,19 +2,33 @@
 
 import { useState } from "react";
 import { MatchCapture } from "@/components/match/MatchCapture";
-import { MatchVerification } from "@/components/match/MatchVerification";
 import { MatchConsensusPanel } from "@/components/match/MatchConsensus";
 import { MatchConfirmation } from "@/components/match/MatchConfirmation";
+import { XPGainSummary } from "@/components/player/XPGainPopup";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useMatchVerification } from "@/hooks/match/useMatchVerification";
-import { Trophy, Shield, Activity } from "lucide-react";
+import { useXPGain } from "@/hooks/player/useXPGain";
+import { Trophy, Shield, Activity, Sparkles } from "lucide-react";
+import type { AttributeType } from "@/types";
 
-type ViewMode = "capture" | "verify" | "detail";
+type ViewMode = "capture" | "verify" | "detail" | "xp-summary";
+
+// Mock XP data for demo
+const MOCK_XP_SUMMARY = {
+  totalXP: 385,
+  attributeGains: [
+    { attribute: 'shooting' as AttributeType, xp: 125, oldRating: 87, newRating: 88 },
+    { attribute: 'passing' as AttributeType, xp: 85, oldRating: 82, newRating: 82 },
+    { attribute: 'physical' as AttributeType, xp: 95, oldRating: 84, newRating: 84 },
+    { attribute: 'pace' as AttributeType, xp: 80, oldRating: 76, newRating: 76 },
+  ],
+};
 
 export default function MatchPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("capture");
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
+  const [showXPSummary, setShowXPSummary] = useState(false);
   
   const { 
     matches, 
@@ -24,15 +38,24 @@ export default function MatchPage() {
     getMatchById 
   } = useMatchVerification();
 
+  const { calculateMatchXPGain } = useXPGain();
+
   const selectedMatch = selectedMatchId ? getMatchById(selectedMatchId) : null;
 
   const handleMatchSubmit = async (result: any) => {
     await submitMatchResult(result);
-    setViewMode("verify");
+    // Show XP summary after match submission
+    setShowXPSummary(true);
+    setViewMode("xp-summary");
   };
 
   const handleVerify = async (matchId: string, verified: boolean) => {
     await verifyMatch(matchId, verified);
+    if (verified) {
+      // After verification, show XP gains
+      setShowXPSummary(true);
+      setViewMode("xp-summary");
+    }
   };
 
   return (
@@ -157,6 +180,42 @@ export default function MatchPage() {
               handleVerify(selectedMatch.id, false);
             }}
           />
+        </div>
+      )}
+
+      {viewMode === "xp-summary" && showXPSummary && (
+        <div className="space-y-4">
+          <Button 
+            onClick={() => {
+              setShowXPSummary(false);
+              setViewMode("verify");
+            }}
+            variant="outline"
+            className="mb-4"
+          >
+            ← Back to Matches
+          </Button>
+          
+          <XPGainSummary 
+            totalXP={MOCK_XP_SUMMARY.totalXP}
+            attributeGains={MOCK_XP_SUMMARY.attributeGains}
+          />
+          
+          <Card className="text-center py-6">
+            <Sparkles className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">XP Applied!</h3>
+            <p className="text-gray-600 mb-4">
+              Your attributes have been updated based on this match performance.
+            </p>
+            <Button 
+              onClick={() => {
+                setShowXPSummary(false);
+                setViewMode("verify");
+              }}
+            >
+              Continue
+            </Button>
+          </Card>
         </div>
       )}
     </div>
