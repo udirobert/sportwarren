@@ -97,21 +97,33 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
 
           {/* Stats */}
           <div className="flex flex-wrap items-center justify-center gap-8">
-            {[
-              { icon: Users, value: stats.totalPlayers, label: 'Players', color: 'green' },
-              { icon: Trophy, value: stats.totalMatches, label: 'Matches', color: 'blue' },
-              { icon: Sparkles, value: stats.totalAgents, label: 'AI Agents', color: 'purple' },
-            ].map((stat, i) => (
-              <div key={i} className="flex items-center space-x-2 group">
-                <div className={`w-10 h-10 rounded-full bg-${stat.color}-500/20 flex items-center justify-center group-hover:scale-110 transition-transform`}>
-                  <stat.icon className={`w-5 h-5 text-${stat.color}-400`} />
-                </div>
-                <div className="text-left">
-                  <div className="text-2xl font-bold text-white">{stat.value.toLocaleString()}+</div>
-                  <div className="text-xs text-gray-400">{stat.label}</div>
-                </div>
+            <div className="flex items-center space-x-2 group">
+              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Users className="w-5 h-5 text-green-400" />
               </div>
-            ))}
+              <div className="text-left">
+                <div className="text-2xl font-bold text-white">{stats.totalPlayers.toLocaleString()}+</div>
+                <div className="text-xs text-gray-400">Players</div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 group">
+              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Trophy className="w-5 h-5 text-blue-400" />
+              </div>
+              <div className="text-left">
+                <div className="text-2xl font-bold text-white">{stats.totalMatches.toLocaleString()}+</div>
+                <div className="text-xs text-gray-400">Matches</div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2 group">
+              <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                <Sparkles className="w-5 h-5 text-purple-400" />
+              </div>
+              <div className="text-left">
+                <div className="text-2xl font-bold text-white">{stats.totalAgents.toLocaleString()}+</div>
+                <div className="text-xs text-gray-400">AI Agents</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -230,17 +242,22 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
                 }}
               >
                 <h3 className="text-3xl font-bold text-white mb-6">SportWarren Layer</h3>
-                {[
-                  { label: 'Result verified on-chain', icon: '✅', color: 'green' },
-                  { label: 'Shooting XP +125', icon: '📈', color: 'blue' },
-                  { label: 'Derby victory bonus', icon: '🔥', color: 'orange' },
-                  { label: 'Squad chemistry +10', icon: '💎', color: 'purple' },
-                ].map((item, i) => (
-                  <div key={i} className={`flex items-center space-x-4 bg-${item.color}-500/10 backdrop-blur-sm border border-${item.color}-500/30 rounded-xl p-4`}>
-                    <span className="text-3xl">{item.icon}</span>
-                    <span className="text-lg text-white font-medium">{item.label}</span>
-                  </div>
-                ))}
+                <div className="flex items-center space-x-4 bg-green-500/10 backdrop-blur-sm border border-green-500/30 rounded-xl p-4">
+                  <span className="text-3xl">✅</span>
+                  <span className="text-lg text-white font-medium">Result verified on-chain</span>
+                </div>
+                <div className="flex items-center space-x-4 bg-blue-500/10 backdrop-blur-sm border border-blue-500/30 rounded-xl p-4">
+                  <span className="text-3xl">📈</span>
+                  <span className="text-lg text-white font-medium">Shooting XP +125</span>
+                </div>
+                <div className="flex items-center space-x-4 bg-orange-500/10 backdrop-blur-sm border border-orange-500/30 rounded-xl p-4">
+                  <span className="text-3xl">🔥</span>
+                  <span className="text-lg text-white font-medium">Derby victory bonus</span>
+                </div>
+                <div className="flex items-center space-x-4 bg-purple-500/10 backdrop-blur-sm border border-purple-500/30 rounded-xl p-4">
+                  <span className="text-3xl">💎</span>
+                  <span className="text-lg text-white font-medium">Squad chemistry +10</span>
+                </div>
               </div>
             </div>
           </div>
@@ -262,55 +279,98 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
 
           {/* Feature Cards with 3D Effect */}
           <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Target,
-                title: 'Play Real Matches',
-                description: 'Your Sunday league matches drive the game. Score goals, win matches, build your reputation on-chain.',
-                features: ['Chainlink oracle verification', 'GPS + weather validation', 'Soulbound reputation tokens'],
-                color: 'green',
-              },
-              {
-                icon: TrendingUp,
-                title: 'Earn Game Rewards',
-                description: 'Real performance = in-game attributes. Your shooting, passing, defending stats evolve with every match.',
-                features: ['XP for goals, assists, clean sheets', 'Form tracking & attribute boosts', 'Derby bonuses & rivalry rewards'],
-                color: 'blue',
-              },
-              {
-                icon: Sparkles,
-                title: 'AI Agent Assistance',
-                description: 'Kite AI-powered agents analyze tactics, scout opponents, manage fitness, and boost team morale.',
-                features: ['Squad Manager for tactics', 'Scout for opponent analysis', 'Fitness Coach for training plans'],
-                color: 'purple',
-              },
-            ].map((feature, i) => (
-              <div
-                key={i}
-                className={`group relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-${feature.color}-500/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-${feature.color}-500/20`}
-                style={{
-                  transform: `translateY(${Math.max(0, (scrollY - 2000) * 0.05 - i * 30)}px) rotateY(${(scrollY - 2000) * 0.02}deg)`,
-                  opacity: Math.min(1, (scrollY - 1900) / 200),
-                }}
-              >
-                <div className={`absolute inset-0 bg-gradient-to-br from-${feature.color}-500/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity`}></div>
-                <div className="relative z-10">
-                  <div className={`w-16 h-16 bg-gradient-to-br from-${feature.color}-500 to-${feature.color}-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-${feature.color}-500/50`}>
-                    <feature.icon className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-2xl font-bold text-white mb-4">{feature.title}</h3>
-                  <p className="text-gray-300 mb-6 leading-relaxed">{feature.description}</p>
-                  <ul className="space-y-3">
-                    {feature.features.map((item, j) => (
-                      <li key={j} className="flex items-start text-gray-300">
-                        <span className={`text-${feature.color}-400 mr-3 mt-1`}>✓</span>
-                        <span>{item}</span>
-                      </li>
-                    ))}
-                  </ul>
+            <div
+              className="group relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-green-500/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-green-500/20"
+              style={{
+                transform: `translateY(${Math.max(0, (scrollY - 2000) * 0.05)}px) rotateY(${(scrollY - 2000) * 0.02}deg)`,
+                opacity: Math.min(1, (scrollY - 1900) / 200),
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-green-500/50">
+                  <Target className="w-8 h-8 text-white" />
                 </div>
+                <h3 className="text-2xl font-bold text-white mb-4">Play Real Matches</h3>
+                <p className="text-gray-300 mb-6 leading-relaxed">Your Sunday league matches drive the game. Score goals, win matches, build your reputation on-chain.</p>
+                <ul className="space-y-3">
+                  <li className="flex items-start text-gray-300">
+                    <span className="text-green-400 mr-3 mt-1">✓</span>
+                    <span>Chainlink oracle verification</span>
+                  </li>
+                  <li className="flex items-start text-gray-300">
+                    <span className="text-green-400 mr-3 mt-1">✓</span>
+                    <span>GPS + weather validation</span>
+                  </li>
+                  <li className="flex items-start text-gray-300">
+                    <span className="text-green-400 mr-3 mt-1">✓</span>
+                    <span>Soulbound reputation tokens</span>
+                  </li>
+                </ul>
               </div>
-            ))}
+            </div>
+
+            <div
+              className="group relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-blue-500/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20"
+              style={{
+                transform: `translateY(${Math.max(0, (scrollY - 2000) * 0.05 - 30)}px) rotateY(${(scrollY - 2000) * 0.02}deg)`,
+                opacity: Math.min(1, (scrollY - 1900) / 200),
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/50">
+                  <TrendingUp className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-4">Earn Game Rewards</h3>
+                <p className="text-gray-300 mb-6 leading-relaxed">Real performance = in-game attributes. Your shooting, passing, defending stats evolve with every match.</p>
+                <ul className="space-y-3">
+                  <li className="flex items-start text-gray-300">
+                    <span className="text-blue-400 mr-3 mt-1">✓</span>
+                    <span>XP for goals, assists, clean sheets</span>
+                  </li>
+                  <li className="flex items-start text-gray-300">
+                    <span className="text-blue-400 mr-3 mt-1">✓</span>
+                    <span>Form tracking & attribute boosts</span>
+                  </li>
+                  <li className="flex items-start text-gray-300">
+                    <span className="text-blue-400 mr-3 mt-1">✓</span>
+                    <span>Derby bonuses & rivalry rewards</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+
+            <div
+              className="group relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-purple-500/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/20"
+              style={{
+                transform: `translateY(${Math.max(0, (scrollY - 2000) * 0.05 - 60)}px) rotateY(${(scrollY - 2000) * 0.02}deg)`,
+                opacity: Math.min(1, (scrollY - 1900) / 200),
+              }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
+              <div className="relative z-10">
+                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-purple-500/50">
+                  <Sparkles className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-4">AI Agent Assistance</h3>
+                <p className="text-gray-300 mb-6 leading-relaxed">Kite AI-powered agents analyze tactics, scout opponents, manage fitness, and boost team morale.</p>
+                <ul className="space-y-3">
+                  <li className="flex items-start text-gray-300">
+                    <span className="text-purple-400 mr-3 mt-1">✓</span>
+                    <span>Squad Manager for tactics</span>
+                  </li>
+                  <li className="flex items-start text-gray-300">
+                    <span className="text-purple-400 mr-3 mt-1">✓</span>
+                    <span>Scout for opponent analysis</span>
+                  </li>
+                  <li className="flex items-start text-gray-300">
+                    <span className="text-purple-400 mr-3 mt-1">✓</span>
+                    <span>Fitness Coach for training plans</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </div>
 
           {/* Tech Stack */}

@@ -6,12 +6,44 @@ import { SmartNavigation } from "../components/adaptive/SmartNavigation";
 import { useSocket } from "../hooks/useSocket";
 import { useUserPreferences } from "../hooks/useUserPreferences";
 import { SmartOnboarding } from "../components/onboarding/SmartOnboarding";
-import { WalletProvider } from "@/contexts/WalletContext";
+import { WalletProvider, useWallet } from "@/contexts/WalletContext";
 import { useState } from "react";
 
-export function Providers({ children }: { children: React.ReactNode }) {
-  const { preferences, isLoading } = useUserPreferences();
+function AppContent({ children }: { children: React.ReactNode }) {
+  const { preferences, savePreferences } = useUserPreferences();
+  const { connected } = useWallet();
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Check if we should show onboarding
+  const shouldShowOnboarding = connected && 
+    showOnboarding && 
+    !preferences.usagePatterns.completedOnboarding &&
+    !preferences.usagePatterns.onboardingSkipped;
+
+  // Show onboarding only if explicitly requested (via settings) or first-time user
+  if (shouldShowOnboarding) {
+    return (
+      <SmartOnboarding 
+        onComplete={() => setShowOnboarding(false)} 
+        onSkip={() => setShowOnboarding(false)}
+      />
+    );
+  }
+
+  return (
+    <ApolloProvider client={apolloClient}>
+      <div className="min-h-screen">
+        <SmartNavigation />
+        <main className="pb-20 md:pb-0">
+          {children}
+        </main>
+      </div>
+    </ApolloProvider>
+  );
+}
+
+export function Providers({ children }: { children: React.ReactNode }) {
+  const { isLoading } = useUserPreferences();
 
   // Initialize socket connection
   useSocket();
@@ -29,20 +61,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!preferences.usagePatterns.completedOnboarding || showOnboarding) {
-    return <SmartOnboarding onComplete={() => setShowOnboarding(false)} />;
-  }
-
   return (
     <WalletProvider>
-      <ApolloProvider client={apolloClient}>
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-green-50">
-          <SmartNavigation />
-          <main className="pb-20 md:pb-0">
-            {children}
-          </main>
-        </div>
-      </ApolloProvider>
+      <AppContent>{children}</AppContent>
     </WalletProvider>
   );
 }
