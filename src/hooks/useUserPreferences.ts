@@ -24,6 +24,8 @@ export interface UserPreferences {
     timeSpentInSections: Record<string, number>;
     lastActiveFeatures: string[];
     completedOnboarding: boolean;
+    onboardingSkipped?: boolean;
+    onboardingSkippedAt?: string;
   };
   
   // Progressive disclosure state

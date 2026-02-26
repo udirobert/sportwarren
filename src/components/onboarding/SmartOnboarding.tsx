@@ -91,7 +91,7 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   },
 ];
 
-export const SmartOnboarding: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
+export const SmartOnboarding: React.FC<{ onComplete: () => void; onSkip?: () => void }> = ({ onComplete, onSkip }) => {
   const { preferences, savePreferences } = useUserPreferences();
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState<Record<string, any>>({});
@@ -103,6 +103,19 @@ export const SmartOnboarding: React.FC<{ onComplete: () => void }> = ({ onComple
       onComplete();
     }
   }, [preferences.usagePatterns.completedOnboarding, onComplete]);
+
+  const handleSkip = () => {
+    // Save minimal preferences and mark as skipped
+    savePreferences({
+      ...preferences,
+      usagePatterns: {
+        ...preferences.usagePatterns,
+        onboardingSkipped: true,
+        onboardingSkippedAt: new Date().toISOString(),
+      },
+    });
+    onSkip?.();
+  };
 
   const handleAnswer = (questionId: string, answer: any) => {
     setAnswers(prev => ({ ...prev, [questionId]: answer }));
@@ -344,8 +357,21 @@ export const SmartOnboarding: React.FC<{ onComplete: () => void }> = ({ onComple
           ))}
         </div>
 
+        {/* Skip option */}
+        <div className="mt-6 pt-6 border-t border-gray-200">
+          <button
+            onClick={handleSkip}
+            className="w-full text-center text-sm text-gray-500 hover:text-gray-700 transition-colors"
+          >
+            Skip for now →
+          </button>
+          <p className="text-xs text-gray-400 text-center mt-2">
+            You can always personalize your experience later from settings
+          </p>
+        </div>
+
         {/* Navigation */}
-        <div className="flex justify-between mt-8">
+        <div className="flex justify-between mt-6">
           <button
             onClick={() => setCurrentStep(Math.max(0, currentStep - 1))}
             disabled={currentStep === 0}
