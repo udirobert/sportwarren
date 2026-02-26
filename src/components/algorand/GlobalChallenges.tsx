@@ -41,11 +41,11 @@ export const GlobalChallenges: React.FC = () => {
   useEffect(() => {
     const mockChallenges: GlobalChallenge[] = [
       {
-        id: 'fifa_world_cup_goals',
-        title: 'FIFA World Cup Goals Challenge',
-        description: 'Score the most goals during the World Cup period and win exclusive FIFA NFTs and ALGO rewards.',
+        id: 'world_cup_goals_challenge',
+        title: 'World Cup Goals Challenge',
+        description: 'Score the most goals during the World Cup period and win exclusive NFTs and ALGO rewards.',
         type: 'goals',
-        sponsor: 'FIFA',
+        sponsor: 'Global Partners',
         prizePool: 10000,
         currency: 'ALGO',
         participants: 15420,

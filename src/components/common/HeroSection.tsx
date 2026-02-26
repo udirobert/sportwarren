@@ -60,7 +60,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
           {/* Badge */}
           <div className="inline-flex items-center space-x-2 bg-green-500/10 backdrop-blur-sm border border-green-500/20 text-green-400 px-6 py-3 rounded-full text-sm font-medium mb-8">
             <Shield className="w-4 h-4" />
-            <span>FIFA Partnership • Chainlink Verified • Kite AI Powered</span>
+            <span>Chainlink Verified • Kite AI Powered • Algorand Native</span>
           </div>
 
           {/* Hero Headline */}
@@ -378,7 +378,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
             <p className="text-sm text-gray-400 mb-6 uppercase tracking-wider">Powered by industry-leading infrastructure</p>
             <div className="flex flex-wrap items-center justify-center gap-4">
               {[
-                { icon: '⚡', label: 'Algorand', subtitle: 'FIFA Official' },
+                { icon: '⚡', label: 'Algorand', subtitle: 'Native Integration' },
                 { icon: '🔗', label: 'Chainlink', subtitle: 'Oracles' },
                 { icon: '🤖', label: 'Kite AI', subtitle: '17.8M+ Agents' },
                 { icon: '🏔️', label: 'Avalanche', subtitle: 'Subnet' },

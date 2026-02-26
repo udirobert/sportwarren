@@ -76,7 +76,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
               </div>
               <div className="text-left flex-1">
                 <h3 className="font-semibold text-gray-900">Algorand</h3>
-                <p className="text-sm text-gray-500">FIFA Official Partner</p>
+                <p className="text-sm text-gray-500">Secure Blockchain Connection</p>
               </div>
               {selectedChain === 'algorand' && isConnecting && (
                 <Loader2 className="w-5 h-5 text-green-600 animate-spin" />

@@ -31,7 +31,7 @@ REDIS_URL=redis://localhost:6379
 AUTH0_DOMAIN=your-domain.auth0.com
 JWT_SECRET=your-secret
 
-# Algorand (FIFA)
+# Algorand
 ALGORAND_NETWORK=testnet
 ALGORAND_NODE_URL=https://testnet-api.algonode.cloud
 ALGORAND_PRIVATE_KEY=your-mnemonic
