@@ -1,15 +1,15 @@
 # SportWarren
 
-**Championship Manager Meets Web3** | First agentic football platform with FIFA partnership
+**Championship Manager Meets Web3** | Agentic football platform with dual-chain architecture
 
-A next-generation football management platform built with Next.js, combining **Algorand** (FIFA official data) and **Avalanche** (1,600+ AI agent ecosystem) for an unparalleled sports experience.
+A next-generation football management platform built with Next.js, combining **Algorand** (core blockchain) and **Avalanche** (AI agent ecosystem) for an unparalleled sports experience.
 
 ---
 
 ## 🎯 Vision
 
 SportWarren transforms amateur football with:
-- **FIFA Official Partnership** - World Cup 2026 integration via Algorand
+- **Real Match Verification** - On-chain verified Sunday league matches
 - **Autonomous AI Agents** - Squad management, match analysis, treasury operations
 - **Dual-Chain Architecture** - User choice, best of both blockchains
 - **Championship Manager UX** - Familiar gameplay, Web3 ownership
@@ -42,8 +42,8 @@ npm run dev
 │  │   AVALANCHE  │                           │   ALGORAND   │   │
 │  │   Subnet     │                           │   Mainnet    │   │
 │  ├──────────────┤                           ├──────────────┤   │
-│  │ 🤖 Agent     │                           │ ⚽ FIFA       │   │
-│  │    Economy   │◄────── User Choice ──────►│    Official  │   │
+│  │ 🤖 Agent     │                           │ ⚽ Match      │   │
+│  │    Economy   │◄────── User Choice ──────►│    Verify    │   │
 │  │ • ERC-8004   │                           │ • State      │   │
 │  │ • Kite AI    │                           │   Proofs     │   │
 │  │ • Chainlink  │                           │ • Match      │   │
@@ -63,7 +63,7 @@ npm run dev
 
 | Operation | Default Chain | Why |
 |-----------|---------------|-----|
-| Match Verification | Algorand | FIFA data, $0.001 fees, Chainlink oracles |
+| Match Verification | Algorand | State Proofs, $0.001 fees, Chainlink oracles |
 | Player Reputation | Algorand | Official credibility |
 | AI Agents | Avalanche | ERC-8004, Kite AI passports |
 | Agent Payments | Avalanche | Kite stablecoin rails |
@@ -98,7 +98,7 @@ npm run dev
 - **Multi-Platform** - WhatsApp, Telegram, XMTP integration
 
 ### Blockchain
-- **Algorand** - FIFA partnership, State Proofs, low fees (~$0.001)
+- **Algorand** - State Proofs, low fees (~$0.001), fast finality
 - **Avalanche** - 1,600+ agents, Kite AI, EVM compatibility
 - **Chainlink Oracles** - Weather/location verification for match credibility
 - **Cross-Chain** - AWM + State Proofs for seamless operations
@@ -113,7 +113,7 @@ npm run dev
 | **2. Avalanche Integration** | Q2 2026 | Solidity contracts, Foundry tests |
 | **3. Chain Abstraction** | Q2-Q3 2026 | Unified interface, cross-chain messaging |
 | **4. Agentic Features** | Q3 2026 | ERC-8004 agents, TEE infrastructure |
-| **5. FIFA + Launch** | Q4 2026 | World Cup 2026, public mainnet |
+| **5. Mainnet Launch** | Q4 2026 | Public launch, full platform |
 
 **See [Roadmap](docs/ROADMAP.md) for detailed timeline and success metrics.**
 
@@ -170,4 +170,4 @@ We welcome contributions! See our [Development Guide](docs/DEVELOPMENT.md) for:
 
 **Built with ⚽ by the SportWarren team**
 
-**Strategic Positioning:** FIFA partnership (Algorand) + Agentic infrastructure (Avalanche) + Next.js UX = Championship Manager for the Web3 era
+**Strategic Positioning:** Algorand core infrastructure + Agentic infrastructure (Avalanche) + Next.js UX = Championship Manager for the Web3 era

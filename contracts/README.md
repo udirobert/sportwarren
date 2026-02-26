@@ -1,6 +1,6 @@
 # SportWarren Smart Contracts
 
-This directory contains all smart contracts for the SportWarren platform, supporting both **Algorand** (FIFA partnership) and **Avalanche** (agentic infrastructure) blockchains.
+This directory contains all smart contracts for the SportWarren platform, supporting both **Algorand** (core blockchain) and **Avalanche** (agentic infrastructure) blockchains.
 
 ## Dual-Chain Architecture
 
@@ -8,7 +8,7 @@ SportWarren leverages both blockchains for their unique advantages:
 
 | Feature | Algorand | Avalanche |
 |---------|----------|-----------|
-| **Purpose** | FIFA data, match verification, reputation | AI agents, DeFi, cross-chain tournaments |
+| **Purpose** | Match verification, reputation | AI agents, DeFi, cross-chain tournaments |
 | **Language** | TEAL | Solidity |
 | **Development** | algosdk + TEAL | Foundry + Solidity |
 | **Network** | Testnet → Mainnet | Fuji → C-Chain |
@@ -70,7 +70,7 @@ contracts/
 - Immutable match statistics storage
 - Dispute resolution mechanisms
 - Automated stat updates
-- **Algorand:** FIFA data oracle integration
+- **Algorand:** Chainlink oracle integration
 
 ### 🎯 Reputation System
 
@@ -245,7 +245,7 @@ When adding new contracts:
 
 | Use Case | Recommended Chain | Rationale |
 |----------|------------------|-----------|
-| Match verification | Algorand | FIFA data, low fees |
+| Match verification | Algorand | Chainlink oracles, low fees |
 | Player reputation | Algorand | Official credibility |
 | Squad governance | User choice | Fees vs. features |
 | AI agents | Avalanche | ERC-8004, TEE |
