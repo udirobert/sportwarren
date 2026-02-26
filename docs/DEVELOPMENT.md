@@ -3,21 +3,25 @@
 ## Quick Start
 
 ### Prerequisites
-- **Node.js 18+**, **PostgreSQL 14+**, **Redis 6+**
-- **Algorand Sandbox** (local dev)
-- **Foundry**: `curl -L https://foundry.paradigm.xyz | bash`
+- **Node.js 18+**, **PostgreSQL 14+**
+- **GitHub CLI** (for auth): `gh auth login`
 
 ### Installation
 ```bash
-git clone https://github.com/your-org/sportwarren.git
+git clone https://github.com/udirobert/sportwarren.git
 cd sportwarren
 npm install
-cp .env.example .env
-npm run setup:analytics
+cp .env.example .env.local
+
+# Set up PostgreSQL database
+brew services start postgresql@14
+psql postgres -c "CREATE DATABASE sportwarren;"
+psql sportwarren < prisma/migrations/001_init.sql
+
 npm run dev
 ```
 
-**Local URLs:** Frontend:3000 | API:4000 | Analytics:5001
+**Local URLs:** Frontend: http://localhost:3000 | API: http://localhost:3000/api/trpc
 
 ---
 
@@ -26,80 +30,119 @@ npm run dev
 ```env
 # Core
 NODE_ENV=development
-DATABASE_URL=postgresql://user:pass@localhost:5432/sportwarren
-REDIS_URL=redis://localhost:6379
-AUTH0_DOMAIN=your-domain.auth0.com
-JWT_SECRET=your-secret
+DATABASE_URL=postgresql://localhost:5432/sportwarren
 
 # Algorand
-ALGORAND_NETWORK=testnet
-ALGORAND_NODE_URL=https://testnet-api.algonode.cloud
-ALGORAND_PRIVATE_KEY=your-mnemonic
+NEXT_PUBLIC_ALGORAND_NODE_URL=https://testnet-api.algonode.cloud
+NEXT_PUBLIC_ALGORAND_INDEXER_URL=https://testnet-idx.algonode.cloud
 
-# Avalanche (Agents)
-AVALANCHE_NETWORK=fuji
-AVALANCHE_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
-AVALANCHE_PRIVATE_KEY=your-key
+# Avalanche
+NEXT_PUBLIC_AVALANCHE_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
 
-# AI
-OPENAI_API_KEY=sk-key
-ROBOFLOW_API_KEY=your-key
+# WalletConnect
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-project-id
 ```
 
 ---
 
-## Smart Contract Development
+## Database
 
-### Algorand (TEAL)
-```bash
-# Local
-npm run deploy:contracts:algorand:local
-# Testnet
-npm run deploy:contracts:algorand:testnet
-# Mainnet
-npm run deploy:contracts:algorand:mainnet
-```
+### Schema
+We use **Prisma** with **PostgreSQL**. The schema is in `prisma/schema.prisma`.
 
-### Avalanche (Solidity + Foundry)
-```bash
-# Test
-forge test
-# Deploy Fuji
-npm run deploy:contracts:avalanche:fuji
-# Deploy Mainnet
-npm run deploy:contracts:avalanche:mainnet
-```
+### Key Tables
+- `users` - Wallet-based authentication
+- `player_profiles` - XP, level, stats
+- `player_attributes` - FIFA-style ratings
+- `squads` - Team management
+- `matches` - Match verification
+- `match_verifications` - Consensus records
+- `xp_gains` - Audit trail
 
-### Both Chains
+### Running Migrations
 ```bash
-npm run deploy:contracts:testnet
-npm run deploy:contracts:mainnet
-npm run verify:contracts
+# Apply SQL migration
+psql sportwarren < prisma/migrations/001_init.sql
+
+# Generate Prisma client
+npx prisma generate
 ```
 
 ---
 
-## Deployment
+## API Layer (tRPC)
 
-### Frontend (Next.js)
-**Vercel (Recommended):**
-```bash
-npm run build && vercel --prod
+We use **tRPC** for type-safe API calls.
+
+### Routers
+| Router | Procedures |
+|--------|-----------|
+| `match` | submit, verify, list, getById |
+| `player` | getProfile, getForm, getLeaderboard |
+| `squad` | create, list, getById, join, leave |
+
+### Using tRPC in Components
+```typescript
+import { trpc } from '@/lib/trpc-client';
+
+// Query
+const { data, isLoading } = trpc.match.list.useQuery({ limit: 10 });
+
+// Mutation
+const mutation = trpc.match.submit.useMutation();
+await mutation.mutateAsync({ homeSquadId, awaySquadId, homeScore, awayScore });
 ```
 
-**Alternatives:** Netlify, AWS Amplify
+---
 
-### Backend & Database
-- **Database:** Supabase or self-hosted PostgreSQL
-- **API:** Next.js API Routes (migrating from Express)
-- **Redis:** Redis Cloud or self-hosted
+## Authentication
 
-### Production Checklist
-- [ ] Database migrated
-- [ ] Smart contracts on mainnet
-- [ ] Environment variables set
-- [ ] SSL certificates configured
-- [ ] Monitoring enabled (Sentry/Datadog)
+### Wallet-Based Auth
+1. User connects wallet (Pera, Defly, etc.)
+2. Client generates auth message with timestamp
+3. User signs message
+4. Server verifies signature using algosdk
+5. Server creates/returns user record
+
+### Auth Headers
+```
+x-wallet-address: ALGO_ADDRESS
+x-chain: algorand|avalanche
+x-wallet-signature: BASE64_SIGNATURE
+x-auth-message: MESSAGE
+x-auth-timestamp: TIMESTAMP
+```
+
+### Development Mode
+In development, signature verification is skipped for easier testing.
+
+---
+
+## Project Structure
+
+```
+src/
+├── app/                 # Next.js App Router
+│   ├── api/trpc/       # tRPC API endpoint
+│   ├── match/          # Match pages
+│   ├── squad/          # Squad pages
+│   └── ...
+├── components/          # React components
+├── hooks/              # Custom React hooks
+│   ├── match/          # Match hooks (tRPC-based)
+│   ├── player/         # Player hooks (tRPC-based)
+│   └── squad/          # Squad hooks (tRPC-based)
+├── lib/                # Utilities
+│   ├── auth/           # Wallet auth
+│   ├── db.ts           # Prisma client
+│   ├── trpc-client.ts  # tRPC client
+│   └── trpc-provider.tsx
+├── server/             # tRPC server
+│   ├── trpc.ts         # tRPC setup
+│   ├── root.ts         # Root router
+│   └── routers/        # API routers
+└── types/              # TypeScript types
+```
 
 ---
 
@@ -109,12 +152,25 @@ npm run build && vercel --prod
 # Frontend (Vitest)
 npm run test
 
-# Contracts
-forge test              # Avalanche
-npm run test:contracts  # All
-
 # Coverage
 npm run test:coverage
+```
+
+---
+
+## Deployment
+
+### Production Checklist
+- [ ] Database migrated
+- [ ] Environment variables set
+- [ ] Wallet signature verification enabled
+- [ ] SSL certificates configured
+- [ ] Monitoring enabled
+
+### Vercel Deployment
+```bash
+npm run build
+vercel --prod
 ```
 
 ---
@@ -123,16 +179,15 @@ npm run test:coverage
 
 ### Guidelines
 1. **TypeScript** - Strict mode, proper types
-2. **Tests Required** - Vitest (frontend), Foundry (contracts)
+2. **tRPC** - All API calls through tRPC
 3. **Conventional Commits** - `feat:`, `fix:`, `chore:`
 4. **Mobile Responsive** - Test on devices
-5. **Dual-Chain** - Works with both chains
 
 ### PR Process
 1. Fork + feature branch
 2. Implement with tests
 3. Update docs if needed
-4. `npm run lint`
+4. `npm run lint && npm run build`
 5. Submit PR
 
 ---
@@ -144,9 +199,17 @@ npm run test:coverage
 rm -rf node_modules .next && npm install
 ```
 
-**Algorand SDK:** Use v3.x `FromObject` functions, camelCase properties
+**Database connection:**
+```bash
+# Check PostgreSQL is running
+brew services list | grep postgresql
+pg_isready
+```
 
-**Avalanche deploy:** Check AVAX balance, verify RPC URL
+**Prisma issues:**
+```bash
+npx prisma generate
+```
 
 ---
 

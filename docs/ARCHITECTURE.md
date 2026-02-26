@@ -28,57 +28,23 @@ Treasury reward distributed
 
 ---
 
-## Core Loop: The Parallel Season
+## Core Loop: Match Verification → XP → Engagement
+
+### MVP Flow
+1. **Match Submission** - Captain submits result with score
+2. **Verification** - Opposing team + witnesses verify
+3. **Consensus** - 3 verifications = match confirmed
+4. **XP Distribution** - Players earn attribute XP
+5. **Leaderboards** - Rankings updated, rivalries formed
 
 ### Weekly Cycle
 
 | Day | Real World | SportWarren Layer |
 |-----|-----------|-------------------|
-| Mon-Wed | Training, fitness | Stamina regen, training mini-games, agent analysis |
-| Thu-Fri | Squad coordination | Tactics setup, scout reports, transfer offers |
-| Sat/Sun | **MATCH DAY** | Live tracking, real-time input, verification |
-| Mon | Rest, recover | Results finalized, XP/rewards distributed, form updates |
-
-### Real World → Game Mechanics
-
-| Real Action | Game Impact |
-|-------------|-------------|
-| Goals scored | Shooting attribute XP |
-| Assists | Passing attribute XP |
-| Clean sheets | Defending attribute XP |
-| Distance run | Stamina/pace XP |
-| Match difficulty | XP multiplier |
-| Regular attendance | Squad chemistry bonus |
-| Social activity | Team morale boost |
-| 3+ matches vs same team | Derby activated (XP bonuses) |
-
-### Game → Real World Incentives
-
-| In-Game Signal | Drives Real Action |
-|----------------|-------------------|
-| Stamina low | "Go for a run to regenerate faster" |
-| Chemistry down | "Organize a team social" |
-| Scout recommends position change | "Try playing CAM this weekend" |
-| Derby upcoming | "Schedule the rematch" |
-| Agent suggests tactic | "Try 3-5-2 formation" |
-
----
-
-## Dual-Chain as Feature Tiers
-
-Both chains give you the full core app. Each unlocks exclusive features.
-
-| Feature | Algorand | Avalanche |
-|---------|----------|-----------|
-| Match verification | ✅ Primary (fast, cheap) | ✅ Supported |
-| Reputation tokens | ✅ Primary (soulbound) | ✅ Supported |
-| Squad DAO | ✅ Supported | ✅ Primary (EVM governance) |
-| AI Agents | ❌ | ✅ Exclusive (ERC-8004) |
-| Scout/Tactics Agents | ❌ | ✅ Exclusive |
-| DeFi treasury | ❌ | ✅ Exclusive |
-| Cross-chain tournaments | Both | Both |
-
-**User journey:** Start on either chain. Algorand = verification + reputation. Avalanche = add AI agents + treasury management. Power users bridge both.
+| Mon-Wed | Training, fitness | Stamina regen, training mini-games |
+| Thu-Fri | Squad coordination | Tactics setup, scout reports |
+| Sat/Sun | **MATCH DAY** | Live tracking, verification |
+| Mon | Rest, recover | Results finalized, XP/rewards distributed |
 
 ---
 
@@ -94,97 +60,184 @@ Both chains give you the full core app. Each unlocks exclusive features.
 │  │              │  │              │  │                  │          │
 │  │ • Photo/voice│  │ • DAO votes  │  │ • Tactics        │          │
 │  │ • Consensus  │  │ • Transfers  │  │ • Scout reports  │          │
-│  │ • GPS/time   │  │ • Treasury   │  │ • Form tracking  │          │
-│  │ • Chainlink  │  │ • Kite AI    │  │ • AI agents      │          │
-│  └──────────────┘  └──────────────┘  └──────────────────┘          │
+│  │ • Verification│ │ • Treasury   │  │ • Form tracking  │          │
+│  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘          │
 │         │                  │                   │                    │
 │         └──────────────────┼───────────────────┘                    │
 │                            ▼                                        │
 │              ┌─────────────────────────┐                            │
-│              │   Chain Abstraction     │                            │
-│              │   (useWallet, etc)      │                            │
-│              └─────────────────────────┘                            │
-│                     │            │                                  │
-│         ┌───────────┴────────────┴───────────┐                      │
-│         ▼                                    ▼                      │
-│  ┌──────────────┐                   ┌──────────────┐               │
-│  │   Algorand   │                   │   Avalanche  │               │
-│  │   • Verify   │◄────── Bridge ───►│   • Agents   │               │
-│  │   • Reputation│                  │   • Treasury │               │
-│  │   • Low fees │                   │   • DeFi     │               │
-│  └──────┬───────┘                   └──────┬───────┘               │
-│         │                                  │                        │
-│         │  ┌──────────────────────────────┐│                        │
-│         └─►│   Chainlink Oracles          ││                        │
-│            │   • Weather verification     ││                        │
-│            │   • Location data            ││                        │
-│            │   • External APIs            ││                        │
-│            └──────────────────────────────┘│                        │
-│                                            │                        │
-│            ┌───────────────────────────────┘                        │
-│            │   Kite AI Agent Layer                                  │
-│            │   • Agent identity (passports)                         │
-│            │   • Stablecoin payments                                │
-│            │   • Agent marketplace                                  │
-│            │   • Cross-chain agent ops                              │
-│            └────────────────────────────────                        │
+│              │   tRPC API Layer        │                            │
+│              │   (Type-safe RPC)       │                            │
+│              └───────────┬─────────────┘                            │
+│                          │                                          │
+│              ┌───────────┴───────────┐                              │
+│              ▼                       ▼                              │
+│  ┌─────────────────────┐  ┌─────────────────────┐                  │
+│  │   Prisma ORM        │  │   Wallet Auth       │                  │
+│  │   (PostgreSQL)      │  │   (algosdk)         │                  │
+│  └──────────┬──────────┘  └─────────────────────┘                  │
+│             │                                                       │
+│  ┌──────────┴──────────┐                                           │
+│  │   PostgreSQL        │                                           │
+│  │   • Users           │                                           │
+│  │   • Matches         │                                           │
+│  │   • Player Stats    │                                           │
+│  │   • Squads          │                                           │
+│  └─────────────────────┘                                           │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Verification Mechanic (Critical)
+## Tech Stack
 
-**Enhanced Consensus Model with Chainlink:**
-1. Both teams submit result independently
-2. Chainlink oracles verify external signals:
-   - Weather conditions at match time/location
-   - GPS coordinates validation
-   - Third-party sports API data (if available)
-3. Match within 15 mins + same location + oracle confirmation = auto-confirm
-4. Discrepancy = escalate to witness/arbiter
-5. Disputed result = stake slashed for false reporter
-
-**Multi-Layer Anti-fraud:**
-- GPS + timestamp metadata
-- Photo/voice logs (optional but weighted)
-- Squad reputation score (established teams trusted more)
-- Chainlink weather oracle (confirms match conditions)
-- Chainlink location oracle (validates GPS authenticity)
-- Third-party witness option
-
-**Why Chainlink:**
-- Adds external credibility to match verification
-- Prevents GPS spoofing with cross-referenced data
-- Weather data confirms match actually happened
-- Grant reviewers recognize the infrastructure
-- Decentralized oracle network = no single point of failure
+| Layer | Technology |
+|-------|-----------|
+| Frontend | Next.js 14, Tailwind, shadcn/ui |
+| State | Zustand, TanStack Query (React Query) |
+| API | tRPC (type-safe RPC) |
+| Database | PostgreSQL 14+ |
+| ORM | Prisma 7 |
+| Auth | Wallet signatures (algosdk) |
+| Wallets | Pera, Defly (Algorand) |
 
 ---
 
-## Championship Manager Layer
+## Database Schema
 
-### Between Real Matches
+### Core Tables
 
-**Tactics:**
-- Set formation for next real match
-- Agent recommends based on opponent scout report
-- Squad votes on approach (DAO)
+**users** - Wallet-based authentication
+```
+id, walletAddress, chain, name, email, createdAt
+```
 
-**Scouting:**
-- Browse local players by on-chain reputation
-- View attributes, recent form, strengths/weaknesses
-- Make transfer offers (backed by treasury)
+**player_profiles** - Player progression
+```
+id, userId, level, totalXP, seasonXP, totalMatches, totalGoals, totalAssists, reputationScore
+```
 
-**Squad Management:**
-- Manage real teammates' positions
-- Handle injuries (synced from real life)
-- Rotate squad based on form/fitness
+**player_attributes** - FIFA-style ratings
+```
+id, profileId, attribute, rating, xp, xpToNext, maxRating, history
+```
 
-**Finances:**
-- Match fees, tournament winnings → treasury
-- Upgrade facilities → training bonuses
-- Custom kit design
+**squads** - Team management
+```
+id, name, shortName, founded, homeGround, treasuryBalance
+```
+
+**matches** - Match verification
+```
+id, homeSquadId, awaySquadId, homeScore, awayScore, submittedBy, status, matchDate
+```
+
+**match_verifications** - Consensus records
+```
+id, matchId, verifierId, verified, trustTier, createdAt
+```
+
+---
+
+## Authentication Flow
+
+```
+1. User connects wallet
+        ↓
+2. Client generates auth message + timestamp
+        ↓
+3. User signs message
+        ↓
+4. Client sends: address + chain + signature + message + timestamp
+        ↓
+5. Server verifies signature with algosdk
+        ↓
+6. Server finds or creates user record
+        ↓
+7. Server returns session (via headers)
+```
+
+### Security
+- Signatures expire after 5 minutes
+- Message format validated
+- Address recovered from signature
+- Development mode allows bypass
+
+---
+
+## API Layer (tRPC)
+
+### Match Router
+```typescript
+match.submit({ homeSquadId, awaySquadId, homeScore, awayScore })
+match.verify({ matchId, verified, homeScore?, awayScore? })
+match.list({ status?, squadId?, limit?, offset? })
+match.getById({ id })
+```
+
+### Player Router
+```typescript
+player.getProfile({ userId })
+player.getForm({ userId, limit? })
+player.getLeaderboard({ type?, attribute?, limit? })
+player.applyXPGains({ matchId, gains[] }) // Admin only
+```
+
+### Squad Router
+```typescript
+squad.create({ name, shortName, homeGround? })
+squad.list({ search?, limit?, offset? })
+squad.getById({ id })
+squad.join({ squadId })
+squad.leave({ squadId })
+squad.getMySquads()
+```
+
+---
+
+## Verification Mechanic
+
+**Consensus Model:**
+1. Captain submits match result
+2. Opposing captain verifies
+3. Additional witnesses can verify
+4. 3 verifications = confirmed
+5. Discrepancy = disputed status
+
+**Trust Tiers:**
+- Bronze - New players
+- Silver - Established players
+- Gold - Verified captains
+- Platinum - Reputable long-term users
+
+**Anti-Fraud:**
+- Both teams must verify
+- Reputation scores affect weight
+- Disputed matches require arbitration
+
+---
+
+## Frontend Hooks
+
+### Match Hooks
+```typescript
+const { matches, submitMatchResult, verifyMatch } = useMatchVerification(squadId);
+const { match, loading } = useMatchDetails(matchId);
+```
+
+### Player Hooks
+```typescript
+const { attributes, getAttributeProgress } = usePlayerAttributes(userId);
+const { form } = usePlayerForm(userId, limit);
+const { leaderboard } = useLeaderboard(type, attribute, limit);
+```
+
+### Squad Hooks
+```typescript
+const { squads } = useSquads(search);
+const { squad, members, joinSquad, leaveSquad } = useSquadDetails(squadId);
+const { memberships } = useMySquads();
+```
 
 ---
 
@@ -207,39 +260,6 @@ Both chains give you the full core app. Each unlocks exclusive features.
         ↓
 8. Repeat with deeper engagement
 ```
-
----
-
-## Licensing Strategy
-
-**Fictional Names (PES Model):**
-
-| Real | SportWarren |
-|------|-------------|
-| Manchester United | Manchester Reds |
-| Liverpool | Merseyside Reds |
-| Premier League | Premier Sunday League |
-
-- City names, colors = not trademarked
-- Community-editable (Option Files)
-- Real licenses negotiable post-traction
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 14, Tailwind, shadcn/ui |
-| State | Zustand, TanStack Query |
-| Wallets | RainbowKit (Avax), Pera (Algo) |
-| Algorand | algosdk v3, TEAL contracts |
-| Avalanche | Viem/Wagmi, Foundry, Solidity |
-| AI Agents | LangChain, ERC-8004, TEE, Kite AI |
-| Agent Identity | Kite AI Passports (17.8M+ issued) |
-| Agent Payments | Kite AI stablecoin rails |
-| Oracles | Chainlink (weather, location, sports data) |
-| Comms | WhatsApp/Telegram bots, XMTP |
 
 ---
 

@@ -1,8 +1,8 @@
 # SportWarren
 
-**Championship Manager Meets Web3** | Agentic football platform with dual-chain architecture
+**Championship Manager Meets Web3** | Football platform with on-chain match verification
 
-A next-generation football management platform built with Next.js, combining **Algorand** (core blockchain) and **Avalanche** (AI agent ecosystem) for an unparalleled sports experience.
+A next-generation football management platform built with Next.js and PostgreSQL, featuring real match verification, player progression, and squad management.
 
 ---
 
@@ -10,25 +10,32 @@ A next-generation football management platform built with Next.js, combining **A
 
 SportWarren transforms amateur football with:
 - **Real Match Verification** - On-chain verified Sunday league matches
-- **Autonomous AI Agents** - Squad management, match analysis, treasury operations
-- **Dual-Chain Architecture** - User choice, best of both blockchains
+- **Player Progression** - FIFA-style attributes that improve with real performance
+- **Squad Management** - Team organization, tactics, and rivalries
 - **Championship Manager UX** - Familiar gameplay, Web3 ownership
 
-Built for footballers who want ownership, transparency, global recognition, AND autonomous agent assistance.
+Built for footballers who want ownership, transparency, and global recognition.
 
 ---
 
 ## ⚡ Quick Start
 
 ```bash
-git clone https://github.com/your-org/sportwarren.git
+git clone https://github.com/udirobert/sportwarren.git
 cd sportwarren
 npm install
-cp .env.example .env
+cp .env.example .env.local
+
+# Start PostgreSQL
+brew services start postgresql@14
+
+# Run database migration
+psql sportwarren < prisma/migrations/001_init.sql
+
 npm run dev
 ```
 
-**Frontend:** http://localhost:3000 | **API:** http://localhost:4000 | **Analytics:** http://localhost:5001
+**Frontend:** http://localhost:3000 | **tRPC API:** http://localhost:3000/api/trpc
 
 ---
 
@@ -36,138 +43,187 @@ npm run dev
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    SportWarren Agentic Platform                  │
+│                    SportWarren Platform                          │
 ├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐                           ┌──────────────┐   │
-│  │   AVALANCHE  │                           │   ALGORAND   │   │
-│  │   Subnet     │                           │   Mainnet    │   │
-│  ├──────────────┤                           ├──────────────┤   │
-│  │ 🤖 Agent     │                           │ ⚽ Match      │   │
-│  │    Economy   │◄────── User Choice ──────►│    Verify    │   │
-│  │ • ERC-8004   │                           │ • State      │   │
-│  │ • Kite AI    │                           │   Proofs     │   │
-│  │ • Chainlink  │                           │ • Match      │   │
-│  │ • AWM Cross  │                           │   Oracles    │   │
-│  │ • DeFi/MeV   │                           │ • Reputation │   │
-│  └──────────────┘                           └──────────────┘   │
-│         └────────────┬───────────────────────────┘              │
-│                      ▼                                          │
-│         ┌─────────────────────────┐                             │
-│         │   Next.js Abstraction   │                             │
-│         │   Layer (Chain-agnostic)│                             │
-│         └─────────────────────────┘                             │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐      │
+│  │   Match      │  │   Squad      │  │   Championship   │      │
+│  │   Verification│  │   Management │  │   Manager Layer  │      │
+│  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘      │
+│         │                  │                   │                │
+│         └──────────────────┼───────────────────┘                │
+│                            ▼                                    │
+│              ┌─────────────────────────┐                        │
+│              │   tRPC API Layer        │                        │
+│              │   (Type-safe RPC)       │                        │
+│              └───────────┬─────────────┘                        │
+│                          │                                      │
+│              ┌───────────┴───────────┐                          │
+│              ▼                       ▼                          │
+│  ┌─────────────────────┐  ┌─────────────────────┐              │
+│  │   Prisma ORM        │  │   Wallet Auth       │              │
+│  │   (PostgreSQL)      │  │   (algosdk)         │              │
+│  └─────────────────────┘  └─────────────────────┘              │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Chain Selection
-
-| Operation | Default Chain | Why |
-|-----------|---------------|-----|
-| Match Verification | Algorand | State Proofs, $0.001 fees, Chainlink oracles |
-| Player Reputation | Algorand | Blockchain credibility |
-| AI Agents | Avalanche | ERC-8004, Kite AI passports |
-| Agent Payments | Avalanche | Kite stablecoin rails |
-| Treasury/DeFi | Avalanche | Liquidity, yield |
-| Squad DAO | User Choice | Flexibility |
-
 ---
 
-## 📚 Documentation (4 Core Docs)
+## 📚 Documentation
 
 | Document | Purpose |
 |----------|---------|
-| **[Architecture](docs/ARCHITECTURE.md)** | System design, dual-chain strategy, tech stack |
+| **[Architecture](docs/ARCHITECTURE.md)** | System design, database schema, tech stack |
 | **[Development](docs/DEVELOPMENT.md)** | Getting started, deployment, contributing |
-| **[Features](docs/FEATURES.md)** | AI analytics, agents, blockchain integration |
-| **[Roadmap](docs/ROADMAP.md)** | 5-phase migration plan, success metrics |
+| **[Features](docs/FEATURES.md)** | Platform features, AI analytics |
+| **[Roadmap](docs/ROADMAP.md)** | Development phases, success metrics |
 
 ---
 
 ## 🚀 Key Features
 
 ### Core Platform
-- **Smart Match Tracking** - Voice/photo capture, AI-powered stats
-- **Adaptive Community Hub** - Squad management, rivalries, leaderboards
-- **Achievement System** - Skill-based achievements, seasonal challenges
+- **Smart Match Tracking** - Photo/voice capture, consensus verification
+- **Player Attributes** - FIFA-style ratings (pace, shooting, passing, etc.)
+- **XP System** - Earn XP from verified matches, level up attributes
+- **Squad Management** - Create squads, invite players, manage roster
+- **Rivalries** - Track head-to-head records, derby bonuses
+- **Leaderboards** - Rank by overall rating, goals, assists, matches
 
-### AI & Agents
-- **Player Analytics** - Roboflow + SAM3, pro benchmarking, match prediction
-- **AI Agents** - Squad Manager, Match Analyst, Treasury Manager (ERC-8004)
-- **Kite AI Integration** - 17.8M+ agent passports, stablecoin payments
-- **Agent Marketplace** - Discover and deploy agents from Kite Agent Store
-- **Multi-Platform** - WhatsApp, Telegram, XMTP integration
+### Match Verification
+- Both teams submit results independently
+- Consensus required (3 verifications)
+- Trust tiers affect verification weight
+- Disputed matches escalated for arbitration
 
-### Blockchain
-- **Algorand** - State Proofs, low fees (~$0.001), fast finality
-- **Avalanche** - 1,600+ agents, Kite AI, EVM compatibility
-- **Chainlink Oracles** - Weather/location verification for match credibility
-- **Cross-Chain** - AWM + State Proofs for seamless operations
-
----
-
-## 📅 Roadmap Summary
-
-| Phase | Timeline | Focus |
-|-------|----------|-------|
-| **1. Next.js Foundation** | Q1 2026 | Frontend migration, API routes |
-| **2. Avalanche Integration** | Q2 2026 | Solidity contracts, Foundry tests |
-| **3. Chain Abstraction** | Q2-Q3 2026 | Unified interface, cross-chain messaging |
-| **4. Agentic Features** | Q3 2026 | ERC-8004 agents, TEE infrastructure |
-| **5. Mainnet Launch** | Q4 2026 | Public launch, full platform |
-
-**See [Roadmap](docs/ROADMAP.md) for detailed timeline and success metrics.**
+### Wallet Authentication
+- Algorand wallet integration (Pera, Defly)
+- Signature-based authentication
+- Automatic user/profile creation
+- Development mode for easy testing
 
 ---
 
 ## 🛠️ Tech Stack
 
 | Layer | Technology |
-|-------|------------|
-| **Frontend** | Next.js 14, Tailwind CSS, Zustand, TanStack Query |
-| **Backend** | Next.js API Routes, PostgreSQL, Redis, Socket.IO |
-| **Algorand** | algosdk v3.x, TEAL contracts, State Proofs |
-| **Avalanche** | Viem + Wagmi, Foundry + Solidity, ERC-8004, AWM |
-| **AI Agents** | OpenAI, LangChain, ERC-8004, Kite AI Passports |
-| **Agent Infra** | Kite AI (identity, payments, marketplace) |
-| **Oracles** | Chainlink (weather, location, sports data) |
-| **Computer Vision** | Roboflow, SAM3 |
+|-------|-----------|
+| Frontend | Next.js 14, Tailwind CSS, shadcn/ui |
+| API | tRPC (type-safe RPC) |
+| Database | PostgreSQL 14+ |
+| ORM | Prisma 7 |
+| State | TanStack Query (React Query), Zustand |
+| Auth | Wallet signatures (algosdk) |
+| Wallets | Pera, Defly (Algorand) |
 
 ---
 
-## 📊 Success Metrics
+## 📁 Project Structure
 
-### Technical (Post-Launch)
-- < 3s page load time | 99.9% uptime | 95%+ contract test coverage
+```
+src/
+├── app/                 # Next.js App Router
+│   ├── api/trpc/       # tRPC API endpoint
+│   ├── match/          # Match pages
+│   ├── squad/          # Squad pages
+│   └── ...
+├── components/          # React components
+├── hooks/              # tRPC-based React hooks
+│   ├── match/          # useMatchVerification, useMatchDetails
+│   ├── player/         # usePlayerAttributes, usePlayerForm
+│   └── squad/          # useSquads, useSquadDetails
+├── lib/                # Utilities
+│   ├── auth/           # Wallet signature verification
+│   ├── db.ts           # Prisma client
+│   └── trpc-*.ts       # tRPC client/provider
+├── server/             # tRPC server
+│   ├── trpc.ts         # tRPC setup, auth middleware
+│   ├── root.ts         # Root router
+│   └── routers/        # match.ts, player.ts, squad.ts
+└── types/              # TypeScript types
+```
 
-### Business (6 Months)
-- 10,000+ MAU | 1,000+ squads | 5,000+ matches verified | 100+ agents deployed
+---
+
+## 🗄️ Database Schema
+
+### Core Tables
+- **users** - Wallet-based authentication
+- **player_profiles** - XP, level, career stats
+- **player_attributes** - FIFA-style ratings (pace, shooting, etc.)
+- **squads** - Team management
+- **squad_members** - Squad membership
+- **matches** - Match verification
+- **match_verifications** - Consensus records
+- **xp_gains** - Audit trail for all XP transactions
+- **form_entries** - Match ratings and form
+
+See `prisma/schema.prisma` and `prisma/migrations/001_init.sql` for full schema.
+
+---
+
+## 🔐 Authentication
+
+### Wallet-Based Auth Flow
+1. User connects Algorand wallet
+2. Client generates auth message with timestamp
+3. User signs message
+4. Server verifies signature using algosdk
+5. Server creates/returns user record
+
+### Development Mode
+In development, signature verification is skipped for easier testing. Set `NODE_ENV=development` in `.env.local`.
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run tests
+npm run test
+
+# Coverage
+npm run test:coverage
+
+# Build check
+npm run build
+```
+
+---
+
+## 🚀 Deployment
+
+### Production Checklist
+- [ ] PostgreSQL database provisioned
+- [ ] Database migrations applied
+- [ ] Environment variables configured
+- [ ] Wallet signature verification enabled
+- [ ] SSL certificates configured
+- [ ] Monitoring enabled (Sentry recommended)
+
+### Vercel Deployment
+```bash
+npm run build
+vercel --prod
+```
 
 ---
 
 ## 🤝 Contributing
 
-We welcome contributions! See our [Development Guide](docs/DEVELOPMENT.md) for:
-- Setup instructions
-- Smart contract development
-- Testing guidelines
-- Pull request process
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and build
+5. Submit a PR
 
-**Key Guidelines:**
-- TypeScript best practices
-- Tests required (Vitest + Foundry)
-- Mobile responsiveness
-- Dual-chain compatibility
+See [Development Guide](docs/DEVELOPMENT.md) for detailed guidelines.
 
 ---
 
-## 📞 Support
+## 📄 License
 
-- 📧 Email: support@sportwarren.com
-- 💬 Discord: [Join Community](https://discord.gg/sportwarren)
-- 🐦 Twitter: [@SportWarren](https://twitter.com/sportwarren)
+MIT License - see LICENSE file for details.
 
 ---
 
-**Built with ⚽ by the SportWarren team**
-
-**Strategic Positioning:** Algorand core infrastructure + Agentic infrastructure (Avalanche) + Next.js UX = Championship Manager for the Web3 era
+**Built with ❤️ for footballers everywhere.**
