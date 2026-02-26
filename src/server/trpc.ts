@@ -1,6 +1,14 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import { cache } from 'react';
 import { prisma } from '@/lib/db';
+import { 
+  verifyWalletSignature, 
+  extractWalletFromHeaders,
+  generateAuthMessage 
+} from '@/lib/auth/wallet';
+
+// Re-export for API routes
+export { generateAuthMessage };
 
 // Context type
 export interface TRPCContext {
@@ -10,19 +18,47 @@ export interface TRPCContext {
   chain?: string;
 }
 
-// Context for tRPC - in production, this would verify wallet signatures
+// Context for tRPC with wallet signature verification
 export const createTRPCContext = cache(async (opts?: { 
   headers?: Headers;
 }): Promise<TRPCContext> => {
-  // TODO: Implement proper wallet signature verification
-  // For now, we'll use a simple header-based approach for development
-  const walletAddress = opts?.headers?.get('x-wallet-address') || undefined;
-  const chain = opts?.headers?.get('x-chain') || undefined;
+  const walletInfo = extractWalletFromHeaders(opts?.headers || new Headers());
   
+  // If no wallet address, return unauthenticated context
+  if (!walletInfo.address || !walletInfo.chain) {
+    return { prisma };
+  }
+
+  // In development mode without signature, just trust the headers
+  // In production, require signature verification
+  const isDevelopment = process.env.NODE_ENV === 'development';
+  const skipVerification = isDevelopment && !walletInfo.signature;
+
+  let verified = false;
+
+  if (skipVerification) {
+    console.warn('Development mode: Skipping signature verification');
+    verified = true;
+  } else if (walletInfo.signature && walletInfo.message && walletInfo.timestamp) {
+    // Verify the signature
+    const verification = await verifyWalletSignature({
+      address: walletInfo.address,
+      chain: walletInfo.chain as 'algorand' | 'avalanche',
+      signature: walletInfo.signature,
+      message: walletInfo.message,
+      timestamp: parseInt(walletInfo.timestamp, 10),
+    });
+    verified = verification.verified;
+  }
+
+  if (!verified) {
+    return { prisma };
+  }
+
   return { 
     prisma,
-    walletAddress,
-    chain,
+    walletAddress: walletInfo.address,
+    chain: walletInfo.chain,
   };
 });
 
@@ -38,7 +74,7 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
   if (!ctx.walletAddress) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
-      message: 'Wallet authentication required',
+      message: 'Wallet authentication required. Please sign the authentication message.',
     });
   }
 
@@ -57,7 +93,7 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
       },
     });
 
-    // Create default player profile
+    // Create default player profile with attributes
     await ctx.prisma.playerProfile.create({
       data: {
         userId: user.id,
@@ -85,13 +121,13 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 
 // Admin procedure - for system operations
 export const adminProcedure = t.procedure.use(async ({ ctx, next }) => {
-  // TODO: Implement admin check
-  // For now, same as protected
   if (!ctx.walletAddress) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',
       message: 'Authentication required',
     });
   }
+  
+  // For now, allow any authenticated user
   return next({ ctx });
 });
