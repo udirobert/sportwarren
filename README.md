@@ -64,7 +64,7 @@ npm run dev
 | Operation | Default Chain | Why |
 |-----------|---------------|-----|
 | Match Verification | Algorand | State Proofs, $0.001 fees, Chainlink oracles |
-| Player Reputation | Algorand | Official credibility |
+| Player Reputation | Algorand | Blockchain credibility |
 | AI Agents | Avalanche | ERC-8004, Kite AI passports |
 | Agent Payments | Avalanche | Kite stablecoin rails |
 | Treasury/DeFi | Avalanche | Liquidity, yield |
