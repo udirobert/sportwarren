@@ -5,6 +5,16 @@ import { Card } from '@/components/ui/Card';
 import { User, TrendingUp, Award, Shield } from 'lucide-react';
 import { FormBadge } from './FormIndicator';
 import type { PlayerAttributes, PlayerPosition } from '@/types';
+import {
+  POSITION_COLORS,
+  POSITION_NAMES,
+  getOverallColor,
+  getAttributeColor,
+  getRarityBgColor,
+  calculateOverallRating,
+  getTopAttributes,
+  detectPositionFromSkills,
+} from '@/lib/utils';
 
 interface PlayerCardProps {
   player: PlayerAttributes;
@@ -13,51 +23,20 @@ interface PlayerCardProps {
   onClick?: () => void;
 }
 
-// Position colors
-const POSITION_COLORS: Record<PlayerPosition, string> = {
-  GK: 'bg-orange-100 text-orange-700',
-  DF: 'bg-blue-100 text-blue-700',
-  MF: 'bg-green-100 text-green-700',
-  ST: 'bg-red-100 text-red-700',
-  WG: 'bg-purple-100 text-purple-700',
-};
-
-// Position names
-const POSITION_NAMES: Record<PlayerPosition, string> = {
-  GK: 'Goalkeeper',
-  DF: 'Defender',
-  MF: 'Midfielder',
-  ST: 'Striker',
-  WG: 'Winger',
-};
-
 export const PlayerCard: React.FC<PlayerCardProps> = ({ 
   player, 
   showForm = true,
   compact = false,
   onClick 
 }) => {
-  // Calculate overall rating
-  const overall = Math.round(
-    player.skills.reduce((sum, s) => sum + s.rating, 0) / player.skills.length
-  );
+  // Calculate overall rating using centralized utility
+  const overall = calculateOverallRating(player.skills);
 
-  // Get top 3 attributes
-  const topSkills = [...player.skills]
-    .sort((a, b) => b.rating - a.rating)
-    .slice(0, 3);
+  // Get top 3 attributes using centralized utility
+  const topSkills = getTopAttributes(player.skills, 3);
 
-  // Get player position from highest attribute
-  const getPositionFromSkills = (): PlayerPosition => {
-    const highestSkill = player.skills.reduce((max, s) => s.rating > max.rating ? s : max);
-    if (highestSkill.skill.startsWith('gk_')) return 'GK';
-    if (['defending', 'physical'].includes(highestSkill.skill)) return 'DF';
-    if (['shooting', 'pace'].includes(highestSkill.skill)) return 'ST';
-    if (['dribbling'].includes(highestSkill.skill)) return 'WG';
-    return 'MF';
-  };
-
-  const position = getPositionFromSkills();
+  // Get player position from highest attribute using centralized utility
+  const position = detectPositionFromSkills(player.skills) as PlayerPosition;
 
   if (compact) {
     return (
@@ -191,7 +170,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             {player.achievements.slice(0, 3).map((a, i) => (
               <span 
                 key={i} 
-                className={`w-2 h-2 rounded-full ${getRarityColor(a.rarity)}`}
+                className={`w-2 h-2 rounded-full ${getRarityBgColor(a.rarity)}`}
                 title={a.title}
               />
             ))}
@@ -212,14 +191,9 @@ export const PlayerSquadList: React.FC<PlayerSquadListProps> = ({
   players, 
   onPlayerClick 
 }) => {
-  // Group by position
+  // Group by position using centralized utility
   const byPosition = players.reduce((acc, player) => {
-    const highestSkill = player.skills.reduce((max, s) => s.rating > max.rating ? s : max);
-    let position: PlayerPosition = 'MF';
-    if (highestSkill.skill.startsWith('gk_')) position = 'GK';
-    else if (['defending', 'physical'].includes(highestSkill.skill)) position = 'DF';
-    else if (['shooting', 'pace'].includes(highestSkill.skill)) position = 'ST';
-    else if (['dribbling'].includes(highestSkill.skill)) position = 'WG';
+    const position = detectPositionFromSkills(player.skills) as PlayerPosition;
 
     if (!acc[position]) acc[position] = [];
     acc[position].push(player);
@@ -257,28 +231,3 @@ export const PlayerSquadList: React.FC<PlayerSquadListProps> = ({
     </div>
   );
 };
-
-// Helper functions
-function getOverallColor(rating: number): string {
-  if (rating >= 90) return 'text-purple-600';
-  if (rating >= 80) return 'text-green-600';
-  if (rating >= 70) return 'text-yellow-600';
-  return 'text-gray-600';
-}
-
-function getAttributeColor(rating: number): string {
-  if (rating >= 90) return 'text-purple-600';
-  if (rating >= 80) return 'text-green-600';
-  if (rating >= 70) return 'text-yellow-600';
-  if (rating >= 60) return 'text-orange-600';
-  return 'text-red-600';
-}
-
-function getRarityColor(rarity: string): string {
-  switch (rarity) {
-    case 'legendary': return 'bg-yellow-400';
-    case 'epic': return 'bg-purple-400';
-    case 'rare': return 'bg-blue-400';
-    default: return 'bg-gray-400';
-  }
-}

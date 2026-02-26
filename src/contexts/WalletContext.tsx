@@ -3,6 +3,14 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { WalletState, UserPreferences } from '@/types';
 
+// Storage keys - centralized for consistency
+const STORAGE_KEYS = {
+  ALGORAND_ADDRESS: 'sw_algorand_address',
+  AVALANCHE_ADDRESS: 'sw_avalanche_address',
+  PREFERRED_CHAIN: 'sw_preferred_chain',
+  USER_PREFERENCES: 'sw_user_preferences',
+} as const;
+
 interface WalletContextType {
   address: string | null;
   connected: boolean;
@@ -36,22 +44,47 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   const loadPreferences = useCallback(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('userPreferences');
+      // Migrate old keys to new keys
+      migrateStorageKeys();
+      
+      const saved = localStorage.getItem(STORAGE_KEYS.USER_PREFERENCES);
       if (saved) {
-        const prefs = JSON.parse(saved);
-        setPreferences(prefs);
-        return prefs;
+        try {
+          const prefs = JSON.parse(saved);
+          setPreferences(prefs);
+          return prefs;
+        } catch (e) {
+          console.error('Failed to parse preferences:', e);
+        }
       }
     }
     return null;
   }, []);
 
+  // Migrate old localStorage keys to new standardized keys
+  const migrateStorageKeys = () => {
+    const migrations = [
+      { old: 'algorand_address', new: STORAGE_KEYS.ALGORAND_ADDRESS },
+      { old: 'avalanche_address', new: STORAGE_KEYS.AVALANCHE_ADDRESS },
+      { old: 'preferred_chain', new: STORAGE_KEYS.PREFERRED_CHAIN },
+      { old: 'userPreferences', new: STORAGE_KEYS.USER_PREFERENCES },
+    ];
+
+    migrations.forEach(({ old: oldKey, new: newKey }) => {
+      const value = localStorage.getItem(oldKey);
+      if (value && !localStorage.getItem(newKey)) {
+        localStorage.setItem(newKey, value);
+        localStorage.removeItem(oldKey);
+      }
+    });
+  };
+
   useEffect(() => {
     const savedPrefs = loadPreferences();
     
-    const savedAlgorand = localStorage.getItem('algorand_address');
-    const savedAvalanche = localStorage.getItem('avalanche_address');
-    const savedChain = localStorage.getItem('preferred_chain') as 'algorand' | 'avalanche' | null;
+    const savedAlgorand = localStorage.getItem(STORAGE_KEYS.ALGORAND_ADDRESS);
+    const savedAvalanche = localStorage.getItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
+    const savedChain = localStorage.getItem(STORAGE_KEYS.PREFERRED_CHAIN) as 'algorand' | 'avalanche' | null;
 
     if (savedAlgorand) {
       setAddress(savedAlgorand);
@@ -99,8 +132,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           if (data.address) {
             setAddress(data.address);
             setChain('algorand');
-            localStorage.setItem('algorand_address', data.address);
-            localStorage.setItem('preferred_chain', 'algorand');
+            localStorage.setItem(STORAGE_KEYS.ALGORAND_ADDRESS, data.address);
+            localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'algorand');
             fetchAlgorandBalance(data.address);
           }
         }
@@ -111,8 +144,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           if (data.address) {
             setAddress(data.address);
             setChain('avalanche');
-            localStorage.setItem('avalanche_address', data.address);
-            localStorage.setItem('preferred_chain', 'avalanche');
+            localStorage.setItem(STORAGE_KEYS.AVALANCHE_ADDRESS, data.address);
+            localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'avalanche');
             fetchAvalancheBalance(data.address);
           }
         }
@@ -127,8 +160,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     setAddress(null);
     setChain(null);
     setBalance(0);
-    localStorage.removeItem('algorand_address');
-    localStorage.removeItem('avalanche_address');
+    localStorage.removeItem(STORAGE_KEYS.ALGORAND_ADDRESS);
+    localStorage.removeItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
   };
 
   const setPreferredChain = (newChain: 'algorand' | 'avalanche') => {
@@ -140,7 +173,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         compactMode: prev?.compactMode ?? false,
         onboardingCompleted: prev?.onboardingCompleted ?? false,
       };
-      localStorage.setItem('userPreferences', JSON.stringify(updated));
+      localStorage.setItem(STORAGE_KEYS.USER_PREFERENCES, JSON.stringify(updated));
       return updated;
     });
   };
@@ -162,3 +195,6 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     </WalletContext.Provider>
   );
 };
+
+// Export storage keys for use in other components
+export { STORAGE_KEYS };

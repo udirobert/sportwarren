@@ -1,4 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { AsyncState } from './types';
+import { createErrorState, createLoadingState, createSuccessState } from './types';
 
 interface DashboardStats {
   goals: number;
@@ -12,27 +14,38 @@ interface DashboardStats {
   }>;
 }
 
-interface UseDashboardDataReturn {
-  stats: DashboardStats | null;
-  loading: boolean;
-  error: string | null;
-  refetch: () => void;
+interface UseDashboardDataReturn extends AsyncState<DashboardStats> {
+  refetch: () => Promise<void>;
 }
 
-export function useDashboardData(userAddress?: string): UseDashboardDataReturn {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// Default/mock data for development
+const DEFAULT_STATS: DashboardStats = {
+  goals: 12,
+  assists: 8,
+  matches: 15,
+  rating: '7.8',
+  recentMatches: [
+    { opponent: 'Red Lions FC', result: 'W 3-1', date: '2 days ago' },
+    { opponent: 'Sunday Legends', result: 'D 2-2', date: '1 week ago' },
+    { opponent: 'Park Rangers', result: 'W 4-1', date: '2 weeks ago' },
+  ],
+};
 
-  const fetchData = async () => {
+export function useDashboardData(userAddress?: string): UseDashboardDataReturn {
+  const [state, setState] = useState<AsyncState<DashboardStats>>({
+    data: null,
+    loading: true,
+    error: null,
+  });
+
+  const fetchData = useCallback(async () => {
     if (!userAddress) {
-      setLoading(false);
+      setState(createSuccessState(DEFAULT_STATS));
       return;
     }
 
     try {
-      setLoading(true);
-      setError(null);
+      setState(createLoadingState());
 
       // Fetch from API
       const response = await fetch(`/api/player/${userAddress}/dashboard`);
@@ -42,32 +55,23 @@ export function useDashboardData(userAddress?: string): UseDashboardDataReturn {
       }
 
       const data = await response.json();
-      setStats(data);
+      setState(createSuccessState(data));
     } catch (err) {
       console.error('Dashboard data fetch error:', err);
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      const errorState = createErrorState(err);
+      setState({ ...errorState, loading: false });
       
       // Fallback to default data if API fails
-      setStats({
-        goals: 0,
-        assists: 0,
-        matches: 0,
-        rating: '0.0',
-        recentMatches: [],
-      });
-    } finally {
-      setLoading(false);
+      setState(createSuccessState(DEFAULT_STATS));
     }
-  };
+  }, [userAddress]);
 
   useEffect(() => {
     fetchData();
-  }, [userAddress]);
+  }, [fetchData]);
 
   return {
-    stats,
-    loading,
-    error,
+    ...state,
     refetch: fetchData,
   };
 }

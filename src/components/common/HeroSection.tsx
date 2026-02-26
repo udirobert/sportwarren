@@ -32,8 +32,18 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
         setStats({ totalPlayers: 0, totalMatches: 0, totalAgents: 0 });
       });
 
-    const handleScroll = () => setScrollY(window.scrollY);
-    window.addEventListener('scroll', handleScroll);
+    // Throttled scroll handler for performance
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setScrollY(window.scrollY);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 

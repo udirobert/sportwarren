@@ -5,44 +5,18 @@ import { Card } from '@/components/ui/Card';
 import { TrendingUp, TrendingDown, Minus, Activity } from 'lucide-react';
 import { usePlayerForm, useFormHistory } from '@/hooks/player/usePlayerForm';
 import type { PlayerAttributes } from '@/types';
+import {
+  FORM_ARROWS,
+  FORM_LABELS,
+  getFormColor,
+  getFormBgColor,
+  getFormBorderColor,
+} from '@/lib/utils';
 
 interface FormIndicatorProps {
   attributes: PlayerAttributes | null;
   showChart?: boolean;
 }
-
-// FIFA-style form arrows
-const FORM_ARROWS: Record<number, { arrow: string; label: string }> = {
-  5: { arrow: '↑↑', label: 'Exceptional' },
-  4: { arrow: '↑↑', label: 'Excellent' },
-  3: { arrow: '↑', label: 'Very Good' },
-  2: { arrow: '↑', label: 'Good' },
-  1: { arrow: '↗', label: 'Okay' },
-  0: { arrow: '→', label: 'Average' },
-  [-1]: { arrow: '↘', label: 'Below Average' },
-  [-2]: { arrow: '↓', label: 'Poor' },
-  [-3]: { arrow: '↓', label: 'Very Poor' },
-  [-4]: { arrow: '↓↓', label: 'Bad' },
-  [-5]: { arrow: '↓↓', label: 'Terrible' },
-};
-
-const getFormColor = (form: number): string => {
-  if (form >= 4) return 'text-green-600 bg-green-100';
-  if (form >= 2) return 'text-green-500 bg-green-50';
-  if (form >= 1) return 'text-yellow-500 bg-yellow-50';
-  if (form === 0) return 'text-gray-500 bg-gray-100';
-  if (form >= -2) return 'text-orange-500 bg-orange-50';
-  return 'text-red-500 bg-red-50';
-};
-
-const getFormBorderColor = (form: number): string => {
-  if (form >= 4) return 'border-green-200';
-  if (form >= 2) return 'border-green-100';
-  if (form >= 1) return 'border-yellow-200';
-  if (form === 0) return 'border-gray-200';
-  if (form >= -2) return 'border-orange-200';
-  return 'border-red-200';
-};
 
 export const FormIndicator: React.FC<FormIndicatorProps> = ({ 
   attributes, 
@@ -51,7 +25,8 @@ export const FormIndicator: React.FC<FormIndicatorProps> = ({
   const { form, recentRatings, averageRating } = usePlayerForm(attributes);
   const formHistory = useFormHistory(attributes);
 
-  const formInfo = FORM_ARROWS[form.value] || { arrow: '→', label: 'Unknown' };
+  const arrow = FORM_ARROWS[form.value] || '→';
+  const label = FORM_LABELS[form.value] || 'Average';
 
   return (
     <Card className={`border-2 ${getFormBorderColor(form.value)}`}>
@@ -59,12 +34,12 @@ export const FormIndicator: React.FC<FormIndicatorProps> = ({
         {/* Main Form Display */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${getFormColor(form.value)}`}>
-              <span className="text-2xl font-bold">{form.arrow}</span>
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${getFormBgColor(form.value)}`}>
+              <span className="text-2xl font-bold">{arrow}</span>
             </div>
             <div>
               <h3 className="font-semibold text-gray-900">Form</h3>
-              <p className="text-sm text-gray-600">{form.description}</p>
+              <p className="text-sm text-gray-600">{label}</p>
             </div>
           </div>
           <div className="text-right">
@@ -158,8 +133,8 @@ export const FormIndicator: React.FC<FormIndicatorProps> = ({
           <div className="grid grid-cols-5 gap-1 text-center">
             {[-5, -2, 0, 2, 5].map((formValue) => (
               <div key={formValue} className="space-y-1">
-                <div className={`text-lg ${getFormColor(formValue).split(' ')[0]}`}>
-                  {FORM_ARROWS[formValue]?.arrow}
+                <div className={`text-lg ${getFormColor(formValue)}`}>
+                  {FORM_ARROWS[formValue] || '→'}
                 </div>
                 <div className="text-xs text-gray-400">{formValue > 0 ? `+${formValue}` : formValue}</div>
               </div>
@@ -178,7 +153,8 @@ interface FormBadgeProps {
 }
 
 export const FormBadge: React.FC<FormBadgeProps> = ({ form, size = 'md' }) => {
-  const formInfo = FORM_ARROWS[form] || { arrow: '→', label: 'Average' };
+  const arrow = FORM_ARROWS[form] || '→';
+  const label = FORM_LABELS[form] || 'Average';
   
   const sizeClasses = {
     sm: 'w-6 h-6 text-xs',
@@ -188,10 +164,10 @@ export const FormBadge: React.FC<FormBadgeProps> = ({ form, size = 'md' }) => {
 
   return (
     <div
-      className={`${sizeClasses[size]} rounded-lg flex items-center justify-center font-bold ${getFormColor(form)}`}
-      title={formInfo.label}
+      className={`${sizeClasses[size]} rounded-lg flex items-center justify-center font-bold ${getFormBgColor(form)}`}
+      title={label}
     >
-      {formInfo.arrow}
+      {arrow}
     </div>
   );
 };

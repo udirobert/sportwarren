@@ -8,50 +8,7 @@ import {
   Search, Filter, TrendingUp, User 
 } from 'lucide-react';
 import type { TransferOffer, SquadPlayer, PlayerAttributes } from '@/types';
-
-// Mock players available for transfer
-const MOCK_AVAILABLE_PLAYERS: Array<{
-  id: string;
-  name: string;
-  position: string;
-  age: number;
-  overall: number;
-  askingPrice: number;
-  currentClub: string;
-  contractExpiry: Date;
-}> = [
-  { id: 'p1', name: 'Alex Thompson', position: 'ST', age: 24, overall: 78, askingPrice: 2500, currentClub: 'Riverside FC', contractExpiry: new Date('2025-06-30') },
-  { id: 'p2', name: 'Jordan Lee', position: 'MF', age: 22, overall: 75, askingPrice: 1800, currentClub: 'City United', contractExpiry: new Date('2025-12-31') },
-  { id: 'p3', name: 'Sam Rodriguez', position: 'DF', age: 28, overall: 82, askingPrice: 3200, currentClub: 'Northside United', contractExpiry: new Date('2025-05-15') },
-  { id: 'p4', name: 'Casey Kim', position: 'GK', age: 26, overall: 80, askingPrice: 2800, currentClub: 'East Enders', contractExpiry: new Date('2026-01-01') },
-  { id: 'p5', name: 'Morgan Taylor', position: 'WG', age: 21, overall: 73, askingPrice: 1500, currentClub: 'Youth Academy', contractExpiry: new Date('2025-08-20') },
-];
-
-// Mock incoming/outgoing offers
-const MOCK_OFFERS: TransferOffer[] = [
-  {
-    id: 'o1',
-    fromSquad: 'Red Lions FC',
-    toSquad: 'Northside United',
-    player: { id: 'sp1', name: 'Marcus Johnson', position: 'ST', status: 'available', address: 'addr1', squadNumber: 9, contract: { type: 'semi-pro', wage: 50, expiry: new Date('2025-12-31') }, isCaptain: true, isViceCaptain: false },
-    offerAmount: 5000,
-    offerType: 'transfer',
-    status: 'pending',
-    timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-    expiry: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
-  },
-  {
-    id: 'o2',
-    fromSquad: 'Northside United',
-    toSquad: 'Park Rangers',
-    player: { id: 'sp2', name: 'Jamie Smith', position: 'MF', status: 'available', address: 'addr2', squadNumber: 8, contract: { type: 'amateur', wage: 25, expiry: new Date('2025-06-30') }, isCaptain: false, isViceCaptain: false },
-    offerAmount: 1200,
-    offerType: 'loan',
-    status: 'negotiating',
-    timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
-    expiry: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-  },
-];
+import { MOCK_OFFERS, MOCK_AVAILABLE_PLAYERS } from '@/lib/mocks';
 
 interface TransferMarketProps {
   squadBalance: number;

@@ -66,7 +66,7 @@ export function useUserPreferences() {
     const loadPreferences = async () => {
       if (typeof window === 'undefined') return;
       try {
-        const stored = localStorage.getItem('sportwarren_preferences');
+        const stored = localStorage.getItem('sw_preferences');
         if (stored) {
           const parsed = JSON.parse(stored);
           setPreferences({ ...DEFAULT_PREFERENCES, ...parsed });
@@ -86,7 +86,7 @@ export function useUserPreferences() {
     const updated = { ...preferences, ...newPreferences };
     setPreferences(updated);
     if (typeof window !== 'undefined') {
-      localStorage.setItem('sportwarren_preferences', JSON.stringify(updated));
+      localStorage.setItem('sw_preferences', JSON.stringify(updated));
     }
   }, [preferences]);
 

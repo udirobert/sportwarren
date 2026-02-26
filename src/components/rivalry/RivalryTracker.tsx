@@ -8,41 +8,7 @@ import {
   Calendar, MapPin, Users, Star 
 } from 'lucide-react';
 import type { Rivalry, RivalryMatch } from '@/types';
-
-// Mock rivalries
-const MOCK_RIVALRIES: Rivalry[] = [
-  {
-    id: 'r1',
-    squadA: 'Northside United',
-    squadB: 'Red Lions FC',
-    name: 'The Hackney Derby',
-    description: 'The most intense rivalry in the league, dating back to 2018',
-    history: [
-      { matchId: 'm1', date: new Date('2025-01-13'), squadAScore: 3, squadBScore: 1, winner: 'Northside United', significance: 'league', memorable: true },
-      { matchId: 'm2', date: new Date('2024-11-20'), squadAScore: 2, squadBScore: 2, significance: 'cup', memorable: false },
-      { matchId: 'm3', date: new Date('2024-09-15'), squadAScore: 1, squadBScore: 0, winner: 'Northside United', significance: 'league', memorable: true },
-      { matchId: 'm4', date: new Date('2024-05-10'), squadAScore: 0, squadBScore: 2, winner: 'Red Lions FC', significance: 'league', memorable: false },
-      { matchId: 'm5', date: new Date('2024-03-22'), squadAScore: 4, squadBScore: 3, winner: 'Northside United', significance: 'playoff', memorable: true },
-    ],
-    stats: { played: 5, squadAWins: 3, squadBWins: 1, draws: 1, squadAGoals: 10, squadBGoals: 7 },
-    intensity: 9,
-    derbyBonuses: { winnerXPBoost: 0.5, loserXPPenalty: 0.1, reputationBonus: 500, fanEngagementBonus: 1000 },
-  },
-  {
-    id: 'r2',
-    squadA: 'Northside United',
-    squadB: 'Sunday Legends',
-    name: 'The Sunday Showdown',
-    description: 'Friendly but competitive local rivalry',
-    history: [
-      { matchId: 'm6', date: new Date('2025-01-06'), squadAScore: 2, squadBScore: 2, significance: 'friendly', memorable: false },
-      { matchId: 'm7', date: new Date('2024-12-01'), squadAScore: 3, squadBScore: 0, winner: 'Northside United', significance: 'league', memorable: false },
-    ],
-    stats: { played: 2, squadAWins: 1, squadBWins: 0, draws: 1, squadAGoals: 5, squadBGoals: 2 },
-    intensity: 5,
-    derbyBonuses: { winnerXPBoost: 0.3, loserXPPenalty: 0.05, reputationBonus: 200, fanEngagementBonus: 500 },
-  },
-];
+import { MOCK_RIVALRIES } from '@/lib/mocks';
 
 interface RivalryTrackerProps {
   userSquad?: string;

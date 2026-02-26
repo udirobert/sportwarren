@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import type { Treasury, TreasuryTransaction } from '@/types';
+import { MOCK_TREASURY } from '@/lib/mocks';
 
 interface UseTreasuryReturn {
   treasury: Treasury | null;
@@ -10,22 +11,6 @@ interface UseTreasuryReturn {
   withdraw: (amount: number, reason: string) => Promise<void>;
   refreshTreasury: () => Promise<void>;
 }
-
-// Mock treasury for development
-const MOCK_TREASURY: Treasury = {
-  balance: 15000,
-  currency: 'ALGO',
-  transactions: [
-    { id: 't1', type: 'income', category: 'match_fee', amount: 500, description: 'Match fee vs Red Lions', timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), verified: true },
-    { id: 't2', type: 'income', category: 'sponsor', amount: 2000, description: 'Local sponsor payment', timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), verified: true },
-    { id: 't3', type: 'expense', category: 'wages', amount: 800, description: 'Weekly player wages', timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), verified: true },
-  ],
-  allowances: {
-    weeklyWages: 1000,
-    transferBudget: 5000,
-    facilityUpgrades: 2000,
-  },
-};
 
 export function useTreasury(squadId?: string): UseTreasuryReturn {
   const [treasury, setTreasury] = useState<Treasury | null>(MOCK_TREASURY);

@@ -11,19 +11,7 @@ import {
   Users, Target, ArrowRightLeft, Wallet, 
   Shield, Vote, Trophy 
 } from "lucide-react";
-import type { Player } from "@/types";
-
-// Mock players for tactics board
-const MOCK_PLAYERS: Player[] = [
-  { id: 'p1', name: 'Marcus Johnson', position: 'ST', status: 'available', address: 'addr1' },
-  { id: 'p2', name: 'Jamie Smith', position: 'MF', status: 'available', address: 'addr2' },
-  { id: 'p3', name: 'Alex Chen', position: 'DF', status: 'available', address: 'addr3' },
-  { id: 'p4', name: 'Sam Wilson', position: 'GK', status: 'available', address: 'addr4' },
-  { id: 'p5', name: 'Jordan Lee', position: 'WG', status: 'available', address: 'addr5' },
-  { id: 'p6', name: 'Casey Brown', position: 'MF', status: 'available', address: 'addr6' },
-  { id: 'p7', name: 'Riley Davis', position: 'DF', status: 'available', address: 'addr7' },
-  { id: 'p8', name: 'Morgan Taylor', position: 'ST', status: 'available', address: 'addr8' },
-];
+import { MOCK_SQUAD_PLAYERS } from "@/lib/mocks";
 
 type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance";
 
@@ -165,7 +153,7 @@ export default function SquadPage() {
 
       {activeTab === 'tactics' && (
         <TacticsBoard
-          players={MOCK_PLAYERS}
+          players={MOCK_SQUAD_PLAYERS}
           onSave={(tactics) => console.log('Saving tactics:', tactics)}
         />
       )}
