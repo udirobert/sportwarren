@@ -23,7 +23,7 @@ export const AdaptiveDashboard: React.FC = () => {
     ? localStorage.getItem('userAddress') || undefined
     : undefined;
   
-  const { stats, loading } = useDashboardData(userAddress);
+  const { data: stats, loading } = useDashboardData(userAddress);
 
   // Define all possible widgets
   const allWidgets: DashboardWidget[] = useMemo(() => [

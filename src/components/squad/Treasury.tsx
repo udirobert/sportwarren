@@ -8,24 +8,7 @@ import {
   History, PieChart, TrendingUp, AlertCircle 
 } from 'lucide-react';
 import type { Treasury as TreasuryType, TreasuryTransaction } from '@/types';
-
-// Mock treasury data
-const MOCK_TREASURY: TreasuryType = {
-  balance: 15000,
-  currency: 'ALGO',
-  transactions: [
-    { id: 't1', type: 'income', category: 'match_fee', amount: 500, description: 'Match fee vs Red Lions', timestamp: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000), verified: true },
-    { id: 't2', type: 'income', category: 'sponsor', amount: 2000, description: 'Local sponsor payment', timestamp: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000), verified: true },
-    { id: 't3', type: 'expense', category: 'wages', amount: 800, description: 'Weekly player wages', timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), verified: true },
-    { id: 't4', type: 'expense', category: 'facility', amount: 300, description: 'Pitch rental', timestamp: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000), verified: true },
-    { id: 't5', type: 'income', category: 'prize', amount: 1500, description: 'Tournament prize', timestamp: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), verified: true },
-  ],
-  allowances: {
-    weeklyWages: 1000,
-    transferBudget: 5000,
-    facilityUpgrades: 2000,
-  },
-};
+import { MOCK_TREASURY } from '@/lib/mocks';
 
 interface TreasuryProps {
   treasury?: TreasuryType;
@@ -132,7 +115,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-medium text-gray-700">Weekly Wages</span>
-              <span className="text-sm text-gray-900">{treasury.allowances.weeklyWages.toLocaleString()} ALGO</span>
+              <span className="text-sm text-gray-900">{treasury.allowances.weeklyWages.toLocaleString()} {treasury.currency}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div className="bg-blue-500 h-2 rounded-full" style={{ width: '60%' }} />
@@ -141,7 +124,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-medium text-gray-700">Transfer Budget</span>
-              <span className="text-sm text-gray-900">{treasury.allowances.transferBudget.toLocaleString()} ALGO</span>
+              <span className="text-sm text-gray-900">{treasury.allowances.transferBudget.toLocaleString()} {treasury.currency}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div className="bg-green-500 h-2 rounded-full" style={{ width: '40%' }} />
@@ -150,7 +133,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
           <div>
             <div className="flex items-center justify-between mb-1">
               <span className="text-sm font-medium text-gray-700">Facility Upgrades</span>
-              <span className="text-sm text-gray-900">{treasury.allowances.facilityUpgrades.toLocaleString()} ALGO</span>
+              <span className="text-sm text-gray-900">{treasury.allowances.facilityUpgrades.toLocaleString()} {treasury.currency}</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2">
               <div className="bg-purple-500 h-2 rounded-full" style={{ width: '25%' }} />
@@ -176,7 +159,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
           </div>
           <div className="space-y-3">
             {treasury.transactions.slice(0, 5).map((tx) => (
-              <TransactionRow key={tx.id} transaction={tx} />
+              <TransactionRow key={tx.id} transaction={tx} currency={treasury.currency} />
             ))}
           </div>
         </Card>
@@ -195,7 +178,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
           </div>
           <div className="space-y-3">
             {treasury.transactions.map((tx) => (
-              <TransactionRow key={tx.id} transaction={tx} />
+              <TransactionRow key={tx.id} transaction={tx} currency={treasury.currency} />
             ))}
           </div>
         </Card>
@@ -207,7 +190,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Amount (ALGO)
+                Amount ({treasury.currency})
               </label>
               <input
                 type="number"
@@ -235,7 +218,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Amount (ALGO)
+                Amount ({treasury.currency})
               </label>
               <input
                 type="number"
@@ -245,7 +228,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               />
               <p className="text-sm text-gray-500 mt-1">
-                Available: {treasury.balance.toLocaleString()} ALGO
+                Available: {treasury.balance.toLocaleString()} {treasury.currency}
               </p>
             </div>
             <div>
@@ -276,7 +259,12 @@ export const Treasury: React.FC<TreasuryProps> = ({
 };
 
 // Transaction row component
-const TransactionRow: React.FC<{ transaction: TreasuryTransaction }> = ({ transaction }) => {
+interface TransactionRowProps {
+  transaction: TreasuryTransaction;
+  currency: string;
+}
+
+const TransactionRow: React.FC<TransactionRowProps> = ({ transaction, currency }) => {
   const isIncome = transaction.type === 'income';
   
   const categoryLabels: Record<string, string> = {
@@ -310,7 +298,7 @@ const TransactionRow: React.FC<{ transaction: TreasuryTransaction }> = ({ transa
       </div>
       <div className="text-right">
         <p className={`font-bold ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
-          {isIncome ? '+' : '-'}{transaction.amount.toLocaleString()} ALGO
+          {isIncome ? '+' : '-'}{transaction.amount.toLocaleString()} {currency}
         </p>
         {transaction.verified && (
           <p className="text-xs text-green-600">✓ Verified</p>

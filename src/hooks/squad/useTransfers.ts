@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import type { TransferOffer, SquadPlayer } from '@/types';
+import { MOCK_OFFERS } from '@/lib/mocks';
 
 interface UseTransfersReturn {
   offers: TransferOffer[];
@@ -11,9 +12,6 @@ interface UseTransfersReturn {
   cancelOffer: (offerId: string) => Promise<void>;
   refreshOffers: () => Promise<void>;
 }
-
-// Mock offers for development
-const MOCK_OFFERS: TransferOffer[] = [];
 
 export function useTransfers(squadId?: string): UseTransfersReturn {
   const [offers, setOffers] = useState<TransferOffer[]>(MOCK_OFFERS);

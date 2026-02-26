@@ -1,286 +1,159 @@
 "use client";
 
-import { useState, useCallback, useEffect } from 'react';
-import type { MatchResult, Verification, MatchStatus, TrustTier, MatchConsensus } from '@/types';
+import { useCallback } from 'react';
+import { trpc } from '@/lib/trpc-client';
+import type { MatchResult, Verification, MatchStatus, TrustTier } from '@/types';
+import { calculateTrustScore } from '@/lib/match/verification';
 
 interface UseMatchVerificationReturn {
   matches: MatchResult[];
   activeMatch: MatchResult | null;
   loading: boolean;
   error: string | null;
-  submitMatchResult: (match: Omit<MatchResult, 'id' | 'timestamp' | 'verifications' | 'status'>) => Promise<string>;
-  verifyMatch: (matchId: string, verified: boolean) => Promise<void>;
+  submitMatchResult: (match: {
+    homeSquadId: string;
+    awaySquadId: string;
+    homeScore: number;
+    awayScore: number;
+    matchDate?: Date;
+  }) => Promise<string>;
+  verifyMatch: (matchId: string, verified: boolean, homeScore?: number, awayScore?: number) => Promise<void>;
   getMatchById: (matchId: string) => MatchResult | undefined;
   refreshMatches: () => Promise<void>;
+  hasMore: boolean;
+  total: number;
 }
 
-// Mock data for development
-const MOCK_MATCHES: MatchResult[] = [
-  {
-    id: 'match_001',
-    homeTeam: 'Northside United',
-    awayTeam: 'Red Lions FC',
-    homeScore: 3,
-    awayScore: 1,
-    submitter: 'Marcus Johnson',
-    submitterTeam: 'home',
-    timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    verifications: [
-      {
-        verifier: 'Jamie Thompson',
-        verifierAddress: 'ADDR_JAMIE_123',
-        verified: true,
-        timestamp: new Date(Date.now() - 1.5 * 60 * 60 * 1000),
-        role: 'captain',
-        trustTier: 'gold',
-      },
-      {
-        verifier: 'Sarah Martinez',
-        verifierAddress: 'ADDR_SARAH_456',
-        verified: true,
-        timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-        role: 'player',
-        trustTier: 'silver',
-      },
-      {
-        verifier: 'Referee Mike',
-        verifierAddress: 'ADDR_MIKE_789',
-        verified: true,
-        timestamp: new Date(Date.now() - 30 * 60 * 1000),
-        role: 'referee',
-        trustTier: 'platinum',
-      },
-    ],
-    status: 'verified',
+// Transform DB match to frontend type
+function transformMatch(match: any): MatchResult {
+  return {
+    id: match.id,
+    homeTeam: match.homeSquad?.name || 'Unknown',
+    awayTeam: match.awaySquad?.name || 'Unknown',
+    homeScore: match.homeScore ?? 0,
+    awayScore: match.awayScore ?? 0,
+    submitter: match.submittedBy,
+    submitterTeam: match.submittedBy === match.homeSquadId ? 'home' : 'away',
+    timestamp: new Date(match.createdAt),
+    status: match.status as MatchStatus,
+    verifications: match.verifications?.map((v: any) => ({
+      verifier: v.verifier?.name || 'Unknown',
+      verifierAddress: v.verifierId,
+      verified: v.verified,
+      timestamp: new Date(v.createdAt),
+      role: 'captain', // TODO: Get from squad membership
+      trustTier: v.trustTier as TrustTier,
+    })) || [],
     requiredVerifications: 3,
-    trustScore: 95,
+    trustScore: match.verifications ? calculateTrustScore(match.verifications) : 0,
     consensus: {
-      homeSubmitted: true,
-      awaySubmitted: true,
-      homeScore: 3,
-      awayScore: 1,
+      homeSubmitted: match.submittedBy === match.homeSquadId,
+      awaySubmitted: match.submittedBy === match.awaySquadId,
+      homeScore: match.homeScore ?? 0,
+      awayScore: match.awayScore ?? 0,
       discrepancy: false,
-      resolved: true,
+      resolved: match.status === 'verified' || match.status === 'finalized',
     },
-  },
-  {
-    id: 'match_002',
-    homeTeam: 'Northside United',
-    awayTeam: 'Sunday Legends',
-    homeScore: 2,
-    awayScore: 2,
-    submitter: 'Emma Wilson',
-    submitterTeam: 'home',
-    timestamp: new Date(Date.now() - 30 * 60 * 1000),
-    verifications: [
-      {
-        verifier: 'Alex Chen',
-        verifierAddress: 'ADDR_ALEX_321',
-        verified: true,
-        timestamp: new Date(Date.now() - 20 * 60 * 1000),
-        role: 'player',
-        trustTier: 'bronze',
-      },
-    ],
-    status: 'pending',
-    requiredVerifications: 3,
-    trustScore: 30,
-    consensus: {
-      homeSubmitted: true,
-      awaySubmitted: false,
-      discrepancy: false,
-      resolved: false,
-    },
-  },
-  {
-    id: 'match_003',
-    homeTeam: 'Park Rangers',
-    awayTeam: 'Northside United',
-    homeScore: 1,
-    awayScore: 4,
-    submitter: 'Ryan Murphy',
-    submitterTeam: 'away',
-    timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000),
-    verifications: [
-      {
-        verifier: 'Marcus Johnson',
-        verifierAddress: 'ADDR_MARCUS_654',
-        verified: false,
-        timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-        role: 'captain',
-        trustTier: 'gold',
-      },
-      {
-        verifier: 'Jamie Thompson',
-        verifierAddress: 'ADDR_JAMIE_123',
-        verified: false,
-        timestamp: new Date(Date.now() - 2.5 * 60 * 60 * 1000),
-        role: 'player',
-        trustTier: 'gold',
-      },
-    ],
-    status: 'disputed',
-    requiredVerifications: 3,
-    trustScore: 10,
-    consensus: {
-      homeSubmitted: false,
-      awaySubmitted: true,
-      homeScore: 1,
-      awayScore: 4,
-      discrepancy: true,
-      resolved: false,
-    },
-  },
-];
+  };
+}
 
-export function useMatchVerification(): UseMatchVerificationReturn {
-  const [matches, setMatches] = useState<MatchResult[]>(MOCK_MATCHES);
-  const [activeMatch, setActiveMatch] = useState<MatchResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const refreshMatches = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // In production: fetch from Algorand
-      // const response = await fetch('/api/matches');
-      // const data = await response.json();
-      // setMatches(data);
-      
-      // For now, use mock data
-      setMatches(MOCK_MATCHES);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch matches');
-    } finally {
-      setLoading(false);
+export function useMatchVerification(squadId?: string): UseMatchVerificationReturn {
+  // Fetch matches with tRPC
+  const { 
+    data, 
+    isLoading, 
+    error, 
+    refetch 
+  } = trpc.match.list.useQuery(
+    { 
+      squadId,
+      limit: 20,
+    },
+    {
+      staleTime: 5 * 1000, // 5 seconds
     }
-  }, []);
+  );
+
+  // Mutations
+  const submitMutation = trpc.match.submit.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  const verifyMutation = trpc.match.verify.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
+
+  const matches = data?.matches.map(transformMatch) || [];
+  const hasMore = data?.hasMore || false;
+  const total = data?.total || 0;
 
   const submitMatchResult = useCallback(async (
-    match: Omit<MatchResult, 'id' | 'timestamp' | 'verifications' | 'status'>
+    match: {
+      homeSquadId: string;
+      awaySquadId: string;
+      homeScore: number;
+      awayScore: number;
+      matchDate?: Date;
+    }
   ): Promise<string> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const newMatch: MatchResult = {
-        ...match,
-        id: `match_${Date.now()}`,
-        timestamp: new Date(),
-        verifications: [],
-        status: 'pending',
-        trustScore: 0,
-        consensus: {
-          homeSubmitted: match.submitterTeam === 'home',
-          awaySubmitted: match.submitterTeam === 'away',
-          homeScore: match.homeScore,
-          awayScore: match.awayScore,
-          discrepancy: false,
-          resolved: false,
-        },
-      };
+    const result = await submitMutation.mutateAsync(match);
+    return result.id;
+  }, [submitMutation]);
 
-      // In production: submit to Algorand
-      // await submitMatchToBlockchain(newMatch);
-
-      setMatches(prev => [newMatch, ...prev]);
-      setActiveMatch(newMatch);
-      return newMatch.id;
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to submit match');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  const verifyMatch = useCallback(async (matchId: string, verified: boolean) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const userAddress = 'CURRENT_USER_ADDR'; // Get from wallet
-      const userTrustTier: TrustTier = 'gold'; // Get from reputation
-
-      const newVerification: Verification = {
-        verifier: 'Current User',
-        verifierAddress: userAddress,
-        verified,
-        timestamp: new Date(),
-        role: 'captain',
-        trustTier: userTrustTier,
-      };
-
-      setMatches(prev => prev.map(match => {
-        if (match.id !== matchId) return match;
-
-        const updatedVerifications = [...match.verifications, newVerification];
-        const verifiedCount = updatedVerifications.filter(v => v.verified).length;
-        const disputedCount = updatedVerifications.filter(v => !v.verified).length;
-
-        let status: MatchStatus = 'pending';
-        if (verifiedCount >= match.requiredVerifications) {
-          status = 'verified';
-        } else if (disputedCount >= 2) {
-          status = 'disputed';
-        }
-
-        // Calculate trust score
-        const trustScore = calculateTrustScore(updatedVerifications);
-
-        return {
-          ...match,
-          verifications: updatedVerifications,
-          status,
-          trustScore,
-        };
-      }));
-
-      // In production: submit verification to Algorand
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to verify match');
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const verifyMatch = useCallback(async (
+    matchId: string, 
+    verified: boolean,
+    homeScore?: number,
+    awayScore?: number
+  ): Promise<void> => {
+    await verifyMutation.mutateAsync({
+      matchId,
+      verified,
+      homeScore,
+      awayScore,
+    });
+  }, [verifyMutation]);
 
   const getMatchById = useCallback((matchId: string) => {
     return matches.find(m => m.id === matchId);
   }, [matches]);
 
-  // Load matches on mount
-  useEffect(() => {
-    refreshMatches();
-  }, [refreshMatches]);
+  const refreshMatches = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
 
   return {
     matches,
-    activeMatch,
-    loading,
-    error,
+    activeMatch: matches[0] || null,
+    loading: isLoading || submitMutation.isPending || verifyMutation.isPending,
+    error: error?.message || submitMutation.error?.message || verifyMutation.error?.message || null,
     submitMatchResult,
     verifyMatch,
     getMatchById,
     refreshMatches,
+    hasMore,
+    total,
   };
 }
 
-// Helper function to calculate trust score
-function calculateTrustScore(verifications: Verification[]): number {
-  if (verifications.length === 0) return 0;
+// Hook for single match details
+export function useMatchDetails(matchId: string) {
+  const { data, isLoading, error, refetch } = trpc.match.getById.useQuery(
+    { id: matchId },
+    {
+      enabled: !!matchId,
+      staleTime: 5 * 1000,
+    }
+  );
 
-  const tierWeights: Record<TrustTier, number> = {
-    bronze: 10,
-    silver: 25,
-    gold: 40,
-    platinum: 60,
+  return {
+    match: data ? transformMatch(data) : null,
+    loading: isLoading,
+    error: error?.message || null,
+    refresh: refetch,
   };
-
-  const totalWeight = verifications.reduce((sum, v) => {
-    return sum + (v.verified ? tierWeights[v.trustTier] : -tierWeights[v.trustTier] * 0.5);
-  }, 0);
-
-  // Normalize to 0-100 scale
-  const maxPossible = verifications.length * 60; // platinum weight
-  return Math.max(0, Math.min(100, (totalWeight / maxPossible) * 100));
 }

@@ -9,22 +9,26 @@ const httpLink = createHttpLink({
   uri: process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:4000/graphql',
 });
 
-// WebSocket link for subscriptions
-const wsLink = new GraphQLWsLink(
-  createClient({
-    url: process.env.NEXT_PUBLIC_GRAPHQL_WS_URL || 'ws://localhost:4000/graphql',
-    connectionParams: () => {
-      const token = localStorage.getItem('auth_token');
-      return {
-        authorization: token ? `Bearer ${token}` : '',
-      };
-    },
-  })
-);
+// WebSocket link for subscriptions (only initialize in browser)
+const wsLink = typeof window !== 'undefined' 
+  ? new GraphQLWsLink(
+      createClient({
+        url: process.env.NEXT_PUBLIC_GRAPHQL_WS_URL || 'ws://localhost:4000/graphql',
+        connectionParams: () => {
+          const token = localStorage.getItem('sw_auth_token');
+          return {
+            authorization: token ? `Bearer ${token}` : '',
+          };
+        },
+      })
+    )
+  : null;
 
 // Auth link to add authorization header
 const authLink = setContext((_, { headers }) => {
-  const token = localStorage.getItem('auth_token');
+  const token = typeof window !== 'undefined' 
+    ? localStorage.getItem('sw_auth_token')
+    : null;
   
   return {
     headers: {
@@ -35,119 +39,55 @@ const authLink = setContext((_, { headers }) => {
 });
 
 // Split link to route queries/mutations to HTTP and subscriptions to WebSocket
-const splitLink = split(
-  ({ query }) => {
-    const definition = getMainDefinition(query);
-    return (
-      definition.kind === 'OperationDefinition' &&
-      definition.operation === 'subscription'
-    );
-  },
-  wsLink,
-  authLink.concat(httpLink)
-);
+const splitLink = wsLink
+  ? split(
+      ({ query }) => {
+        const definition = getMainDefinition(query);
+        return (
+          definition.kind === 'OperationDefinition' &&
+          definition.operation === 'subscription'
+        );
+      },
+      wsLink,
+      authLink.concat(httpLink)
+    )
+  : authLink.concat(httpLink);
 
-// Apollo Client instance
+// Helper to create array merge policy
+const arrayMergePolicy = {
+  merge(existing: unknown[] = [], incoming: unknown[]) {
+    return incoming;
+  },
+};
+
+// Apollo Client instance with simplified cache configuration
 export const apolloClient = new ApolloClient({
   link: splitLink,
   cache: new InMemoryCache({
     typePolicies: {
+      // Common pattern: arrays should be replaced on update, not merged
       User: {
         fields: {
-          squads: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
+          squads: arrayMergePolicy,
         },
       },
       Squad: {
         fields: {
-          members: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
-          matches: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
+          members: arrayMergePolicy,
+          matches: arrayMergePolicy,
         },
       },
       Match: {
         fields: {
-          events: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
-          playerStats: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
-        },
-      },
-      SquadDAO: {
-        fields: {
-          proposals: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
-          members: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
+          events: arrayMergePolicy,
+          playerStats: arrayMergePolicy,
         },
       },
       ReputationProfile: {
         fields: {
-          skillRatings: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
-          achievements: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
-          endorsements: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
-        },
-      },
-      GlobalChallenge: {
-        fields: {
-          participants: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
-          leaderboard: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
-        },
-      },
-      MarketplaceItem: {
-        fields: {
-          bids: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
-          transactions: {
-            merge(existing = [], incoming) {
-              return incoming;
-            },
-          },
+          skillRatings: arrayMergePolicy,
+          achievements: arrayMergePolicy,
+          endorsements: arrayMergePolicy,
         },
       },
     },
@@ -155,9 +95,24 @@ export const apolloClient = new ApolloClient({
   defaultOptions: {
     watchQuery: {
       errorPolicy: 'all',
+      // Use network-only for data that changes frequently
+      fetchPolicy: 'cache-and-network',
     },
     query: {
       errorPolicy: 'all',
     },
+    mutate: {
+      errorPolicy: 'all',
+    },
   },
 });
+
+// Helper to reset cache (useful after logout)
+export async function resetApolloCache(): Promise<void> {
+  await apolloClient.resetStore();
+}
+
+// Helper to clear cache (more aggressive than reset)
+export async function clearApolloCache(): Promise<void> {
+  await apolloClient.clearStore();
+}

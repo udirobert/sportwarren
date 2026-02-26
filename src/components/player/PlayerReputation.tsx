@@ -12,7 +12,7 @@ import type { PlayerAttributes as PlayerReputationData, Endorsement, Professiona
 
 export const PlayerReputation: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'achievements' | 'endorsements' | 'scouts'>('overview');
-  const { attributes, loading, updateAttribute } = usePlayerAttributes('ADDR_MARCUS_001');
+  const { attributes, loading } = usePlayerAttributes('ADDR_MARCUS_001');
   const { form } = usePlayerForm(attributes);
 
   if (loading) {
@@ -223,7 +223,7 @@ export const PlayerReputation: React.FC = () => {
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 mb-2">{achievement.description}</p>
-                <p className="text-xs text-gray-500">Earned: {achievement.dateEarned.toLocaleDateString()}</p>
+                <p className="text-xs text-gray-500">Earned: {achievement.dateEarned?.toLocaleDateString() || 'Not yet earned'}</p>
               </div>
             ))}
           </div>

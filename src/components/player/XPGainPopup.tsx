@@ -3,6 +3,17 @@
 import React, { useEffect, useState } from 'react';
 import { X, TrendingUp, Star } from 'lucide-react';
 import type { AttributeType } from '@/types';
+import { ATTRIBUTE_NAMES } from '@/lib/utils';
+
+// Local mock data for XP notifications (different from achievement notifications)
+const MOCK_XP_NOTIFICATIONS: XPGainNotification[] = [
+  { id: '1', attribute: 'shooting', xpGained: 125, newRating: 88, levelsGained: 1 },
+  { id: '2', attribute: 'passing', xpGained: 85, levelsGained: 0 },
+  { id: '3', attribute: 'physical', xpGained: 95, levelsGained: 0 },
+];
+
+// Re-export for backward compatibility
+export { MOCK_XP_NOTIFICATIONS as MOCK_NOTIFICATIONS };
 
 interface XPGainNotification {
   id: string;
@@ -11,13 +22,6 @@ interface XPGainNotification {
   newRating?: number;
   levelsGained: number;
 }
-
-// Mock notifications for demo
-const MOCK_NOTIFICATIONS: XPGainNotification[] = [
-  { id: '1', attribute: 'shooting', xpGained: 125, newRating: 88, levelsGained: 1 },
-  { id: '2', attribute: 'passing', xpGained: 85, levelsGained: 0 },
-  { id: '3', attribute: 'physical', xpGained: 95, levelsGained: 0 },
-];
 
 export const XPGainPopup: React.FC = () => {
   const [notifications, setNotifications] = useState<XPGainNotification[]>([]);
@@ -46,7 +50,7 @@ export const XPGainPopup: React.FC = () => {
     );
   }
 
-  const displayNotifications = showDemo ? MOCK_NOTIFICATIONS : notifications;
+  const displayNotifications = showDemo ? MOCK_XP_NOTIFICATIONS : notifications;
 
   return (
     <div className="fixed bottom-4 right-4 z-50 space-y-2">
@@ -93,20 +97,7 @@ const XPGainCard: React.FC<XPGainCardProps> = ({ notification, onDismiss }) => {
     };
   }, [onDismiss]);
 
-  const attributeNames: Record<AttributeType, string> = {
-    pace: 'Pace',
-    shooting: 'Shooting',
-    passing: 'Passing',
-    dribbling: 'Dribbling',
-    defending: 'Defending',
-    physical: 'Physical',
-    gk_diving: 'GK Diving',
-    gk_handling: 'GK Handling',
-    gk_kicking: 'GK Kicking',
-    gk_reflexes: 'GK Reflexes',
-    gk_speed: 'GK Speed',
-    gk_positioning: 'GK Positioning',
-  };
+  // Use centralized attribute names
 
   return (
     <div
@@ -132,7 +123,7 @@ const XPGainCard: React.FC<XPGainCardProps> = ({ notification, onDismiss }) => {
               +{notification.xpGained} XP
             </p>
             <p className="text-sm text-gray-600">
-              {attributeNames[notification.attribute]}
+              {ATTRIBUTE_NAMES[notification.attribute]}
             </p>
             {notification.levelsGained > 0 && (
               <p className="text-sm text-purple-600 font-medium">
@@ -183,20 +174,6 @@ export const XPGainSummary: React.FC<XPGainSummaryProps> = ({
   totalXP, 
   attributeGains 
 }) => {
-  const attributeNames: Record<AttributeType, string> = {
-    pace: 'Pace',
-    shooting: 'Shooting',
-    passing: 'Passing',
-    dribbling: 'Dribbling',
-    defending: 'Defending',
-    physical: 'Physical',
-    gk_diving: 'GK Diving',
-    gk_handling: 'GK Handling',
-    gk_kicking: 'GK Kicking',
-    gk_reflexes: 'GK Reflexes',
-    gk_speed: 'GK Speed',
-    gk_positioning: 'GK Positioning',
-  };
 
   const leveledUpAttributes = attributeGains.filter(g => g.newRating > g.oldRating);
 
@@ -216,7 +193,7 @@ export const XPGainSummary: React.FC<XPGainSummaryProps> = ({
           <div className="space-y-2">
             {leveledUpAttributes.map((gain, idx) => (
               <div key={idx} className="flex items-center justify-between">
-                <span className="text-gray-700">{attributeNames[gain.attribute]}</span>
+                <span className="text-gray-700">{ATTRIBUTE_NAMES[gain.attribute]}</span>
                 <span className="font-bold text-purple-600">
                   {gain.oldRating} → {gain.newRating}
                 </span>
@@ -230,7 +207,7 @@ export const XPGainSummary: React.FC<XPGainSummaryProps> = ({
         <p className="font-medium text-gray-700">Attribute Gains:</p>
         {attributeGains.map((gain, idx) => (
           <div key={idx} className="flex items-center justify-between p-2 bg-white rounded-lg">
-            <span className="text-gray-600">{attributeNames[gain.attribute]}</span>
+            <span className="text-gray-600">{ATTRIBUTE_NAMES[gain.attribute]}</span>
             <div className="flex items-center space-x-2">
               <span className="text-green-600 font-medium">+{gain.xp} XP</span>
               {gain.newRating > gain.oldRating && (

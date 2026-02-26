@@ -10,20 +10,9 @@ import { Button } from "@/components/ui/Button";
 import { useMatchVerification } from "@/hooks/match/useMatchVerification";
 import { useXPGain } from "@/hooks/player/useXPGain";
 import { Trophy, Shield, Activity, Sparkles } from "lucide-react";
-import type { AttributeType } from "@/types";
+import { MOCK_XP_SUMMARY } from "@/lib/mocks";
 
 type ViewMode = "capture" | "verify" | "detail" | "xp-summary";
-
-// Mock XP data for demo
-const MOCK_XP_SUMMARY = {
-  totalXP: 385,
-  attributeGains: [
-    { attribute: 'shooting' as AttributeType, xp: 125, oldRating: 87, newRating: 88 },
-    { attribute: 'passing' as AttributeType, xp: 85, oldRating: 82, newRating: 82 },
-    { attribute: 'physical' as AttributeType, xp: 95, oldRating: 84, newRating: 84 },
-    { attribute: 'pace' as AttributeType, xp: 80, oldRating: 76, newRating: 76 },
-  ],
-};
 
 export default function MatchPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("capture");

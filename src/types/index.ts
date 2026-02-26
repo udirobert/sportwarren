@@ -163,7 +163,7 @@ export interface Achievement {
   id: string;
   title: string;
   description: string;
-  dateEarned: Date;
+  dateEarned?: Date; // Optional for unearned achievements
   rarity: 'common' | 'rare' | 'epic' | 'legendary';
   verified: boolean;
   icon?: string;
