@@ -60,7 +60,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
           {/* Badge */}
           <div className="inline-flex items-center space-x-2 bg-green-500/10 backdrop-blur-sm border border-green-500/20 text-green-400 px-6 py-3 rounded-full text-sm font-medium mb-8">
             <Shield className="w-4 h-4" />
-            <span>Chainlink Verified • Kite AI Powered • Algorand Native</span>
+            <span>Blockchain Verified • Chainlink Oracles • Kite AI Powered</span>
           </div>
 
           {/* Hero Headline */}
@@ -377,25 +377,42 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
           <div className="mt-24 text-center">
             <p className="text-sm text-gray-400 mb-6 uppercase tracking-wider">Powered by industry-leading infrastructure</p>
             <div className="flex flex-wrap items-center justify-center gap-4">
-              {[
-                { icon: '⚡', label: 'Algorand', subtitle: 'Native Integration' },
-                { icon: '🔗', label: 'Chainlink', subtitle: 'Oracles' },
-                { icon: '🤖', label: 'Kite AI', subtitle: '17.8M+ Agents' },
-                { icon: '🏔️', label: 'Avalanche', subtitle: 'Subnet' },
-              ].map((tech, i) => (
-                <div
-                  key={i}
-                  className="px-6 py-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-white/30 transition-all hover:scale-105"
-                >
-                  <div className="flex items-center space-x-3">
-                    <span className="text-2xl">{tech.icon}</span>
-                    <div className="text-left">
-                      <div className="text-sm font-bold text-white">{tech.label}</div>
-                      <div className="text-xs text-gray-400">{tech.subtitle}</div>
-                    </div>
+              <div className="px-6 py-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-white/30 transition-all hover:scale-105">
+                <div className="flex items-center space-x-3">
+                  <span className="text-2xl">🔗</span>
+                  <div className="text-left">
+                    <div className="text-sm font-bold text-white">Chainlink</div>
+                    <div className="text-xs text-gray-400">Oracles</div>
                   </div>
                 </div>
-              ))}
+              </div>
+              <div className="px-6 py-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-white/30 transition-all hover:scale-105">
+                <div className="flex items-center space-x-3">
+                  <span className="text-2xl">🤖</span>
+                  <div className="text-left">
+                    <div className="text-sm font-bold text-white">Kite AI</div>
+                    <div className="text-xs text-gray-400">17.8M+ Agents</div>
+                  </div>
+                </div>
+              </div>
+              <div className="px-6 py-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-white/30 transition-all hover:scale-105">
+                <div className="flex items-center space-x-3">
+                  <span className="text-2xl">⚡</span>
+                  <div className="text-left">
+                    <div className="text-sm font-bold text-white">Algorand</div>
+                    <div className="text-xs text-gray-400">Blockchain</div>
+                  </div>
+                </div>
+              </div>
+              <div className="px-6 py-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-white/30 transition-all hover:scale-105">
+                <div className="flex items-center space-x-3">
+                  <span className="text-2xl">🏔️</span>
+                  <div className="text-left">
+                    <div className="text-sm font-bold text-white">Avalanche</div>
+                    <div className="text-xs text-gray-400">Subnet</div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

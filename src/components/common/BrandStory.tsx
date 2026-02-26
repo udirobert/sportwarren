@@ -108,7 +108,7 @@ export const BrandStory: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-900 mb-1">Blockchain Verified</h3>
-                  <p className="text-sm text-gray-600">Your stats are immutable and trustworthy on Algorand</p>
+                  <p className="text-sm text-gray-600">Your stats are immutable and trustworthy on-chain</p>
                 </div>
               </div>
             </div>
