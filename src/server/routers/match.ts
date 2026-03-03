@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
+import { chainlinkService } from '../../../server/services/blockchain/chainlink';
 
 const MatchStatus = z.enum(['pending', 'verified', 'disputed', 'finalized']);
 
@@ -22,6 +23,8 @@ export const matchRouter = createTRPCRouter({
       homeScore: z.number().min(0, 'Score cannot be negative'),
       awayScore: z.number().min(0, 'Score cannot be negative'),
       matchDate: z.date().default(() => new Date()),
+      latitude: z.number().optional(),
+      longitude: z.number().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -44,6 +47,28 @@ export const matchRouter = createTRPCRouter({
           });
         }
 
+        let weatherVerified = false;
+        let locationVerified = false;
+
+        // Perform Chainlink Verification if coordinates are provided
+        if (input.latitude !== undefined && input.longitude !== undefined) {
+          try {
+            const verificationResult = await chainlinkService.verifyMatch({
+              latitude: input.latitude,
+              longitude: input.longitude,
+              timestamp: Math.floor(input.matchDate.getTime() / 1000),
+              homeTeam: homeSquad.name,
+              awayTeam: awaySquad.name,
+            });
+            
+            weatherVerified = verificationResult.weatherVerified;
+            locationVerified = verificationResult.locationVerified;
+          } catch (e) {
+            console.error('Chainlink verification failed during match submission:', e);
+            // We don't fail the match submission if oracle fails, just log it.
+          }
+        }
+
         const match = await ctx.prisma.match.create({
           data: {
             homeSquadId: input.homeSquadId,
@@ -53,6 +78,10 @@ export const matchRouter = createTRPCRouter({
             matchDate: input.matchDate,
             submittedBy: ctx.userId!,
             status: 'pending',
+            latitude: input.latitude,
+            longitude: input.longitude,
+            weatherVerified,
+            locationVerified,
           },
           include: {
             homeSquad: true,

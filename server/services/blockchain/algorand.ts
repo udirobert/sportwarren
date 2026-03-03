@@ -433,7 +433,7 @@ export class AlgorandService {
         Number(algosdk.decodeUint64(Buffer.from(value), "mixed"));
 
       const findGlobalStateValue = (key: string) => {
-        const entry = globalState.find(
+        const entry = globalState?.find(
           (state: any) => decodeBase64(state.key) === key,
         );
         if (entry) {
@@ -495,7 +495,7 @@ export class AlgorandService {
       const accountInfo = await this.algodClient
         .accountInformation(address)
         .do();
-      const appLocalState = accountInfo.appsLocalState.find(
+      const appLocalState = accountInfo.appsLocalState?.find(
         (app: any) => app.id === this.squadDAOAppId,
       );
 
@@ -540,7 +540,7 @@ export class AlgorandService {
         Number(algosdk.decodeUint64(Buffer.from(value), "mixed"));
 
       const findGlobalStateValue = (key: string) => {
-        const entry = globalState.find(
+        const entry = globalState?.find(
           (state: any) => decodeBase64(state.key) === key,
         );
         if (entry) {
@@ -874,7 +874,7 @@ export class AlgorandService {
       const accountInfo = await this.algodClient
         .accountInformation(address)
         .do();
-      const appLocalState = accountInfo.appsLocalState.find(
+      const appLocalState = accountInfo.appsLocalState?.find(
         (app: any) => app.id === this.matchVerificationAppId,
       );
 
@@ -923,7 +923,7 @@ export class AlgorandService {
         Number(algosdk.decodeUint64(Buffer.from(value), "mixed"));
 
       const findGlobalStateValue = (key: string) => {
-        const entry = globalState.find(
+        const entry = globalState?.find(
           (state: any) => decodeBase64(state.key) === key,
         );
         if (entry) {
