@@ -38,10 +38,12 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   // Get player position from highest attribute using centralized utility
   const position = detectPositionFromSkills(player.skills) as PlayerPosition;
 
+  const isGlowing = player.form.current > 7;
+
   if (compact) {
     return (
       <Card 
-        className="cursor-pointer hover:shadow-md transition-shadow"
+        className={`cursor-pointer transition-all duration-300 ${isGlowing ? 'animate-pulse-glow border-blue-500 shadow-blue-500/20 shadow-lg' : 'hover:shadow-md'}`}
         onClick={onClick}
       >
         <div className="flex items-center space-x-3">
@@ -71,7 +73,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
   return (
     <Card 
-      className="cursor-pointer hover:shadow-lg transition-shadow"
+      className={`cursor-pointer transition-all duration-300 ${isGlowing ? 'animate-pulse-glow border-blue-500 shadow-blue-500/20 shadow-xl' : 'hover:shadow-lg'}`}
       onClick={onClick}
     >
       <div className="space-y-4">

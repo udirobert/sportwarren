@@ -85,7 +85,7 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
           Begin tracking your match. Goals, events, and evidence will be recorded 
           for blockchain verification.
         </p>
-        <Button onClick={handleStartMatch} size="lg">
+        <Button onClick={handleStartMatch} size="lg" className="w-full h-16 text-lg font-bold shadow-lg shadow-green-600/20 active:scale-95 transition-transform">
           Start Match Tracking
         </Button>
       </Card>
