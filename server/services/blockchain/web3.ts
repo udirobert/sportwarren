@@ -3,7 +3,7 @@ import { ethers } from 'ethers';
 export class Web3Service {
   private provider: ethers.Provider;
   private wallet: ethers.Wallet;
-  private achievementContract: ethers.Contract;
+  private achievementContract: ethers.Contract | null = null;
 
   constructor() {
     // Initialize provider (use Polygon for low gas fees)
