@@ -1,101 +1,105 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import { trpc } from '@/lib/trpc-client';
 import type { TransferOffer, SquadPlayer } from '@/types';
-import { MOCK_OFFERS } from '@/lib/mocks';
 
 interface UseTransfersReturn {
-  offers: TransferOffer[];
+  incomingOffers: TransferOffer[];
+  outgoingOffers: TransferOffer[];
   loading: boolean;
-  makeOffer: (player: SquadPlayer, amount: number, type: 'transfer' | 'loan') => Promise<void>;
+  makeOffer: (player: SquadPlayer, amount: number, type: 'transfer' | 'loan', loanDuration?: number) => Promise<void>;
   respondToOffer: (offerId: string, accept: boolean) => Promise<void>;
   cancelOffer: (offerId: string) => Promise<void>;
   refreshOffers: () => Promise<void>;
 }
 
-export function useTransfers(squadId?: string): UseTransfersReturn {
-  const [offers, setOffers] = useState<TransferOffer[]>(MOCK_OFFERS);
-  const [loading, setLoading] = useState(false);
+// Transform DB offer to frontend type
+function transformOffer(offer: any): TransferOffer {
+  return {
+    id: offer.id,
+    fromSquad: offer.fromSquad.id,
+    toSquad: offer.toSquad.id,
+    fromSquadName: offer.fromSquad.name,
+    toSquadName: offer.toSquad.name,
+    player: { id: offer.playerId } as SquadPlayer,
+    offerAmount: offer.amount,
+    offerType: offer.offerType as 'transfer' | 'loan',
+    loanDuration: offer.loanDuration || undefined,
+    status: offer.status as TransferOffer['status'],
+    timestamp: new Date(offer.createdAt),
+    expiry: offer.expiresAt ? new Date(offer.expiresAt) : undefined,
+  };
+}
 
-  const refreshOffers = useCallback(async () => {
-    setLoading(true);
-    try {
-      // In production: fetch from API
-      // const response = await fetch(`/api/squads/${squadId}/offers`);
-      // const data = await response.json();
-      // setOffers(data);
-    } finally {
-      setLoading(false);
-    }
-  }, [squadId]);
+export function useTransfers(squadId?: string): UseTransfersReturn {
+  // Fetch incoming offers
+  const { data: incomingData, isLoading: incomingLoading, refetch: refetchIncoming } = trpc.squad.getTransferOffers.useQuery(
+    { squadId: squadId || '', type: 'incoming' },
+    { enabled: !!squadId, staleTime: 30 * 1000 }
+  );
+
+  // Fetch outgoing offers
+  const { data: outgoingData, isLoading: outgoingLoading, refetch: refetchOutgoing } = trpc.squad.getTransferOffers.useQuery(
+    { squadId: squadId || '', type: 'outgoing' },
+    { enabled: !!squadId, staleTime: 30 * 1000 }
+  );
+
+  // Create offer mutation
+  const createMutation = trpc.squad.createTransferOffer.useMutation();
+
+  // Respond mutation
+  const respondMutation = trpc.squad.respondToTransferOffer.useMutation({
+    onSuccess: () => {
+      refetchIncoming();
+      refetchOutgoing();
+    },
+  });
+
+  // Cancel mutation
+  const cancelMutation = trpc.squad.cancelTransferOffer.useMutation({
+    onSuccess: () => {
+      refetchIncoming();
+      refetchOutgoing();
+    },
+  });
 
   const makeOffer = useCallback(async (
-    player: SquadPlayer, 
-    amount: number, 
-    type: 'transfer' | 'loan'
+    player: SquadPlayer,
+    amount: number,
+    type: 'transfer' | 'loan',
+    loanDuration?: number
   ) => {
-    setLoading(true);
-    try {
-      // In production: submit to API
-      // await fetch(`/api/squads/${squadId}/offers`, {
-      //   method: 'POST',
-      //   body: JSON.stringify({ playerId: player.id, amount, type }),
-      // });
-      
-      // Optimistic update
-      const newOffer: TransferOffer = {
-        id: `offer_${Date.now()}`,
-        fromSquad: squadId || 'unknown',
-        toSquad: 'target_squad',
-        player,
-        offerAmount: amount,
-        offerType: type,
-        status: 'pending',
-        timestamp: new Date(),
-        expiry: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      };
-      setOffers(prev => [newOffer, ...prev]);
-    } finally {
-      setLoading(false);
-    }
-  }, [squadId]);
+    if (!squadId) return;
+
+    await createMutation.mutateAsync({
+      toSquadId: squadId,
+      playerId: player.id,
+      offerType: type === 'transfer' ? 'permanent' : 'loan',
+      amount,
+      loanDuration,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+    });
+
+    await refetchOutgoing();
+  }, [squadId, createMutation, refetchOutgoing]);
 
   const respondToOffer = useCallback(async (offerId: string, accept: boolean) => {
-    setLoading(true);
-    try {
-      // In production: submit to API
-      // await fetch(`/api/offers/${offerId}/respond`, {
-      //   method: 'POST',
-      //   body: JSON.stringify({ accept }),
-      // });
-      
-      // Optimistic update
-      setOffers(prev => prev.map(offer => 
-        offer.id === offerId 
-          ? { ...offer, status: accept ? 'accepted' : 'rejected' }
-          : offer
-      ));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    await respondMutation.mutateAsync({ offerId, accept });
+  }, [respondMutation]);
 
   const cancelOffer = useCallback(async (offerId: string) => {
-    setLoading(true);
-    try {
-      // In production: submit to API
-      // await fetch(`/api/offers/${offerId}`, { method: 'DELETE' });
-      
-      // Optimistic update
-      setOffers(prev => prev.filter(offer => offer.id !== offerId));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+    await cancelMutation.mutateAsync({ offerId });
+  }, [cancelMutation]);
+
+  const refreshOffers = useCallback(async () => {
+    await Promise.all([refetchIncoming(), refetchOutgoing()]);
+  }, [refetchIncoming, refetchOutgoing]);
 
   return {
-    offers,
-    loading,
+    incomingOffers: incomingData?.map(transformOffer) || [],
+    outgoingOffers: outgoingData?.map(transformOffer) || [],
+    loading: incomingLoading || outgoingLoading || createMutation.isPending,
     makeOffer,
     respondToOffer,
     cancelOffer,

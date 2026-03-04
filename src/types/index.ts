@@ -261,12 +261,15 @@ export interface TransferOffer {
   id: string;
   fromSquad: string;
   toSquad: string;
+  fromSquadName?: string;
+  toSquadName?: string;
   player: SquadPlayer;
   offerAmount: number;
   offerType: 'transfer' | 'loan';
-  status: 'pending' | 'accepted' | 'rejected' | 'negotiating';
+  loanDuration?: number;
+  status: 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'negotiating';
   timestamp: Date;
-  expiry: Date;
+  expiry?: Date;
 }
 
 // ============================================================================
