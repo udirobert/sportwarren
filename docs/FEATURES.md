@@ -1,12 +1,12 @@
 # SportWarren Features
 
-## The Parallel Season
+**The Parallel Season** — Your real Sunday league season and your SportWarren season run simultaneously. Real matches drive the game.
 
-Your real Sunday league season and your SportWarren season run simultaneously. Real matches drive the game. The game enhances your real season.
+**Last Updated:** March 2026
 
 ---
 
-## Match Verification
+## 1. Match Verification ✅
 
 ### Real-World Capture
 - **Voice logging:** Dictate match events as they happen
@@ -25,33 +25,25 @@ Your real Sunday league season and your SportWarren season run simultaneously. R
 | Diamond | Full verification + witness | Absolute |
 
 ### Chainlink Oracle Integration
-**Weather Oracle:**
-- Confirms weather conditions at match time/location
-- Prevents fake match submissions
-- Cross-references with meteorological data
-
-**Location Oracle:**
-- Validates GPS coordinates authenticity
-- Prevents GPS spoofing
-- Confirms match venue legitimacy
-
-**Sports Data Oracle (Future):**
-- Integration with local league APIs
-- Official fixture verification
-- Tournament bracket validation
+**Weather Oracle:** Confirms weather conditions at match time/location  
+**Location Oracle:** Validates GPS coordinates authenticity  
+**Sports Data Oracle (Future):** Integration with local league APIs
 
 ### On-Chain Result
 - Match hash stored on Algorand (fast, cheap)
-- Chainlink oracle data stored as proof
 - Disputed results escalate to community arbitration
 - False reporting = reputation penalty + stake slashed
-- Oracle-verified matches = higher reputation rewards
+
+**Status:** ✅ Complete (Frontend + Backend + Database)  
+**Pending:** Blockchain deployment, Chainlink integration
 
 ---
 
-## Player Attributes
+## 2. Player Attributes ✅
 
-### Core Stats (Evolve Through Play)
+### FIFA-Style Attribute System
+
+#### Core Stats (Evolve Through Play)
 | Attribute | Real-World Driver | Game Impact |
 |-----------|------------------|-------------|
 | Shooting | Goals scored | Finishing quality in sims |
@@ -61,24 +53,83 @@ Your real Sunday league season and your SportWarren season run simultaneously. R
 | Stamina | Minutes played, fitness | Late-game performance |
 | Physical | Duels won, aerials | Strength in challenges |
 
-### Form System
-- Last 5 real matches = current form rating
-- Hot streak = attribute boost, confidence bonus
-- Cold streak = agent suggests changes, training focus
+#### Goalkeeper Attributes
+| Attribute | Description |
+|-----------|-------------|
+| Diving | Shot-stopping ability |
+| Handling | Catching and holding |
+| Kicking | Distribution accuracy |
+| Reflexes | Reaction speed |
+| Speed | Rushing out |
+| Positioning | Angle play |
 
-### Reputation
-- Soulbound token (non-transferable)
-- Earned through verified matches only
-- Portable across any platform using SportWarren
+### Rating System
+- **Scale:** 0-99 (FIFA-style)
+- **Color Coding:** 90+ purple (elite), 80+ green (excellent), 70+ yellow (good), 60+ orange (average), <60 red (poor)
+- **Position Detection:** Auto-detects best position from top attributes
+
+### XP Progression
+- **Quadratic Curve:** XP required increases per level
+- **Position-Based XP Distribution:** Strikers get more shooting XP from goals
+- **Level-Up Notifications:** Animated celebrations
+- **Season XP Tracking:** Separate career and seasonal totals
+
+### Form System
+- **Calculation:** Last 5 match ratings determine form
+- **Visual Indicators:** FIFA-style arrows (↑↑ +5, ↑ +3, → 0, ↓ -3, ↓↓ -5)
+- **Form Trend Detection:** Improving, declining, or stable
+- **Team Comparison:** Compare your form to squad average
+
+### User Flow Example
+```
+1. Match Completed: Marcus scores 2 goals, gets 8.5 rating
+2. XP Calculation: +125 XP to Shooting, +85 to Passing
+3. Level Up: Shooting increases from 87 → 88
+4. Form Update: Form arrow shows ↑ (Good form)
+5. Notification: Popup shows "+385 XP Earned!"
+6. Profile Updated: New rating visible on player card
+```
+
+**Status:** ✅ Complete (Frontend + Backend + Database)
 
 ---
 
-## Squad Management
+## 3. Squad Management ✅
 
 ### Your Real Team, In-Game
-- All your actual teammates, with fictional club name
+- All your actual teammates with fictional club name
 - Positions, formations, tactics
 - Chemistry based on real attendance and social activity
+
+### Tactics System
+- **10 Formations:** 4-4-2, 4-3-3, 4-2-3-1, 3-5-2, 5-3-2, 4-5-1, 4-1-4-1, 3-4-3, 4-3-1-2, 5-4-1
+- **Visual Pitch:** Player positions displayed
+- **Play Styles:** Balanced, Possession, Direct, Counter, High Press, Low Block
+- **Team Instructions:**
+  - Width: Narrow, Normal, Wide
+  - Tempo: Slow, Normal, Fast
+  - Passing: Short, Mixed, Long
+  - Pressing: Low, Medium, High
+  - Defensive Line: Deep, Normal, High
+- **Set Pieces:** Corner kicks, free kicks, penalties
+
+### Transfer Market
+- **Browse Players:** Search by position, filter by rating
+- **Offer Types:** Permanent transfers and loans (1-24 months)
+- **Offer Management:** Create, accept, reject, cancel offers
+- **Expiration:** 7-day default expiry
+- **Treasury Integration:** Auto-deduction on accepted offers
+
+### Treasury Management
+- **Balance Tracking:** Real-time ALGO balance
+- **Income/Expense Categories:**
+  - Match fees, sponsorships, tournament prizes
+  - Transfer fees, wages, facility upgrades
+- **Budget Allocations:** Weekly wages, transfer budget, facilities
+- **Transaction History:** Full audit trail with verification status
+- **Permissions:**
+  - Deposits: Any squad member
+  - Withdrawals: Captain/vice-captain only
 
 ### DAO Governance
 | Decision | Voting Power |
@@ -94,9 +145,43 @@ Your real Sunday league season and your SportWarren season run simultaneously. R
 - Social events organized = "club culture" trait
 - New player integration = chemistry penalty (temporary)
 
+**Status:** ✅ Complete (Frontend + Backend + Database)  
+**tRPC Endpoints:** 9 endpoints (getTactics, saveTactics, getTreasury, depositToTreasury, withdrawFromTreasury, getTransferOffers, createTransferOffer, respondToTransferOffer, cancelTransferOffer)
+
 ---
 
-## Championship Manager Layer
+## 4. Rivalries ✅
+
+### Derby Activation
+- Play same team 3+ times = rivalry unlocked
+- Real banter drives in-game trash talk
+- Rematch scheduling = anticipation XP boost
+- Cross-season rivalry history tracked
+
+### Rivalry Intensity
+- **Scale:** 1-10 flames
+- **Factors:** Match frequency, competitiveness, historical results
+- **Visual Indicators:** Flame icons, color coding
+
+### Rivalry Bonuses
+| Achievement | Reward |
+|-------------|--------|
+| Win derby | Double XP for all players (+50%) |
+| Derby hat-trick | Rare achievement minted |
+| Clean sheet in derby | Defensive reputation bonus (+500) |
+| Fan engagement | Fan engagement bonus (+1000) |
+
+### Head-to-Head Stats
+- Total matches, wins, draws, losses
+- Goals for/against
+- Current streak
+- Memorable matches highlighted
+
+**Status:** ✅ Complete (Frontend + Backend)
+
+---
+
+## 5. Championship Manager Layer 🟡
 
 ### Tactics
 - Set formation for upcoming real matches
@@ -110,21 +195,17 @@ Your real Sunday league season and your SportWarren season run simultaneously. R
 - Identify weaknesses in upcoming opponents
 - Make transfer offers (treasury-backed)
 
-### Transfer Market
-- Scout real players from rival squads
-- Loan requests to other local teams
-- Free agents (players not in verified squads)
-- Transfer window aligned with real season
-
 ### Finances
 - Match fees → treasury
 - Tournament winnings → treasury
 - Facility upgrades → training bonuses
 - Kit customization
 
+**Status:** 🟡 Partial (Tactics complete, scouting basic)
+
 ---
 
-## AI Agents (Avalanche Exclusive)
+## 6. AI Agents (Avalanche Exclusive) 🔴
 
 **Powered by Kite AI Infrastructure:**
 
@@ -138,7 +219,7 @@ All SportWarren agents are registered with Kite AI passports, enabling:
 - Analyzes your real results vs tactics
 - Suggests formation changes
 - Manages squad rotation
-- "Your 4-4-2 works at home but not away — try 4-2-3-1"
+- *"Your 4-4-2 works at home but not away — try 4-2-3-1"*
 - **Kite Identity:** Verified agent passport with reputation score
 
 ### Scout Agent
@@ -152,7 +233,7 @@ All SportWarren agents are registered with Kite AI passports, enabling:
 - Syncs with Strava/Apple Health (optional)
 - Manages player condition
 - Suggests training focus
-- "Marcus hasn't trained — stamina penalty this weekend"
+- *"Marcus hasn't trained — stamina penalty this weekend"*
 - **Kite Payments:** Micro-payments for premium health integrations
 
 ### Social Agent
@@ -168,25 +249,11 @@ All SportWarren agents are registered with Kite AI passports, enabling:
 - Agent reputation tracked via Kite passports
 - Cross-squad agent sharing via Kite marketplace
 
----
-
-## Rivalries
-
-### Derby Activation
-- Play same team 3+ times = rivalry unlocked
-- Real banter drives in-game trash talk
-- Rematch scheduling = anticipation XP boost
-- Cross-season rivalry history tracked
-
-### Rivalry Bonuses
-- Win derby = double XP for all players
-- Derby hat-trick = rare achievement minted
-- Clean sheet in derby = defensive reputation boost
-- Rivalry record visible to all local squads
+**Status:** 🔴 Not Started (Schema only)
 
 ---
 
-## Season Structure
+## 7. Season Structure
 
 ### Real Season (10-20 matches)
 - Local league fixtures
@@ -194,7 +261,7 @@ All SportWarren agents are registered with Kite AI passports, enabling:
 - Friendlies arranged via app
 - All verified on-chain
 
-### SportWarren Season (parallel)
+### SportWarren Season (Parallel)
 - Same fixtures drive narrative
 - Virtual "what if" scenarios
 - End-of-season awards
@@ -208,7 +275,7 @@ All SportWarren agents are registered with Kite AI passports, enabling:
 
 ---
 
-## Viral Mechanics
+## 8. Viral Mechanics 🟡
 
 ### Shareable Moments
 - Match highlight cards (auto-generated)
@@ -228,9 +295,11 @@ All SportWarren agents are registered with Kite AI passports, enabling:
 - Rivalry records
 - Trophy cabinet
 
+**Status:** 🟡 Partial (Rivalries complete, sharing not started)
+
 ---
 
-## Blockchain Integration
+## 9. Blockchain Integration
 
 ### Algorand (Primary)
 - Match verification (fast, cheap)
@@ -249,11 +318,28 @@ All SportWarren agents are registered with Kite AI passports, enabling:
 
 ---
 
-## Communication
+## 10. Communication
 
 - **WhatsApp/Telegram bots:** Match reminders, results, stats
 - **XMTP:** Web3 native messaging between squads
 - **In-app:** Squad chat, transfer negotiations, banter
+
+---
+
+## Feature Status Summary
+
+| Feature | Frontend | Backend | Database | Overall |
+|---------|----------|---------|----------|---------|
+| Match Verification | ✅ | ✅ | ✅ | 🟡 90% |
+| Player Attributes | ✅ | ✅ | ✅ | ✅ 100% |
+| Squad Management | ✅ | ✅ | ✅ | ✅ 100% |
+| Rivalries | ✅ | ✅ | ✅ | ✅ 100% |
+| Championship Manager | 🟡 | 🟡 | ✅ | 🟡 70% |
+| AI Agents | 🔴 | 🔴 | 🟡 | 🔴 10% |
+| Viral Mechanics | 🟡 | 🔴 | ✅ | 🟡 50% |
+| Blockchain | 🔴 | 🟡 | ✅ | 🔴 40% |
+
+**Legend:** ✅ Complete | 🟡 Partial | 🔴 Not Started
 
 ---
 

@@ -2,6 +2,8 @@
 
 **Phygital Football Platform | Real World + Championship Manager Layer**
 
+**Last Updated:** March 2026
+
 ---
 
 ## Vision: Championship Manager Meets Pokémon Go
@@ -83,6 +85,9 @@ Treasury reward distributed
 │  │   • Matches         │                                           │
 │  │   • Player Stats    │                                           │
 │  │   • Squads          │                                           │
+│  │   • Tactics         │                                           │
+│  │   • Treasury        │                                           │
+│  │   • Transfers       │                                           │
 │  └─────────────────────┘                                           │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -105,37 +110,183 @@ Treasury reward distributed
 
 ## Database Schema
 
-### Core Tables
+### User & Authentication
 
 **users** - Wallet-based authentication
 ```
-id, walletAddress, chain, name, email, createdAt
+id, walletAddress, chain, name, email, avatar, position
+createdAt, updatedAt
 ```
+
+### Player Profile & Attributes
 
 **player_profiles** - Player progression
 ```
-id, userId, level, totalXP, seasonXP, totalMatches, totalGoals, totalAssists, reputationScore
+id, userId, level, totalXP, seasonXP
+totalMatches, totalGoals, totalAssists
+reputationScore
+createdAt, updatedAt
 ```
 
-**player_attributes** - FIFA-style ratings
+**player_attributes** - FIFA-style ratings (0-99)
 ```
-id, profileId, attribute, rating, xp, xpToNext, maxRating, history
+id, profileId, attribute, rating, xp, xpToNext, maxRating
+history (array of last 5 ratings)
+updatedAt
 ```
+
+**form_entries** - Match form tracking
+```
+id, profileId, matchId, rating, formValue
+createdAt
+```
+
+### Squad Management
 
 **squads** - Team management
 ```
 id, name, shortName, founded, homeGround, treasuryBalance
+tacticsId, treasuryId
+createdAt, updatedAt
 ```
 
-**matches** - Match verification
+**squad_members** - Squad membership
 ```
-id, homeSquadId, awaySquadId, homeScore, awayScore, submittedBy, status, matchDate
+id, squadId, userId, role (captain/vice_captain/player)
+joinedAt
+```
+
+**squad_tactics** - Team tactics ⭐ NEW
+```
+id, squadId, formation, playStyle
+instructions (JSON), setPieces (JSON)
+createdAt, updatedAt
+```
+
+**squad_treasury** - Squad finances ⭐ NEW
+```
+id, squadId, balance, budgets (JSON)
+createdAt, updatedAt
+```
+
+**treasury_transactions** - Transaction audit trail ⭐ NEW
+```
+id, treasuryId, type (income/expense), category
+amount, description, txHash, verified
+createdAt
+```
+
+**transfer_offers** - Player transfer market ⭐ NEW
+```
+id, fromSquadId, toSquadId, playerId
+offerType (permanent/loan), amount, loanDuration
+status (pending/accepted/rejected/cancelled)
+expiresAt, createdAt, updatedAt
+```
+
+### Match Verification
+
+**matches** - Match records
+```
+id, homeSquadId, awaySquadId, homeScore, awayScore
+submittedBy, status (pending/verified/disputed/finalized)
+matchDate, latitude, longitude
+weatherVerified, locationVerified
+txId (Algorand transaction)
+createdAt, updatedAt
 ```
 
 **match_verifications** - Consensus records
 ```
-id, matchId, verifierId, verified, trustTier, createdAt
+id, matchId, verifierId, verified, homeScore, awayScore
+trustTier (bronze/silver/gold/platinum)
+createdAt
 ```
+
+**player_match_stats** - Individual match performance
+```
+id, matchId, profileId
+goals, assists, cleanSheet, rating, minutesPlayed, xpEarned
+createdAt
+```
+
+**xp_gains** - XP audit trail
+```
+id, matchId, profileId
+baseXP, bonusXP, totalXP
+source, description, attributeBreakdown (JSON)
+createdAt
+```
+
+### Achievements
+
+**achievements** - Achievement definitions
+```
+id, type, title, description, requirement (JSON), xpReward
+createdAt
+```
+
+**player_achievements** - Unlocked achievements
+```
+id, profileId, achievementId, unlockedAt
+```
+
+### AI Agents
+
+**ai_agents** - Kite AI agent registry
+```
+id, agentId, passportId, name, type
+description, reputation, capabilities
+createdAt, updatedAt
+```
+
+---
+
+## API Layer (tRPC)
+
+### Match Router
+```typescript
+match.submit({ homeSquadId, awaySquadId, homeScore, awayScore, matchDate })
+match.verify({ matchId, verified, homeScore?, awayScore? })
+match.list({ status?, squadId?, limit?, offset? })
+match.getById({ id })
+```
+
+### Player Router
+```typescript
+player.getProfile({ userId })
+player.getForm({ userId, limit? })
+player.getLeaderboard({ type?, attribute?, limit? })
+player.applyXPGains({ matchId, gains[] }) // Admin only
+```
+
+### Squad Router ⭐ UPDATED March 2026
+```typescript
+// Squad Management
+squad.create({ name, shortName, homeGround? })
+squad.list({ search?, limit?, offset? })
+squad.getById({ id })
+squad.join({ squadId })
+squad.leave({ squadId })
+squad.getMySquads()
+
+// Tactics
+squad.getTactics({ squadId })
+squad.saveTactics({ squadId, formation, playStyle, instructions?, setPieces? })
+
+// Treasury
+squad.getTreasury({ squadId })
+squad.depositToTreasury({ squadId, amount, description? })
+squad.withdrawFromTreasury({ squadId, amount, reason, category })
+
+// Transfers
+squad.getTransferOffers({ squadId, type: 'incoming' | 'outgoing' })
+squad.createTransferOffer({ toSquadId, playerId, offerType, amount, loanDuration? })
+squad.respondToTransferOffer({ offerId, accept })
+squad.cancelTransferOffer({ offerId })
+```
+
+**Total Endpoints:** 18 (9 squad + 4 match + 4 player + 1 admin)
 
 ---
 
@@ -162,36 +313,6 @@ id, matchId, verifierId, verified, trustTier, createdAt
 - Message format validated
 - Address recovered from signature
 - Development mode allows bypass
-
----
-
-## API Layer (tRPC)
-
-### Match Router
-```typescript
-match.submit({ homeSquadId, awaySquadId, homeScore, awayScore })
-match.verify({ matchId, verified, homeScore?, awayScore? })
-match.list({ status?, squadId?, limit?, offset? })
-match.getById({ id })
-```
-
-### Player Router
-```typescript
-player.getProfile({ userId })
-player.getForm({ userId, limit? })
-player.getLeaderboard({ type?, attribute?, limit? })
-player.applyXPGains({ matchId, gains[] }) // Admin only
-```
-
-### Squad Router
-```typescript
-squad.create({ name, shortName, homeGround? })
-squad.list({ search?, limit?, offset? })
-squad.getById({ id })
-squad.join({ squadId })
-squad.leave({ squadId })
-squad.getMySquads()
-```
 
 ---
 
@@ -232,11 +353,20 @@ const { form } = usePlayerForm(userId, limit);
 const { leaderboard } = useLeaderboard(type, attribute, limit);
 ```
 
-### Squad Hooks
+### Squad Hooks ⭐ UPDATED March 2026
 ```typescript
 const { squads } = useSquads(search);
 const { squad, members, joinSquad, leaveSquad } = useSquadDetails(squadId);
 const { memberships } = useMySquads();
+
+// Tactics
+const { tactics, updateFormation, saveTactics, hasChanges } = useTactics(squadId);
+
+// Transfers
+const { incomingOffers, outgoingOffers, makeOffer, respondToOffer } = useTransfers(squadId);
+
+// Treasury
+const { treasury, deposit, withdraw } = useTreasury(squadId);
 ```
 
 ---
@@ -260,6 +390,20 @@ const { memberships } = useMySquads();
         ↓
 8. Repeat with deeper engagement
 ```
+
+---
+
+## Development Progress
+
+### March 2026 - Full Stack Integration ✅
+- **Database:** 4 new models (squad_tactics, squad_treasury, treasury_transactions, transfer_offers)
+- **Backend:** 9 new tRPC endpoints for squad management
+- **Frontend:** All squad hooks converted from mock to real API
+- **Build:** Passing with 19 routes
+
+### Previous Milestones
+- **Phase 3:** Player attributes system (FIFA-style ratings, XP, form)
+- **Phase 4:** Squad management UI (tactics, transfers, treasury, rivalries)
 
 ---
 
