@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback } from 'react';
+import { trpc } from '@/lib/trpc-client';
 import type { Tactics, Formation, PlayStyle, TeamInstructions } from '@/types';
 
 interface UseTacticsReturn {
@@ -11,10 +12,11 @@ interface UseTacticsReturn {
   saveTactics: () => Promise<void>;
   hasChanges: boolean;
   isSaving: boolean;
+  isLoading: boolean;
 }
 
 const DEFAULT_TACTICS: Tactics = {
-  formation: '4-3-3',
+  formation: '4-4-2',
   style: 'balanced',
   instructions: {
     width: 'normal',
@@ -30,48 +32,66 @@ const DEFAULT_TACTICS: Tactics = {
   },
 };
 
-export function useTactics(
-  initialTactics?: Tactics,
-  onSave?: (tactics: Tactics) => Promise<void>
-): UseTacticsReturn {
-  const [tactics, setTactics] = useState<Tactics>(initialTactics || DEFAULT_TACTICS);
-  const [originalTactics, setOriginalTactics] = useState<Tactics>(initialTactics || DEFAULT_TACTICS);
-  const [isSaving, setIsSaving] = useState(false);
+export function useTactics(squadId?: string): UseTacticsReturn {
+  const { data: rawData, isLoading } = trpc.squad.getTactics.useQuery(
+    { squadId: squadId || '' },
+    {
+      enabled: !!squadId,
+      staleTime: 30 * 1000,
+    }
+  ) as { data: any; isLoading: boolean };
 
-  const hasChanges = JSON.stringify(tactics) !== JSON.stringify(originalTactics);
+  const saveMutation = trpc.squad.saveTactics.useMutation();
+
+  // Build tactics from data or use defaults
+  const serverTactics: Tactics = rawData
+    ? {
+        formation: (rawData.formation as Formation) || '4-4-2',
+        style: (rawData.playStyle as PlayStyle) || 'balanced',
+        instructions: (rawData.instructions as TeamInstructions) || DEFAULT_TACTICS.instructions,
+        setPieces: (rawData.setPieces as any) || DEFAULT_TACTICS.setPieces,
+      }
+    : DEFAULT_TACTICS;
+
+  const [localTactics, setLocalTactics] = useState<Tactics>(serverTactics);
+  const hasChanges = JSON.stringify(localTactics) !== JSON.stringify(serverTactics);
+  const isSaving = saveMutation.isPending;
 
   const updateFormation = useCallback((formation: Formation) => {
-    setTactics(prev => ({ ...prev, formation }));
+    setLocalTactics((prev) => ({ ...prev, formation }));
   }, []);
 
   const updatePlayStyle = useCallback((style: PlayStyle) => {
-    setTactics(prev => ({ ...prev, style }));
+    setLocalTactics((prev) => ({ ...prev, style }));
   }, []);
 
   const updateInstructions = useCallback((instructions: Partial<TeamInstructions>) => {
-    setTactics(prev => ({
+    setLocalTactics((prev) => ({
       ...prev,
       instructions: { ...prev.instructions, ...instructions },
     }));
   }, []);
 
   const saveTactics = useCallback(async () => {
-    setIsSaving(true);
-    try {
-      await onSave?.(tactics);
-      setOriginalTactics(tactics);
-    } finally {
-      setIsSaving(false);
-    }
-  }, [tactics, onSave]);
+    if (!squadId) return;
+
+    await saveMutation.mutateAsync({
+      squadId,
+      formation: localTactics.formation,
+      playStyle: localTactics.style,
+      instructions: localTactics.instructions,
+      setPieces: localTactics.setPieces,
+    });
+  }, [squadId, localTactics, saveMutation]);
 
   return {
-    tactics,
+    tactics: localTactics,
     updateFormation,
     updatePlayStyle,
     updateInstructions,
     saveTactics,
     hasChanges,
     isSaving,
+    isLoading,
   };
 }

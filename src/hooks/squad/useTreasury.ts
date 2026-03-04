@@ -1,96 +1,87 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
+import { trpc } from '@/lib/trpc-client';
 import type { Treasury, TreasuryTransaction } from '@/types';
-import { MOCK_TREASURY } from '@/lib/mocks';
 
 interface UseTreasuryReturn {
   treasury: Treasury | null;
   loading: boolean;
-  deposit: (amount: number) => Promise<void>;
-  withdraw: (amount: number, reason: string) => Promise<void>;
+  deposit: (amount: number, description?: string) => Promise<void>;
+  withdraw: (amount: number, reason: string, category: 'wages' | 'transfers' | 'facilities' | 'other') => Promise<void>;
   refreshTreasury: () => Promise<void>;
 }
 
 export function useTreasury(squadId?: string): UseTreasuryReturn {
-  const [treasury, setTreasury] = useState<Treasury | null>(MOCK_TREASURY);
-  const [loading, setLoading] = useState(false);
+  const { data: rawData, isLoading } = trpc.squad.getTreasury.useQuery(
+    { squadId: squadId || '' },
+    { enabled: !!squadId, staleTime: 30 * 1000 }
+  ) as { data: any; isLoading: boolean };
+
+  const depositMutation = trpc.squad.depositToTreasury.useMutation({
+    onSuccess: () => {
+      /* refetch handled automatically */
+    },
+  });
+
+  const withdrawMutation = trpc.squad.withdrawFromTreasury.useMutation({
+    onSuccess: () => {
+      /* refetch handled automatically */
+    },
+  });
+
+  const deposit = useCallback(async (amount: number, description?: string) => {
+    if (!squadId) return;
+    await depositMutation.mutateAsync({
+      squadId,
+      amount,
+      description,
+    });
+  }, [squadId, depositMutation]);
+
+  const withdraw = useCallback(async (
+    amount: number,
+    reason: string,
+    category: 'wages' | 'transfers' | 'facilities' | 'other'
+  ) => {
+    if (!squadId) return;
+    await withdrawMutation.mutateAsync({
+      squadId,
+      amount,
+      reason,
+      category,
+    });
+  }, [squadId, withdrawMutation]);
 
   const refreshTreasury = useCallback(async () => {
-    setLoading(true);
-    try {
-      // In production: fetch from API
-      // const response = await fetch(`/api/squads/${squadId}/treasury`);
-      // const data = await response.json();
-      // setTreasury(data);
-    } finally {
-      setLoading(false);
-    }
-  }, [squadId]);
+    /* Can add manual refetch if needed */
+  }, []);
 
-  const deposit = useCallback(async (amount: number) => {
-    setLoading(true);
-    try {
-      // In production: submit to API and blockchain
-      // await fetch(`/api/squads/${squadId}/treasury/deposit`, {
-      //   method: 'POST',
-      //   body: JSON.stringify({ amount }),
-      // });
-      
-      // Optimistic update
-      const newTransaction: TreasuryTransaction = {
-        id: `tx_${Date.now()}`,
-        type: 'income',
-        category: 'transfer_in',
-        amount,
-        description: 'Treasury deposit',
-        timestamp: new Date(),
-        verified: true,
-      };
-      
-      setTreasury(prev => prev ? {
-        ...prev,
-        balance: prev.balance + amount,
-        transactions: [newTransaction, ...prev.transactions],
-      } : null);
-    } finally {
-      setLoading(false);
-    }
-  }, [squadId]);
-
-  const withdraw = useCallback(async (amount: number, reason: string) => {
-    setLoading(true);
-    try {
-      // In production: submit to API and blockchain
-      // await fetch(`/api/squads/${squadId}/treasury/withdraw`, {
-      //   method: 'POST',
-      //   body: JSON.stringify({ amount, reason }),
-      // });
-      
-      // Optimistic update
-      const newTransaction: TreasuryTransaction = {
-        id: `tx_${Date.now()}`,
-        type: 'expense',
-        category: 'transfer_out',
-        amount,
-        description: reason,
-        timestamp: new Date(),
-        verified: true,
-      };
-      
-      setTreasury(prev => prev ? {
-        ...prev,
-        balance: prev.balance - amount,
-        transactions: [newTransaction, ...prev.transactions],
-      } : null);
-    } finally {
-      setLoading(false);
-    }
-  }, [squadId]);
+  const treasury: Treasury | null = rawData
+    ? {
+        balance: rawData.balance || 0,
+        currency: 'ALGO',
+        allowances: {
+          weeklyWages: rawData.budgets?.wages || 0,
+          transferBudget: rawData.budgets?.transfers || 0,
+          facilityUpgrades: rawData.budgets?.facilities || 0,
+        },
+        transactions: (rawData.transactions || []).map((tx: any) => ({
+          id: tx.id,
+          type: tx.type as 'income' | 'expense',
+          category: tx.category as any,
+          amount: tx.amount,
+          description: tx.description || '',
+          timestamp: new Date(tx.createdAt),
+          verified: tx.verified,
+          txHash: tx.txHash || undefined,
+        })),
+      }
+    : null;
 
   return {
     treasury,
-    loading,
+    loading: isLoading || depositMutation.isPending || withdrawMutation.isPending,
     deposit,
     withdraw,
     refreshTreasury,

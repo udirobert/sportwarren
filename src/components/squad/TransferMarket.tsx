@@ -262,7 +262,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                           </span>
                           <span className="flex items-center text-gray-500">
                             <Clock className="w-4 h-4 mr-1" />
-                            Expires: {offer.expiry.toLocaleDateString()}
+                            Expires: {offer.expiry?.toLocaleDateString() || 'N/A'}
                           </span>
                         </div>
                       </div>
@@ -325,7 +325,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                           </span>
                           <span className="flex items-center text-gray-500">
                             <Clock className="w-4 h-4 mr-1" />
-                            Expires: {offer.expiry.toLocaleDateString()}
+                            Expires: {offer.expiry?.toLocaleDateString() || 'N/A'}
                           </span>
                         </div>
                       </div>

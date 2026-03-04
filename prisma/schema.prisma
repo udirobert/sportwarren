@@ -114,23 +114,27 @@ model Squad {
   id          String   @id @default(cuid())
   name        String
   shortName   String   @map("short_name")
-  
+
   // Squad details
   founded     DateTime @default(now())
   homeGround  String?  @map("home_ground")
-  
+
   // Treasury (simplified for MVP)
   treasuryBalance Int @default(0) @map("treasury_balance")
-  
+
   // Timestamps
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
-  
+
   // Relations
   members     SquadMember[]
   matchesHome Match[] @relation("MatchHomeSquad")
   matchesAway Match[] @relation("MatchAwaySquad")
-  
+  tactics     SquadTactics?
+  treasury    SquadTreasury?
+  transferOffersFrom TransferOffer[] @relation("TransferFromSquad")
+  transferOffersTo TransferOffer[] @relation("TransferToSquad")
+
   @@map("squads")
 }
 
@@ -138,16 +142,128 @@ model SquadMember {
   id     String @id @default(cuid())
   squadId String @map("squad_id")
   squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
-  
+
   userId  String @map("user_id")
   user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   // Role
   role    String @default("player") // captain, vice_captain, player
   joinedAt DateTime @default(now()) @map("joined_at")
-  
+
   @@unique([squadId, userId])
   @@map("squad_members")
+}
+
+// ============================================================================
+// SQUAD TACTICS
+// ============================================================================
+
+model SquadTactics {
+  id      String @id @default(cuid())
+  squadId String @unique @map("squad_id")
+  squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  // Formation (4-4-2, 4-3-3, etc.)
+  formation String @default("4-4-2")
+
+  // Play style
+  playStyle String @default("balanced") @map("play_style")
+
+  // Team instructions (JSON)
+  instructions Json? // { width, tempo, passing, pressing, defensiveLine }
+
+  // Set pieces (JSON)
+  setPieces Json? @map("set_pieces") // { corners, freeKicks, penalties }
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("squad_tactics")
+}
+
+// ============================================================================
+// TREASURY & TRANSACTIONS
+// ============================================================================
+
+model SquadTreasury {
+  id      String @id @default(cuid())
+  squadId String @unique @map("squad_id")
+  squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  // Balance in smallest unit (e.g., microALGO)
+  balance Int @default(0)
+
+  // Budgets (JSON)
+  budgets Json? // { wages, transfers, facilities }
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  transactions TreasuryTransaction[]
+
+  @@map("squad_treasury")
+}
+
+model TreasuryTransaction {
+  id          String   @id @default(cuid())
+  treasuryId  String   @map("treasury_id")
+  treasury    SquadTreasury @relation(fields: [treasuryId], references: [id], onDelete: Cascade)
+
+  // Transaction type
+  type        String   // income, expense
+
+  // Category
+  category    String   // transfer_in, transfer_out, match_fee, tournament_prize, facility, wage
+
+  // Amount
+  amount      Int
+
+  // Description
+  description String?
+
+  // Verification (blockchain tx hash)
+  txHash      String?  @map("tx_hash")
+  verified    Boolean  @default(false)
+
+  // Timestamps
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@map("treasury_transactions")
+}
+
+// ============================================================================
+// TRANSFER MARKET
+// ============================================================================
+
+model TransferOffer {
+  id          String   @id @default(cuid())
+
+  // From/To squads
+  fromSquadId String   @map("from_squad_id")
+  fromSquad   Squad    @relation("TransferFromSquad", fields: [fromSquadId], references: [id])
+  toSquadId   String   @map("to_squad_id")
+  toSquad     Squad    @relation("TransferToSquad", fields: [toSquadId], references: [id])
+
+  // Player (user ID)
+  playerId    String   @map("player_id")
+
+  // Offer details
+  offerType   String   @map("offer_type") // permanent, loan
+  amount      Int
+  loanDuration Int?    @map("loan_duration") // months, if loan
+
+  // Status
+  status      String   @default("pending") // pending, accepted, rejected, cancelled
+
+  // Timestamps
+  expiresAt   DateTime? @map("expires_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("transfer_offers")
 }
 
 // ============================================================================
