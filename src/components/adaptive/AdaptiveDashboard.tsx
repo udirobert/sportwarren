@@ -6,6 +6,8 @@ import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Shield, Star, Sparkles } from 'lucide-react';
 
+import { CoachKiteInsight } from '@/components/adaptive/CoachKiteInsight';
+
 interface DashboardWidget {
   id: string;
   component: React.ReactNode;
@@ -71,19 +73,7 @@ export const AdaptiveDashboard: React.FC = () => {
       requiredLevel: 'basic',
       category: 'stats',
       component: (
-        <Card className="border-l-4 border-l-blue-500 bg-gradient-to-r from-blue-50 to-transparent">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center space-x-3 mb-2">
-              <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                <Sparkles className="w-5 h-5 text-blue-600" />
-              </div>
-              <h2 className="text-lg font-bold text-gray-900">Coach Kite Insight</h2>
-            </div>
-          </div>
-          <p className="text-sm text-gray-700 mt-2">
-            "Based on your last 3 matches, you're dropping too deep late in the second half. Focus on maintaining a higher line to exploit counter-attacks."
-          </p>
-        </Card>
+        <CoachKiteInsight userId={userAddress || 'demo-user'} />
       ),
     },
     {

@@ -33,15 +33,31 @@ NODE_ENV=development
 DATABASE_URL=postgresql://localhost:5432/sportwarren
 
 # Algorand
+ALGORAND_NETWORK=testnet
 NEXT_PUBLIC_ALGORAND_NODE_URL=https://testnet-api.algonode.cloud
 NEXT_PUBLIC_ALGORAND_INDEXER_URL=https://testnet-idx.algonode.cloud
+DEPLOYER_MNEMONIC="your 25-word mnemonic"
+ALGORAND_MATCH_VERIFICATION_APP_ID=756630713
 
-# Avalanche
+# Avalanche (Premium Agents)
 NEXT_PUBLIC_AVALANCHE_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
+WEB3_PRIVATE_KEY=0x... (Required for live Chainlink oracles)
 
 # WalletConnect
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-project-id
 ```
+
+---
+
+## Blockchain & Simulation Mode
+
+SportWarren uses a "Resilient Verification" model. If blockchain keys are missing, the system automatically falls back to **Simulation Mode** to allow local testing.
+
+### Chainlink Simulation
+The `ChainlinkService` will detect if `WEB3_PRIVATE_KEY` or oracle addresses are missing and provide simulated "Ground Truth" (Weather/Location) data.
+
+### Algorand Posting
+On-chain posting occurs in the `match.verify` tRPC procedure. If `ALGORAND_MATCH_VERIFICATION_APP_ID` is set to `0` or the deployer mnemonic is missing, the system will log an error but continue the database verification flow.
 
 ---
 

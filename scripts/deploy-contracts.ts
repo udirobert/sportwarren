@@ -79,15 +79,6 @@ const getConfig = (): Config => {
 // Contract definitions
 const CONTRACTS: ContractConfig[] = [
   {
-    name: "SquadDAO",
-    approvalPath: "contracts/squad_dao/approval.teal",
-    clearStatePath: "contracts/squad_dao/clear_state.teal",
-    globalInts: 10,
-    globalBytes: 10,
-    localInts: 5,
-    localBytes: 5,
-  },
-  {
     name: "MatchVerification",
     approvalPath: "contracts/match_verification/approval.teal",
     clearStatePath: "contracts/match_verification/clear_state.teal",
@@ -95,24 +86,6 @@ const CONTRACTS: ContractConfig[] = [
     globalBytes: 8,
     localInts: 3,
     localBytes: 3,
-  },
-  {
-    name: "ReputationSystem",
-    approvalPath: "contracts/reputation_system/approval.teal",
-    clearStatePath: "contracts/reputation_system/clear_state.teal",
-    globalInts: 6,
-    globalBytes: 6,
-    localInts: 4,
-    localBytes: 4,
-  },
-  {
-    name: "GlobalChallenges",
-    approvalPath: "contracts/global_challenges/approval.teal",
-    clearStatePath: "contracts/global_challenges/clear_state.teal",
-    globalInts: 12,
-    globalBytes: 12,
-    localInts: 6,
-    localBytes: 6,
   },
 ];
 
@@ -188,6 +161,8 @@ class ContractDeployer {
 
       // Create application
       const params = await this.algodClient.getTransactionParams().do();
+      params.fee = 10000;
+      params.flatFee = true;
 
       const createTxn = algosdk.makeApplicationCreateTxnFromObject({
         sender: this.deployerAccount.addr,
@@ -212,7 +187,10 @@ class ContractDeployer {
       const confirmedTxn = await this.waitForTransaction(txId);
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const appId = (confirmedTxn as any)["application-index"] as number;
+      const appId = (confirmedTxn as any)["application-index"] || (confirmedTxn as any).applicationIndex;
+      if (!appId) {
+        throw new Error(`Application ID not found in confirmed transaction. Transaction might have failed on-chain or response format changed.`);
+      }
       const appAddress = algosdk.getApplicationAddress(appId);
 
       console.log(`✅ ${contractConfig.name} deployed successfully!`);
