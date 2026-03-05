@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import algosdk from 'algosdk';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { chainlinkService } from '../../../server/services/blockchain/chainlink';
 
@@ -171,9 +172,49 @@ export const matchRouter = createTRPCRouter({
         }
 
         if (newStatus !== updatedMatch.status) {
+          let txId = null;
+
+          // If match is now verified, post to Algorand
+          if (newStatus === 'verified') {
+            try {
+              const { algodClient, deployerAccount } = await import('../../../server/services/blockchain/algorand');
+              const appId = parseInt(process.env.ALGORAND_MATCH_VERIFICATION_APP_ID || '0');
+              
+              if (appId > 0) {
+                const params = await algodClient.getTransactionParams().do();
+                const encoder = new TextEncoder();
+                
+                // Op: verify_match, Args: [match_id, type (1=confirm), weight]
+                const appArgs = [
+                  encoder.encode('verify_match'),
+                  algosdk.encodeUint64(parseInt(matchId.replace(/\D/g, '').slice(0, 10)) || 1), 
+                  algosdk.encodeUint64(1), 
+                  algosdk.encodeUint64(100), 
+                ];
+
+                const txn = algosdk.makeApplicationNoOpTxn(
+                  deployerAccount.addr,
+                  params,
+                  appId,
+                  appArgs
+                );
+
+                const signedTxn = txn.signTxn(deployerAccount.sk);
+                const { txId: submittedTxId } = await algodClient.sendRawTransaction(signedTxn).do();
+                txId = submittedTxId;
+                console.log(`Match ${matchId} verified on-chain! Tx: ${txId}`);
+              }
+            } catch (algoError) {
+              console.error('Failed to post verification to Algorand:', algoError);
+            }
+          }
+
           await ctx.prisma.match.update({
             where: { id: matchId },
-            data: { status: newStatus },
+            data: { 
+              status: newStatus,
+              txId: txId || undefined
+            },
           });
         }
 

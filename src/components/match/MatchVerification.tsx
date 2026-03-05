@@ -3,6 +3,8 @@ import { Card } from '@/components/ui/Card';
 import { Shield, Check, X, Clock, Users, AlertCircle, Trophy, Camera, Mic, MapPin } from 'lucide-react';
 import type { MatchResult, Verification, MatchStatus, TrustTier } from '@/types';
 
+import { HighlightCard } from '@/components/player/HighlightCard';
+
 interface PlayerStats {
   playerId: string;
   playerName: string;
@@ -17,7 +19,19 @@ export const MatchVerification: React.FC = () => {
   const [selectedMatch, setSelectedMatch] = useState<MatchResult | null>(null);
   const [playerStats, setPlayerStats] = useState<PlayerStats[]>([]);
   const [loading, setLoading] = useState(false);
+  const [showHighlight, setShowHighlight] = useState(false);
   const [userAddress] = useState('ADDR1234567890ABCDEF'); // Mock user address
+
+  const demoPlayer: any = {
+    playerName: 'Marcus Johnson',
+    position: 'ST',
+    xp: { level: 12 },
+    skills: [
+      { skill: 'shooting', rating: 71, maxRating: 99, xp: 50, xpToNextLevel: 100, history: [67, 68, 69, 70, 71], verified: true },
+      { skill: 'pace', rating: 85, maxRating: 99, xp: 20, xpToNextLevel: 100, history: [84, 84, 85, 85, 85], verified: true },
+      { skill: 'passing', rating: 65, maxRating: 99, xp: 80, xpToNextLevel: 100, history: [63, 64, 64, 65, 65], verified: true },
+    ]
+  };
 
   // Mock data for demonstration
   useEffect(() => {
@@ -336,8 +350,44 @@ export const MatchVerification: React.FC = () => {
                     >
                       Details
                     </button>
+                    {match.status === 'verified' && (
+                      <button
+                        onClick={() => setShowHighlight(true)}
+                        className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center space-x-2"
+                      >
+                        <Trophy className="w-4 h-4" />
+                        <span>Highlight</span>
+                      </button>
+                    )}
                   </div>
                 </div>
+
+                {/* Highlight Modal */}
+                {showHighlight && (
+                  <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-[100] p-4" onClick={() => setShowHighlight(false)}>
+                    <div onClick={e => e.stopPropagation()}>
+                      <HighlightCard 
+                        player={demoPlayer}
+                        matchStats={{
+                          goals: 2,
+                          assists: 1,
+                          rating: 8.5,
+                          opponent: match.awayTeam === 'Northside United' ? match.homeTeam : match.awayTeam
+                        }}
+                        attributeGains={[
+                          { attribute: 'shooting', oldRating: 67, newRating: 71 },
+                          { attribute: 'pace', oldRating: 84, newRating: 85 }
+                        ]}
+                      />
+                      <button 
+                        onClick={() => setShowHighlight(false)}
+                        className="mt-6 w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition-all"
+                      >
+                        Close Preview
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* Expanded Details */}
                 {selectedMatch?.id === match.id && (

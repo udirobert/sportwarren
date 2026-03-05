@@ -219,6 +219,18 @@ export class AlgorandService {
     }
   }
 
+  public getAlgodClient(): algosdk.Algodv2 {
+    return this.algodClient;
+  }
+
+  public getDeployerAccount(): algosdk.Account {
+    const mnemonic = process.env.DEPLOYER_MNEMONIC || process.env.ALGORAND_PRIVATE_KEY;
+    if (!mnemonic) {
+      throw new Error("DEPLOYER_MNEMONIC or ALGORAND_PRIVATE_KEY not set in .env");
+    }
+    return algosdk.mnemonicToSecretKey(mnemonic);
+  }
+
   public async optInToSquadDAO(userAddress: string): Promise<boolean> {
     if (!this.squadDAOAppId) {
       console.error("Squad DAO App ID not set. Deploy the DAO first.");
@@ -978,5 +990,9 @@ export class AlgorandService {
     return null;
   }
 }
+
+export const algorandService = new AlgorandService();
+export const algodClient = algorandService.getAlgodClient();
+export const deployerAccount = algorandService.getDeployerAccount();
 
 export default AlgorandService;

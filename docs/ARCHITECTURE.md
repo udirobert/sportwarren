@@ -105,6 +105,8 @@ Treasury reward distributed
 | ORM | Prisma 7 |
 | Auth | Wallet signatures (algosdk) |
 | Wallets | Pera, Defly (Algorand) |
+| On-Chain | Algorand Testnet (Match Verification) |
+| Oracles | Chainlink (via Server-as-Oracle pattern) |
 
 ---
 
@@ -257,6 +259,7 @@ match.getById({ id })
 player.getProfile({ userId })
 player.getForm({ userId, limit? })
 player.getLeaderboard({ type?, attribute?, limit? })
+player.getAiInsights({ userId }) // Coach Kite Tactical Advice
 player.applyXPGains({ matchId, gains[] }) // Admin only
 ```
 
