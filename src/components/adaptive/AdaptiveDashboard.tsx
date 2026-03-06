@@ -11,6 +11,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { useWallet } from '@/contexts/WalletContext';
 import { useMySquads } from '@/hooks/squad/useSquad';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
 
 import { StaffFeed } from '@/components/adaptive/StaffFeed';
 import { NearbyRivals } from '@/components/dashboard/NearbyRivals';
@@ -39,11 +41,30 @@ export const AdaptiveDashboard: React.FC = () => {
 
   const { data: stats, loading } = useDashboardData(userAddress);
   const { memberships, loading: squadLoading } = useMySquads();
+  const { completeChecklistItem, allChecklistDone } = useOnboarding();
 
   const primarySquadId = memberships?.[0]?.squad.id;
 
+  const handleOpenOffice = React.useCallback(() => {
+    setIsStaffRoomOpen(true);
+    completeChecklistItem('open_office');
+  }, [completeChecklistItem]);
+
   // Define all possible widgets
   const allWidgets: DashboardWidget[] = useMemo(() => [
+    {
+      id: 'onboarding-checklist',
+      priority: 999,
+      requiredLevel: 'basic',
+      category: 'stats',
+      component: (
+        <OnboardingChecklist
+          onStepAction={(id) => {
+            if (id === 'open_office') handleOpenOffice();
+          }}
+        />
+      ),
+    },
     {
       id: 'quick-stats',
       priority: 100,
@@ -255,7 +276,11 @@ export const AdaptiveDashboard: React.FC = () => {
       priority: 98,
       requiredLevel: 'basic',
       category: 'matches',
-      component: <MatchEnginePreview squadId={primarySquadId} />,
+      component: (
+        <div onClick={() => completeChecklistItem('view_match_engine')}>
+          <MatchEnginePreview squadId={primarySquadId} />
+        </div>
+      ),
     },
     {
       id: 'squad-dynamics',
@@ -291,7 +316,7 @@ export const AdaptiveDashboard: React.FC = () => {
         </Card>
       ),
     },
-  ], [preferences, trackFeatureUsage, stats, loading, userAddress]);
+  ], [preferences, trackFeatureUsage, stats, loading, userAddress, primarySquadId, completeChecklistItem, handleOpenOffice, allChecklistDone]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {
@@ -365,7 +390,7 @@ export const AdaptiveDashboard: React.FC = () => {
         </div>
         <div className="flex items-center space-x-3">
           <Button
-            onClick={() => setIsStaffRoomOpen(true)}
+            onClick={handleOpenOffice}
             size="sm"
             className="hidden md:flex bg-gray-900 hover:bg-black text-white border-white/5 font-black uppercase tracking-widest text-[10px] items-center space-x-2 px-4 shadow-xl"
           >
