@@ -5,6 +5,8 @@ import { Card } from '@/components/ui/Card';
 import { Play, Pause, RotateCcw, Activity, Shield, Trophy, Zap, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { useSquadDetails } from '@/hooks/squad/useSquad';
+
 type ReputationTier = 'bronze' | 'silver' | 'gold' | 'platinum';
 
 interface PlayerPuck {
@@ -34,7 +36,7 @@ interface LiveMatch {
     status: 'live' | 'finishing' | 'ht';
 }
 
-export const MatchEnginePreview: React.FC = () => {
+export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [ball, setBall] = useState({ x: 50, y: 50, ownerId: null as string | null });
     const [players, setPlayers] = useState<PlayerPuck[]>([]);
@@ -45,25 +47,54 @@ export const MatchEnginePreview: React.FC = () => {
     const [daoAlert, setDaoAlert] = useState<string | null>(null);
     const [tempo, setTempo] = useState(1); // 1 = normal, 1.5 = fast (DAO triggered)
 
+    // Fetch real team members
+    const { members, loading: membersLoading } = useSquadDetails(squadId);
+
     const matches: LiveMatch[] = [
         { id: 'm1', home: 'HOU', away: 'RIV', homeScore: score.home, awayScore: score.away, status: 'live' },
         { id: 'm2', home: 'LNS', away: 'BASE', homeScore: 1, awayScore: 0, status: 'ht' },
         { id: 'm3', home: 'ALG', away: 'AVAL', homeScore: 2, awayScore: 2, status: 'live' },
     ];
 
-    // Initialize players with reputation tiers
+    // Initialize players with real data or high-fidelity fallback
     useEffect(() => {
-        const initPlayers: PlayerPuck[] = [
-            // Home Team (Blue)
-            { id: 'h1', name: 'Marcus', x: 45, y: 50, team: 'home', role: 'ST', stats: { pace: 92, agility: 88, strength: 75, passing: 80 }, reputationTier: 'platinum', history: [] },
-            { id: 'h2', name: 'Jamie', x: 30, y: 40, team: 'home', role: 'CM', stats: { pace: 70, agility: 75, strength: 65, passing: 82 }, reputationTier: 'gold', history: [] },
-            { id: 'h3', name: 'Alex', x: 30, y: 60, team: 'home', role: 'CM', stats: { pace: 72, agility: 78, strength: 68, passing: 80 }, reputationTier: 'silver', history: [] },
-            // Away Team (Red)
-            { id: 'a1', name: 'Rival 1', x: 55, y: 50, team: 'away', role: 'CB', stats: { pace: 65, agility: 60, strength: 85, passing: 60 }, reputationTier: 'gold', history: [] },
-            { id: 'a2', name: 'Rival 2', x: 70, y: 40, team: 'away', role: 'CB', stats: { pace: 68, agility: 62, strength: 82, passing: 65 }, reputationTier: 'silver', history: [] },
-        ];
-        setPlayers(initPlayers);
-    }, []);
+        if (!membersLoading && members && members.length > 0) {
+            // Map real members to pucks (max 3 for the preview engine complexity)
+            const homePlayers: PlayerPuck[] = members.slice(0, 3).map((m, i) => ({
+                id: m.id,
+                name: m.name.split(' ')[0],
+                x: i === 0 ? 45 : 30,
+                y: i === 0 ? 50 : (i === 1 ? 40 : 60),
+                team: 'home',
+                role: m.role.toUpperCase(),
+                stats: {
+                    pace: m.stats?.level ? Math.min(99, 60 + m.stats.level * 2) : 75,
+                    agility: 80,
+                    strength: 70,
+                    passing: 80
+                },
+                reputationTier: (m.stats?.level ?? 0) > 15 ? 'platinum' : (m.stats?.level ?? 0) > 8 ? 'gold' : 'silver',
+                history: []
+            }));
+
+            const awayPlayers: PlayerPuck[] = [
+                { id: 'a1', name: 'Rival 1', x: 55, y: 50, team: 'away', role: 'CB', stats: { pace: 65, agility: 60, strength: 85, passing: 60 }, reputationTier: 'gold', history: [] },
+                { id: 'a2', name: 'Rival 2', x: 70, y: 40, team: 'away', role: 'CB', stats: { pace: 68, agility: 62, strength: 82, passing: 65 }, reputationTier: 'silver', history: [] },
+            ];
+
+            setPlayers([...homePlayers, ...awayPlayers]);
+        } else if (!membersLoading) {
+            // Traditional fallback data
+            const fallbackPlayers: PlayerPuck[] = [
+                { id: 'h1', name: 'Marcus', x: 45, y: 50, team: 'home', role: 'ST', stats: { pace: 92, agility: 88, strength: 75, passing: 80 }, reputationTier: 'platinum', history: [] },
+                { id: 'h2', name: 'Jamie', x: 30, y: 40, team: 'home', role: 'CM', stats: { pace: 70, agility: 75, strength: 65, passing: 82 }, reputationTier: 'gold', history: [] },
+                { id: 'h3', name: 'Alex', x: 30, y: 60, team: 'home', role: 'CM', stats: { pace: 72, agility: 78, strength: 68, passing: 80 }, reputationTier: 'silver', history: [] },
+                { id: 'a1', name: 'Rival 1', x: 55, y: 50, team: 'away', role: 'CB', stats: { pace: 65, agility: 60, strength: 85, passing: 60 }, reputationTier: 'gold', history: [] },
+                { id: 'a2', name: 'Rival 2', x: 70, y: 40, team: 'away', role: 'CB', stats: { pace: 68, agility: 62, strength: 82, passing: 65 }, reputationTier: 'silver', history: [] },
+            ];
+            setPlayers(fallbackPlayers);
+        }
+    }, [members, membersLoading]);
 
     const addCommentary = (text: string, type: MatchCommentary['type'] = 'action') => {
         const timeStr = `${Math.floor(time / 10)}:00`;
@@ -296,8 +327,8 @@ export const MatchEnginePreview: React.FC = () => {
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     className={`text-[10px] font-mono flex space-x-2 ${c.type === 'goal' ? 'text-yellow-400 font-bold' :
-                                            c.type === 'dao' ? 'text-blue-400 font-bold' :
-                                                c.type === 'incident' ? 'text-red-400' : 'text-gray-400'
+                                        c.type === 'dao' ? 'text-blue-400 font-bold' :
+                                            c.type === 'incident' ? 'text-red-400' : 'text-gray-400'
                                         }`}
                                 >
                                     <span className="text-gray-600 flex-shrink-0">[{c.time}]</span>
