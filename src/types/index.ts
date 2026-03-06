@@ -394,6 +394,30 @@ export interface Transaction {
 }
 
 // ============================================================================
+// SOCIAL & LENS DOMAIN
+// ============================================================================
+
+export interface LensProfile {
+  id: string;
+  handle: string;
+  name?: string;
+  bio?: string;
+  avatarUrl?: string;
+  ownedBy: string;
+  stats: {
+    totalFollowers: number;
+    totalFollowing: number;
+    totalPosts: number;
+  };
+}
+
+export interface LensConnectionState {
+  isConnected: boolean;
+  profile: LensProfile | null;
+  accessToken: string | null;
+}
+
+// ============================================================================
 // UI/UTILITY TYPES
 // ============================================================================
 
@@ -416,5 +440,5 @@ export interface UserPreferences {
   notifications: boolean;
   compactMode: boolean;
   onboardingCompleted: boolean;
-  preferredChain: 'algorand' | 'avalanche';
+  preferredChain: 'algorand' | 'avalanche' | 'base';
 }

@@ -861,4 +861,221 @@ export const squadRouter = createTRPCRouter({
         });
       }
     }),
+
+  // Get nearby squads for matchmaking/discovery
+  getNearbySquads: publicProcedure
+    .input(z.object({
+      latitude: z.number(),
+      longitude: z.number(),
+      radiusKm: z.number().default(10),
+      limit: z.number().min(1).max(50).default(5),
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const { latitude, longitude, radiusKm, limit } = input;
+
+        // Fetch squads that have recent matches with coordinates
+        // In a production app, squads would have a primary homeGround location
+        // For now, we'll derive it from their recent matches or mock it
+        const squads = await ctx.prisma.squad.findMany({
+          include: {
+            matchesHome: {
+              where: { latitude: { not: null }, longitude: { not: null } },
+              take: 1,
+              orderBy: { createdAt: 'desc' }
+            },
+            _count: { select: { members: true } }
+          },
+          take: 50, // Get a pool to filter from
+        });
+
+        const nearbySquads = squads
+          .map(squad => {
+            // Use match location or fallback to a slightly offset location for demo variety
+            const squadLat = squad.matchesHome[0]?.latitude || latitude + (Math.random() - 0.5) * 0.1;
+            const squadLon = squad.matchesHome[0]?.longitude || longitude + (Math.random() - 0.5) * 0.1;
+            
+            // Haversine formula for distance
+            const R = 6371; // Earth radius in km
+            const dLat = (squadLat - latitude) * Math.PI / 180;
+            const dLon = (squadLon - longitude) * Math.PI / 180;
+            const a = 
+              Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(latitude * Math.PI / 180) * Math.cos(squadLat * Math.PI / 180) * 
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const distance = R * c;
+
+            return {
+              id: squad.id,
+              name: squad.name,
+              shortName: squad.shortName,
+              memberCount: squad._count.members,
+              distance: Math.round(distance * 10) / 10,
+              location: squad.homeGround || 'Local Field',
+            };
+          })
+          .filter(squad => squad.distance <= radiusKm)
+          .sort((a, b) => squad.distance - b.distance)
+          .slice(0, limit);
+
+        return nearbySquads;
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch nearby squads',
+          cause: error,
+        });
+      }
+    }),
+
+  // Create a match challenge
+  createChallenge: protectedProcedure
+    .input(z.object({
+      toSquadId: z.string().min(1),
+      proposedDate: z.date(),
+      pitchId: z.string().optional(),
+      message: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { toSquadId, proposedDate, pitchId, message } = input;
+
+        // Get user's squad (must be captain)
+        const member = await ctx.prisma.squadMember.findFirst({
+          where: { userId: ctx.userId!, role: 'captain' },
+        });
+
+        if (!member) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only captains can issue challenges',
+          });
+        }
+
+        const challenge = await ctx.prisma.matchChallenge.create({
+          data: {
+            fromSquadId: member.squadId,
+            toSquadId,
+            proposedDate,
+            pitchId,
+            message,
+            status: 'pending',
+          },
+        });
+
+        return challenge;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to create challenge',
+          cause: error,
+        });
+      }
+    }),
+
+  // Respond to a challenge
+  respondToChallenge: protectedProcedure
+    .input(z.object({
+      challengeId: z.string().min(1),
+      accept: z.boolean(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { challengeId, accept } = input;
+
+        const challenge = await ctx.prisma.matchChallenge.findUnique({
+          where: { id: challengeId },
+          include: { fromSquad: true, toSquad: true },
+        });
+
+        if (!challenge) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Challenge not found' });
+        }
+
+        // Must be captain of the target squad
+        const member = await ctx.prisma.squadMember.findFirst({
+          where: { userId: ctx.userId!, squadId: challenge.toSquadId, role: 'captain' },
+        });
+
+        if (!member) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only captains can respond to challenges' });
+        }
+
+        const updatedChallenge = await ctx.prisma.matchChallenge.update({
+          where: { id: challengeId },
+          data: { status: accept ? 'accepted' : 'rejected' },
+        });
+
+        // If accepted, create the Match record
+        if (accept) {
+          await ctx.prisma.match.create({
+            data: {
+              homeSquadId: challenge.fromSquadId,
+              awaySquadId: challenge.toSquadId,
+              matchDate: challenge.proposedDate,
+              status: 'pending',
+              submittedBy: ctx.userId!, // Initial submitter is the accepter
+            },
+          });
+        }
+
+        return updatedChallenge;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to respond to challenge',
+          cause: error,
+        });
+      }
+    }),
+
+  // Get territory control data
+  getTerritory: publicProcedure
+    .input(z.object({ squadId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const { squadId } = input;
+
+        // Get all pitches
+        const pitches = await ctx.prisma.pitch.findMany();
+
+        // For each pitch, count verified wins for this squad vs others
+        // (Simplified for MVP: just show control status)
+        const territory = await Promise.all(pitches.map(async (pitch) => {
+          const wins = await ctx.prisma.match.count({
+            where: {
+              pitchId: pitch.id,
+              status: 'verified',
+              OR: [
+                { homeSquadId: squadId, homeScore: { gt: ctx.prisma.match.fields.awayScore } },
+                { awaySquadId: squadId, awayScore: { gt: ctx.prisma.match.fields.homeScore } },
+              ]
+            }
+          });
+
+          const totalMatches = await ctx.prisma.match.count({
+            where: { pitchId: pitch.id, status: 'verified' }
+          });
+
+          return {
+            ...pitch,
+            squadWins: wins,
+            totalMatches,
+            isControlling: pitch.controllingSquadId === squadId,
+            dominance: totalMatches > 0 ? Math.round((wins / totalMatches) * 100) : 0
+          };
+        }));
+
+        return territory;
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch territory data',
+          cause: error,
+        });
+      }
+    }),
 });

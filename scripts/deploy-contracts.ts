@@ -87,6 +87,15 @@ const CONTRACTS: ContractConfig[] = [
     localInts: 3,
     localBytes: 3,
   },
+  {
+    name: "ReputationSystem",
+    approvalPath: "contracts/reputation_system/approval.teal",
+    clearStatePath: "contracts/reputation_system/clear_state.teal",
+    globalInts: 6,
+    globalBytes: 6,
+    localInts: 8,
+    localBytes: 8,
+  },
 ];
 
 class ContractDeployer {
@@ -94,9 +103,12 @@ class ContractDeployer {
   private indexerClient: algosdk.Indexer;
   private deployerAccount: algosdk.Account;
   private config: Config;
+  private deploymentInfo: any;
+  private rootDir: string;
 
   constructor(config: Config) {
     this.config = config;
+    this.rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
     this.algodClient = new algosdk.Algodv2(
       config.algodToken,
       config.algodServer,
@@ -113,6 +125,21 @@ class ContractDeployer {
     }
 
     this.deployerAccount = algosdk.mnemonicToSecretKey(config.deployerMnemonic);
+    this.deploymentInfo = this.loadDeploymentInfo();
+  }
+
+  private loadDeploymentInfo() {
+    const filename = `deployment-${this.config.network}.json`;
+    const filepath = path.join(this.rootDir, filename);
+    if (fs.existsSync(filepath)) {
+      try {
+        const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+        return data || { contracts: {} };
+      } catch (e) {
+        console.warn(`Error parsing ${filename}, starting fresh`);
+      }
+    }
+    return { contracts: {} };
   }
 
   private async waitForTransaction(txId: string) {
@@ -135,7 +162,7 @@ class ContractDeployer {
   }
 
   private readTealFile(filePath: string): Uint8Array {
-    const fullPath = path.join(__dirname, "..", filePath);
+    const fullPath = path.join(this.rootDir, filePath);
     if (!fs.existsSync(fullPath)) {
       throw new Error(`TEAL file not found: ${fullPath}`);
     }
@@ -189,16 +216,54 @@ class ContractDeployer {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const appId = (confirmedTxn as any)["application-index"] || (confirmedTxn as any).applicationIndex;
       if (!appId) {
-        throw new Error(`Application ID not found in confirmed transaction. Transaction might have failed on-chain or response format changed.`);
+        throw new Error(`Application ID not found in confirmed transaction.`);
       }
-      const appAddress = algosdk.getApplicationAddress(appId);
+      const appAddress = algosdk.getApplicationAddress(appId).toString();
+
+      // Fund the application account for inner transactions
+      console.log(`💸 Funding application account ${appAddress}...`);
+      const fundParams = await this.algodClient.getTransactionParams().do();
+      const fundTxn = algosdk.makePaymentTxn(
+        this.deployerAccount.addr.toString(),
+        appAddress,
+        fundParams.fee,
+        500000, // 0.5 ALGO
+        fundParams.firstRound,
+        fundParams.lastRound,
+        undefined,
+        fundParams.genesisHash,
+        fundParams.genesisID,
+        undefined
+      );
+      await this.algodClient.sendRawTransaction(fundTxn.signTxn(this.deployerAccount.sk)).do();
+      await this.waitForTransaction(fundTxn.txID());
+
+      // If ReputationSystem, call initialize
+      if (contractConfig.name === "ReputationSystem") {
+        console.log(`🎬 Initializing ReputationSystem...`);
+        const initParams = await this.algodClient.getTransactionParams().do();
+        initParams.fee = 10000;
+        initParams.flatFee = true;
+        
+        const encoder = new TextEncoder();
+        const initTxn = algosdk.makeApplicationNoOpTxn(
+          this.deployerAccount.addr.toString(),
+          initParams,
+          Number(appId),
+          [encoder.encode("initialize")]
+        );
+        
+        await this.algodClient.sendRawTransaction(initTxn.signTxn(this.deployerAccount.sk)).do();
+        await this.waitForTransaction(initTxn.txID());
+        console.log(`✅ ReputationSystem initialized!`);
+      }
 
       console.log(`✅ ${contractConfig.name} deployed successfully!`);
       console.log(`   📋 Application ID: ${appId}`);
       console.log(`   📍 Application Address: ${appAddress}`);
       console.log(`   🔗 Transaction ID: ${txId}`);
 
-      return appId;
+      return Number(appId);
     } catch (error) {
       console.error(`❌ Failed to deploy ${contractConfig.name}:`, error);
       throw error;
@@ -226,6 +291,11 @@ class ContractDeployer {
 
     for (const contract of CONTRACTS) {
       try {
+        if (this.deploymentInfo.contracts && this.deploymentInfo.contracts[contract.name]) {
+          console.log(`⏩ ${contract.name} already deployed (${this.deploymentInfo.contracts[contract.name]}), skipping...`);
+          deployedContracts[contract.name] = this.deploymentInfo.contracts[contract.name];
+          continue;
+        }
         const appId = await this.deployContract(contract);
         deployedContracts[contract.name] = appId;
       } catch (deployError) {
@@ -251,11 +321,12 @@ class ContractDeployer {
     };
 
     const outputPath = path.join(
-      __dirname,
-      "..",
+      this.rootDir,
       `deployment-${this.config.network}.json`,
     );
-    fs.writeFileSync(outputPath, JSON.stringify(deploymentInfo, null, 2));
+    fs.writeFileSync(outputPath, JSON.stringify(deploymentInfo, (key, value) =>
+      typeof value === 'bigint' ? value.toString() : value
+    , 2));
     console.log(`\n📄 Deployment info saved to: ${outputPath}`);
 
     return deployedContracts;

@@ -43,6 +43,10 @@ int 1
 return
 main_l10:
 txn ApplicationArgs 0
+byte "initialize"
+==
+bnz main_l_init
+txn ApplicationArgs 0
 byte "update_skill"
 ==
 bnz main_l23
@@ -63,6 +67,69 @@ byte "transfer_reputation"
 ==
 bnz main_l19
 err
+main_l_init:
+txn Sender
+byte "system_creator"
+app_global_get
+==
+assert
+byte "reputation_token_id"
+app_global_get
+int 0
+==
+assert
+itxn_begin
+int acfg
+itxn_field TypeEnum
+int 1000000000
+itxn_field ConfigAssetTotal
+int 6
+itxn_field ConfigAssetDecimals
+byte "REP"
+itxn_field ConfigAssetUnitName
+byte "SportWarren Reputation"
+itxn_field ConfigAssetName
+global CurrentApplicationAddress
+itxn_field ConfigAssetManager
+global CurrentApplicationAddress
+itxn_field ConfigAssetReserve
+global CurrentApplicationAddress
+itxn_field ConfigAssetFreeze
+global CurrentApplicationAddress
+itxn_field ConfigAssetClawback
+int 0
+itxn_field Fee
+itxn_submit
+byte "reputation_token_id"
+itxn CreatedAssetID
+app_global_put
+itxn_begin
+int acfg
+itxn_field TypeEnum
+int 1000000000
+itxn_field ConfigAssetTotal
+int 6
+itxn_field ConfigAssetDecimals
+byte "SKILL"
+itxn_field ConfigAssetUnitName
+byte "SportWarren Skill Points"
+itxn_field ConfigAssetName
+global CurrentApplicationAddress
+itxn_field ConfigAssetManager
+global CurrentApplicationAddress
+itxn_field ConfigAssetReserve
+global CurrentApplicationAddress
+itxn_field ConfigAssetFreeze
+global CurrentApplicationAddress
+itxn_field ConfigAssetClawback
+int 0
+itxn_field Fee
+itxn_submit
+byte "skill_token_id"
+itxn CreatedAssetID
+app_global_put
+int 1
+return
 main_l19:
 txn NumAppArgs
 int 2
@@ -533,56 +600,6 @@ int 0
 app_global_put
 byte "verification_threshold"
 int 3
-app_global_put
-itxn_begin
-int acfg
-itxn_field TypeEnum
-int 1000000000
-itxn_field ConfigAssetTotal
-int 6
-itxn_field ConfigAssetDecimals
-byte "REP"
-itxn_field ConfigAssetUnitName
-byte "SportWarren Reputation"
-itxn_field ConfigAssetName
-global CurrentApplicationAddress
-itxn_field ConfigAssetManager
-global CurrentApplicationAddress
-itxn_field ConfigAssetReserve
-global CurrentApplicationAddress
-itxn_field ConfigAssetFreeze
-global CurrentApplicationAddress
-itxn_field ConfigAssetClawback
-int 0
-itxn_field Fee
-itxn_submit
-byte "reputation_token_id"
-itxn CreatedAssetID
-app_global_put
-itxn_begin
-int acfg
-itxn_field TypeEnum
-int 1000000000
-itxn_field ConfigAssetTotal
-int 6
-itxn_field ConfigAssetDecimals
-byte "SKILL"
-itxn_field ConfigAssetUnitName
-byte "SportWarren Skill Points"
-itxn_field ConfigAssetName
-global CurrentApplicationAddress
-itxn_field ConfigAssetManager
-global CurrentApplicationAddress
-itxn_field ConfigAssetReserve
-global CurrentApplicationAddress
-itxn_field ConfigAssetFreeze
-global CurrentApplicationAddress
-itxn_field ConfigAssetClawback
-int 0
-itxn_field Fee
-itxn_submit
-byte "skill_token_id"
-itxn CreatedAssetID
 app_global_put
 int 1
 return

@@ -157,6 +157,22 @@ export const playerRouter = createTRPCRouter({
               newRating += 1;
               newXpToNext = Math.floor(newXpToNext * 1.2);
             }
+
+            // Sync to Algorand
+            try {
+              const { algorandService } = await import('../../../server/services/blockchain/algorand');
+              const user = await ctx.prisma.user.findUnique({ where: { id: gain.userId } });
+              if (user?.walletAddress && user.chain === 'algorand') {
+                await algorandService.updatePlayerSkillOnChain(
+                  user.walletAddress,
+                  attrName,
+                  newRating,
+                  `match:${matchId.slice(0, 8)}`
+                );
+              }
+            } catch (e) {
+              console.warn('On-chain sync failed:', e);
+            }
             
             await ctx.prisma.playerAttribute.update({
               where: { id: attr.id },
@@ -367,6 +383,74 @@ export const playerRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to generate AI insights',
+          cause: error,
+        });
+      }
+    }),
+
+  // Chat with Coach Kite
+  chatWithCoach: publicProcedure
+    .input(z.object({
+      userId: z.string().min(1, 'User ID is required'),
+      message: z.string().min(1, 'Message is required'),
+      context: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { userId, message, context } = input;
+        
+        // record interaction
+        try {
+          const { kiteAIService } = await import('../../../server/services/blockchain/kite');
+          await kiteAIService.recordInteraction('coach_kite', 'chat_request', { userId });
+        } catch (e) {
+          console.warn('Kite AI service not available for analytics');
+        }
+
+        // Fetch player profile for context
+        const profile = await ctx.prisma.playerProfile.findUnique({
+          where: { userId },
+          include: { attributes: true }
+        });
+
+        const statsContext = profile ? 
+          `Player Stats: ${profile.attributes.map(a => `${a.attribute}: ${a.rating}`).join(', ')}` : 
+          'No profile data available.';
+
+        // Call OpenAI service
+        try {
+          const { openai } = await import('../../../server/services/openai');
+          const response = await openai.chat.completions.create({
+            model: "gpt-4-turbo-preview",
+            messages: [
+              { 
+                role: "system", 
+                content: `You are Coach Kite, a supportive but firm Sunday league football coach. 
+                Your goal is to help players improve their real-world game.
+                Use football terminology. Be concise and encouraging.
+                Current Player Context: ${statsContext}
+                Previous Advice Context: ${context || 'None'}`
+              },
+              { role: "user", content: message }
+            ],
+            max_tokens: 150,
+          });
+
+          return {
+            reply: response.choices[0]?.message.content || "I'm focusing on the next match, let's talk later!",
+            agentName: "Coach Kite"
+          };
+        } catch (openaiError) {
+          console.error('OpenAI call failed:', openaiError);
+          return {
+            reply: "The locker room is a bit noisy right now. To give you the best advice: focus on your positioning and keep your head up!",
+            agentName: "Coach Kite (Offline)"
+          };
+        }
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to chat with coach',
           cause: error,
         });
       }

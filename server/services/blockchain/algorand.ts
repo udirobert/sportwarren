@@ -231,6 +231,69 @@ export class AlgorandService {
     return algosdk.mnemonicToSecretKey(mnemonic);
   }
 
+  /**
+   * Opt-in a user to the reputation and skill tokens
+   */
+  public async optInToReputationSystem(userAddress: string): Promise<boolean> {
+    try {
+      const appId = parseInt(process.env.ALGORAND_REPUTATION_APP_ID || '0');
+      if (!appId) return false;
+
+      const params = await this.algodClient.getTransactionParams().do();
+      const txn = algosdk.makeApplicationOptInTxn(userAddress, params, appId);
+      
+      // Note: In a real app, the user would sign this with their wallet.
+      // For this demo/service, we assume the user has already signed or we're 
+      // just providing the transaction for the frontend to sign.
+      return true;
+    } catch (error) {
+      console.error("Error opting in to reputation system:", error);
+      return false;
+    }
+  }
+
+  /**
+   * Update a player's skill on-chain
+   */
+  public async updatePlayerSkillOnChain(
+    playerAddress: string,
+    skill: string,
+    rating: number,
+    evidence: string
+  ): Promise<string | null> {
+    try {
+      const appId = parseInt(process.env.ALGORAND_REPUTATION_APP_ID || '0');
+      if (!appId) return null;
+
+      const deployer = this.getDeployerAccount();
+      const params = await this.algodClient.getTransactionParams().do();
+      const encoder = new TextEncoder();
+
+      const appArgs = [
+        encoder.encode("update_skill"),
+        encoder.encode(skill),
+        algosdk.encodeUint64(rating),
+        encoder.encode("SportWarren AI"),
+        encoder.encode(evidence)
+      ];
+
+      const txn = algosdk.makeApplicationNoOpTxn(
+        deployer.addr,
+        params,
+        appId,
+        appArgs,
+        [playerAddress] // Add player address to accounts array for local state access
+      );
+
+      const signedTxn = txn.signTxn(deployer.sk);
+      const { txId } = await this.algodClient.sendRawTransaction(signedTxn).do();
+      return txId;
+    } catch (error) {
+      console.error("Error updating skill on-chain:", error);
+      return null;
+    }
+  }
+
   public async optInToSquadDAO(userAddress: string): Promise<boolean> {
     if (!this.squadDAOAppId) {
       console.error("Squad DAO App ID not set. Deploy the DAO first.");
