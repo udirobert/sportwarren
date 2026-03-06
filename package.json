@@ -19,7 +19,8 @@
     "test:chainlink": "tsx scripts/test-chainlink.ts",
     "test:kite": "tsx scripts/test-kite.ts",
     "test:verification": "tsx scripts/test-verification.ts",
-    "setup:analytics": "bash scripts/setup-analytics.sh"
+    "setup:analytics": "bash scripts/setup-analytics.sh",
+    "postinstall": "prisma generate"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

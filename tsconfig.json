@@ -39,6 +39,7 @@
     "node_modules",
     "server",
     "contracts",
-    "scripts"
+    "scripts",
+    "prisma"
   ]
 }
