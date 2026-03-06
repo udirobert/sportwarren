@@ -14,6 +14,9 @@ import { NearbyRivals } from '@/components/dashboard/NearbyRivals';
 import { TerritoryControl } from '@/components/dashboard/TerritoryControl';
 import { TrainingCenter } from '@/components/dashboard/TrainingCenter';
 import { SquadGovernance } from '@/components/dashboard/SquadGovernance';
+import { SquadDynamics } from '@/components/dashboard/SquadDynamics';
+import { ScoutingReport } from '@/components/dashboard/ScoutingReport';
+import { MatchEnginePreview } from '@/components/dashboard/MatchEnginePreview';
 
 interface DashboardWidget {
   id: string;
@@ -240,6 +243,27 @@ export const AdaptiveDashboard: React.FC = () => {
           </Card>
         </ProgressiveDisclosure>
       ),
+    },
+    {
+      id: 'match-engine',
+      priority: 98,
+      requiredLevel: 'basic',
+      category: 'matches',
+      component: <MatchEnginePreview />,
+    },
+    {
+      id: 'squad-dynamics',
+      priority: 89,
+      requiredLevel: 'basic',
+      category: 'stats',
+      component: <SquadDynamics squadId="demo-squad-id" />,
+    },
+    {
+      id: 'scouting-report',
+      priority: 87,
+      requiredLevel: 'basic',
+      category: 'social',
+      component: <ScoutingReport />,
     },
     {
       id: 'upcoming-fixtures',
