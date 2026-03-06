@@ -8,11 +8,14 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_AVAILABLE_PLAYERS } from '@/lib/mocks';
 
 import { trpc } from '@/lib/trpc-client';
+import { useOnboarding } from '@/hooks/useOnboarding';
 
 export const DraftEngine: React.FC = () => {
     const [isDrafting, setIsDrafting] = useState(false);
     const [draftStep, setDraftStep] = useState(0);
     const [selectedProspect, setSelectedProspect] = useState<any>(null);
+
+    const { completeChecklistItem } = useOnboarding();
 
     // Dynamic prospect pool from server
     const { data: serverProspects } = trpc.market.listProspects.useQuery();
@@ -20,8 +23,8 @@ export const DraftEngine: React.FC = () => {
 
     const signMutation = trpc.market.signProspect.useMutation({
         onSuccess: (data) => {
-            // In a real app we'd use a toast, staying minimal as per principles
             alert(data.message);
+            completeChecklistItem('use_draft');
             setIsDrafting(false);
             setDraftStep(0);
         },
