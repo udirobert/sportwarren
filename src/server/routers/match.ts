@@ -192,15 +192,15 @@ export const matchRouter = createTRPCRouter({
                   algosdk.encodeUint64(100), 
                 ];
 
-                const txn = algosdk.makeApplicationNoOpTxn(
-                  deployerAccount.addr,
-                  params,
-                  appId,
-                  appArgs
-                );
+                const txn = algosdk.makeApplicationNoOpTxnFromObject({
+                  sender: deployerAccount.addr.toString(),
+                  suggestedParams: params,
+                  appIndex: appId,
+                  appArgs,
+                });
 
                 const signedTxn = txn.signTxn(deployerAccount.sk);
-                const { txId: submittedTxId } = await algodClient.sendRawTransaction(signedTxn).do();
+                const { txid: submittedTxId } = await algodClient.sendRawTransaction(signedTxn).do();
                 txId = submittedTxId;
                 console.log(`Match ${matchId} verified on-chain! Tx: ${txId}`);
               }

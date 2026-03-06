@@ -916,7 +916,7 @@ export const squadRouter = createTRPCRouter({
             };
           })
           .filter(squad => squad.distance <= radiusKm)
-          .sort((a, b) => squad.distance - b.distance)
+          .sort((a, b) => a.distance - b.distance)
           .slice(0, limit);
 
         return nearbySquads;
@@ -975,15 +975,15 @@ export const squadRouter = createTRPCRouter({
       }
     }),
 
-  // Respond to a challenge
+  // Respond to a challenge (triggers a proposal for the squad to vote on)
   respondToChallenge: protectedProcedure
     .input(z.object({
       challengeId: z.string().min(1),
-      accept: z.boolean(),
+      action: z.enum(['accept', 'reject']),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
-        const { challengeId, accept } = input;
+        const { challengeId, action } = input;
 
         const challenge = await ctx.prisma.matchChallenge.findUnique({
           where: { id: challengeId },
@@ -994,39 +994,180 @@ export const squadRouter = createTRPCRouter({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Challenge not found' });
         }
 
-        // Must be captain of the target squad
+        // Must be a member of the target squad
         const member = await ctx.prisma.squadMember.findFirst({
-          where: { userId: ctx.userId!, squadId: challenge.toSquadId, role: 'captain' },
+          where: { userId: ctx.userId!, squadId: challenge.toSquadId },
         });
 
         if (!member) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only captains can respond to challenges' });
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only squad members can respond' });
         }
 
-        const updatedChallenge = await ctx.prisma.matchChallenge.update({
-          where: { id: challengeId },
-          data: { status: accept ? 'accepted' : 'rejected' },
-        });
-
-        // If accepted, create the Match record
-        if (accept) {
-          await ctx.prisma.match.create({
-            data: {
-              homeSquadId: challenge.fromSquadId,
-              awaySquadId: challenge.toSquadId,
-              matchDate: challenge.proposedDate,
-              status: 'pending',
-              submittedBy: ctx.userId!, // Initial submitter is the accepter
-            },
+        if (action === 'reject') {
+          return await ctx.prisma.matchChallenge.update({
+            where: { id: challengeId },
+            data: { status: 'rejected' },
           });
         }
 
-        return updatedChallenge;
+        // If action is 'accept', we don't accept yet - we create a PROPOSAL
+        const proposal = await ctx.prisma.squadProposal.create({
+          data: {
+            squadId: challenge.toSquadId,
+            creatorId: ctx.userId!,
+            title: `Accept match vs ${challenge.fromSquad.name}?`,
+            description: `Proposed for ${challenge.proposedDate.toISOString().split('T')[0]}. Message: ${challenge.message || 'None'}`,
+            type: 'match_challenge',
+            referenceId: challengeId,
+            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h to vote
+            status: 'active',
+          },
+        });
+
+        return { proposalCreated: true, proposalId: proposal.id };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to respond to challenge',
+          cause: error,
+        });
+      }
+    }),
+
+  // Get active proposals for a squad
+  getProposals: publicProcedure
+    .input(z.object({ squadId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await ctx.prisma.squadProposal.findMany({
+          where: { squadId: input.squadId },
+          include: { 
+            votes: true,
+            _count: { select: { votes: true } }
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch proposals',
+          cause: error,
+        });
+      }
+    }),
+
+  // Vote on a proposal
+  voteOnProposal: protectedProcedure
+    .input(z.object({
+      proposalId: z.string().min(1),
+      vote: z.enum(['yes', 'no', 'abstain']),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { proposalId, vote } = input;
+
+        const proposal = await ctx.prisma.squadProposal.findUnique({
+          where: { id: proposalId },
+        });
+
+        if (!proposal || proposal.status !== 'active') {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proposal not active' });
+        }
+
+        // Must be in the squad
+        const member = await ctx.prisma.squadMember.findFirst({
+          where: { userId: ctx.userId!, squadId: proposal.squadId },
+        });
+
+        if (!member) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only squad members can vote' });
+        }
+
+        return await ctx.prisma.proposalVote.upsert({
+          where: {
+            proposalId_voterId: { proposalId, voterId: ctx.userId! }
+          },
+          update: { vote },
+          create: {
+            proposalId,
+            voterId: ctx.userId!,
+            vote,
+          },
+        });
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to cast vote',
+          cause: error,
+        });
+      }
+    }),
+
+  // Finalize/Execute a proposal
+  executeProposal: protectedProcedure
+    .input(z.object({ proposalId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { proposalId } = input;
+        const proposal = await ctx.prisma.squadProposal.findUnique({
+          where: { id: proposalId },
+          include: { votes: true },
+        });
+
+        if (!proposal || proposal.status !== 'active') {
+          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proposal not executable' });
+        }
+
+        const yesVotes = proposal.votes.filter(v => v.vote === 'yes').length;
+        const noVotes = proposal.votes.filter(v => v.vote === 'no').length;
+
+        if (yesVotes >= proposal.quorum && yesVotes > noVotes) {
+          // PROPOSAL PASSED
+          await ctx.prisma.squadProposal.update({
+            where: { id: proposalId },
+            data: { status: 'passed' },
+          });
+
+          // Logic based on type
+          if (proposal.type === 'match_challenge' && proposal.referenceId) {
+            const challenge = await ctx.prisma.matchChallenge.findUnique({
+              where: { id: proposal.referenceId }
+            });
+
+            if (challenge) {
+              await ctx.prisma.matchChallenge.update({
+                where: { id: challenge.id },
+                data: { status: 'accepted' },
+              });
+
+              await ctx.prisma.match.create({
+                data: {
+                  homeSquadId: challenge.fromSquadId,
+                  awaySquadId: challenge.toSquadId,
+                  matchDate: challenge.proposedDate,
+                  status: 'pending',
+                  submittedBy: proposal.creatorId,
+                },
+              });
+            }
+          }
+
+          return { status: 'executed' };
+        } else {
+          // PROPOSAL FAILED
+          await ctx.prisma.squadProposal.update({
+            where: { id: proposalId },
+            data: { status: 'failed' },
+          });
+          return { status: 'failed' };
+        }
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to execute proposal',
           cause: error,
         });
       }

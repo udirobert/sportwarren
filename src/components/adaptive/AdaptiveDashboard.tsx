@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Shield, Star, Sparkles, MapPin } from 'lucide-react';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Shield, Star, Sparkles, MapPin, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 import { CoachKiteInsight } from '@/components/adaptive/CoachKiteInsight';
 import { trpc } from '@/lib/trpc-client';
@@ -135,6 +136,184 @@ const TerritoryControl: React.FC<{ squadId: string }> = ({ squadId }) => {
   );
 };
 
+const TrainingCenter: React.FC<{ userId: string }> = ({ userId }) => {
+  const { data: training, refetch } = trpc.player.getTrainingData.useQuery({ userId });
+  
+  const syncMutation = trpc.player.syncActivity.useMutation({
+    onSuccess: () => refetch()
+  });
+
+  const handleQuickSync = (type: 'run' | 'hiit' | 'gym') => {
+    syncMutation.mutate({
+      userId,
+      type,
+      duration: 30,
+      intensity: 'medium',
+      source: 'mock_strava'
+    });
+  };
+
+  if (!training) return null;
+
+  return (
+    <Card className="relative overflow-hidden">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <Zap className="w-5 h-5 text-orange-500" />
+          <h2 className="text-lg font-bold text-gray-900">Training Center</h2>
+        </div>
+        <div className="flex items-center space-x-1 bg-orange-100 px-2 py-0.5 rounded-full">
+          <span className="text-[10px] font-black text-orange-700 uppercase">{training.sharpness}% Sharpness</span>
+        </div>
+      </div>
+
+      {/* Progress */}
+      <div className="mb-6 space-y-2">
+        <div className="flex justify-between text-[10px] font-bold text-gray-500 uppercase">
+          <span>Weekly Goal</span>
+          <span>{training.weeklyProgress} / {training.weeklyTarget} mins</span>
+        </div>
+        <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+          <motion.div 
+            initial={{ width: 0 }}
+            animate={{ width: `${Math.min(100, (training.weeklyProgress / training.weeklyTarget) * 100)}%` }}
+            className="h-full bg-gradient-to-r from-orange-400 to-orange-600"
+          />
+        </div>
+      </div>
+
+      {/* Quick Sync Actions */}
+      <div className="grid grid-cols-3 gap-2">
+        <button 
+          onClick={() => handleQuickSync('run')}
+          disabled={syncMutation.isPending}
+          className="flex flex-col items-center justify-center p-3 bg-gray-50 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all border border-transparent hover:border-orange-200 group"
+        >
+          <TrendingUp className="w-5 h-5 mb-1 group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-bold uppercase">Sync Run</span>
+        </button>
+        <button 
+          onClick={() => handleQuickSync('hiit')}
+          disabled={syncMutation.isPending}
+          className="flex flex-col items-center justify-center p-3 bg-gray-50 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all border border-transparent hover:border-orange-200 group"
+        >
+          <Zap className="w-5 h-5 mb-1 group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-bold uppercase">Sync HIIT</span>
+        </button>
+        <button 
+          onClick={() => handleQuickSync('gym')}
+          disabled={syncMutation.isPending}
+          className="flex flex-col items-center justify-center p-3 bg-gray-50 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all border border-transparent hover:border-orange-200 group"
+        >
+          <Users className="w-5 h-5 mb-1 group-hover:scale-110 transition-transform" />
+          <span className="text-[10px] font-bold uppercase">Sync Gym</span>
+        </button>
+      </div>
+
+      {syncMutation.isPending && (
+        <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+          <Loader2 className="w-6 h-6 text-orange-500 animate-spin" />
+        </div>
+      )}
+    </Card>
+  );
+};
+
+const SquadGovernance: React.FC<{ squadId: string }> = ({ squadId }) => {
+  const { data: proposals, refetch } = trpc.squad.getProposals.useQuery({ squadId });
+  
+  const voteMutation = trpc.squad.voteOnProposal.useMutation({
+    onSuccess: () => refetch()
+  });
+
+  const executeMutation = trpc.squad.executeProposal.useMutation({
+    onSuccess: () => refetch()
+  });
+
+  if (!proposals || proposals.length === 0) return (
+    <Card className="bg-gray-50 border-dashed border-gray-200">
+      <div className="text-center py-6">
+        <Shield className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+        <p className="text-xs text-gray-500 font-medium">No active squad proposals.</p>
+      </div>
+    </Card>
+  );
+
+  return (
+    <Card className="border-l-4 border-l-purple-500">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <Users className="w-5 h-5 text-purple-600" />
+          <h2 className="text-lg font-bold text-gray-900">Squad DAO</h2>
+        </div>
+        <span className="text-[10px] font-bold text-purple-600 uppercase tracking-widest">Voting Active</span>
+      </div>
+      
+      <div className="space-y-4">
+        {proposals.filter(p => p.status === 'active').map(proposal => {
+          const yesVotes = proposal.votes.filter(v => v.vote === 'yes').length;
+          const noVotes = proposal.votes.filter(v => v.vote === 'no').length;
+          const totalVotes = yesVotes + noVotes;
+          const progress = totalVotes > 0 ? (yesVotes / proposal.quorum) * 100 : 0;
+
+          return (
+            <div key={proposal.id} className="bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-900">{proposal.title}</h3>
+                  <p className="text-[10px] text-gray-500 line-clamp-1">{proposal.description}</p>
+                </div>
+                <span className="text-[10px] font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                  {proposal.type.replace('_', ' ')}
+                </span>
+              </div>
+
+              {/* Vote Progress */}
+              <div className="mt-3 space-y-1">
+                <div className="flex justify-between text-[8px] font-black text-gray-400 uppercase tracking-tighter">
+                  <span>Progress to Quorum</span>
+                  <span>{yesVotes} / {proposal.quorum} Yes</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, progress)}%` }}
+                    className="h-full bg-purple-500"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="mt-4 flex items-center gap-2">
+                <button 
+                  onClick={() => voteMutation.mutate({ proposalId: proposal.id, vote: 'yes' })}
+                  className="flex-1 py-2 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-green-600 hover:bg-green-50 hover:border-green-200 transition-all"
+                >
+                  Vote Yes
+                </button>
+                <button 
+                  onClick={() => voteMutation.mutate({ proposalId: proposal.id, vote: 'no' })}
+                  className="flex-1 py-2 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-red-600 hover:bg-red-50 hover:border-red-200 transition-all"
+                >
+                  Vote No
+                </button>
+                {yesVotes >= proposal.quorum && (
+                  <button 
+                    onClick={() => executeMutation.mutate({ proposalId: proposal.id })}
+                    className="px-3 py-2 bg-purple-600 text-white rounded-lg text-[10px] font-bold hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20"
+                  >
+                    Execute
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+};
+
 interface DashboardWidget {
   id: string;
   component: React.ReactNode;
@@ -195,6 +374,13 @@ export const AdaptiveDashboard: React.FC = () => {
       ),
     },
     {
+      id: 'governance',
+      priority: 92,
+      requiredLevel: 'basic',
+      category: 'social',
+      component: <SquadGovernance squadId="demo-squad-id" />,
+    },
+    {
       id: 'ai-insights',
       priority: 95,
       requiredLevel: 'basic',
@@ -216,6 +402,13 @@ export const AdaptiveDashboard: React.FC = () => {
       requiredLevel: 'advanced',
       category: 'social',
       component: <TerritoryControl squadId="demo-squad-id" />,
+    },
+    {
+      id: 'training',
+      priority: 88,
+      requiredLevel: 'basic',
+      category: 'stats',
+      component: <TrainingCenter userId={userAddress || 'demo-user'} />,
     },
     {
       id: 'recent-matches',

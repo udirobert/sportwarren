@@ -26,6 +26,7 @@ function transformProfile(profile: any): PlayerAttributes {
   return {
     address: profile.userId,
     playerName: profile.user?.name || 'Unknown',
+    position: (profile.user?.position as any) || 'MF',
     totalMatches: profile.totalMatches,
     totalGoals: profile.totalGoals,
     totalAssists: profile.totalAssists,

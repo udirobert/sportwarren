@@ -401,7 +401,7 @@ export const playerRouter = createTRPCRouter({
         
         // record interaction
         try {
-          const { kiteAIService } = await import('../../../server/services/blockchain/kite');
+          const { kiteAIService } = await import('../../../server/services/ai/kite');
           await kiteAIService.recordInteraction('coach_kite', 'chat_request', { userId });
         } catch (e) {
           console.warn('Kite AI service not available for analytics');
@@ -451,6 +451,123 @@ export const playerRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to chat with coach',
+          cause: error,
+        });
+      }
+    }),
+
+  // Get training and physical activity data
+  getTrainingData: publicProcedure
+    .input(z.object({
+      userId: z.string().min(1),
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const { userId } = input;
+        const profile = await ctx.prisma.playerProfile.findUnique({
+          where: { userId },
+          include: {
+            activities: {
+              orderBy: { createdAt: 'desc' },
+              take: 10
+            }
+          }
+        });
+
+        if (!profile) return null;
+
+        // Calculate start of "Match Week" relative to their preference
+        const now = new Date();
+        const currentDay = now.getDay();
+        const prefDay = profile.matchDayPreference;
+        
+        // Find the most recent "PrefDay" (e.g. if today is Wed(3) and pref is Tue(2), diff is 1)
+        let daysSinceStart = currentDay - prefDay;
+        if (daysSinceStart < 0) daysSinceStart += 7;
+        
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - daysSinceStart);
+        weekStart.setHours(0, 0, 0, 0);
+
+        return {
+          sharpness: profile.sharpness,
+          matchDay: profile.matchDayPreference,
+          activities: profile.activities,
+          weeklyTarget: 150, // 150 minutes per week
+          weeklyProgress: profile.activities
+            .filter(a => a.createdAt >= weekStart)
+            .reduce((sum, a) => sum + a.duration, 0)
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch training data',
+          cause: error,
+        });
+      }
+    }),
+
+  // Sync a physical activity (Manual or mock for Strava/Garmin)
+  syncActivity: publicProcedure
+    .input(z.object({
+      userId: z.string().min(1),
+      type: z.enum(['run', 'gym', 'hiit', 'field_training']),
+      duration: z.number().min(1),
+      intensity: z.enum(['low', 'medium', 'high']),
+      distance: z.number().optional(),
+      source: z.string().default('manual'),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { userId, type, duration, intensity, distance, source } = input;
+
+        const profile = await ctx.prisma.playerProfile.findUnique({
+          where: { userId },
+        });
+
+        if (!profile) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Player profile not found' });
+        }
+
+        // Calculate gains
+        const intensityMult = intensity === 'high' ? 1.5 : intensity === 'medium' ? 1.0 : 0.5;
+        const xpGained = Math.floor(duration * 2 * intensityMult);
+        const sharpnessGain = Math.floor(duration / 5 * intensityMult);
+
+        const activity = await ctx.prisma.physicalActivity.create({
+          data: {
+            profileId: profile.id,
+            type,
+            duration,
+            intensity,
+            distance,
+            source,
+            xpGained,
+            sharpnessGain
+          }
+        });
+
+        // Update profile sharpness (capped at 100)
+        await ctx.prisma.playerProfile.update({
+          where: { id: profile.id },
+          data: {
+            sharpness: Math.min(100, profile.sharpness + sharpnessGain),
+            totalXP: { increment: xpGained }
+          }
+        });
+
+        // Record for Coach Kite to mention
+        try {
+          const { kiteAIService } = await import('../../../server/services/ai/kite');
+          await kiteAIService.recordInteraction('fitness_agent', 'activity_synced', { userId, type, duration });
+        } catch (e) {}
+
+        return activity;
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to sync activity',
           cause: error,
         });
       }

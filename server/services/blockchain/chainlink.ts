@@ -56,7 +56,7 @@ export class ChainlinkService {
       try {
         await this.initializeOracles();
       } catch (e) {
-        console.warn('Failed to initialize real Chainlink oracles, using simulation mode:', e.message);
+        console.warn('Failed to initialize real Chainlink oracles, using simulation mode:', e instanceof Error ? e.message : String(e));
         this.initialized = true; // Mark as initialized anyway to prevent repeated attempts
       }
     }

@@ -188,7 +188,7 @@ class ContractDeployer {
 
       // Create application
       const params = await this.algodClient.getTransactionParams().do();
-      params.fee = 10000;
+      params.fee = 10000n;
       params.flatFee = true;
 
       const createTxn = algosdk.makeApplicationCreateTxnFromObject({
@@ -223,18 +223,12 @@ class ContractDeployer {
       // Fund the application account for inner transactions
       console.log(`💸 Funding application account ${appAddress}...`);
       const fundParams = await this.algodClient.getTransactionParams().do();
-      const fundTxn = algosdk.makePaymentTxn(
-        this.deployerAccount.addr.toString(),
-        appAddress,
-        fundParams.fee,
-        500000, // 0.5 ALGO
-        fundParams.firstRound,
-        fundParams.lastRound,
-        undefined,
-        fundParams.genesisHash,
-        fundParams.genesisID,
-        undefined
-      );
+      const fundTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
+        sender: this.deployerAccount.addr.toString(),
+        receiver: appAddress,
+        amount: 500000, // 0.5 ALGO
+        suggestedParams: fundParams,
+      });
       await this.algodClient.sendRawTransaction(fundTxn.signTxn(this.deployerAccount.sk)).do();
       await this.waitForTransaction(fundTxn.txID());
 
@@ -242,16 +236,16 @@ class ContractDeployer {
       if (contractConfig.name === "ReputationSystem") {
         console.log(`🎬 Initializing ReputationSystem...`);
         const initParams = await this.algodClient.getTransactionParams().do();
-        initParams.fee = 10000;
+        initParams.fee = 10000n;
         initParams.flatFee = true;
         
         const encoder = new TextEncoder();
-        const initTxn = algosdk.makeApplicationNoOpTxn(
-          this.deployerAccount.addr.toString(),
-          initParams,
-          Number(appId),
-          [encoder.encode("initialize")]
-        );
+        const initTxn = algosdk.makeApplicationNoOpTxnFromObject({
+          sender: this.deployerAccount.addr.toString(),
+          appIndex: Number(appId),
+          appArgs: [encoder.encode("initialize")],
+          suggestedParams: initParams,
+        });
         
         await this.algodClient.sendRawTransaction(initTxn.signTxn(this.deployerAccount.sk)).do();
         await this.waitForTransaction(initTxn.txID());

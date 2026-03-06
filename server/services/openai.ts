@@ -9,6 +9,10 @@ export class OpenAIService {
     });
   }
 
+  public get openai(): OpenAI {
+    return this.client;
+  }
+
   // Voice transcription using Whisper
   async transcribeAudio(audioBuffer: Buffer, language?: string): Promise<string> {
     try {
@@ -207,3 +211,6 @@ export class OpenAIService {
     }
   }
 }
+
+export const openaiService = new OpenAIService();
+export const openai = openaiService.openai;
