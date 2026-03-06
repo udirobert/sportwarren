@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Trophy, Zap, Shield, Users, Target, TrendingUp, Sparkles, ArrowRight, Play, AlertCircle, CheckCircle2, Cpu } from 'lucide-react';
+import { Trophy, Zap, Shield, Users, Target, TrendingUp, Sparkles, ArrowRight, Play, AlertCircle, CheckCircle2, Cpu, Eye } from 'lucide-react';
+import { useWallet } from '@/contexts/WalletContext';
 
 interface HeroSectionProps {
   onGetStarted?: () => void;
@@ -19,6 +20,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
     totalMatches: 0,
     totalAgents: 0,
   });
+  const { loginAsGuest } = useWallet();
   const [scrollY, setScrollY] = useState(0);
   const problemRef = useRef<HTMLDivElement>(null);
   const solutionRef = useRef<HTMLDivElement>(null);
@@ -56,11 +58,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
         {/* Animated Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-green-900 to-gray-900">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-          <div 
+          <div
             className="absolute top-0 -left-4 w-96 h-96 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
             style={{ transform: `translateY(${parallaxOffset}px)` }}
           ></div>
-          <div 
+          <div
             className="absolute top-0 -right-4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
             style={{ transform: `translateY(${parallaxOffset * 0.8}px)` }}
           ></div>
@@ -80,7 +82,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
               Championship Manager Style
             </span>
           </h1>
-          
+
           <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto">
             Turn real matches into an epic game. Build your legend with AI agents, blockchain verification, and Championship Manager gameplay.
           </p>
@@ -95,13 +97,21 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
               Start Your Season
               <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
             </button>
-            
+
             <button
               onClick={() => problemRef.current?.scrollIntoView({ behavior: 'smooth' })}
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl hover:bg-white/20 transition-all"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl hover:bg-white/20 transition-all font-sans"
             >
               <Play className="w-5 h-5 mr-2" />
               See How It Works
+            </button>
+
+            <button
+              onClick={loginAsGuest}
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-blue-400 bg-blue-600/10 backdrop-blur-sm border-2 border-blue-600/20 rounded-xl hover:bg-blue-600/20 transition-all group"
+            >
+              <Eye className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+              Preview as Guest
             </button>
           </div>
 
@@ -217,7 +227,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
           <div className="relative">
             <div className="grid md:grid-cols-2 gap-12 items-center">
               {/* Left: Real World */}
-              <div 
+              <div
                 className="space-y-6"
                 style={{
                   transform: `translateX(${Math.max(-50, (scrollY - 1200) * 0.1 - 50)}px)`,
@@ -244,7 +254,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
               </div>
 
               {/* Right: Game Layer */}
-              <div 
+              <div
                 className="space-y-6"
                 style={{
                   transform: `translateX(${Math.min(50, -(scrollY - 1200) * 0.1 + 50)}px)`,

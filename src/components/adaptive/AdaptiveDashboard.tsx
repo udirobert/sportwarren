@@ -6,8 +6,10 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Briefcase } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Button } from '@/components/ui/Button';
+import { useWallet } from '@/contexts/WalletContext';
 
 import { StaffFeed } from '@/components/adaptive/StaffFeed';
 import { NearbyRivals } from '@/components/dashboard/NearbyRivals';
@@ -17,6 +19,7 @@ import { SquadGovernance } from '@/components/dashboard/SquadGovernance';
 import { SquadDynamics } from '@/components/dashboard/SquadDynamics';
 import { ScoutingReport } from '@/components/dashboard/ScoutingReport';
 import { MatchEnginePreview } from '@/components/dashboard/MatchEnginePreview';
+import { StaffRoom } from '@/components/dashboard/StaffRoom';
 
 interface DashboardWidget {
   id: string;
@@ -26,13 +29,11 @@ interface DashboardWidget {
   category: 'stats' | 'social' | 'matches' | 'achievements';
   unlockCondition?: () => boolean;
 }
-
 export const AdaptiveDashboard: React.FC = () => {
   const { preferences, trackFeatureUsage } = useUserPreferences();
-
-  const userAddress = typeof window !== 'undefined'
-    ? localStorage.getItem('userAddress') || undefined
-    : undefined;
+  const { address, isGuest } = useWallet();
+  const [isStaffRoomOpen, setIsStaffRoomOpen] = React.useState(false);
+  const userAddress = address || undefined;
 
   const { data: stats, loading } = useDashboardData(userAddress);
 
@@ -328,6 +329,26 @@ export const AdaptiveDashboard: React.FC = () => {
 
   return (
     <div className={`max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 ${getLayoutClass()}`}>
+      <AnimatePresence>
+        {isGuest && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            className="mb-4 overflow-hidden"
+          >
+            <div className="bg-blue-600 text-white p-2 rounded-lg flex items-center justify-between shadow-lg shadow-blue-500/20">
+              <div className="flex items-center space-x-3 px-2">
+                <Sparkles className="w-4 h-4" />
+                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Guest Mode Active • Hackney Marshes Demo Experience</span>
+              </div>
+              <Button size="sm" variant="outline" className="h-6 text-[8px] border-white/20 hover:bg-white/10 text-white" onClick={() => window.location.reload()}>
+                Connect Wallet
+              </Button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="border-b border-gray-200 pb-4 mb-2 flex items-end justify-between">
         <div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">
@@ -337,18 +358,34 @@ export const AdaptiveDashboard: React.FC = () => {
             Season 2026/27 • Match Day -1
           </p>
         </div>
-        <div className="hidden md:flex items-center space-x-4">
-          <div className="text-right">
-            <div className="text-[8px] font-black text-gray-400 uppercase">Club Status</div>
-            <div className="text-xs font-bold text-green-600">Stable</div>
-          </div>
-          <div className="w-px h-8 bg-gray-200" />
-          <div className="text-right">
-            <div className="text-[8px] font-black text-gray-400 uppercase">Rank</div>
-            <div className="text-xs font-bold text-gray-900">#42 Local</div>
+        <div className="flex items-center space-x-3">
+          <Button
+            onClick={() => setIsStaffRoomOpen(true)}
+            size="sm"
+            className="hidden md:flex bg-gray-900 hover:bg-black text-white border-white/5 font-black uppercase tracking-widest text-[10px] items-center space-x-2 px-4 shadow-xl"
+          >
+            <Briefcase className="w-3 h-3 text-blue-400" />
+            <span>Enter Office</span>
+          </Button>
+          <div className="hidden md:flex items-center space-x-4">
+            <div className="text-right">
+              <div className="text-[8px] font-black text-gray-400 uppercase">Club Status</div>
+              <div className="text-xs font-bold text-green-600">Stable</div>
+            </div>
+            <div className="w-px h-8 bg-gray-200" />
+            <div className="text-right">
+              <div className="text-[8px] font-black text-gray-400 uppercase">Rank</div>
+              <div className="text-xs font-bold text-gray-900">#42 Local</div>
+            </div>
           </div>
         </div>
       </div>
+
+      <AnimatePresence>
+        {isStaffRoomOpen && (
+          <StaffRoom onClose={() => setIsStaffRoomOpen(false)} />
+        )}
+      </AnimatePresence>
 
       <div className="space-y-6">
         {visibleWidgets.map((widget) => (
