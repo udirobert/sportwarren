@@ -1,15 +1,13 @@
 import { ethers } from 'ethers';
-import axios from 'axios';
 
 /**
  * Lens Protocol v3 Service
  * Handles authentication, profiles, and social engagement
  */
 export class LensService {
-  private apiEndpoint: string;
+
 
   constructor() {
-    this.apiEndpoint = process.env.LENS_API_URL || 'https://api-v2.lens.xyz'; // Placeholder for v3 API
   }
 
   /**
@@ -29,7 +27,7 @@ export class LensService {
     try {
       // 1. Recover address from signature
       const recoveredAddress = ethers.verifyMessage(message, signature);
-      
+
       if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
         throw new Error('Signature verification failed');
       }
@@ -63,12 +61,12 @@ export class LensService {
   /**
    * Create a post on Lens (e.g. Match Highlight)
    */
-  async createPost(profileId: string, content: string, imageUrl?: string): Promise<string> {
+  async createPost(profileId: string, content: string, _imageUrl?: string): Promise<string> {
     console.info(`Posting to Lens Profile ${profileId}: ${content}`);
-    
+
     // Simulate successful on-chain publication
     const pubId = `pub_${Math.random().toString(36).substring(7)}`;
-    
+
     // In production, this would use the Lens SDK / Gasless relay
     return pubId;
   }
@@ -76,7 +74,7 @@ export class LensService {
   /**
    * Check if an address has a Lens Profile
    */
-  async hasProfile(address: string): Promise<boolean> {
+  async hasProfile(_address: string): Promise<boolean> {
     // Simulated check
     return true;
   }

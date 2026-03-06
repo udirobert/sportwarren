@@ -1,4 +1,4 @@
-import Redis from 'ioredis';
+import { Redis } from 'ioredis';
 
 export class RedisService {
   private client: Redis;
@@ -7,8 +7,8 @@ export class RedisService {
     this.client = new Redis({
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT || '6379'),
-      password: process.env.REDIS_PASSWORD,
-      retryDelayOnFailover: 100,
+      password: process.env.REDIS_PASSWORD || undefined,
+      retryStrategy: (times) => Math.min(times * 50, 2000),
       maxRetriesPerRequest: 3,
     });
   }
@@ -65,14 +65,14 @@ export class RedisService {
     try {
       const results = await this.client.zrevrange(`leaderboard:${type}`, 0, limit - 1, 'WITHSCORES');
       const leaderboard = [];
-      
+
       for (let i = 0; i < results.length; i += 2) {
         leaderboard.push({
           userId: results[i],
           score: parseFloat(results[i + 1]),
         });
       }
-      
+
       return leaderboard;
     } catch (error) {
       console.warn('Redis leaderboard get error:', error);

@@ -39,7 +39,7 @@ export class CommunicationBridge {
 
       // Set up message listeners
       this.setupMessageListeners();
-      
+
       console.log('✅ Communication bridge initialized');
     } catch (error) {
       console.error('❌ Failed to initialize communication bridge:', error);
@@ -70,7 +70,7 @@ export class CommunicationBridge {
   private async handleIncomingMessage(message: CrossPlatformMessage): Promise<void> {
     // Process and potentially bridge the message to other platforms
     this.messageQueue.push(message);
-    
+
     // Determine if message should be bridged
     if (this.shouldBridgeMessage(message)) {
       await this.bridgeMessage(message);
@@ -145,7 +145,7 @@ export class CommunicationBridge {
     console.log('Processing cross-platform message:', message);
   }
 
-  private async getSquadCommunicationPreferences(squadId: string): Promise<any> {
+  private async getSquadCommunicationPreferences(_squadId: string): Promise<any> {
     // Mock data - in real app, fetch from database
     return {
       xmtp: {

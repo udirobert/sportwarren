@@ -35,7 +35,7 @@ async function startServer() {
   const dbService = new DatabaseService();
   const redisService = new RedisService();
   const authService = new AuthService();
-  
+
   await dbService.connect();
   await redisService.connect();
 
@@ -51,7 +51,7 @@ async function startServer() {
   try {
     await communicationBridge.initialize();
     await eventStreamService.initialize();
-    
+
     // Deploy blockchain contracts
     const squadDAOAppId = await algorandService.deploySquadDAO();
     if (squadDAOAppId) {
@@ -66,7 +66,7 @@ async function startServer() {
     } else {
       console.warn('Failed to deploy Match Verification.');
     }
-    
+
     console.log('Advanced services initialized');
   } catch (error) {
     console.warn('Some advanced services failed to initialize:', error);
@@ -90,18 +90,19 @@ async function startServer() {
     {
       schema,
       context: async (ctx) => {
-        return createContext({ 
-          req: ctx.extra.request, 
-          services: { 
-            dbService, 
-            redisService, 
+        return createContext({
+          req: ctx.extra.request,
+          services: {
+            dbService,
+            redisService,
             authService,
             communicationBridge,
             voiceService,
             visionService,
             algorandService,
             eventStreamService,
-          } 
+            lensService,
+          }
         });
       },
     },
@@ -148,19 +149,20 @@ async function startServer() {
 
   // GraphQL endpoint
   app.use('/graphql', expressMiddleware(server, {
-    context: async ({ req }) => createContext({ 
-      req, 
-      services: { 
-        dbService, 
-        redisService, 
-        authService, 
+    context: async ({ req }) => createContext({
+      req,
+      services: {
+        dbService,
+        redisService,
+        authService,
         socketService,
         communicationBridge,
         voiceService,
         visionService,
         algorandService,
         eventStreamService,
-      } 
+        lensService,
+      }
     }),
   }));
 
@@ -169,7 +171,7 @@ async function startServer() {
     try {
       const { audioData, matchId } = req.body;
       const result = await voiceService.processVoiceCommand(audioData, matchId);
-      
+
       res.json(result);
     } catch (error) {
       console.error('Voice processing error:', error);
@@ -181,7 +183,7 @@ async function startServer() {
     try {
       const { audioData } = req.body;
       const transcription = await voiceService.transcribeAudio(audioData);
-      
+
       res.json({ transcription });
     } catch (error) {
       console.error('Transcription error:', error);
@@ -194,7 +196,7 @@ async function startServer() {
     try {
       const { imageData, matchId } = req.body;
       const analysis = await visionService.analyzeMatchPhoto(imageData, matchId);
-      
+
       res.json(analysis);
     } catch (error) {
       console.error('Vision analysis error:', error);
@@ -206,7 +208,7 @@ async function startServer() {
     try {
       const { imageData } = req.body;
       const events = await visionService.detectMatchEvents(imageData);
-      
+
       res.json({ events });
     } catch (error) {
       console.error('Event detection error:', error);
@@ -220,7 +222,7 @@ async function startServer() {
       const { address } = req.params;
       const balance = await algorandService.getAccountBalance(address);
       const networkStatus = await algorandService.getNetworkStatus();
-      
+
       res.json({
         address,
         balance,
@@ -238,7 +240,7 @@ async function startServer() {
       const success = await algorandService.submitMatchResult(
         matchId, homeTeam, awayTeam, homeScore, awayScore, submitter
       );
-      
+
       res.json({ success });
     } catch (error) {
       console.error('Match submission error:', error);
@@ -250,7 +252,7 @@ async function startServer() {
     try {
       const { matchId, verifier } = req.body;
       const success = await algorandService.verifyMatchResult(matchId, verifier);
-      
+
       res.json({ success });
     } catch (error) {
       console.error('Match verification error:', error);
@@ -262,7 +264,7 @@ async function startServer() {
     try {
       const { address } = req.params;
       const reputation = await algorandService.getPlayerReputation(address);
-      
+
       res.json({ reputation });
     } catch (error) {
       console.error('Player reputation error:', error);
@@ -276,7 +278,7 @@ async function startServer() {
       const challengeId = await algorandService.createGlobalChallenge(
         challengeName, description, prizePool, new Date(endDate)
       );
-      
+
       res.json({
         challengeId,
         success: !!challengeId,
@@ -288,7 +290,7 @@ async function startServer() {
   });
 
   // DAO API endpoints
-  app.get('/api/algorand/squad-dao-info', async (req, res) => {
+  app.get('/api/algorand/squad-dao-info', async (_req, res) => {
     try {
       const daoInfo = await algorandService.getSquadDAOInfo();
       res.json({ daoInfo });
@@ -298,7 +300,7 @@ async function startServer() {
     }
   });
 
-  app.get('/api/algorand/proposals', async (req, res) => {
+  app.get('/api/algorand/proposals', async (_req, res) => {
     try {
       const proposals = await algorandService.getProposals();
       res.json({ proposals });
@@ -398,20 +400,31 @@ async function startServer() {
     }
   });
 
-  app.get('/api/base/balance', async (req, res) => {
+  app.post('/api/lens/connect-wallet', async (_req, res) => {
     try {
-      const { address } = req.query;
-      // Simulated Base balance
+      // In a real app, this would involve wallet interaction
+      // Simulated connection for demo
+      res.json({ address: '0x1234567890abcdef1234567890abcdef12345678' });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to connect Lens wallet' });
+    }
+  });
+
+  app.get('/api/lens/balance', async (req, res) => {
+    try {
+      const { address: _address } = req.query;
+      // Real balance check on Lens Chain would go here
+      // For now, simulated Lens balance (GHO)
       res.json({ balance: 0.42 });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to get Base balance' });
+      res.status(500).json({ error: 'Failed to get Lens balance' });
     }
   });
 
   // Health check endpoint
-  app.get('/health', (req, res) => {
-    res.json({ 
-      status: 'ok', 
+  app.get('/health', (_req, res) => {
+    res.json({
+      status: 'ok',
       timestamp: new Date().toISOString(),
       services: {
         database: 'connected',
@@ -427,11 +440,11 @@ async function startServer() {
   // Graceful shutdown
   process.on('SIGTERM', async () => {
     console.log('Shutting down gracefully...');
-    
+
     await eventStreamService.disconnect();
     await redisService.disconnect();
     await dbService.disconnect();
-    
+
     httpServer.close(() => {
       console.log('Server shut down complete');
       process.exit(0);

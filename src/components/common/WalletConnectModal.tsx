@@ -15,13 +15,13 @@ interface WalletConnectModalProps {
 export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, onClose }) => {
   const { connect, connected, chain } = useWallet();
   const { login, isConnected: lensConnected, profile: lensProfile } = useLens();
-  const [selectedChain, setSelectedChain] = useState<'algorand' | 'avalanche' | 'base' | null>(null);
+  const [selectedChain, setSelectedChain] = useState<'algorand' | 'avalanche' | 'lens' | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleConnect = async (targetChain: 'algorand' | 'avalanche' | 'base') => {
+  const handleConnect = async (targetChain: 'algorand' | 'avalanche' | 'lens') => {
     setSelectedChain(targetChain);
     setIsConnecting(true);
     setError(null);
@@ -29,7 +29,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
     try {
       await connect(targetChain);
       // If connecting to Base, we don't close yet - we show Lens option
-      if (targetChain !== 'base') {
+      if (targetChain !== 'lens') {
         onClose();
       }
     } catch (err: any) {
@@ -68,11 +68,11 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
               <Wallet className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              {connected && chain === 'base' ? 'Social Identity' : 'Connect Your Wallet'}
+              {connected && chain === 'lens' ? 'Social Identity' : 'Connect Your Wallet'}
             </h2>
             <p className="text-gray-600">
-              {connected && chain === 'base' 
-                ? 'Link your Lens Profile to share highlights' 
+              {connected && chain === 'lens'
+                ? 'Link your Lens Profile to share highlights'
                 : 'Choose your preferred blockchain to get started'}
             </p>
           </div>
@@ -84,7 +84,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
           )}
 
           <div className="space-y-4">
-            {!(connected && chain === 'base') ? (
+            {!(connected && chain === 'lens') ? (
               <>
                 <button
                   onClick={() => handleConnect('algorand')}
@@ -113,16 +113,16 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                 </button>
 
                 <button
-                  onClick={() => handleConnect('base')}
+                  onClick={() => handleConnect('lens')}
                   disabled={isConnecting}
-                  className="w-full p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all flex items-center gap-4 disabled:opacity-50"
+                  className="w-full p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-green-400 hover:bg-green-50 transition-all flex items-center gap-4 disabled:opacity-50"
                 >
-                  <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white">B</div>
+                  <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center font-bold text-white italic">L</div>
                   <div className="text-left flex-1">
-                    <h3 className="font-bold text-gray-900 leading-tight">Base</h3>
+                    <h3 className="font-bold text-gray-900 leading-tight">Lens Chain</h3>
                     <p className="text-xs text-gray-500">Lens v3 Social Graph</p>
                   </div>
-                  {selectedChain === 'base' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-blue-600" />}
+                  {selectedChain === 'lens' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-green-600" />}
                 </button>
               </>
             ) : (

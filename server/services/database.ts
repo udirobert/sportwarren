@@ -1,4 +1,4 @@
-import { Pool, PoolClient } from 'pg';
+import { Pool } from 'pg';
 
 export class DatabaseService {
   private pool: Pool;
@@ -602,23 +602,23 @@ export class DatabaseService {
   async createSquad(squadData: any): Promise<any> {
     const { name, description, sport, createdBy } = squadData;
     const client = await this.pool.connect();
-    
+
     try {
       await client.query('BEGIN');
-      
+
       // Create squad
       const squadResult = await client.query(
         'INSERT INTO squads (name, description, sport, created_by) VALUES ($1, $2, $3, $4) RETURNING *',
         [name, description, sport, createdBy]
       );
       const squad = squadResult.rows[0];
-      
+
       // Add creator as captain
       await client.query(
         'INSERT INTO squad_members (user_id, squad_id, role) VALUES ($1, $2, $3)',
         [createdBy, squad.id, 'CAPTAIN']
       );
-      
+
       await client.query('COMMIT');
       return squad;
     } catch (error) {
@@ -681,14 +681,14 @@ export class DatabaseService {
   async getMatches(squadId?: string): Promise<any[]> {
     let query = 'SELECT * FROM matches';
     let params: any[] = [];
-    
+
     if (squadId) {
       query += ' WHERE squad_id = $1';
       params.push(squadId);
     }
-    
+
     query += ' ORDER BY match_date DESC';
-    
+
     const result = await this.pool.query(query, params);
     return result.rows;
   }
@@ -752,12 +752,12 @@ export class DatabaseService {
   async getPlayerStats(userId: string, squadId?: string): Promise<any> {
     let query = 'SELECT * FROM player_stats WHERE user_id = $1';
     let params = [userId];
-    
+
     if (squadId) {
       query += ' AND squad_id = $2';
       params.push(squadId);
     }
-    
+
     const result = await this.pool.query(query, params);
     return result.rows[0];
   }
@@ -775,10 +775,10 @@ export class DatabaseService {
       FROM matches 
       WHERE squad_id = $1 AND status = 'COMPLETED'
     `, [squadId]);
-    
+
     const stats = result.rows[0];
     const winRate = stats.total_matches > 0 ? (stats.wins / stats.total_matches) * 100 : 0;
-    
+
     return {
       id: squadId,
       squad_id: squadId,
@@ -809,12 +809,12 @@ export class DatabaseService {
       JOIN users u ON ps.user_id = u.id
     `;
     let params: any[] = [];
-    
+
     if (squadId) {
       query += ' WHERE ps.squad_id = $1';
       params.push(squadId);
     }
-    
+
     // Order by the requested type
     switch (type) {
       case 'goals':
@@ -829,9 +829,9 @@ export class DatabaseService {
       default:
         query += ' ORDER BY ps.total_goals DESC';
     }
-    
+
     query += ' LIMIT 10';
-    
+
     const result = await this.pool.query(query, params);
     return result.rows;
   }
@@ -1070,7 +1070,7 @@ export class DatabaseService {
 
   async updateMatchVerificationStatus(id: string, status: string, currentVerifications?: number, disputeCount?: number): Promise<any> {
     let query = 'UPDATE match_verifications SET status = $2, updated_at = NOW()';
-    const params = [id, status];
+    const params: any[] = [id, status];
 
     if (currentVerifications !== undefined) {
       query += ', current_verifications = $3';
@@ -1127,7 +1127,7 @@ export class DatabaseService {
 
   async updateDisputeStatus(id: string, status: string, resolution?: string): Promise<any> {
     let query = 'UPDATE disputes SET status = $2, updated_at = NOW()';
-    const params = [id, status];
+    const params: any[] = [id, status];
 
     if (resolution) {
       query += ', resolution = $3';
@@ -1164,7 +1164,7 @@ export class DatabaseService {
     return result.rows[0];
   }
 
-  async updateUserReputation(algorandAddress: string, reputationChange: number, reason: string): Promise<any> {
+  async updateUserReputation(algorandAddress: string, reputationChange: number, _reason: string): Promise<any> {
     const client = await this.pool.connect();
     try {
       await client.query('BEGIN');
@@ -1203,7 +1203,7 @@ export class DatabaseService {
 
   async updateUserReputationStats(algorandAddress: string, verificationCount?: number, successfulVerifications?: number, disputesRaised?: number, disputesWon?: number): Promise<any> {
     let query = 'UPDATE user_reputations SET updated_at = NOW()';
-    const params = [algorandAddress];
+    const params: any[] = [algorandAddress];
     let paramIndex = 2;
 
     if (verificationCount !== undefined) {
@@ -1275,7 +1275,7 @@ export class DatabaseService {
        RETURNING *`,
       [userId, algorandAddress]
     );
-    
+
     // Create portable identity
     const identityHash = `identity_${algorandAddress}_${Date.now()}`;
     await this.pool.query(
@@ -1284,7 +1284,7 @@ export class DatabaseService {
        ON CONFLICT (profile_id) DO NOTHING`,
       [result.rows[0].id, identityHash, 1000]
     );
-    
+
     return result.rows[0];
   }
 
@@ -1342,7 +1342,7 @@ export class DatabaseService {
     for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) {
         fields.push(`${key} = $${paramIndex}`);
-        values.push(value);
+        values.push(value as any);
         paramIndex++;
       }
     }
@@ -1521,7 +1521,7 @@ export class DatabaseService {
     for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) {
         fields.push(`${key} = $${paramIndex}`);
-        values.push(value);
+        values.push(value as any);
         paramIndex++;
       }
     }
@@ -1640,7 +1640,7 @@ export class DatabaseService {
     for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) {
         fields.push(`${key} = $${paramIndex}`);
-        values.push(value);
+        values.push(value as any);
         paramIndex++;
       }
     }
@@ -1743,7 +1743,7 @@ export class DatabaseService {
   }
 
   // Marketplace methods
-  async createMarketplaceItem(itemType: string, seller: string, sellerName: string, title: string, description: string, price: number, currency: string, quantity: number, metadata: any, imageUrl?: string, collectionId?: string, expiresAt?: Date, blockchainAssetId?: number): Promise<any> {
+  async createMarketplaceItem(itemType: string, seller: string, sellerName: string, title: string, description: string, price: number, currency: string, quantity: number, metadata: any, imageUrl?: string, _collectionId?: string, expiresAt?: Date, blockchainAssetId?: number): Promise<any> {
     const result = await this.pool.query(
       `INSERT INTO marketplace_items (item_type, seller, seller_name, title, description, price, currency, quantity, available_quantity, metadata, image_url, expires_at, blockchain_asset_id)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8, $9, $10, $11, $12)
@@ -1802,7 +1802,7 @@ export class DatabaseService {
 
   async updateMarketplaceItem(id: string, updates: any): Promise<any> {
     const fields = [];
-    const values = [id];
+    const values: any[] = [id];
     let paramIndex = 2;
 
     for (const [key, value] of Object.entries(updates)) {
@@ -1931,7 +1931,7 @@ export class DatabaseService {
       `DELETE FROM marketplace_favorites WHERE user_address = $1 AND item_id = $2`,
       [userAddress, itemId]
     );
-    return result.rowCount > 0;
+    return (result.rowCount ?? 0) > 0;
   }
 
   async getUserFavorites(userAddress: string): Promise<any[]> {

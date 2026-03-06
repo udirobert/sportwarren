@@ -7,7 +7,7 @@ dotenv.config();
 
 export class AlgorandService {
   private algodClient: algosdk.Algodv2;
-  private indexerClient: algosdk.Indexer;
+
   private squadDAOAppId: number | null = null;
   private matchVerificationAppId: number | null = null;
 
@@ -22,10 +22,8 @@ export class AlgorandService {
     }
 
     const algodToken = process.env.ALGORAND_NODE_TOKEN || "";
-    const indexerToken = process.env.ALGORAND_INDEXER_TOKEN || "";
 
     this.algodClient = new algosdk.Algodv2(algodToken, algodServer);
-    this.indexerClient = new algosdk.Indexer(indexerToken, indexerServer);
   }
 
   public async deploySquadDAO(): Promise<number | null> {
@@ -76,10 +74,10 @@ export class AlgorandService {
         onComplete: algosdk.OnApplicationComplete.NoOpOC,
         approvalProgram: approvalProgramBytes,
         clearProgram: clearProgramBytes,
-        numLocalInts: numLocalInts,
-        numLocalByteSlices: numLocalBytes,
-        numGlobalInts: numGlobalInts,
-        numGlobalByteSlices: numGlobalBytes,
+        numLocalInts: BigInt(numLocalInts),
+        numLocalByteSlices: BigInt(numLocalBytes),
+        numGlobalInts: BigInt(numGlobalInts),
+        numGlobalByteSlices: BigInt(numGlobalBytes),
       });
 
       const signedTxn = appCreateTxn.signTxn(creatorAccount.sk);
@@ -153,10 +151,10 @@ export class AlgorandService {
         onComplete: algosdk.OnApplicationComplete.NoOpOC,
         approvalProgram: approvalProgramBytes,
         clearProgram: clearProgramBytes,
-        numLocalInts: numLocalInts,
-        numLocalByteSlices: numLocalBytes,
-        numGlobalInts: numGlobalInts,
-        numGlobalByteSlices: numGlobalBytes,
+        numLocalInts: BigInt(numLocalInts),
+        numLocalByteSlices: BigInt(numLocalBytes),
+        numGlobalInts: BigInt(numGlobalInts),
+        numGlobalByteSlices: BigInt(numGlobalBytes),
       });
 
       const signedTxn = appCreateTxn.signTxn(creatorAccount.sk);
@@ -240,12 +238,12 @@ export class AlgorandService {
       if (!appId) return false;
 
       const params = await this.algodClient.getTransactionParams().do();
-      const txn = algosdk.makeApplicationOptInTxnFromObject({
+      algosdk.makeApplicationOptInTxnFromObject({
         sender: userAddress,
         suggestedParams: params,
         appIndex: appId,
       });
-      
+
       // Note: In a real app, the user would sign this with their wallet.
       // For this demo/service, we assume the user has already signed or we're 
       // just providing the transaction for the frontend to sign.
@@ -581,8 +579,8 @@ export class AlgorandService {
       if (appLocalState && appLocalState.keyValue) {
         const userTokenBalanceEntry = appLocalState.keyValue.find(
           (state: any) => {
-            const keyBuffer = typeof state.key === 'string' 
-              ? Buffer.from(state.key, "base64") 
+            const keyBuffer = typeof state.key === 'string'
+              ? Buffer.from(state.key, "base64")
               : Buffer.from(state.key);
             return keyBuffer.toString("utf8") === "user_token_balance";
           }
@@ -647,8 +645,8 @@ export class AlgorandService {
   }
 
   public async createSquadDAO(
-    squadName: string,
-    initialMembers: string[],
+    _squadName: string,
+    _initialMembers: string[],
   ): Promise<any> {
     // This function is a placeholder for future implementation if needed.
     // The actual DAO deployment is handled by deploySquadDAO on server startup.
@@ -960,8 +958,8 @@ export class AlgorandService {
       if (appLocalState && appLocalState.keyValue) {
         const reputationEntry = appLocalState.keyValue.find(
           (state: any) => {
-            const keyBuffer = typeof state.key === 'string' 
-              ? Buffer.from(state.key, "base64") 
+            const keyBuffer = typeof state.key === 'string'
+              ? Buffer.from(state.key, "base64")
               : Buffer.from(state.key);
             return keyBuffer.toString("utf8") === "user_reputation";
           }
@@ -1048,10 +1046,10 @@ export class AlgorandService {
   }
 
   public async createGlobalChallenge(
-    challengeName: string,
-    description: string,
-    prizePool: number,
-    endDate: Date,
+    _challengeName: string,
+    _description: string,
+    _prizePool: number,
+    _endDate: Date,
   ): Promise<number | null> {
     // Implement creating global challenge
     return null;

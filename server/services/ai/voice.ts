@@ -15,7 +15,8 @@ export class VoiceProcessingService {
     try {
       // Save buffer to temporary file
       const tempPath = `/tmp/audio_${Date.now()}.wav`;
-      await writeFile(tempPath, audioBuffer);
+      const buffer = Buffer.isBuffer(audioBuffer) ? audioBuffer : Buffer.from(audioBuffer as any);
+      await writeFile(tempPath, buffer);
 
       // Transcribe using Whisper
       const response = await this.openai.audio.transcriptions.create({
@@ -30,6 +31,21 @@ export class VoiceProcessingService {
     } catch (error) {
       console.error('Voice transcription error:', error);
       throw new Error('Failed to transcribe audio');
+    }
+  }
+
+  async processVoiceCommand(audioData: any, matchId?: string): Promise<any> {
+    try {
+      const transcription = await this.transcribeAudio(audioData);
+      const processed = await this.processVoiceMatchLog(transcription);
+      return {
+        ...processed,
+        matchId,
+        transcription
+      };
+    } catch (error) {
+      console.error('Voice command processing error:', error);
+      throw error;
     }
   }
 
@@ -100,7 +116,7 @@ export class VoiceProcessingService {
   private validateMatchData(data: any): any {
     // Validate and sanitize the extracted data
     const validated = {
-      events: Array.isArray(data.events) ? data.events.filter(event => 
+      events: Array.isArray(data.events) ? data.events.filter((event: any) =>
         event.type && ['goal', 'assist', 'substitution', 'yellow_card', 'red_card', 'penalty'].includes(event.type)
       ) : [],
       score: {
@@ -170,10 +186,10 @@ export class VoiceProcessingService {
     try {
       // For real-time processing, we might use streaming transcription
       const transcription = await this.transcribeAudio(audioChunk);
-      
+
       // Quick extraction of immediate events
       const quickEvents = await this.extractQuickEvents(transcription);
-      
+
       return {
         transcription,
         events: quickEvents,

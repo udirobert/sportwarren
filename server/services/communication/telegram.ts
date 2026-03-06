@@ -94,10 +94,10 @@ export class TelegramService {
     });
   }
 
-  private async handleMatchLog(chatId: number, matchText: string, user: any): Promise<void> {
+  private async handleMatchLog(chatId: number, matchText: string, _user: any): Promise<void> {
     try {
       const matchData = this.parseMatchResult(matchText);
-      
+
       if (matchData) {
         // Create inline keyboard for confirmation
         const keyboard = {
@@ -121,7 +121,7 @@ export class TelegramService {
 
         await this.bot.sendMessage(chatId, message, { reply_markup: keyboard });
       } else {
-        await this.bot.sendMessage(chatId, 
+        await this.bot.sendMessage(chatId,
           '❌ Could not parse match details.\n\n' +
           'Try formats like:\n' +
           '• "4-2 win vs Red Lions"\n' +
@@ -154,11 +154,11 @@ export class TelegramService {
     await this.bot.sendMessage(chatId, '❌ Invalid score format. Try "+1 home" or "2-1"');
   }
 
-  private async handleMotmVoting(chatId: number, user: any): Promise<void> {
+  private async handleMotmVoting(chatId: number, _user: any): Promise<void> {
     // Create poll for MOTM voting
     const pollOptions = [
       'Marcus Johnson',
-      'Sarah Martinez', 
+      'Sarah Martinez',
       'Jamie Thompson',
       'Emma Wilson',
       'Ryan Murphy',
@@ -180,16 +180,16 @@ export class TelegramService {
     }
   }
 
-  private async handleStatsRequest(chatId: number, playerName?: string, user?: any): Promise<void> {
+  private async handleStatsRequest(chatId: number, playerName?: string, _user?: any): Promise<void> {
     // Mock stats data - in real app, fetch from database
-    const statsMessage = playerName 
+    const statsMessage = playerName
       ? `📊 **${playerName} Stats**\n\n⚽ Goals: 18\n🎯 Assists: 11\n⭐ Rating: 8.2\n🏆 Matches: 24`
       : `📊 **Team Stats**\n\n⚽ Total Goals: 45\n🎯 Total Assists: 38\n📈 Win Rate: 67%\n🏆 Matches: 24`;
 
     await this.bot.sendMessage(chatId, statsMessage);
   }
 
-  private async handleFixturesRequest(chatId: number, user?: any): Promise<void> {
+  private async handleFixturesRequest(chatId: number, _user?: any): Promise<void> {
     const fixturesMessage = `📅 **Upcoming Fixtures**\n\n` +
       `🗓️ Jan 20, 2:00 PM\n⚔️ vs Grass Roots United\n🏟️ Regent's Park\n\n` +
       `🗓️ Jan 27, 3:30 PM\n⚔️ vs Borough Rovers\n🏟️ Hampstead Heath`;
@@ -225,7 +225,7 @@ export class TelegramService {
       });
     }
 
-    await this.bot.answerInlineQuery(query.id, results);
+    await this.bot.answerInlineQuery(query.id, results as any[]);
   }
 
   private async handleCallbackQuery(query: any): Promise<void> {
@@ -276,9 +276,9 @@ export class TelegramService {
     return null;
   }
 
-  private async processMatchLog(matchData: any, chatId: number, user: any): Promise<void> {
+  private async processMatchLog(matchData: any, chatId: number, _user: any): Promise<void> {
     // Send to main application system
-    console.log('Processing match log from Telegram:', { matchData, chatId, user });
+    console.log('Processing match log from Telegram:', { matchData, chatId, user: _user });
   }
 
   async sendMatchNotification(chatId: string, message: string): Promise<void> {

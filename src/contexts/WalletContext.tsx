@@ -7,7 +7,7 @@ import { WalletState, UserPreferences } from '@/types';
 const STORAGE_KEYS = {
   ALGORAND_ADDRESS: 'sw_algorand_address',
   AVALANCHE_ADDRESS: 'sw_avalanche_address',
-  BASE_ADDRESS: 'sw_base_address',
+  LENS_ADDRESS: 'sw_lens_address',
   PREFERRED_CHAIN: 'sw_preferred_chain',
   USER_PREFERENCES: 'sw_user_preferences',
 } as const;
@@ -15,12 +15,12 @@ const STORAGE_KEYS = {
 interface WalletContextType {
   address: string | null;
   connected: boolean;
-  chain: 'algorand' | 'avalanche' | 'base' | null;
+  chain: 'algorand' | 'avalanche' | 'lens' | null;
   balance: number;
-  connect: (chain: 'algorand' | 'avalanche' | 'base') => Promise<void>;
+  connect: (chain: 'algorand' | 'avalanche' | 'lens') => Promise<void>;
   disconnect: () => void;
   preferences: UserPreferences | null;
-  setPreferredChain: (chain: 'algorand' | 'avalanche' | 'base') => void;
+  setPreferredChain: (chain: 'algorand' | 'avalanche' | 'lens') => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -39,7 +39,7 @@ interface WalletProviderProps {
 
 export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [address, setAddress] = useState<string | null>(null);
-  const [chain, setChain] = useState<'algorand' | 'avalanche' | 'base' | null>(null);
+  const [chain, setChain] = useState<'algorand' | 'avalanche' | 'lens' | null>(null);
   const [balance, setBalance] = useState<number>(0);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
 
@@ -47,7 +47,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     if (typeof window !== 'undefined') {
       // Migrate old keys to new keys
       migrateStorageKeys();
-      
+
       const saved = localStorage.getItem(STORAGE_KEYS.USER_PREFERENCES);
       if (saved) {
         try {
@@ -67,7 +67,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     const migrations = [
       { old: 'algorand_address', new: STORAGE_KEYS.ALGORAND_ADDRESS },
       { old: 'avalanche_address', new: STORAGE_KEYS.AVALANCHE_ADDRESS },
-      { old: 'base_address', new: STORAGE_KEYS.BASE_ADDRESS },
+      { old: 'lens_address', new: STORAGE_KEYS.LENS_ADDRESS },
       { old: 'preferred_chain', new: STORAGE_KEYS.PREFERRED_CHAIN },
       { old: 'userPreferences', new: STORAGE_KEYS.USER_PREFERENCES },
     ];
@@ -83,11 +83,11 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   useEffect(() => {
     const savedPrefs = loadPreferences();
-    
+
     const savedAlgorand = localStorage.getItem(STORAGE_KEYS.ALGORAND_ADDRESS);
     const savedAvalanche = localStorage.getItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
-    const savedBase = localStorage.getItem(STORAGE_KEYS.BASE_ADDRESS);
-    const savedChain = localStorage.getItem(STORAGE_KEYS.PREFERRED_CHAIN) as 'algorand' | 'avalanche' | 'base' | null;
+    const savedLens = localStorage.getItem(STORAGE_KEYS.LENS_ADDRESS);
+    const savedChain = localStorage.getItem(STORAGE_KEYS.PREFERRED_CHAIN) as 'algorand' | 'avalanche' | 'lens' | null;
 
     if (savedAlgorand) {
       setAddress(savedAlgorand);
@@ -97,10 +97,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       setAddress(savedAvalanche);
       setChain('avalanche');
       fetchAvalancheBalance(savedAvalanche);
-    } else if (savedBase) {
-      setAddress(savedBase);
-      setChain('base');
-      fetchBaseBalance(savedBase);
+    } else if (savedLens) {
+      setAddress(savedLens);
+      setChain('lens');
+      fetchLensBalance(savedLens);
     } else if (savedPrefs?.preferredChain) {
       setChain(savedPrefs.preferredChain);
     }
@@ -130,19 +130,19 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     }
   };
 
-  const fetchBaseBalance = async (addr: string) => {
+  const fetchLensBalance = async (addr: string) => {
     try {
-      const response = await fetch(`/api/base/balance?address=${addr}`);
+      const response = await fetch(`/api/lens/balance?address=${addr}`);
       if (response.ok) {
         const data = await response.json();
         setBalance(data.balance || 0);
       }
     } catch (error) {
-      console.error('Failed to fetch Base balance:', error);
+      console.error('Failed to fetch Lens balance:', error);
     }
   };
 
-  const connect = async (selectedChain: 'algorand' | 'avalanche' | 'base') => {
+  const connect = async (selectedChain: 'algorand' | 'avalanche' | 'lens') => {
     try {
       if (selectedChain === 'algorand') {
         const response = await fetch('/api/algorand/connect-wallet', { method: 'POST' });
@@ -168,17 +168,18 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
             fetchAvalancheBalance(data.address);
           }
         }
-      } else if (selectedChain === 'base') {
-        // Handle Base connection (e.g. via RainbowKit/Wagmi)
-        const response = await fetch('/api/base/connect-wallet', { method: 'POST' });
+      } else if (selectedChain === 'lens') {
+        // Handle Lens connection (via Lens Chain RPC)
+        // In a real app we'd trigger wallet to switch to Lens Chain
+        const response = await fetch('/api/lens/connect-wallet', { method: 'POST' });
         if (response.ok) {
           const data = await response.json();
           if (data.address) {
             setAddress(data.address);
-            setChain('base');
-            localStorage.setItem(STORAGE_KEYS.BASE_ADDRESS, data.address);
-            localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'base');
-            fetchBaseBalance(data.address);
+            setChain('lens');
+            localStorage.setItem(STORAGE_KEYS.LENS_ADDRESS, data.address);
+            localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'lens');
+            fetchLensBalance(data.address);
           }
         }
       }
@@ -194,10 +195,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     setBalance(0);
     localStorage.removeItem(STORAGE_KEYS.ALGORAND_ADDRESS);
     localStorage.removeItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
-    localStorage.removeItem(STORAGE_KEYS.BASE_ADDRESS);
+    localStorage.removeItem(STORAGE_KEYS.LENS_ADDRESS);
   };
 
-  const setPreferredChain = (newChain: 'algorand' | 'avalanche' | 'base') => {
+  const setPreferredChain = (newChain: 'algorand' | 'avalanche' | 'lens') => {
     setPreferences(prev => {
       const updated: UserPreferences = {
         preferredChain: newChain,
