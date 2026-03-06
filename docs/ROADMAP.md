@@ -48,20 +48,20 @@
 
 **Goal:** AI agents + treasury make the game strategic
 
-### Avalanche Integration
-- [ ] Foundry setup, Solidity contracts
-- [ ] SquadDAO with governance (On-chain pending)
-- [x] Treasury management (database layer)
-- [ ] RainbowKit wallet connection
+### Multi-Chain Integration (Avalanche + Kite AI)
+- [x] Hardhat setup (Fuji & Kite Testnet)
+- [x] UUPS Upgradeable Smart Contracts (Governance & Escrow)
+- [x] SquadDAO on Avalanche Fuji
+- [x] Agent Escrow on Kite AI Testnet
+- [ ] Unified Privy Multi-Chain connection
 
-### AI Agents (Avalanche Exclusive / Kite AI)
+### AI Agents (Agent-Native Infrastructure via Kite AI)
 - [x] Kite AI agent passport registration (Schema active)
-- [x] Squad Manager / Coach Kite agent (Tactical insights active)
+- [x] Squad Manager / Coach (Tactical insights active)
 - [x] Fitness Agent (Activity sync active)
-- [ ] Scout agent (Opponent analysis)
-- [ ] Social agent (Morale management)
-- [ ] Kite stablecoin payment rails
-- [ ] Agent marketplace integration
+- [x] Agentic Economic Settlement (Kite Chain) 🚀
+- [ ] Live Agent Marketplace for Scouting/Social agents
+- [ ] Continuous Attestations for "Match Proof" on Kite
 
 ### Economy
 - [x] Match fees → treasury (database)
@@ -69,9 +69,9 @@
 - [x] Transfer market (backend + frontend)
 - [ ] Kit customization
 
-**Deliverables:** ✅ Coach Kite and Fitness Agent active. Training center and activity syncing live.
+**Deliverables:** ✅ Core 3-Chain structure is live. AI agents are registered with passports and the economic settlement contracts are deployed to Kite AI.
 
-**Status:** 🟡 **75% Complete** - Agent logic active, remaining agent types + Avalanche blockchain pending
+**Status:** 🟡 **85% Complete** - Multi-chain infrastructure + Agentic economic settlement active. Finalizing frontend Unified Wallet connection.
 
 ---
 

@@ -46,8 +46,8 @@ npm run dev
 │                    SportWarren Platform                          │
 ├─────────────────────────────────────────────────────────────────┤
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐      │
-│  │   Match      │  │   Squad      │  │   Championship   │      │
-│  │   Verification│  │   Management │  │   Manager Layer  │      │
+│  │   Algorand   │  │  Avalanche   │  │     Kite AI      │      │
+│  │ (Sensor/XP)  │  │ (Governance) │  │ (Agent Economy)  │      │
 │  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘      │
 │         │                  │                   │                │
 │         └──────────────────┼───────────────────┘                │
@@ -60,8 +60,8 @@ npm run dev
 │              ┌───────────┴───────────┐                          │
 │              ▼                       ▼                          │
 │  ┌─────────────────────┐  ┌─────────────────────┐              │
-│  │   Prisma ORM        │  │   Wallet Auth       │              │
-│  │   (PostgreSQL)      │  │   (algosdk)         │              │
+│  │   Prisma ORM        │  │   Unified Auth      │              │
+│  │   (PostgreSQL)      │  │ (Privy/Multi-Chain) │              │
 │  └─────────────────────┘  └─────────────────────┘              │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -107,13 +107,13 @@ npm run dev
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 14, Tailwind CSS, shadcn/ui |
+| Frontend | Next.js 16, Tailwind CSS, shadcn/ui |
 | API | tRPC (type-safe RPC) |
-| Database | PostgreSQL 14+ |
+| Database | PostgreSQL 15+ |
 | ORM | Prisma 7 |
-| State | TanStack Query (React Query), Zustand |
-| Auth | Wallet signatures (algosdk) |
-| Wallets | Pera, Defly (Algorand) |
+| State | TanStack Query, Zustand |
+| Auth | Privy (Social + Multi-Chain Wallets) |
+| Blockchains | Algorand (XP), Avalanche (DAO), Kite AI (Agents) |
 
 ---
 
@@ -164,11 +164,11 @@ See `prisma/schema.prisma` and `prisma/migrations/001_init.sql` for full schema.
 ## 🔐 Authentication
 
 ### Wallet-Based Auth Flow
-1. User connects Algorand wallet
-2. Client generates auth message with timestamp
-3. User signs message
-4. Server verifies signature using algosdk
-5. Server creates/returns user record
+### Multi-Chain Auth Flow (Privy)
+1. User logs in via Social (Google/Apple) or Wallet
+2. Privy provisions/connects Algorand and EVM (Avalanche/Kite) addresses
+3. Identity is unified under a single SportWarren Profile in PostgreSQL
+4. App handles cross-chain routing based on feature (e.g., Match XP on Algorand, DAO on Avalanche, Agent Fees on Kite)
 
 ### Development Mode
 In development, signature verification is skipped for easier testing. Set `NODE_ENV=development` in `.env.local`.
