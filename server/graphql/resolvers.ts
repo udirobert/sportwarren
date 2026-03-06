@@ -47,28 +47,28 @@ export const resolvers = {
     },
 
     // Player Analytics Queries
-    playerAnalytics: async (_: any, { userId }: { userId: string }, context: Context) => {
+    playerAnalytics: async (_: any, { userId: _userId }: { userId: string }, _context: Context) => {
       // This would fetch stored analytics or trigger new analysis
       return null; // Placeholder
     },
 
     matchPrediction: async (
       _: any,
-      { matchId, teamStats, opponentStats }: { matchId?: string; teamStats?: any; opponentStats?: any },
-      context: Context
+      _input: { matchId?: string; teamStats?: any; opponentStats?: any },
+      _context: Context
     ) => {
       return null; // Placeholder
     },
 
-    videoAnalysis: async (_: any, { id }: { id: string }, context: Context) => {
+    videoAnalysis: async (_: any, { id: _id }: { id: string }, _context: Context) => {
       return null; // Placeholder
     },
 
-    videoAnalyses: async (_: any, { userId }: { userId: string }, context: Context) => {
+    videoAnalyses: async (_: any, { userId: _userId }: { userId: string }, _context: Context) => {
       return []; // Placeholder
     },
 
-    proBenchmarks: async (_: any, { position }: { position?: string }, context: Context) => {
+    proBenchmarks: async (_: any, { position }: { position?: string }, _context: Context) => {
       const benchmarks = {
         striker: {
           shot_accuracy: 0.75,
@@ -154,10 +154,10 @@ export const resolvers = {
         throw new Error('Not authenticated');
       }
       const match = await context.services.dbService.createMatch(input);
-      
+
       // Emit real-time update
       pubsub.publish(`SQUAD_UPDATED_${input.squadId}`, { squadUpdated: match.squad });
-      
+
       return match;
     },
 
@@ -166,11 +166,11 @@ export const resolvers = {
         throw new Error('Not authenticated');
       }
       const event = await context.services.dbService.addMatchEvent(input);
-      
+
       // Emit real-time updates
       pubsub.publish(`MATCH_EVENT_ADDED_${input.matchId}`, { matchEventAdded: event });
       pubsub.publish(`MATCH_UPDATED_${input.matchId}`, { matchUpdated: event.match });
-      
+
       return event;
     },
 
@@ -186,10 +186,10 @@ export const resolvers = {
         throw new Error('Not authenticated');
       }
       const match = await context.services.dbService.updateMatchStatus(matchId, status);
-      
+
       // Emit real-time update
       pubsub.publish(`MATCH_UPDATED_${matchId}`, { matchUpdated: match });
-      
+
       return match;
     },
 

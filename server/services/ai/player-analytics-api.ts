@@ -1,6 +1,5 @@
 import axios from 'axios';
 import FormData from 'form-data';
-import { Readable } from 'stream';
 
 const ANALYTICS_SERVICE_URL = process.env.ANALYTICS_SERVICE_URL || 'http://localhost:5001';
 
@@ -190,13 +189,13 @@ export class PlayerAnalyticsAPI {
     try {
       // Extract frames from video (simplified - in production use ffmpeg)
       const frames = await this.extractFrames(videoBuffer);
-      
+
       const results: FrameAnalysisResult[] = [];
-      
+
       for (const frame of frames) {
         const result = await this.analyzeFrame(frame);
         results.push(result);
-        
+
         if (onFrameAnalyzed) {
           onFrameAnalyzed(result);
         }
@@ -231,7 +230,7 @@ export class PlayerAnalyticsAPI {
 
     for (let i = 0; i < results.length; i++) {
       const result = results[i];
-      
+
       // Detect interesting moments
       if (result.analytics?.player_density > 0.5) {
         highlights.push({
@@ -268,7 +267,7 @@ export class PlayerAnalyticsAPI {
       // Generate comprehensive technique report
       const performanceAnalysis = await this.analyzePerformance(
         playerData,
-        playerData.position as string || 'midfielder'
+        (playerData as any).position || 'midfielder'
       );
 
       const techniqueScores = {
@@ -301,7 +300,7 @@ export class PlayerAnalyticsAPI {
 
   private calculatePositioningScore(videoAnalysis: any): number {
     if (!videoAnalysis?.analytics) return 0.7;
-    
+
     const { field_coverage, team_compactness } = videoAnalysis.analytics;
     return (field_coverage + team_compactness) / 2;
   }
@@ -309,18 +308,18 @@ export class PlayerAnalyticsAPI {
   private calculateMovementScore(playerData: Record<string, number>): number {
     const avgSpeed = playerData.avg_speed || 0;
     const distance = playerData.distance_per_match || 0;
-    
+
     // Normalize scores
     const speedScore = Math.min(avgSpeed / 30, 1);
     const distanceScore = Math.min(distance / 12, 1);
-    
+
     return (speedScore + distanceScore) / 2;
   }
 
   private calculateDecisionMakingScore(playerData: Record<string, number>): number {
     const passAccuracy = playerData.pass_accuracy || 0;
     const shotAccuracy = playerData.shot_accuracy || 0;
-    
+
     return (passAccuracy + shotAccuracy) / 2;
   }
 
@@ -353,8 +352,8 @@ export class PlayerAnalyticsAPI {
     return recommendations.slice(0, 5); // Top 5 recommendations
   }
 
-  private getSkillRecommendation(skill: string, score: number): string {
-    const recommendations = {
+  private getSkillRecommendation(skill: string, _score: number): string {
+    const recommendations: Record<string, string> = {
       positioning: 'Work on tactical awareness and positioning drills',
       movement: 'Increase sprint training and stamina work',
       decision_making: 'Practice decision-making under pressure scenarios',

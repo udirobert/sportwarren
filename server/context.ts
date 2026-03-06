@@ -1,4 +1,5 @@
 import { Request } from 'express';
+import { IncomingMessage } from 'http';
 import { DatabaseService } from './services/database.js';
 import { RedisService } from './services/redis.js';
 import { AuthService } from './services/auth.js';
@@ -8,9 +9,10 @@ import { VoiceProcessingService } from './services/ai/voice.js';
 import { ComputerVisionService } from './services/ai/vision.js';
 import { AlgorandService } from './services/blockchain/algorand.js';
 import { EventStreamService } from './services/events/kafka.js';
+import { LensService } from './services/communication/lens.js';
 
 export interface Context {
-  req: Request;
+  req: Request | IncomingMessage;
   user?: {
     id: string;
     email: string;
@@ -27,11 +29,12 @@ export interface Context {
     visionService?: ComputerVisionService;
     algorandService?: AlgorandService;
     eventStreamService?: EventStreamService;
+    lensService?: LensService;
   };
 }
 
 export async function createContext({ req, services }: {
-  req: Request;
+  req: Request | IncomingMessage;
   services: {
     dbService: DatabaseService;
     redisService: RedisService;
@@ -42,6 +45,7 @@ export async function createContext({ req, services }: {
     visionService?: ComputerVisionService;
     algorandService?: AlgorandService;
     eventStreamService?: EventStreamService;
+    lensService?: LensService;
   };
 }): Promise<Context> {
   const token = req.headers.authorization?.replace('Bearer ', '');

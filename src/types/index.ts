@@ -143,7 +143,7 @@ export interface SkillRating {
   history: number[];    // Last 5 match ratings for form calculation
 }
 
-export type AttributeType = 
+export type AttributeType =
   | 'pace' | 'shooting' | 'passing' | 'dribbling' | 'defending' | 'physical'
   | 'gk_diving' | 'gk_handling' | 'gk_kicking' | 'gk_reflexes' | 'gk_speed' | 'gk_positioning';
 
@@ -237,11 +237,11 @@ export interface Tactics {
   setPieces: SetPieceInstructions;
 }
 
-export type Formation = 
+export type Formation =
   | '4-4-2' | '4-3-3' | '4-2-3-1' | '4-5-1' | '4-1-4-1'
   | '3-5-2' | '3-4-3' | '5-3-2' | '5-4-1' | '4-3-1-2';
 
-export type PlayStyle = 
+export type PlayStyle =
   | 'balanced' | 'possession' | 'direct' | 'counter' | 'high_press' | 'low_block';
 
 export interface TeamInstructions {
@@ -441,5 +441,5 @@ export interface UserPreferences {
   notifications: boolean;
   compactMode: boolean;
   onboardingCompleted: boolean;
-  preferredChain: 'algorand' | 'avalanche' | 'base';
+  preferredChain: 'algorand' | 'avalanche' | 'base' | 'lens';
 }

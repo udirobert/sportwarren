@@ -41,8 +41,8 @@ export const LensProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, []);
 
   const login = async () => {
-    if (!address || chain !== 'base') {
-      throw new Error('Please connect your Base wallet first to use Lens.');
+    if (!address || chain !== 'lens') {
+      throw new Error('Please connect your Lens wallet first to use Lens.');
     }
 
     try {
@@ -57,7 +57,7 @@ export const LensProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // 2. In a real app, we'd prompt user to sign 'text' via wallet
       // For this implementation, we'll simulate the signature/verification
       // const signature = await signMessage(text);
-      const signature = "simulated_lens_v3_signature"; 
+      const signature = "simulated_lens_v3_signature";
 
       // 3. Verify signature and get profile/token
       const authRes = await fetch('/api/lens/authenticate', {

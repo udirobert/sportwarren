@@ -1,5 +1,4 @@
 import OpenAI from 'openai';
-import { createReadStream } from 'fs';
 import { writeFile } from 'fs/promises';
 
 export class ComputerVisionService {
@@ -11,10 +10,11 @@ export class ComputerVisionService {
     });
   }
 
-  async analyzeMatchPhoto(imageBuffer: Buffer): Promise<any> {
+  async analyzeMatchPhoto(imageData: any, _matchId?: string): Promise<any> {
     try {
       // Save buffer to temporary file
       const tempPath = `/tmp/image_${Date.now()}.jpg`;
+      const imageBuffer = Buffer.isBuffer(imageData) ? imageData : Buffer.from(imageData as any);
       await writeFile(tempPath, imageBuffer);
 
       // Convert to base64 for OpenAI Vision API
@@ -73,7 +73,7 @@ export class ComputerVisionService {
     try {
       // For video analysis, we'd typically extract frames first
       // This is a simplified version - in production, you'd use specialized video processing
-      
+
       const frames = await this.extractVideoFrames(videoBuffer);
       const analyses = [];
 
@@ -96,7 +96,15 @@ export class ComputerVisionService {
   }
 
   private aggregateVideoAnalysis(analyses: any[]): any {
-    const aggregated = {
+    const aggregated: {
+      scene_types: string[];
+      total_players: number;
+      key_moments: string[];
+      emotions: string[];
+      highlight_timestamps: number[];
+      suggested_title: string;
+      confidence: number;
+    } = {
       scene_types: [],
       total_players: 0,
       key_moments: [],
@@ -106,7 +114,7 @@ export class ComputerVisionService {
       confidence: 0,
     };
 
-    analyses.forEach((analysis, index) => {
+    analyses.forEach((analysis) => {
       if (analysis.scene_type) {
         aggregated.scene_types.push(analysis.scene_type);
       }
@@ -130,7 +138,7 @@ export class ComputerVisionService {
 
   private generateVideoTitle(analysis: any): string {
     const sceneTypes = analysis.scene_types;
-    
+
     if (sceneTypes.includes('goal_celebration')) {
       return '🔥 Epic Goal Celebration!';
     } else if (sceneTypes.includes('action_shot')) {
@@ -200,6 +208,18 @@ export class ComputerVisionService {
     }
   }
 
+  async detectMatchEvents(imageBuffer: any): Promise<any> {
+    try {
+      // Logic for match event detection from photo
+      // For now, call analyzeMatchPhoto as it already includes scene/moment analysis
+      const analysis = await this.analyzeMatchPhoto(imageBuffer);
+      return analysis.key_moments || [];
+    } catch (error) {
+      console.error('Event detection error:', error);
+      return [];
+    }
+  }
+
   private createFallbackPhotoAnalysis(): any {
     return {
       scene_type: 'other',
@@ -232,12 +252,12 @@ export class ComputerVisionService {
     };
   }
 
-  async generateMatchHighlights(videoBuffer: Buffer, events: any[]): Promise<any> {
+  async generateMatchHighlights(_videoBuffer: Buffer, events: any[]): Promise<any> {
     try {
       // This would involve more sophisticated video processing
       // For now, return a simplified highlight structure
-      
-      const highlights = events.map((event, index) => ({
+
+      const highlights = events.map((event, _index) => ({
         timestamp: event.minute * 60, // Convert minutes to seconds
         type: event.type,
         description: event.description,
@@ -263,7 +283,7 @@ export class ComputerVisionService {
   }
 
   private calculateEventImportance(event: any): number {
-    const importanceMap = {
+    const importanceMap: Record<string, number> = {
       'goal': 10,
       'red_card': 9,
       'penalty': 8,
@@ -272,11 +292,11 @@ export class ComputerVisionService {
       'substitution': 3,
     };
 
-    return importanceMap[event.type] || 1;
+    return importanceMap[event.type as string] || 1;
   }
 
   private getSuggestedClipDuration(eventType: string): number {
-    const durationMap = {
+    const durationMap: Record<string, number> = {
       'goal': 15,
       'red_card': 10,
       'penalty': 12,

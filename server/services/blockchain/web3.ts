@@ -68,9 +68,9 @@ export class Web3Service {
       );
 
       const receipt = await tx.wait();
-      
+
       // Extract token ID from events
-      const event = receipt.logs.find((log: any) => 
+      const event = receipt.logs.find((log: any) =>
         log.topics[0] === ethers.id('AchievementMinted(address,uint256,uint256)')
       );
 
@@ -124,12 +124,12 @@ export class Web3Service {
     }
   }
 
-  async createSquadDAO(squadData: any): Promise<string | null> {
+  async createSquadDAO(_squadData: any): Promise<string | null> {
     try {
       // This would deploy a new DAO contract for the squad
       // For now, return a mock DAO address
       const mockDAOAddress = ethers.Wallet.createRandom().address;
-      
+
       console.log(`✅ Squad DAO created: ${mockDAOAddress}`);
       return mockDAOAddress;
     } catch (error) {
