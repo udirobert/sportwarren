@@ -13,7 +13,7 @@ interface WalletConnectModalProps {
 }
 
 export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, onClose }) => {
-  const { connect, connected, chain } = useWallet();
+  const { connect, connected, chain, loginAsGuest } = useWallet();
   const { login, isConnected: lensConnected, profile: lensProfile } = useLens();
   const [selectedChain, setSelectedChain] = useState<'algorand' | 'avalanche' | 'lens' | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -142,6 +142,18 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                 </div>
               </button>
             )}
+          </div>
+
+          <div className="mt-6">
+            <button
+              onClick={() => {
+                loginAsGuest();
+                onClose();
+              }}
+              className="w-full py-3 text-sm font-black text-gray-500 hover:text-blue-600 uppercase tracking-widest transition-colors flex items-center justify-center space-x-2"
+            >
+              <span>Continue as Guest</span>
+            </button>
           </div>
 
           <div className="mt-8 pt-4 border-t border-gray-100 flex items-center justify-between text-[10px] font-black text-gray-400 uppercase tracking-widest">

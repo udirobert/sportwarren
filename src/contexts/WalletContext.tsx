@@ -14,10 +14,9 @@ const STORAGE_KEYS = {
 
 interface WalletContextType {
   address: string | null;
-  connected: boolean;
-  chain: 'algorand' | 'avalanche' | 'lens' | null;
-  balance: number;
+  isGuest: boolean;
   connect: (chain: 'algorand' | 'avalanche' | 'lens') => Promise<void>;
+  loginAsGuest: () => void;
   disconnect: () => void;
   preferences: UserPreferences | null;
   setPreferredChain: (chain: 'algorand' | 'avalanche' | 'lens') => void;
@@ -42,6 +41,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [chain, setChain] = useState<'algorand' | 'avalanche' | 'lens' | null>(null);
   const [balance, setBalance] = useState<number>(0);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [isGuest, setIsGuest] = useState<boolean>(false);
 
   const loadPreferences = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -101,6 +101,11 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       setAddress(savedLens);
       setChain('lens');
       fetchLensBalance(savedLens);
+    } else if (localStorage.getItem('sw_is_guest') === 'true') {
+      setIsGuest(true);
+      setAddress('0xGUEST_ADDRESS_HACKNEY_MARSHES');
+      setChain('lens');
+      setBalance(1000); // Guest gets some local currency to play with
     } else if (savedPrefs?.preferredChain) {
       setChain(savedPrefs.preferredChain);
     }
@@ -189,13 +194,23 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     }
   };
 
+  const loginAsGuest = () => {
+    setIsGuest(true);
+    setAddress('0xGUEST_ADDRESS_HACKNEY_MARSHES');
+    setChain('lens');
+    setBalance(1000);
+    localStorage.setItem('sw_is_guest', 'true');
+  };
+
   const disconnect = () => {
     setAddress(null);
     setChain(null);
     setBalance(0);
+    setIsGuest(false);
     localStorage.removeItem(STORAGE_KEYS.ALGORAND_ADDRESS);
     localStorage.removeItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
     localStorage.removeItem(STORAGE_KEYS.LENS_ADDRESS);
+    localStorage.removeItem('sw_is_guest');
   };
 
   const setPreferredChain = (newChain: 'algorand' | 'avalanche' | 'lens') => {
@@ -217,9 +232,11 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       value={{
         address,
         connected: !!address,
+        isGuest,
         chain,
         balance,
         connect,
+        loginAsGuest,
         disconnect,
         preferences,
         setPreferredChain,
