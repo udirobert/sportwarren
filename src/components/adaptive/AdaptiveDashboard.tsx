@@ -11,7 +11,7 @@ import { CoachKiteInsight } from '@/components/adaptive/CoachKiteInsight';
 import { trpc } from '@/lib/trpc-client';
 
 const NearbyRivals: React.FC = () => {
-  const [coords, setCoords] = useState<{lat: number, lon: number} | null>(null);
+  const [coords, setCoords] = useState<{ lat: number, lon: number } | null>(null);
 
   useEffect(() => {
     navigator.geolocation.getCurrentPosition(
@@ -74,7 +74,7 @@ const NearbyRivals: React.FC = () => {
             </div>
             <div className="text-right">
               <div className="text-sm font-black text-red-600">{squad.distance}km</div>
-              <button 
+              <button
                 onClick={() => handleChallenge(squad.id)}
                 disabled={challengeMutation.isPending}
                 className="text-[10px] font-bold text-blue-600 hover:underline opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
@@ -119,7 +119,7 @@ const TerritoryControl: React.FC<{ squadId: string }> = ({ squadId }) => {
               </span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden flex">
-              <motion.div 
+              <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${pitch.dominance}%` }}
                 className={`h-full ${pitch.isControlling ? 'bg-green-500' : 'bg-blue-500'}`}
@@ -138,7 +138,7 @@ const TerritoryControl: React.FC<{ squadId: string }> = ({ squadId }) => {
 
 const TrainingCenter: React.FC<{ userId: string }> = ({ userId }) => {
   const { data: training, refetch } = trpc.player.getTrainingData.useQuery({ userId });
-  
+
   const syncMutation = trpc.player.syncActivity.useMutation({
     onSuccess: () => refetch()
   });
@@ -174,7 +174,7 @@ const TrainingCenter: React.FC<{ userId: string }> = ({ userId }) => {
           <span>{training.weeklyProgress} / {training.weeklyTarget} mins</span>
         </div>
         <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-          <motion.div 
+          <motion.div
             initial={{ width: 0 }}
             animate={{ width: `${Math.min(100, (training.weeklyProgress / training.weeklyTarget) * 100)}%` }}
             className="h-full bg-gradient-to-r from-orange-400 to-orange-600"
@@ -184,7 +184,7 @@ const TrainingCenter: React.FC<{ userId: string }> = ({ userId }) => {
 
       {/* Quick Sync Actions */}
       <div className="grid grid-cols-3 gap-2">
-        <button 
+        <button
           onClick={() => handleQuickSync('run')}
           disabled={syncMutation.isPending}
           className="flex flex-col items-center justify-center p-3 bg-gray-50 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all border border-transparent hover:border-orange-200 group"
@@ -192,7 +192,7 @@ const TrainingCenter: React.FC<{ userId: string }> = ({ userId }) => {
           <TrendingUp className="w-5 h-5 mb-1 group-hover:scale-110 transition-transform" />
           <span className="text-[10px] font-bold uppercase">Sync Run</span>
         </button>
-        <button 
+        <button
           onClick={() => handleQuickSync('hiit')}
           disabled={syncMutation.isPending}
           className="flex flex-col items-center justify-center p-3 bg-gray-50 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all border border-transparent hover:border-orange-200 group"
@@ -200,7 +200,7 @@ const TrainingCenter: React.FC<{ userId: string }> = ({ userId }) => {
           <Zap className="w-5 h-5 mb-1 group-hover:scale-110 transition-transform" />
           <span className="text-[10px] font-bold uppercase">Sync HIIT</span>
         </button>
-        <button 
+        <button
           onClick={() => handleQuickSync('gym')}
           disabled={syncMutation.isPending}
           className="flex flex-col items-center justify-center p-3 bg-gray-50 rounded-xl hover:bg-orange-50 hover:text-orange-600 transition-all border border-transparent hover:border-orange-200 group"
@@ -221,7 +221,7 @@ const TrainingCenter: React.FC<{ userId: string }> = ({ userId }) => {
 
 const SquadGovernance: React.FC<{ squadId: string }> = ({ squadId }) => {
   const { data: proposals, refetch } = trpc.squad.getProposals.useQuery({ squadId });
-  
+
   const voteMutation = trpc.squad.voteOnProposal.useMutation({
     onSuccess: () => refetch()
   });
@@ -248,11 +248,11 @@ const SquadGovernance: React.FC<{ squadId: string }> = ({ squadId }) => {
         </div>
         <span className="text-[10px] font-bold text-purple-600 uppercase tracking-widest">Voting Active</span>
       </div>
-      
+
       <div className="space-y-4">
-        {proposals.filter(p => p.status === 'active').map(proposal => {
-          const yesVotes = proposal.votes.filter(v => v.vote === 'yes').length;
-          const noVotes = proposal.votes.filter(v => v.vote === 'no').length;
+        {(proposals as any[]).filter((p: any) => p.status === 'active').map((proposal: any) => {
+          const yesVotes = proposal.votes.filter((v: any) => v.vote === 'yes').length;
+          const noVotes = proposal.votes.filter((v: any) => v.vote === 'no').length;
           const totalVotes = yesVotes + noVotes;
           const progress = totalVotes > 0 ? (yesVotes / proposal.quorum) * 100 : 0;
 
@@ -275,7 +275,7 @@ const SquadGovernance: React.FC<{ squadId: string }> = ({ squadId }) => {
                   <span>{yesVotes} / {proposal.quorum} Yes</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                  <motion.div 
+                  <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min(100, progress)}%` }}
                     className="h-full bg-purple-500"
@@ -285,20 +285,20 @@ const SquadGovernance: React.FC<{ squadId: string }> = ({ squadId }) => {
 
               {/* Actions */}
               <div className="mt-4 flex items-center gap-2">
-                <button 
+                <button
                   onClick={() => voteMutation.mutate({ proposalId: proposal.id, vote: 'yes' })}
                   className="flex-1 py-2 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-green-600 hover:bg-green-50 hover:border-green-200 transition-all"
                 >
                   Vote Yes
                 </button>
-                <button 
+                <button
                   onClick={() => voteMutation.mutate({ proposalId: proposal.id, vote: 'no' })}
                   className="flex-1 py-2 bg-white border border-gray-200 rounded-lg text-[10px] font-bold text-red-600 hover:bg-red-50 hover:border-red-200 transition-all"
                 >
                   Vote No
                 </button>
                 {yesVotes >= proposal.quorum && (
-                  <button 
+                  <button
                     onClick={() => executeMutation.mutate({ proposalId: proposal.id })}
                     className="px-3 py-2 bg-purple-600 text-white rounded-lg text-[10px] font-bold hover:bg-purple-700 transition-all shadow-lg shadow-purple-500/20"
                   >
@@ -325,12 +325,12 @@ interface DashboardWidget {
 
 export const AdaptiveDashboard: React.FC = () => {
   const { preferences, trackFeatureUsage } = useUserPreferences();
-  
+
   // Get user address from wallet or auth
-  const userAddress = typeof window !== 'undefined' 
+  const userAddress = typeof window !== 'undefined'
     ? localStorage.getItem('userAddress') || undefined
     : undefined;
-  
+
   const { data: stats, loading } = useDashboardData(userAddress);
 
   // Define all possible widgets
@@ -428,9 +428,8 @@ export const AdaptiveDashboard: React.FC = () => {
                     <h3 className="font-medium text-gray-900">{match.opponent}</h3>
                     <p className="text-sm text-gray-600">{match.date}</p>
                   </div>
-                  <span className={`font-bold ${
-                    match.result.startsWith('W') ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <span className={`font-bold ${match.result.startsWith('W') ? 'text-green-600' : 'text-red-600'
+                    }`}>
                     {match.result}
                   </span>
                 </div>
@@ -566,33 +565,33 @@ export const AdaptiveDashboard: React.FC = () => {
     return allWidgets
       .filter(widget => {
         // Check if widget should be visible based on UI complexity
-        const complexityMatch = 
+        const complexityMatch =
           widget.requiredLevel === 'basic' ||
           (widget.requiredLevel === 'intermediate' && preferences.uiComplexity !== 'simple') ||
           (widget.requiredLevel === 'advanced' && preferences.uiComplexity === 'advanced');
 
         // Check if feature is unlocked
-        const isUnlocked = preferences.unlockedFeatures.includes(widget.id) || 
+        const isUnlocked = preferences.unlockedFeatures.includes(widget.id) ||
           widget.requiredLevel === 'basic';
 
         // Check category preferences
-        const categoryMatch = 
+        const categoryMatch =
           (widget.category === 'stats' && preferences.preferredFeatures.statistics !== 'basic') ||
           (widget.category === 'social' && preferences.preferredFeatures.social !== 'minimal') ||
           (widget.category === 'achievements' && preferences.preferredFeatures.gamification !== 'none') ||
           widget.category === 'matches'; // Always show matches
 
-        return complexityMatch && (isUnlocked || widget.unlockCondition) && 
+        return complexityMatch && (isUnlocked || widget.unlockCondition) &&
           (widget.category === 'matches' || widget.category === 'stats' || categoryMatch);
       })
       .sort((a, b) => {
         // Prioritize recently used features
         const aRecentlyUsed = preferences.usagePatterns.lastActiveFeatures.includes(a.id);
         const bRecentlyUsed = preferences.usagePatterns.lastActiveFeatures.includes(b.id);
-        
+
         if (aRecentlyUsed && !bRecentlyUsed) return -1;
         if (!aRecentlyUsed && bRecentlyUsed) return 1;
-        
+
         // Then sort by priority
         return b.priority - a.priority;
       });
@@ -621,7 +620,7 @@ export const AdaptiveDashboard: React.FC = () => {
         </h1>
         {preferences.uiComplexity !== 'simple' && (
           <p className="text-gray-600">
-            {preferences.primaryRole === 'organizer' 
+            {preferences.primaryRole === 'organizer'
               ? 'Your squad is ready for action!'
               : 'Ready to build your legend?'
             }

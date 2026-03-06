@@ -1,4 +1,4 @@
-import OpenAI from 'openai';
+import OpenAI, { toFile } from 'openai';
 
 export class OpenAIService {
   private client: OpenAI;
@@ -17,7 +17,7 @@ export class OpenAIService {
   async transcribeAudio(audioBuffer: Buffer, language?: string): Promise<string> {
     try {
       const response = await this.client.audio.transcriptions.create({
-        file: new File([audioBuffer], 'audio.wav', { type: 'audio/wav' }),
+        file: await toFile(audioBuffer, 'audio.wav'),
         model: 'whisper-1',
         language: language || 'en',
         response_format: 'text',
