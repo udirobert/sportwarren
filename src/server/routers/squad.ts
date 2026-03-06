@@ -33,7 +33,7 @@ export const squadRouter = createTRPCRouter({
         const existing = await ctx.prisma.squad.findFirst({
           where: { shortName: input.shortName },
         });
-        
+
         if (existing) {
           throw new TRPCError({
             code: 'CONFLICT',
@@ -54,7 +54,7 @@ export const squadRouter = createTRPCRouter({
             }
           },
         });
-        
+
         return squad;
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -76,7 +76,7 @@ export const squadRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const { search, limit, offset } = input;
-        
+
         const where: any = {};
         if (search) {
           where.OR = [
@@ -154,14 +154,14 @@ export const squadRouter = createTRPCRouter({
             },
           },
         });
-        
+
         if (!squad) {
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'Squad not found',
           });
         }
-        
+
         return squad;
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -184,7 +184,7 @@ export const squadRouter = createTRPCRouter({
         const squad = await ctx.prisma.squad.findUnique({
           where: { id: input.squadId },
         });
-        
+
         if (!squad) {
           throw new TRPCError({
             code: 'NOT_FOUND',
@@ -201,14 +201,14 @@ export const squadRouter = createTRPCRouter({
             }
           }
         });
-        
+
         if (existing) {
           throw new TRPCError({
             code: 'CONFLICT',
             message: 'Already a member of this squad',
           });
         }
-        
+
         const member = await ctx.prisma.squadMember.create({
           data: {
             squadId: input.squadId,
@@ -216,7 +216,7 @@ export const squadRouter = createTRPCRouter({
             role: 'player',
           },
         });
-        
+
         return member;
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -244,7 +244,7 @@ export const squadRouter = createTRPCRouter({
             }
           }
         });
-        
+
         if (!member) {
           throw new TRPCError({
             code: 'NOT_FOUND',
@@ -257,7 +257,7 @@ export const squadRouter = createTRPCRouter({
           const otherMembers = await ctx.prisma.squadMember.count({
             where: { squadId: input.squadId, userId: { not: ctx.userId! } },
           });
-          
+
           if (otherMembers > 0) {
             throw new TRPCError({
               code: 'FORBIDDEN',
@@ -265,7 +265,7 @@ export const squadRouter = createTRPCRouter({
             });
           }
         }
-        
+
         await ctx.prisma.squadMember.delete({
           where: {
             squadId_userId: {
@@ -274,7 +274,7 @@ export const squadRouter = createTRPCRouter({
             }
           }
         });
-        
+
         return { success: true };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -894,16 +894,16 @@ export const squadRouter = createTRPCRouter({
             // Use match location or fallback to a slightly offset location for demo variety
             const squadLat = squad.matchesHome[0]?.latitude || latitude + (Math.random() - 0.5) * 0.1;
             const squadLon = squad.matchesHome[0]?.longitude || longitude + (Math.random() - 0.5) * 0.1;
-            
+
             // Haversine formula for distance
             const R = 6371; // Earth radius in km
             const dLat = (squadLat - latitude) * Math.PI / 180;
             const dLon = (squadLon - longitude) * Math.PI / 180;
-            const a = 
-              Math.sin(dLat/2) * Math.sin(dLat/2) +
-              Math.cos(latitude * Math.PI / 180) * Math.cos(squadLat * Math.PI / 180) * 
-              Math.sin(dLon/2) * Math.sin(dLon/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            const a =
+              Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(latitude * Math.PI / 180) * Math.cos(squadLat * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
             const distance = R * c;
 
             return {
@@ -1010,7 +1010,9 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
-        // If action is 'accept', we don't accept yet - we create a PROPOSAL
+        // If action is 'accept', we don't accept yet - we should initiate a DAO vote
+        // TODO: Bridge to On-Chain Governor instead of legacy PrismaProposal
+        /*
         const proposal = await ctx.prisma.squadProposal.create({
           data: {
             squadId: challenge.toSquadId,
@@ -1023,8 +1025,13 @@ export const squadRouter = createTRPCRouter({
             status: 'active',
           },
         });
+        */
 
-        return { proposalCreated: true, proposalId: proposal.id };
+        // Temporary: accept challenge directly until on-chain bridge is complete
+        return await ctx.prisma.matchChallenge.update({
+          where: { id: challengeId },
+          data: { status: 'accepted' },
+        });
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
@@ -1035,142 +1042,35 @@ export const squadRouter = createTRPCRouter({
       }
     }),
 
-  // Get active proposals for a squad
+  // Get active proposals for a squad (LEGACY - Migration to On-Chain)
   getProposals: publicProcedure
     .input(z.object({ squadId: z.string().min(1) }))
-    .query(async ({ ctx, input }) => {
-      try {
-        return await ctx.prisma.squadProposal.findMany({
-          where: { squadId: input.squadId },
-          include: { 
-            votes: true,
-            _count: { select: { votes: true } }
-          },
-          orderBy: { createdAt: 'desc' },
-        });
-      } catch (error) {
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to fetch proposals',
-          cause: error,
-        });
-      }
+    .query(async () => {
+      // Returning empty for now until on-chain indexer/governor bridge is active
+      return [];
     }),
 
-  // Vote on a proposal
+  // Vote on a proposal (LEGACY - DEPRECATED)
   voteOnProposal: protectedProcedure
     .input(z.object({
       proposalId: z.string().min(1),
       vote: z.enum(['yes', 'no', 'abstain']),
     }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const { proposalId, vote } = input;
-
-        const proposal = await ctx.prisma.squadProposal.findUnique({
-          where: { id: proposalId },
-        });
-
-        if (!proposal || proposal.status !== 'active') {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proposal not active' });
-        }
-
-        // Must be in the squad
-        const member = await ctx.prisma.squadMember.findFirst({
-          where: { userId: ctx.userId!, squadId: proposal.squadId },
-        });
-
-        if (!member) {
-          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only squad members can vote' });
-        }
-
-        return await ctx.prisma.proposalVote.upsert({
-          where: {
-            proposalId_voterId: { proposalId, voterId: ctx.userId! }
-          },
-          update: { vote },
-          create: {
-            proposalId,
-            voterId: ctx.userId!,
-            vote,
-          },
-        });
-      } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to cast vote',
-          cause: error,
-        });
-      }
+    .mutation(async () => {
+      throw new TRPCError({
+        code: 'NOT_IMPLEMENTED',
+        message: 'Legacy voting deprecated. Use On-Chain Governor.'
+      });
     }),
 
-  // Finalize/Execute a proposal
+  // Finalize/Execute a proposal (LEGACY - DEPRECATED)
   executeProposal: protectedProcedure
     .input(z.object({ proposalId: z.string().min(1) }))
-    .mutation(async ({ ctx, input }) => {
-      try {
-        const { proposalId } = input;
-        const proposal = await ctx.prisma.squadProposal.findUnique({
-          where: { id: proposalId },
-          include: { votes: true },
-        });
-
-        if (!proposal || proposal.status !== 'active') {
-          throw new TRPCError({ code: 'BAD_REQUEST', message: 'Proposal not executable' });
-        }
-
-        const yesVotes = proposal.votes.filter(v => v.vote === 'yes').length;
-        const noVotes = proposal.votes.filter(v => v.vote === 'no').length;
-
-        if (yesVotes >= proposal.quorum && yesVotes > noVotes) {
-          // PROPOSAL PASSED
-          await ctx.prisma.squadProposal.update({
-            where: { id: proposalId },
-            data: { status: 'passed' },
-          });
-
-          // Logic based on type
-          if (proposal.type === 'match_challenge' && proposal.referenceId) {
-            const challenge = await ctx.prisma.matchChallenge.findUnique({
-              where: { id: proposal.referenceId }
-            });
-
-            if (challenge) {
-              await ctx.prisma.matchChallenge.update({
-                where: { id: challenge.id },
-                data: { status: 'accepted' },
-              });
-
-              await ctx.prisma.match.create({
-                data: {
-                  homeSquadId: challenge.fromSquadId,
-                  awaySquadId: challenge.toSquadId,
-                  matchDate: challenge.proposedDate,
-                  status: 'pending',
-                  submittedBy: proposal.creatorId,
-                },
-              });
-            }
-          }
-
-          return { status: 'executed' };
-        } else {
-          // PROPOSAL FAILED
-          await ctx.prisma.squadProposal.update({
-            where: { id: proposalId },
-            data: { status: 'failed' },
-          });
-          return { status: 'failed' };
-        }
-      } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to execute proposal',
-          cause: error,
-        });
-      }
+    .mutation(async () => {
+      throw new TRPCError({
+        code: 'NOT_IMPLEMENTED',
+        message: 'Legacy execution deprecated. Use On-Chain Timelock.'
+      });
     }),
 
   // Get territory control data
