@@ -71,6 +71,16 @@ export const StaffFeed: React.FC<StaffFeedProps> = ({ userId }) => {
                 actionLabel: 'View Match',
                 type: 'alert',
                 priorityLevel: 5
+            },
+            {
+                id: 'dao-1',
+                sender: 'The Referee', // Using Referee as the regulatory voice for now, or could add 'The Board'
+                role: 'tactical',
+                message: 'New DAO Directive: Squad complexity limits increased. You can now deploy more advanced tactics in the match engine.',
+                timestamp: new Date(),
+                actionLabel: 'Update Tactics',
+                type: 'insight',
+                priorityLevel: 4
             }
         ];
         setMessages(mockMessages);
