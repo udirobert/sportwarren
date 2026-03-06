@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+import { trpc } from '@/lib/trpc-client';
+import { useSquadDetails } from '@/hooks/squad/useSquad';
+
 interface StaffMember {
     id: string;
     name: string;
@@ -54,13 +57,25 @@ const STAFF_MEMBERS: StaffMember[] = [
 ];
 
 interface StaffRoomProps {
+    squadId?: string;
     onClose: () => void;
 }
 
-export const StaffRoom: React.FC<StaffRoomProps> = ({ onClose }) => {
+export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(STAFF_MEMBERS[0]);
     const [chatHistory, setChatHistory] = useState<Array<{ sender: string, text: string }>>([]);
     const [isTyping, setIsTyping] = useState(false);
+
+    // Fetch real-time data for functional responses
+    const { data: treasury } = trpc.squad.getTreasury.useQuery(
+        { squadId: squadId || '' },
+        { enabled: !!squadId }
+    );
+    const { data: tactics } = trpc.squad.getTactics.useQuery(
+        { squadId: squadId || '' },
+        { enabled: !!squadId }
+    );
+    const { members } = useSquadDetails(squadId);
 
     useEffect(() => {
         if (selectedStaff) {
@@ -74,9 +89,29 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ onClose }) => {
         setChatHistory(prev => [...prev, { sender: 'You', text }]);
         setIsTyping(true);
 
-        // Simulate AI response
+        // Functional Response Logic
         setTimeout(() => {
-            const response = getStaffResponse(selectedStaff?.id || '', text);
+            let response = "";
+
+            if (text === "Transfer Budget Inquiry") {
+                const balance = treasury?.balance || 0;
+                response = `Our current transfer budget is looking at exactly ${balance.toLocaleString()} credits. We should be careful with our next moves.`;
+            } else if (text === "Balance Sheet Review") {
+                const txCount = treasury?.transactions?.length || 0;
+                response = `I've prepared the sheet. We have ${txCount} recent transactions. Salaries are our biggest drain atm, but the last match prize money helped.`;
+            } else if (text === "Tactical Briefing") {
+                const formation = tactics?.formation || '4-4-2';
+                response = `Current setup is ${formation}. I've run the numbers; our win probability against average Hackney sides is currently ${Math.floor(Math.random() * 20) + 60}%.`;
+            } else if (text.includes("Renegotiate") && text.includes("Contract")) {
+                const playerName = text.split("'")[0].split(" ").pop();
+                response = `I've already sent a preliminary feeler to ${playerName}'s camp. They're looking for a 15% bump in the win-bonus, but I think I can talk them down.`;
+            } else if (text === "Squad Morale Check") {
+                const avgLevel = members?.length ? Math.round(members.reduce((acc, m) => acc + (m.stats?.level || 0), 0) / members.length) : 5;
+                response = `Morale is decent. The squad's average experience level of ${avgLevel} is keeping them grounded but hungry.`;
+            } else {
+                response = getStaffResponse(selectedStaff?.id || '', text);
+            }
+
             setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Staff', text: response }]);
             setIsTyping(false);
         }, 1500);
@@ -112,8 +147,8 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ onClose }) => {
                                 key={member.id}
                                 onClick={() => setSelectedStaff(member)}
                                 className={`w-full p-4 rounded-xl flex items-center space-x-4 transition-all ${selectedStaff?.id === member.id
-                                        ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                                        : 'text-gray-400 hover:bg-white/5'
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
+                                    : 'text-gray-400 hover:bg-white/5'
                                     }`}
                             >
                                 <div className="text-2xl">{member.avatar}</div>
@@ -164,8 +199,8 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ onClose }) => {
                                 className={`flex ${chat.sender === 'You' ? 'justify-end' : 'justify-start'}`}
                             >
                                 <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${chat.sender === 'You'
-                                        ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/10'
-                                        : 'bg-white/5 text-gray-200 border border-white/10'
+                                    ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/10'
+                                    : 'bg-white/5 text-gray-200 border border-white/10'
                                     }`}>
                                     {chat.text}
                                 </div>

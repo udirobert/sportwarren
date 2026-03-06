@@ -10,6 +10,7 @@ import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Brief
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { useWallet } from '@/contexts/WalletContext';
+import { useMySquads } from '@/hooks/squad/useSquad';
 
 import { StaffFeed } from '@/components/adaptive/StaffFeed';
 import { NearbyRivals } from '@/components/dashboard/NearbyRivals';
@@ -29,6 +30,7 @@ interface DashboardWidget {
   category: 'stats' | 'social' | 'matches' | 'achievements';
   unlockCondition?: () => boolean;
 }
+
 export const AdaptiveDashboard: React.FC = () => {
   const { preferences, trackFeatureUsage } = useUserPreferences();
   const { address, isGuest } = useWallet();
@@ -36,6 +38,9 @@ export const AdaptiveDashboard: React.FC = () => {
   const userAddress = address || undefined;
 
   const { data: stats, loading } = useDashboardData(userAddress);
+  const { memberships, loading: squadLoading } = useMySquads();
+
+  const primarySquadId = memberships?.[0]?.squad.id;
 
   // Define all possible widgets
   const allWidgets: DashboardWidget[] = useMemo(() => [
@@ -250,7 +255,7 @@ export const AdaptiveDashboard: React.FC = () => {
       priority: 98,
       requiredLevel: 'basic',
       category: 'matches',
-      component: <MatchEnginePreview />,
+      component: <MatchEnginePreview squadId={primarySquadId} />,
     },
     {
       id: 'squad-dynamics',
@@ -383,7 +388,10 @@ export const AdaptiveDashboard: React.FC = () => {
 
       <AnimatePresence>
         {isStaffRoomOpen && (
-          <StaffRoom onClose={() => setIsStaffRoomOpen(false)} />
+          <StaffRoom
+            squadId={primarySquadId}
+            onClose={() => setIsStaffRoomOpen(false)}
+          />
         )}
       </AnimatePresence>
 

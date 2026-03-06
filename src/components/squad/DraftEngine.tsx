@@ -7,12 +7,28 @@ import { Trophy, Zap, Search, UserCheck, Star, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MOCK_AVAILABLE_PLAYERS } from '@/lib/mocks';
 
+import { trpc } from '@/lib/trpc-client';
+
 export const DraftEngine: React.FC = () => {
     const [isDrafting, setIsDrafting] = useState(false);
     const [draftStep, setDraftStep] = useState(0);
     const [selectedProspect, setSelectedProspect] = useState<any>(null);
 
-    const prospects = MOCK_AVAILABLE_PLAYERS.filter(p => p.isDraftEligible);
+    // Dynamic prospect pool from server
+    const { data: serverProspects } = trpc.market.listProspects.useQuery();
+    const prospects = serverProspects || MOCK_AVAILABLE_PLAYERS.filter(p => p.isDraftEligible);
+
+    const signMutation = trpc.market.signProspect.useMutation({
+        onSuccess: (data) => {
+            // In a real app we'd use a toast, staying minimal as per principles
+            alert(data.message);
+            setIsDrafting(false);
+            setDraftStep(0);
+        },
+        onError: (error) => {
+            alert(error.message);
+        }
+    });
 
     const startDraft = () => {
         setIsDrafting(true);
@@ -25,6 +41,11 @@ export const DraftEngine: React.FC = () => {
             setSelectedProspect(picked);
             setDraftStep(3);
         }, 4500);
+    };
+
+    const handleContract = () => {
+        if (!selectedProspect) return;
+        signMutation.mutate({ playerId: selectedProspect.id });
     };
 
     return (
@@ -118,9 +139,16 @@ export const DraftEngine: React.FC = () => {
                                     </div>
 
                                     <div className="mt-8 space-x-3">
-                                        <Button className="bg-white text-blue-900 hover:bg-blue-100 font-black uppercase">Contract Player</Button>
+                                        <Button
+                                            onClick={handleContract}
+                                            disabled={signMutation.isPending}
+                                            className="bg-white text-blue-900 hover:bg-blue-100 font-black uppercase"
+                                        >
+                                            {signMutation.isPending ? 'Signing...' : 'Contract Player'}
+                                        </Button>
                                         <Button
                                             variant="outline"
+                                            disabled={signMutation.isPending}
                                             onClick={() => { setIsDrafting(false); setDraftStep(0); }}
                                             className="border-white/10 text-gray-400 hover:text-white"
                                         >
