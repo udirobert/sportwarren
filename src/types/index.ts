@@ -26,6 +26,8 @@ export interface MatchResult {
   evidence?: MatchEvidence;
   consensus?: MatchConsensus;
   trustScore?: number;
+  weatherVerified?: boolean;
+  locationVerified?: boolean;
 }
 
 export interface Verification {
