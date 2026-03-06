@@ -260,6 +260,9 @@ player.getProfile({ userId })
 player.getForm({ userId, limit? })
 player.getLeaderboard({ type?, attribute?, limit? })
 player.getAiInsights({ userId }) // Coach Kite Tactical Advice
+player.getTrainingData({ userId }) // Fitness Agent & Activity
+player.syncActivity({ userId, type, duration, ... }) // Health Sync
+player.chatWithCoach({ userId, message, context? }) // Conversational AI
 player.applyXPGains({ matchId, gains[] }) // Admin only
 ```
 
@@ -272,6 +275,15 @@ squad.getById({ id })
 squad.join({ squadId })
 squad.leave({ squadId })
 squad.getMySquads()
+squad.getNearbySquads({ latitude, longitude, radiusKm? })
+
+// Matchmaking & Governance
+squad.createChallenge({ toSquadId, proposedDate, pitchId?, message? })
+squad.respondToChallenge({ challengeId, action: 'accept' | 'reject' })
+squad.getProposals({ squadId })
+squad.voteOnProposal({ proposalId, vote: 'yes' | 'no' | 'abstain' })
+squad.executeProposal({ proposalId })
+squad.getTerritory({ squadId }) // Pitch dominance
 
 // Tactics
 squad.getTactics({ squadId })
@@ -289,7 +301,15 @@ squad.respondToTransferOffer({ offerId, accept })
 squad.cancelTransferOffer({ offerId })
 ```
 
-**Total Endpoints:** 18 (9 squad + 4 match + 4 player + 1 admin)
+### Social & Auth (Express Endpoints)
+```typescript
+POST /api/lens/challenge // SIWL challenge generation
+POST /api/lens/authenticate // SIWL signature verification
+POST /api/lens/post // Publication to Lens feed
+GET /api/base/balance // Base network balance
+```
+
+**Total Endpoints:** 30+ (16 squad + 4 match + 8 player + Express APIs)
 
 ---
 

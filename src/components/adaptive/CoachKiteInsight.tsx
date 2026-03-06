@@ -85,7 +85,7 @@ export const CoachKiteInsight: React.FC<CoachKiteInsightProps> = ({ userId }) =>
           <div className={`w-8 h-8 ${getBgColor()} rounded-full flex items-center justify-center`}>
             {getIcon()}
           </div>
-          <h2 className="text-lg font-bold text-gray-900">{data.agentName || "Coach Kite"}</h2>
+          <h2 className="text-lg font-bold text-gray-900">{('agentName' in data ? data.agentName : null) || "Coach Kite"}</h2>
         </div>
         {!isChatOpen && (
           <button 
@@ -103,10 +103,10 @@ export const CoachKiteInsight: React.FC<CoachKiteInsightProps> = ({ userId }) =>
           <p className="text-sm text-gray-700 mt-2 italic font-medium leading-relaxed">
             &quot;{data.insight}&quot;
           </p>
-          {data.confidence && (
+          {('confidence' in data ? data.confidence : null) && (
             <div className="mt-2 flex justify-end">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
-                {Math.round(data.confidence * 100)}% Confidence
+                {Math.round((data as any).confidence * 100)}% Confidence
               </span>
             </div>
           )}

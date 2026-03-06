@@ -98,6 +98,7 @@ export type PlayerStatus = 'available' | 'injured' | 'suspended' | 'unavailable'
 export interface PlayerAttributes {
   address: string;
   playerName: string;
+  position: PlayerPosition;
   totalMatches: number;
   totalGoals: number;
   totalAssists: number;

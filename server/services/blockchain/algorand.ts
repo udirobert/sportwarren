@@ -240,7 +240,11 @@ export class AlgorandService {
       if (!appId) return false;
 
       const params = await this.algodClient.getTransactionParams().do();
-      const txn = algosdk.makeApplicationOptInTxn(userAddress, params, appId);
+      const txn = algosdk.makeApplicationOptInTxnFromObject({
+        sender: userAddress,
+        suggestedParams: params,
+        appIndex: appId,
+      });
       
       // Note: In a real app, the user would sign this with their wallet.
       // For this demo/service, we assume the user has already signed or we're 
@@ -277,17 +281,17 @@ export class AlgorandService {
         encoder.encode(evidence)
       ];
 
-      const txn = algosdk.makeApplicationNoOpTxn(
-        deployer.addr,
-        params,
-        appId,
+      const txn = algosdk.makeApplicationNoOpTxnFromObject({
+        sender: deployer.addr.toString(),
+        suggestedParams: params,
+        appIndex: appId,
         appArgs,
-        [playerAddress] // Add player address to accounts array for local state access
-      );
+        accounts: [playerAddress],
+      });
 
       const signedTxn = txn.signTxn(deployer.sk);
-      const { txId } = await this.algodClient.sendRawTransaction(signedTxn).do();
-      return txId;
+      const { txid } = await this.algodClient.sendRawTransaction(signedTxn).do();
+      return txid;
     } catch (error) {
       console.error("Error updating skill on-chain:", error);
       return null;

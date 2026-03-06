@@ -33,6 +33,8 @@ model User {
   squads        SquadMember[]
   matchesSubmitted Match[] @relation("MatchSubmitter")
   verifications MatchVerification[]
+  proposalsCreated SquadProposal[]
+  votesCast        ProposalVote[]
   
   @@map("users")
 }
@@ -56,6 +58,12 @@ model PlayerProfile {
   totalGoals      Int      @default(0) @map("total_goals")
   totalAssists    Int      @default(0) @map("total_assists")
   
+  // Weekly Schedule (0=Sunday, 1=Monday, etc.)
+  matchDayPreference Int @default(0) @map("match_day_preference")
+  
+  // Physical Condition (0-100)
+  sharpness       Int      @default(50) @map("sharpness")
+  
   // Reputation
   reputationScore Int      @default(100) @map("reputation_score")
   
@@ -67,8 +75,33 @@ model PlayerProfile {
   attributes PlayerAttribute[]
   matchStats PlayerMatchStats[]
   formHistory FormEntry[]
+  activities PhysicalActivity[]
   
   @@map("player_profiles")
+}
+
+model PhysicalActivity {
+  id          String   @id @default(cuid())
+  profileId   String   @map("profile_id")
+  profile     PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  type        String   // 'run', 'gym', 'hiit', 'field_training'
+  duration    Int      // minutes
+  intensity   String   // 'low', 'medium', 'high'
+  distance    Float?   // km, if applicable
+  calories    Int?
+  
+  // Provider info
+  source      String   @default("manual") // 'manual', 'strava', 'apple_health'
+  externalId  String?  @map("external_id")
+  
+  // Impact
+  xpGained    Int      @default(0) @map("xp_gained")
+  sharpnessGain Int    @default(0) @map("sharpness_gain")
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  
+  @@map("physical_activities")
 }
 
 model PlayerAttribute {
@@ -118,6 +151,9 @@ model Squad {
   // Squad details
   founded     DateTime @default(now())
   homeGround  String?  @map("home_ground")
+  
+  // Weekly Schedule (0=Sunday, 1=Monday, etc.)
+  preferredMatchDay Int @default(0) @map("preferred_match_day")
 
   // Treasury (simplified for MVP)
   treasuryBalance Int @default(0) @map("treasury_balance")
@@ -136,6 +172,7 @@ model Squad {
   transferOffersTo TransferOffer[] @relation("TransferToSquad")
   challengesFrom MatchChallenge[] @relation("ChallengeFromSquad")
   challengesTo   MatchChallenge[] @relation("ChallengeToSquad")
+  proposals      SquadProposal[]
 
   @@map("squads")
 }
@@ -182,6 +219,60 @@ model SquadTactics {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("squad_tactics")
+}
+
+// ============================================================================
+// DAO GOVERNANCE (PROPOSALS & VOTING)
+// ============================================================================
+
+model SquadProposal {
+  id          String   @id @default(cuid())
+  squadId     String   @map("squad_id")
+  squad       Squad    @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  
+  creatorId   String   @map("creator_id")
+  creator     User     @relation(fields: [creatorId], references: [id])
+  
+  title       String
+  description String?
+  
+  // Type: match_challenge, hire_agent, spend_treasury, update_tactics
+  type        String   
+  
+  // Data related to the proposal (e.g. challengeId)
+  referenceId String?  @map("reference_id")
+  
+  status      String   @default("active") // active, passed, failed, executed
+  
+  // Voting rules
+  expiresAt   DateTime @map("expires_at")
+  quorum      Int      @default(3) // Min votes required
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  votes       ProposalVote[]
+
+  @@map("squad_proposals")
+}
+
+model ProposalVote {
+  id          String   @id @default(cuid())
+  proposalId  String   @map("proposal_id")
+  proposal    SquadProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  
+  voterId     String   @map("voter_id")
+  voter       User     @relation(fields: [voterId], references: [id])
+  
+  // Vote: yes, no, abstain
+  vote        String
+  
+  weight      Int      @default(1)
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@unique([proposalId, voterId])
+  @@map("proposal_votes")
 }
 
 // ============================================================================
@@ -306,6 +397,7 @@ model Pitch {
   
   // History
   challenges MatchChallenge[]
+  matches    Match[]
   
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
@@ -347,6 +439,10 @@ model Match {
   longitude        Float?
   weatherVerified  Boolean @default(false) @map("weather_verified")
   locationVerified Boolean @default(false) @map("location_verified")
+  
+  // Pitch Relation
+  pitchId          String? @map("pitch_id")
+  pitch            Pitch?  @relation(fields: [pitchId], references: [id])
   
   // Blockchain
   txId        String?  @map("tx_id") // Algorand transaction ID
