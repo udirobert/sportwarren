@@ -66,13 +66,13 @@ __pycache__/
 *.so
 .Python
 env/
-build/
+/build/
 develop-eggs/
-dist/
+/dist/
 downloads/
 eggs/
 .eggs/
-lib/
+/lib/
 lib64/
 parts/
 sdist/
@@ -102,8 +102,8 @@ test-results/
 junit.xml
 
 # Build artifacts
-build/
-out/
+/build/
+/out/
 .next/
 *.tgz
 *.tar.gz
