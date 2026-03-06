@@ -7,6 +7,7 @@ import { WalletState, UserPreferences } from '@/types';
 const STORAGE_KEYS = {
   ALGORAND_ADDRESS: 'sw_algorand_address',
   AVALANCHE_ADDRESS: 'sw_avalanche_address',
+  BASE_ADDRESS: 'sw_base_address',
   PREFERRED_CHAIN: 'sw_preferred_chain',
   USER_PREFERENCES: 'sw_user_preferences',
 } as const;
@@ -14,12 +15,12 @@ const STORAGE_KEYS = {
 interface WalletContextType {
   address: string | null;
   connected: boolean;
-  chain: 'algorand' | 'avalanche' | null;
+  chain: 'algorand' | 'avalanche' | 'base' | null;
   balance: number;
-  connect: (chain: 'algorand' | 'avalanche') => Promise<void>;
+  connect: (chain: 'algorand' | 'avalanche' | 'base') => Promise<void>;
   disconnect: () => void;
   preferences: UserPreferences | null;
-  setPreferredChain: (chain: 'algorand' | 'avalanche') => void;
+  setPreferredChain: (chain: 'algorand' | 'avalanche' | 'base') => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -38,7 +39,7 @@ interface WalletProviderProps {
 
 export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [address, setAddress] = useState<string | null>(null);
-  const [chain, setChain] = useState<'algorand' | 'avalanche' | null>(null);
+  const [chain, setChain] = useState<'algorand' | 'avalanche' | 'base' | null>(null);
   const [balance, setBalance] = useState<number>(0);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
 
@@ -66,6 +67,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     const migrations = [
       { old: 'algorand_address', new: STORAGE_KEYS.ALGORAND_ADDRESS },
       { old: 'avalanche_address', new: STORAGE_KEYS.AVALANCHE_ADDRESS },
+      { old: 'base_address', new: STORAGE_KEYS.BASE_ADDRESS },
       { old: 'preferred_chain', new: STORAGE_KEYS.PREFERRED_CHAIN },
       { old: 'userPreferences', new: STORAGE_KEYS.USER_PREFERENCES },
     ];
@@ -84,7 +86,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     
     const savedAlgorand = localStorage.getItem(STORAGE_KEYS.ALGORAND_ADDRESS);
     const savedAvalanche = localStorage.getItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
-    const savedChain = localStorage.getItem(STORAGE_KEYS.PREFERRED_CHAIN) as 'algorand' | 'avalanche' | null;
+    const savedBase = localStorage.getItem(STORAGE_KEYS.BASE_ADDRESS);
+    const savedChain = localStorage.getItem(STORAGE_KEYS.PREFERRED_CHAIN) as 'algorand' | 'avalanche' | 'base' | null;
 
     if (savedAlgorand) {
       setAddress(savedAlgorand);
@@ -94,6 +97,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       setAddress(savedAvalanche);
       setChain('avalanche');
       fetchAvalancheBalance(savedAvalanche);
+    } else if (savedBase) {
+      setAddress(savedBase);
+      setChain('base');
+      fetchBaseBalance(savedBase);
     } else if (savedPrefs?.preferredChain) {
       setChain(savedPrefs.preferredChain);
     }
@@ -123,7 +130,19 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     }
   };
 
-  const connect = async (selectedChain: 'algorand' | 'avalanche') => {
+  const fetchBaseBalance = async (addr: string) => {
+    try {
+      const response = await fetch(`/api/base/balance?address=${addr}`);
+      if (response.ok) {
+        const data = await response.json();
+        setBalance(data.balance || 0);
+      }
+    } catch (error) {
+      console.error('Failed to fetch Base balance:', error);
+    }
+  };
+
+  const connect = async (selectedChain: 'algorand' | 'avalanche' | 'base') => {
     try {
       if (selectedChain === 'algorand') {
         const response = await fetch('/api/algorand/connect-wallet', { method: 'POST' });
@@ -137,7 +156,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
             fetchAlgorandBalance(data.address);
           }
         }
-      } else {
+      } else if (selectedChain === 'avalanche') {
         const response = await fetch('/api/avalanche/connect-wallet', { method: 'POST' });
         if (response.ok) {
           const data = await response.json();
@@ -147,6 +166,19 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
             localStorage.setItem(STORAGE_KEYS.AVALANCHE_ADDRESS, data.address);
             localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'avalanche');
             fetchAvalancheBalance(data.address);
+          }
+        }
+      } else if (selectedChain === 'base') {
+        // Handle Base connection (e.g. via RainbowKit/Wagmi)
+        const response = await fetch('/api/base/connect-wallet', { method: 'POST' });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.address) {
+            setAddress(data.address);
+            setChain('base');
+            localStorage.setItem(STORAGE_KEYS.BASE_ADDRESS, data.address);
+            localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'base');
+            fetchBaseBalance(data.address);
           }
         }
       }
@@ -162,9 +194,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     setBalance(0);
     localStorage.removeItem(STORAGE_KEYS.ALGORAND_ADDRESS);
     localStorage.removeItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
+    localStorage.removeItem(STORAGE_KEYS.BASE_ADDRESS);
   };
 
-  const setPreferredChain = (newChain: 'algorand' | 'avalanche') => {
+  const setPreferredChain = (newChain: 'algorand' | 'avalanche' | 'base') => {
     setPreferences(prev => {
       const updated: UserPreferences = {
         preferredChain: newChain,

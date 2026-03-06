@@ -4,9 +4,136 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Shield, Star, Sparkles } from 'lucide-react';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Shield, Star, Sparkles, MapPin } from 'lucide-react';
 
 import { CoachKiteInsight } from '@/components/adaptive/CoachKiteInsight';
+import { trpc } from '@/lib/trpc-client';
+
+const NearbyRivals: React.FC = () => {
+  const [coords, setCoords] = useState<{lat: number, lon: number} | null>(null);
+
+  useEffect(() => {
+    navigator.geolocation.getCurrentPosition(
+      (pos) => setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => setCoords({ lat: 53.4808, lon: -2.2426 }) // Manchester default
+    );
+  }, []);
+
+  const { data: squads, isLoading } = trpc.squad.getNearbySquads.useQuery(
+    { latitude: coords?.lat || 53.4808, longitude: coords?.lon || -2.2426 },
+    { enabled: !!coords, staleTime: 1000 * 60 * 5 }
+  );
+
+  const challengeMutation = trpc.squad.createChallenge.useMutation({
+    onSuccess: () => {
+      alert('Challenge sent successfully!');
+    },
+    onError: (err) => {
+      alert(`Failed to send challenge: ${err.message}`);
+    }
+  });
+
+  const handleChallenge = (squadId: string) => {
+    challengeMutation.mutate({
+      toSquadId: squadId,
+      proposedDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Next week
+      message: 'Fancy a match at Hackney Marshes?'
+    });
+  };
+
+  if (isLoading || !squads) return (
+    <Card className="animate-pulse">
+      <div className="h-4 w-32 bg-gray-200 rounded mb-4"></div>
+      <div className="space-y-3">
+        {[1, 2, 3].map(i => <div key={i} className="h-10 bg-gray-100 rounded"></div>)}
+      </div>
+    </Card>
+  );
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <MapPin className="w-5 h-5 text-red-500" />
+          <h2 className="text-lg font-bold text-gray-900">Nearby Rivals</h2>
+        </div>
+        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Hackney Marshes</span>
+      </div>
+      <div className="space-y-3">
+        {squads.map(squad => (
+          <div key={squad.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg transition-colors border border-transparent hover:border-gray-100 group">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gray-900 rounded-lg flex items-center justify-center text-white font-black text-xs">
+                {squad.shortName}
+              </div>
+              <div>
+                <div className="text-sm font-bold text-gray-900">{squad.name}</div>
+                <div className="text-[10px] text-gray-500">{squad.location} • {squad.memberCount} players</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm font-black text-red-600">{squad.distance}km</div>
+              <button 
+                onClick={() => handleChallenge(squad.id)}
+                disabled={challengeMutation.isPending}
+                className="text-[10px] font-bold text-blue-600 hover:underline opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50"
+              >
+                {challengeMutation.isPending ? 'Sending...' : 'Challenge'}
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+};
+
+const TerritoryControl: React.FC<{ squadId: string }> = ({ squadId }) => {
+  const { data: territory, isLoading } = trpc.squad.getTerritory.useQuery(
+    { squadId },
+    { staleTime: 1000 * 60 * 10 }
+  );
+
+  if (isLoading || !territory) return <div className="h-32 bg-gray-100 animate-pulse rounded-xl"></div>;
+
+  return (
+    <Card>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <Trophy className="w-5 h-5 text-yellow-500" />
+          <h2 className="text-lg font-bold text-gray-900">Territory Control</h2>
+        </div>
+        <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Level 4 District</span>
+      </div>
+      <div className="space-y-4">
+        {territory.length === 0 && (
+          <p className="text-xs text-gray-500 italic">No pitches claimed yet. Win a verified match to start controlling territory!</p>
+        )}
+        {territory.map(pitch => (
+          <div key={pitch.id} className="space-y-1.5">
+            <div className="flex justify-between items-end">
+              <span className="text-sm font-bold text-gray-800">{pitch.name}</span>
+              <span className={`text-[10px] font-black uppercase ${pitch.isControlling ? 'text-green-600' : 'text-gray-400'}`}>
+                {pitch.isControlling ? 'Home Turf' : 'Contested'}
+              </span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden flex">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${pitch.dominance}%` }}
+                className={`h-full ${pitch.isControlling ? 'bg-green-500' : 'bg-blue-500'}`}
+              />
+            </div>
+            <div className="flex justify-between text-[8px] font-bold text-gray-400 uppercase tracking-tighter">
+              <span>{pitch.squadWins} Wins</span>
+              <span>{pitch.dominance}% Dominance</span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+};
 
 interface DashboardWidget {
   id: string;
@@ -75,6 +202,20 @@ export const AdaptiveDashboard: React.FC = () => {
       component: (
         <CoachKiteInsight userId={userAddress || 'demo-user'} />
       ),
+    },
+    {
+      id: 'nearby-squads',
+      priority: 85,
+      requiredLevel: 'intermediate',
+      category: 'social',
+      component: <NearbyRivals />,
+    },
+    {
+      id: 'territory',
+      priority: 80,
+      requiredLevel: 'advanced',
+      category: 'social',
+      component: <TerritoryControl squadId="demo-squad-id" />,
     },
     {
       id: 'recent-matches',

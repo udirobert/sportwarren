@@ -23,6 +23,7 @@ import { CommunicationBridge } from './services/communication/bridge.js';
 import { VoiceProcessingService } from './services/ai/voice.js';
 import { ComputerVisionService } from './services/ai/vision.js';
 import { AlgorandService } from './services/blockchain/algorand.js';
+import { LensService } from './services/communication/lens.js';
 import { EventStreamService } from './services/events/kafka.js';
 
 dotenv.config();
@@ -43,6 +44,7 @@ async function startServer() {
   const voiceService = new VoiceProcessingService();
   const visionService = new ComputerVisionService();
   const algorandService = new AlgorandService();
+  const lensService = new LensService();
   const eventStreamService = new EventStreamService();
 
   // Initialize advanced services
@@ -362,6 +364,47 @@ async function startServer() {
     } catch (error) {
       console.error('Execute proposal error:', error);
       res.status(500).json({ error: 'Failed to execute proposal' });
+    }
+  });
+
+  // Lens v3 & Base API endpoints
+  app.post('/api/lens/challenge', async (req, res) => {
+    try {
+      const { address } = req.body;
+      const text = await lensService.generateChallenge(address);
+      res.json({ text });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to generate Lens challenge' });
+    }
+  });
+
+  app.post('/api/lens/authenticate', async (req, res) => {
+    try {
+      const { address, signature, message } = req.body;
+      const result = await lensService.authenticate(address, signature, message);
+      res.json(result);
+    } catch (error) {
+      res.status(401).json({ error: 'Lens authentication failed' });
+    }
+  });
+
+  app.post('/api/lens/post', async (req, res) => {
+    try {
+      const { profileId, content, imageUrl } = req.body;
+      const pubId = await lensService.createPost(profileId, content, imageUrl);
+      res.json({ pubId });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to post to Lens' });
+    }
+  });
+
+  app.get('/api/base/balance', async (req, res) => {
+    try {
+      const { address } = req.query;
+      // Simulated Base balance
+      res.json({ balance: 0.42 });
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to get Base balance' });
     }
   });
 

@@ -134,6 +134,8 @@ model Squad {
   treasury    SquadTreasury?
   transferOffersFrom TransferOffer[] @relation("TransferFromSquad")
   transferOffersTo TransferOffer[] @relation("TransferToSquad")
+  challengesFrom MatchChallenge[] @relation("ChallengeFromSquad")
+  challengesTo   MatchChallenge[] @relation("ChallengeToSquad")
 
   @@map("squads")
 }
@@ -264,6 +266,51 @@ model TransferOffer {
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("transfer_offers")
+}
+
+// ============================================================================
+// CHALLENGES & TERRITORY
+// ============================================================================
+
+model MatchChallenge {
+  id          String   @id @default(cuid())
+  
+  fromSquadId String   @map("from_squad_id")
+  fromSquad   Squad    @relation("ChallengeFromSquad", fields: [fromSquadId], references: [id])
+  toSquadId   String   @map("to_squad_id")
+  toSquad     Squad    @relation("ChallengeToSquad", fields: [toSquadId], references: [id])
+  
+  status      String   @default("pending") // pending, accepted, rejected, cancelled
+  
+  // Proposed details
+  proposedDate DateTime @map("proposed_date")
+  pitchId      String?  @map("pitch_id")
+  pitch        Pitch?   @relation(fields: [pitchId], references: [id])
+  message      String?
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("match_challenges")
+}
+
+model Pitch {
+  id          String   @id @default(cuid())
+  name        String
+  location    String
+  latitude    Float
+  longitude   Float
+  
+  // Territory Control
+  controllingSquadId String? @map("controlling_squad_id")
+  
+  // History
+  challenges MatchChallenge[]
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("pitches")
 }
 
 // ============================================================================

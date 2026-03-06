@@ -1,19 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { X, TrendingUp, Star } from 'lucide-react';
+import { X, TrendingUp, Star, ChevronUp, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import type { AttributeType } from '@/types';
-import { ATTRIBUTE_NAMES } from '@/lib/utils';
-
-// Local mock data for XP notifications (different from achievement notifications)
-const MOCK_XP_NOTIFICATIONS: XPGainNotification[] = [
-  { id: '1', attribute: 'shooting', xpGained: 125, newRating: 88, levelsGained: 1 },
-  { id: '2', attribute: 'passing', xpGained: 85, levelsGained: 0 },
-  { id: '3', attribute: 'physical', xpGained: 95, levelsGained: 0 },
-];
-
-// Re-export for backward compatibility
-export { MOCK_XP_NOTIFICATIONS as MOCK_NOTIFICATIONS };
+import { ATTRIBUTE_NAMES, getAttributeColor, getAttributeTextColor } from '@/lib/utils';
 
 interface XPGainNotification {
   id: string;
@@ -23,139 +14,154 @@ interface XPGainNotification {
   levelsGained: number;
 }
 
+// Local mock data for XP notifications
+const MOCK_XP_NOTIFICATIONS: XPGainNotification[] = [
+  { id: '1', attribute: 'shooting', xpGained: 125, newRating: 88, levelsGained: 1 },
+  { id: '2', attribute: 'passing', xpGained: 85, levelsGained: 0 },
+  { id: '3', attribute: 'physical', xpGained: 95, levelsGained: 0 },
+];
+
+export { MOCK_XP_NOTIFICATIONS as MOCK_NOTIFICATIONS };
+
 export const XPGainPopup: React.FC = () => {
   const [notifications, setNotifications] = useState<XPGainNotification[]>([]);
   const [showDemo, setShowDemo] = useState(false);
-
-  // For demo purposes - show mock notifications
-  useEffect(() => {
-    // In production, this would come from a context or state management
-    // setNotifications(MOCK_NOTIFICATIONS);
-  }, []);
 
   const dismissNotification = (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
   };
 
-  if (notifications.length === 0 && !showDemo) {
-    return (
-      <div className="fixed bottom-4 right-4 z-50">
-        <button
-          onClick={() => setShowDemo(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg text-sm hover:bg-blue-700 transition-colors"
-        >
-          Show XP Demo
-        </button>
-      </div>
-    );
-  }
-
-  const displayNotifications = showDemo ? MOCK_XP_NOTIFICATIONS : notifications;
+  const activeNotifications = showDemo ? MOCK_XP_NOTIFICATIONS : notifications;
 
   return (
-    <div className="fixed bottom-4 right-4 z-50 space-y-2">
-      {showDemo && (
+    <>
+      <div className="fixed bottom-24 right-4 z-[100] flex flex-col items-end space-y-3 pointer-events-none">
+        <AnimatePresence>
+          {activeNotifications.map((notification) => (
+            <XPGainCard
+              key={notification.id}
+              notification={notification}
+              onDismiss={() => dismissNotification(notification.id)}
+            />
+          ))}
+        </AnimatePresence>
+      </div>
+      
+      {/* Demo Trigger - only in dev */}
+      <div className="fixed bottom-4 right-4 z-50">
         <button
-          onClick={() => setShowDemo(false)}
-          className="mb-2 text-xs text-gray-500 hover:text-gray-700"
+          onClick={() => setShowDemo(!showDemo)}
+          className="bg-gray-900/80 backdrop-blur-md text-white px-3 py-1.5 rounded-full shadow-lg text-[10px] font-bold uppercase tracking-widest hover:bg-black transition-all border border-white/10"
         >
-          Hide Demo
+          {showDemo ? 'Hide XP Demo' : 'Test Level Up'}
         </button>
-      )}
-      {displayNotifications.map((notification) => (
-        <XPGainCard
-          key={notification.id}
-          notification={notification}
-          onDismiss={() => dismissNotification(notification.id)}
-        />
-      ))}
-    </div>
+      </div>
+    </>
   );
 };
 
-interface XPGainCardProps {
-  notification: XPGainNotification;
-  onDismiss: () => void;
-}
-
-const XPGainCard: React.FC<XPGainCardProps> = ({ notification, onDismiss }) => {
-  const [isVisible, setIsVisible] = useState(false);
+const XPGainCard: React.FC<{ notification: XPGainNotification; onDismiss: () => void }> = ({ 
+  notification, 
+  onDismiss 
+}) => {
+  const isLevelUp = notification.levelsGained > 0;
 
   useEffect(() => {
-    // Animate in
-    const timer = setTimeout(() => setIsVisible(true), 100);
-    
-    // Auto dismiss after 5 seconds
-    const dismissTimer = setTimeout(() => {
-      setIsVisible(false);
-      setTimeout(onDismiss, 300);
-    }, 5000);
-
-    return () => {
-      clearTimeout(timer);
-      clearTimeout(dismissTimer);
-    };
+    const timer = setTimeout(onDismiss, 6000);
+    return () => clearTimeout(timer);
   }, [onDismiss]);
 
-  // Use centralized attribute names
-
   return (
-    <div
-      className={`bg-white rounded-xl shadow-xl border border-gray-200 p-4 w-72 transform transition-all duration-300 ${
-        isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+    <motion.div
+      layout
+      initial={{ x: 300, opacity: 0, scale: 0.9 }}
+      animate={{ x: 0, opacity: 1, scale: 1 }}
+      exit={{ x: 300, opacity: 0, scale: 0.9 }}
+      transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+      className={`pointer-events-auto relative overflow-hidden bg-white rounded-2xl shadow-2xl border-2 p-1 w-72 ${
+        isLevelUp ? 'border-yellow-400 shadow-yellow-500/20' : 'border-blue-500/20 shadow-blue-500/10'
       }`}
     >
-      <div className="flex items-start justify-between">
-        <div className="flex items-center space-x-3">
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-            notification.levelsGained > 0 
-              ? 'bg-purple-100 text-purple-600' 
-              : 'bg-green-100 text-green-600'
-          }`}>
-            {notification.levelsGained > 0 ? (
-              <Star className="w-5 h-5" />
-            ) : (
-              <TrendingUp className="w-5 h-5" />
-            )}
-          </div>
-          <div>
-            <p className="font-semibold text-gray-900">
-              +{notification.xpGained} XP
-            </p>
-            <p className="text-sm text-gray-600">
-              {ATTRIBUTE_NAMES[notification.attribute]}
-            </p>
-            {notification.levelsGained > 0 && (
-              <p className="text-sm text-purple-600 font-medium">
-                Level up! Now {notification.newRating}
-              </p>
-            )}
-          </div>
-        </div>
-        <button
-          onClick={() => {
-            setIsVisible(false);
-            setTimeout(onDismiss, 300);
-          }}
-          className="text-gray-400 hover:text-gray-600"
-        >
-          <X className="w-4 h-4" />
-        </button>
-      </div>
-
-      {/* Progress bar for next level */}
-      {notification.levelsGained === 0 && (
-        <div className="mt-3">
-          <div className="w-full bg-gray-200 rounded-full h-1.5">
-            <div 
-              className="bg-green-500 h-1.5 rounded-full transition-all duration-500"
-              style={{ width: '60%' }}
-            />
-          </div>
-          <p className="text-xs text-gray-500 mt-1">Progress to next level</p>
-        </div>
+      {/* Level Up Glow Effect */}
+      {isLevelUp && (
+        <motion.div 
+          animate={{ opacity: [0.1, 0.3, 0.1] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="absolute inset-0 bg-yellow-400 pointer-events-none"
+        />
       )}
-    </div>
+
+      <div className="relative bg-white rounded-[14px] p-4">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center space-x-3">
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center relative ${
+              isLevelUp 
+                ? 'bg-gradient-to-br from-yellow-400 to-orange-500 shadow-lg shadow-orange-500/30' 
+                : 'bg-gradient-to-br from-blue-500 to-blue-600'
+            }`}>
+              {isLevelUp ? (
+                <Zap className="w-6 h-6 text-white fill-white" />
+              ) : (
+                <TrendingUp className="w-6 h-6 text-white" />
+              )}
+              {isLevelUp && (
+                <motion.div 
+                  animate={{ scale: [1, 1.5, 1], opacity: [1, 0, 1] }}
+                  transition={{ duration: 1, repeat: Infinity }}
+                  className="absolute inset-0 rounded-xl border-2 border-white"
+                />
+              )}
+            </div>
+            <div>
+              <div className="flex items-center space-x-1">
+                <span className="text-xl font-black text-gray-900">+{notification.xpGained}</span>
+                <span className="text-[10px] font-black text-gray-400 uppercase tracking-tighter">XP</span>
+              </div>
+              <p className="text-[10px] font-black text-blue-600 uppercase tracking-widest leading-none">
+                {ATTRIBUTE_NAMES[notification.attribute]}
+              </p>
+            </div>
+          </div>
+          <button onClick={onDismiss} className="text-gray-300 hover:text-gray-500 transition-colors">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {isLevelUp ? (
+          <motion.div 
+            initial={{ y: 10, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="mt-3 bg-yellow-50 rounded-xl p-3 border border-yellow-200"
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black text-yellow-700 uppercase tracking-widest">Attribute UP</span>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm font-bold text-gray-400">{notification.newRating! - 1}</span>
+                <ChevronUp className="w-4 h-4 text-green-500" />
+                <span className={`text-lg font-black ${getAttributeTextColor(notification.newRating!)}`}>
+                  {notification.newRating}
+                </span>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <div className="mt-4 space-y-1">
+            <div className="flex justify-between items-end">
+              <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Progress to Level</span>
+              <span className="text-[10px] font-bold text-blue-600">60%</span>
+            </div>
+            <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: '60%' }}
+                className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+    </motion.div>
   );
 };
 
