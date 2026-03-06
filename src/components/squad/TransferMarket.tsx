@@ -3,12 +3,14 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { 
-  ArrowRightLeft, DollarSign, Clock, Check, X, 
-  Search, Filter, TrendingUp, User 
+import {
+  ArrowRightLeft, DollarSign, Clock, Check, X,
+  Search, Filter, TrendingUp, User, Trophy, Zap
 } from 'lucide-react';
 import type { TransferOffer, SquadPlayer, PlayerAttributes } from '@/types';
 import { MOCK_OFFERS, MOCK_AVAILABLE_PLAYERS } from '@/lib/mocks';
+import { DraftEngine } from './DraftEngine';
+import { calculateMarketValuation } from '@/lib/utils/calculations';
 
 interface TransferMarketProps {
   squadBalance: number;
@@ -21,7 +23,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
   onMakeOffer,
   onRespondToOffer,
 }) => {
-  const [activeTab, setActiveTab] = useState<'browse' | 'offers' | 'my-players'>('browse');
+  const [activeTab, setActiveTab] = useState<'browse' | 'offers' | 'drafts' | 'my-players'>('browse');
   const [searchQuery, setSearchQuery] = useState('');
   const [positionFilter, setPositionFilter] = useState<string>('all');
   const [selectedPlayer, setSelectedPlayer] = useState<typeof MOCK_AVAILABLE_PLAYERS[0] | null>(null);
@@ -70,18 +72,17 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
       {/* Tabs */}
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
         {[
-          { key: 'browse', label: 'Browse Players', count: MOCK_AVAILABLE_PLAYERS.length },
-          { key: 'offers', label: 'Offers', count: incomingOffers.length + outgoingOffers.length },
-          { key: 'my-players', label: 'My Players', count: 0 },
+          { key: 'browse', label: 'Browse', count: MOCK_AVAILABLE_PLAYERS.length },
+          { key: 'drafts', label: 'Drafts', count: MOCK_AVAILABLE_PLAYERS.filter(p => p.isDraftEligible).length },
+          { key: 'offers', label: 'Market Feed', count: incomingOffers.length + outgoingOffers.length },
         ].map(({ key, label, count }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key as any)}
-            className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all ${
-              activeTab === key
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all ${activeTab === key
+              ? 'bg-white text-blue-600 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+              }`}
           >
             <span className="font-medium">{label}</span>
             {count > 0 && (
@@ -127,11 +128,10 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
           {/* Player List */}
           <div className="grid md:grid-cols-2 gap-4">
             {filteredPlayers.map((player) => (
-              <Card 
+              <Card
                 key={player.id}
-                className={`cursor-pointer transition-all ${
-                  selectedPlayer?.id === player.id ? 'ring-2 ring-blue-500' : 'hover:shadow-md'
-                }`}
+                className={`cursor-pointer transition-all ${selectedPlayer?.id === player.id ? 'ring-2 ring-blue-500' : 'hover:shadow-md'
+                  }`}
                 onClick={() => setSelectedPlayer(player)}
               >
                 <div className="flex items-start justify-between">
@@ -139,30 +139,45 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                       <User className="w-6 h-6 text-white" />
                     </div>
-                    <div>
-                      <h4 className="font-semibold text-gray-900">{player.name}</h4>
-                      <div className="flex items-center space-x-2 text-sm">
-                        <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-600">{player.position}</span>
-                        <span className="text-gray-500">Age {player.age}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-bold text-gray-900 truncate">{player.name}</h4>
+                        {getReputationBadge(player.reputationTier)}
+                      </div>
+                      <div className="flex items-center space-x-2 text-[10px] mt-0.5">
+                        <span className="px-1.5 py-0.5 bg-gray-100 rounded font-mono text-gray-600">{player.position}</span>
+                        <span className="text-gray-400">AGE {player.age}</span>
+                        {player.isDraftEligible && (
+                          <span className="text-blue-500 font-black tracking-tighter uppercase italic">Draft Eligible</span>
+                        )}
                       </div>
                     </div>
-                  </div>
-                  <div className="text-right">
-                    <div className={`text-xl font-bold ${player.overall >= 80 ? 'text-purple-600' : player.overall >= 75 ? 'text-green-600' : 'text-gray-600'}`}>
-                      {player.overall}
+                    <div className="text-right">
+                      <div className={`text-xl font-black leading-none ${player.overall >= 80 ? 'text-blue-600' : 'text-gray-900'}`}>
+                        {player.overall}
+                      </div>
+                      <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest">OVR</div>
                     </div>
-                    <div className="text-xs text-gray-500">OVR</div>
                   </div>
                 </div>
-                <div className="mt-3 pt-3 border-t border-gray-200 flex items-center justify-between text-sm">
-                  <div>
-                    <span className="text-gray-500">Current: </span>
-                    <span className="font-medium">{player.currentClub}</span>
+
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                  <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                    <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Market Valuation</div>
+                    <div className="text-sm font-bold text-gray-900 flex items-center space-x-1">
+                      <span>{player.marketValuation.toLocaleString()}</span>
+                      <TrendingUp className={`w-3 h-3 ${player.marketValuation > player.askingPrice ? 'text-green-500' : 'text-gray-400'}`} />
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-1">
-                    <DollarSign className="w-4 h-4 text-green-600" />
-                    <span className="font-bold text-green-600">{player.askingPrice.toLocaleString()}</span>
+                  <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                    <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Asking Price</div>
+                    <div className="text-sm font-bold text-blue-600">{player.askingPrice.toLocaleString()} ALGO</div>
                   </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between text-[10px]">
+                  <div className="text-gray-500 italic">Reputation: {player.reputationScore} pts</div>
+                  <div className="font-mono text-gray-400 uppercase">{player.currentClub}</div>
                 </div>
               </Card>
             ))}
@@ -180,21 +195,19 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                   <div className="flex space-x-2">
                     <button
                       onClick={() => setOfferType('transfer')}
-                      className={`flex-1 py-2 px-4 rounded-lg ${
-                        offerType === 'transfer' 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-white text-gray-700 border border-gray-300'
-                      }`}
+                      className={`flex-1 py-2 px-4 rounded-lg ${offerType === 'transfer'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300'
+                        }`}
                     >
                       Permanent Transfer
                     </button>
                     <button
                       onClick={() => setOfferType('loan')}
-                      className={`flex-1 py-2 px-4 rounded-lg ${
-                        offerType === 'loan' 
-                          ? 'bg-blue-600 text-white' 
-                          : 'bg-white text-gray-700 border border-gray-300'
-                      }`}
+                      className={`flex-1 py-2 px-4 rounded-lg ${offerType === 'loan'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300'
+                        }`}
                     >
                       Loan
                     </button>
@@ -246,9 +259,8 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                       <div>
                         <div className="flex items-center space-x-2">
                           <h4 className="font-semibold text-gray-900">{offer.player.name}</h4>
-                          <span className={`px-2 py-0.5 rounded text-xs ${
-                            offer.offerType === 'transfer' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                          }`}>
+                          <span className={`px-2 py-0.5 rounded text-xs ${offer.offerType === 'transfer' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                            }`}>
                             {offer.offerType.toUpperCase()}
                           </span>
                         </div>
@@ -267,14 +279,14 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                         </div>
                       </div>
                       <div className="flex space-x-2">
-                        <Button 
+                        <Button
                           onClick={() => onRespondToOffer?.(offer.id, true)}
                           className="bg-green-600 hover:bg-green-700"
                         >
                           <Check className="w-4 h-4 mr-1" />
                           Accept
                         </Button>
-                        <Button 
+                        <Button
                           onClick={() => onRespondToOffer?.(offer.id, false)}
                           variant="outline"
                           className="border-red-200 text-red-600 hover:bg-red-50"
@@ -301,17 +313,15 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                       <div>
                         <div className="flex items-center space-x-2">
                           <h4 className="font-semibold text-gray-900">{offer.player.name}</h4>
-                          <span className={`px-2 py-0.5 rounded text-xs ${
-                            offer.offerType === 'transfer' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
-                          }`}>
+                          <span className={`px-2 py-0.5 rounded text-xs ${offer.offerType === 'transfer' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                            }`}>
                             {offer.offerType.toUpperCase()}
                           </span>
-                          <span className={`px-2 py-0.5 rounded text-xs ${
-                            offer.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
+                          <span className={`px-2 py-0.5 rounded text-xs ${offer.status === 'pending' ? 'bg-yellow-100 text-yellow-700' :
                             offer.status === 'accepted' ? 'bg-green-100 text-green-700' :
-                            offer.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                            'bg-gray-100 text-gray-700'
-                          }`}>
+                              offer.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                'bg-gray-100 text-gray-700'
+                            }`}>
                             {offer.status.toUpperCase()}
                           </span>
                         </div>
@@ -346,6 +356,41 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
         </div>
       )}
 
+      {/* Drafts Tab */}
+      {activeTab === 'drafts' && (
+        <div className="space-y-6">
+          <DraftEngine />
+
+          <div>
+            <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-4 px-1">Available Prospects</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              {MOCK_AVAILABLE_PLAYERS.filter(p => p.isDraftEligible).map(player => (
+                <Card key={player.id} className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all cursor-pointer group">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-600 transition-colors">
+                        <User className="w-6 h-6 text-blue-600 group-hover:text-white" />
+                      </div>
+                      <div>
+                        <div className="flex items-center space-x-2">
+                          <h4 className="font-bold text-gray-900">{player.name}</h4>
+                          <span className="text-[8px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded uppercase">U21</span>
+                        </div>
+                        <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">POTENTIAL: A+</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-[10px] font-black text-blue-600 uppercase">Valuation</div>
+                      <div className="text-sm font-black text-gray-900">{(player.marketValuation * 1.2).toLocaleString()}</div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* My Players Tab */}
       {activeTab === 'my-players' && (
         <Card className="text-center py-12">
@@ -359,4 +404,13 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
       )}
     </div>
   );
+};
+
+const getReputationBadge = (tier: string) => {
+  switch (tier) {
+    case 'platinum': return <div className="px-1.5 py-0.5 bg-blue-600 text-[8px] font-black text-white rounded uppercase shadow-lg shadow-blue-500/20">Platinum</div>;
+    case 'gold': return <div className="px-1.5 py-0.5 bg-yellow-500 text-[8px] font-black text-white rounded uppercase">Gold</div>;
+    case 'silver': return <div className="px-1.5 py-0.5 bg-gray-400 text-[8px] font-black text-white rounded uppercase">Silver</div>;
+    default: return <div className="px-1.5 py-0.5 bg-orange-700 text-[8px] font-black text-white rounded uppercase">Bronze</div>;
+  }
 };
