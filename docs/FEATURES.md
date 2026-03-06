@@ -60,7 +60,20 @@
 
 ---
 
-## 4. Training Center & Fitness Agent ✅
+## 4. The Office & Draft Engine ✅
+
+### Interactive Command Center
+- **Staff Room:** Conversational interface with the Agent, Scout, and Coach.
+- **Functional Advisors:** Staff respond with real-time squad data (Treasury balance, Formation, Morale).
+- **Draft Engine:** Discover and sign local academy prospects to your squad.
+- **Economic Impact:** Signing players deducts from the Squad Treasury and records a transaction.
+- **Match Engine Sync:** Newly signed players are immediately injected into the match simulation.
+
+**Status:** ✅ Complete (Frontend + Backend + Database + AI Logic)
+
+---
+
+## 5. Training Center & Fitness Agent ✅
 
 ### Real-World Training Sync
 - **Activity Sync:** Log runs, gym sessions, and HIIT (ready for Strava integration).
@@ -72,7 +85,7 @@
 
 ---
 
-## 5. Matchmaking & Territory ✅
+## 6. Matchmaking & Territory ✅
 
 ### Phygital Discovery
 - **Nearby Rivals:** Discover squads within your GPS radius.
@@ -84,7 +97,7 @@
 
 ---
 
-## 6. Lens Social Graph ✅
+## 7. Lens Social Graph ✅
 
 ### Web3 Identity & Engagement
 - **Login with Lens:** Sign-in with Lens (SIWL) on the Base network.
@@ -96,7 +109,7 @@
 
 ---
 
-## 7. AI Agents (Kite AI) ✅
+## 8. AI Agents (Kite AI) ✅
 
 **Powered by Kite AI Infrastructure:**
 - **Coach Kite:** Conversational tactical advice based on form and attributes.
@@ -116,8 +129,9 @@
 | Squad Management | ✅ | ✅ | ✅ | ✅ 100% |
 | Rivalries | ✅ | ✅ | ✅ | ✅ 100% |
 | Training Center | ✅ | ✅ | ✅ | ✅ 100% |
-| AI Agents | ✅ | ✅ | ✅ | ✅ 90% |
+| AI Agents | ✅ | ✅ | ✅ | ✅ 100% |
 | Viral Mechanics | ✅ | ✅ | ✅ | ✅ 100% |
+| Office / Market | ✅ | ✅ | ✅ | ✅ 100% |
 | Blockchain | ✅ | ✅ | ✅ | ✅ 90% |
 
 **Legend:** ✅ Complete | 🟡 Partial | 🔴 Not Started
