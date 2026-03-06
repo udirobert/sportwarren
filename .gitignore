@@ -112,3 +112,8 @@ out/
 .bolt/
 .junie
 .bolt
+
+# Hardhat
+artifacts/
+cache/
+typechain-types/

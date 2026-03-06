@@ -33,9 +33,6 @@ model User {
   squads        SquadMember[]
   matchesSubmitted Match[] @relation("MatchSubmitter")
   verifications MatchVerification[]
-  proposalsCreated SquadProposal[]
-  votesCast        ProposalVote[]
-  
   @@map("users")
 }
 
@@ -172,7 +169,10 @@ model Squad {
   transferOffersTo TransferOffer[] @relation("TransferToSquad")
   challengesFrom MatchChallenge[] @relation("ChallengeFromSquad")
   challengesTo   MatchChallenge[] @relation("ChallengeToSquad")
-  proposals      SquadProposal[]
+
+  // On-chain Governance
+  governorAddress String? @map("governor_address")
+  tokenAddress    String? @map("token_address")
 
   @@map("squads")
 }
@@ -221,59 +221,8 @@ model SquadTactics {
   @@map("squad_tactics")
 }
 
-// ============================================================================
-// DAO GOVERNANCE (PROPOSALS & VOTING)
-// ============================================================================
+// DAO GOVERNANCE (PROPOSALS & VOTING) - Moved to Avalanche Smart Contracts
 
-model SquadProposal {
-  id          String   @id @default(cuid())
-  squadId     String   @map("squad_id")
-  squad       Squad    @relation(fields: [squadId], references: [id], onDelete: Cascade)
-  
-  creatorId   String   @map("creator_id")
-  creator     User     @relation(fields: [creatorId], references: [id])
-  
-  title       String
-  description String?
-  
-  // Type: match_challenge, hire_agent, spend_treasury, update_tactics
-  type        String   
-  
-  // Data related to the proposal (e.g. challengeId)
-  referenceId String?  @map("reference_id")
-  
-  status      String   @default("active") // active, passed, failed, executed
-  
-  // Voting rules
-  expiresAt   DateTime @map("expires_at")
-  quorum      Int      @default(3) // Min votes required
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
-  votes       ProposalVote[]
-
-  @@map("squad_proposals")
-}
-
-model ProposalVote {
-  id          String   @id @default(cuid())
-  proposalId  String   @map("proposal_id")
-  proposal    SquadProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
-  
-  voterId     String   @map("voter_id")
-  voter       User     @relation(fields: [voterId], references: [id])
-  
-  // Vote: yes, no, abstain
-  vote        String
-  
-  weight      Int      @default(1)
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  @@unique([proposalId, voterId])
-  @@map("proposal_votes")
-}
 
 // ============================================================================
 // TREASURY & TRANSACTIONS
