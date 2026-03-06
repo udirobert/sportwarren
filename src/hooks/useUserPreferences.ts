@@ -1,40 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-
-export interface UserPreferences {
-  // Core interests
-  primaryRole: 'player' | 'organizer' | 'fan' | 'coach';
-  sportsInterests: string[];
-  experienceLevel: 'beginner' | 'intermediate' | 'advanced';
-  
-  // Feature preferences
-  preferredFeatures: {
-    statistics: 'basic' | 'detailed' | 'advanced';
-    social: 'minimal' | 'moderate' | 'active';
-    gamification: 'none' | 'light' | 'full';
-    notifications: 'essential' | 'moderate' | 'all';
-  };
-  
-  // UI preferences
-  uiComplexity: 'simple' | 'standard' | 'advanced';
-  dashboardLayout: 'minimal' | 'balanced' | 'comprehensive';
-  
-  // Behavioral data
-  usagePatterns: {
-    mostUsedFeatures: string[];
-    timeSpentInSections: Record<string, number>;
-    lastActiveFeatures: string[];
-    completedOnboarding: boolean;
-    onboardingSkipped?: boolean;
-    onboardingSkippedAt?: string;
-  };
-  
-  // Progressive disclosure state
-  unlockedFeatures: string[];
-  dismissedTutorials: string[];
-  featureDiscoveryLevel: number; // 0-100
-}
+import { UserPreferences } from '@/types';
 
 const DEFAULT_PREFERENCES: UserPreferences = {
+  theme: 'system',
+  notifications: true,
+  compactMode: false,
+  onboardingCompleted: false,
+  preferredChain: 'algorand',
   primaryRole: 'player',
   sportsInterests: ['football'],
   experienceLevel: 'beginner',
@@ -116,12 +88,12 @@ export function useUserPreferences() {
     if (!preferences.unlockedFeatures.includes(feature)) {
       const newUnlocked = [...preferences.unlockedFeatures, feature];
       const newDiscoveryLevel = Math.min(100, preferences.featureDiscoveryLevel + 10);
-      
+
       savePreferences({
         unlockedFeatures: newUnlocked,
         featureDiscoveryLevel: newDiscoveryLevel,
       });
-      
+
       return true; // Feature was newly unlocked
     }
     return false; // Feature was already unlocked
@@ -140,15 +112,15 @@ export function useUserPreferences() {
   const adaptUIComplexity = useCallback(() => {
     const totalUsage = Object.values(preferences.usagePatterns.timeSpentInSections).reduce((a, b) => a + b, 0);
     const uniqueFeaturesUsed = preferences.usagePatterns.mostUsedFeatures.length;
-    
+
     let newComplexity: 'simple' | 'standard' | 'advanced' = 'simple';
-    
+
     if (totalUsage > 3600000 && uniqueFeaturesUsed > 5) { // 1 hour+ and 5+ features
       newComplexity = 'advanced';
     } else if (totalUsage > 1800000 && uniqueFeaturesUsed > 3) { // 30 min+ and 3+ features
       newComplexity = 'standard';
     }
-    
+
     if (newComplexity !== preferences.uiComplexity) {
       savePreferences({ uiComplexity: newComplexity });
     }

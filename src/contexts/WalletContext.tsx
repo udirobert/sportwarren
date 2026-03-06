@@ -14,7 +14,10 @@ const STORAGE_KEYS = {
 
 interface WalletContextType {
   address: string | null;
+  connected: boolean;
   isGuest: boolean;
+  chain: 'algorand' | 'avalanche' | 'lens' | null;
+  balance: number;
   connect: (chain: 'algorand' | 'avalanche' | 'lens') => Promise<void>;
   loginAsGuest: () => void;
   disconnect: () => void;
@@ -216,11 +219,29 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const setPreferredChain = (newChain: 'algorand' | 'avalanche' | 'lens') => {
     setPreferences(prev => {
       const updated: UserPreferences = {
+        ...prev,
         preferredChain: newChain,
         theme: prev?.theme || 'system',
         notifications: prev?.notifications ?? true,
         compactMode: prev?.compactMode ?? false,
         onboardingCompleted: prev?.onboardingCompleted ?? false,
+        preferredFeatures: prev?.preferredFeatures || {
+          statistics: 'basic',
+          social: 'moderate',
+          gamification: 'light',
+          notifications: 'moderate',
+        },
+        uiComplexity: prev?.uiComplexity || 'simple',
+        dashboardLayout: prev?.dashboardLayout || 'minimal',
+        usagePatterns: prev?.usagePatterns || {
+          mostUsedFeatures: [],
+          timeSpentInSections: {},
+          lastActiveFeatures: [],
+          completedOnboarding: false,
+        },
+        unlockedFeatures: prev?.unlockedFeatures || ['dashboard', 'match-tracker', 'basic-stats'],
+        dismissedTutorials: prev?.dismissedTutorials || [],
+        featureDiscoveryLevel: prev?.featureDiscoveryLevel || 0,
       };
       localStorage.setItem(STORAGE_KEYS.USER_PREFERENCES, JSON.stringify(updated));
       return updated;
