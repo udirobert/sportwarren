@@ -438,10 +438,47 @@ export interface FeatureFlag {
   description: string;
 }
 
+// ============================================================================
+// USER & SETTINGS DOMAIN
+// ============================================================================
+
 export interface UserPreferences {
+  // UI basics
   theme: 'light' | 'dark' | 'system';
   notifications: boolean;
   compactMode: boolean;
   onboardingCompleted: boolean;
   preferredChain: 'algorand' | 'avalanche' | 'base' | 'lens';
+
+  // Core interests
+  primaryRole?: 'player' | 'organizer' | 'fan' | 'coach';
+  sportsInterests?: string[];
+  experienceLevel?: 'beginner' | 'intermediate' | 'advanced';
+
+  // Feature preferences
+  preferredFeatures: {
+    statistics: 'basic' | 'detailed' | 'advanced';
+    social: 'minimal' | 'moderate' | 'active';
+    gamification: 'none' | 'light' | 'full';
+    notifications: 'essential' | 'moderate' | 'all';
+  };
+
+  // UI preferences
+  uiComplexity: 'simple' | 'standard' | 'advanced';
+  dashboardLayout: 'minimal' | 'balanced' | 'comprehensive';
+
+  // Behavioral data
+  usagePatterns: {
+    mostUsedFeatures: string[];
+    timeSpentInSections: Record<string, number>;
+    lastActiveFeatures: string[];
+    completedOnboarding: boolean;
+    onboardingSkipped?: boolean;
+    onboardingSkippedAt?: string;
+  };
+
+  // Progressive disclosure state
+  unlockedFeatures: string[];
+  dismissedTutorials: string[];
+  featureDiscoveryLevel: number; // 0-100
 }
