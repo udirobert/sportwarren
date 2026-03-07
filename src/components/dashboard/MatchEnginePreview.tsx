@@ -6,6 +6,7 @@ import { Play, Pause, RotateCcw, Activity, Shield, Trophy, Zap, MessageSquare } 
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSquadDetails } from '@/hooks/squad/useSquad';
+import { useWallet } from '@/contexts/WalletContext';
 
 type ReputationTier = 'bronze' | 'silver' | 'gold' | 'platinum';
 
@@ -46,6 +47,17 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
     const [activeMatch, setActiveMatch] = useState<string>('m1');
     const [daoAlert, setDaoAlert] = useState<string | null>(null);
     const [tempo, setTempo] = useState(1); // 1 = normal, 1.5 = fast (DAO triggered)
+
+    const { address, isGuest } = useWallet();
+
+    // Initialize players with real data or high-fidelity fallback
+    useEffect(() => {
+        // Auto-start for guests to show life immediately
+        if (isGuest && !isPlaying && time === 0) {
+            const timer = setTimeout(() => setIsPlaying(true), 2500);
+            return () => clearTimeout(timer);
+        }
+    }, [isGuest, isPlaying, time]);
 
     // Fetch real team members
     const { members, loading: membersLoading } = useSquadDetails(squadId);

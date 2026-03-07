@@ -171,6 +171,13 @@ export function useOnboarding() {
             completed: state.checklistItems.verify_match ?? false,
             emoji: '✅',
         },
+        {
+            id: 'claim_identity',
+            label: 'Secure your Legacy',
+            description: 'Connect wallet to mint your guest stats to the blockchain',
+            completed: state.wizardDone, // If they did the wizard or connected, they might be done
+            emoji: '⚡',
+        },
     ];
 
     const allDone = checklistItems.every(i => i.completed);
