@@ -107,7 +107,8 @@ Treasury reward distributed
 | Wallets | Pera, Defly (Algorand) |
 | On-Chain | Algorand Testnet (Match Verification) |
 | Social | Lens Network (Social Highlights) |
-| Oracles | Chainlink CRE (Trustless Verification) |
+| Oracles | Chainlink CRE (Runtime Environment) |
+| Verification | OpenWeatherMap + Google Maps (Geofencing) |
 
 ---
 
@@ -195,6 +196,7 @@ id, homeSquadId, awaySquadId, homeScore, awayScore
 submittedBy, status (pending/verified/disputed/finalized)
 matchDate, latitude, longitude
 weatherVerified, locationVerified
+verificationDetails (JSON) // CRE result: confidence, weather source, geofencing
 txId (Algorand transaction)
 createdAt, updatedAt
 ```
@@ -249,10 +251,10 @@ createdAt, updatedAt
 
 ### Match Router
 ```typescript
-match.submit({ homeSquadId, awaySquadId, homeScore, awayScore, matchDate })
+match.submit({ homeSquadId, awaySquadId, homeScore, awayScore, matchDate, latitude?, longitude? })
 match.verify({ matchId, verified, homeScore?, awayScore? })
 match.list({ status?, squadId?, limit?, offset? })
-match.getById({ id })
+match.getById({ id }) // Returns rich creResult metadata
 ```
 
 ### Player Router
@@ -342,18 +344,19 @@ GET /api/lens/balance // Lens Network balance
 
 ## Verification Mechanic
 
-**Consensus Model:**
-1. Captain submits match result
-2. Opposing captain verifies
-3. Additional witnesses can verify
-4. 3 verifications = confirmed
-5. Discrepancy = disputed status
+**Trust Mechanic: Chainlink CRE**
+The platform uses a 3-phase verification workflow:
+1. **Orchestration**: Parallel fetching of weather (One Call API) and location (Reverse Geocoding).
+2. **Consensus**: Weighing results to generate a confidence score (threshold: 60%).
+   - *Location (60%)*: Stadium/Pitch detection via Geofencing.
+   - *Weather (40%)*: Conditions matching (Historical vs. Current).
+3. **Settlement**: Match record is hashed and committed to Algorand Testnet.
 
 **Trust Tiers:**
 - Bronze - New players
 - Silver - Established players
 - Gold - Verified captains
-- Platinum - Reputable long-term users
+- Platinum - Chainlink CRE Verified (Automatic)
 
 **Anti-Fraud:**
 - Both teams must verify
@@ -418,6 +421,12 @@ const { treasury, deposit, withdraw } = useTreasury(squadId);
 ---
 
 ## Development Progress
+
+### March 2026 - Chainlink CRE & Phygital Trust ✅
+- **Workflow:** Implemented Chainlink Runtime Environment (CRE) pattern for match verification.
+- **Data:** Integrated OpenWeatherMap OneCall (Historical) and Google Maps Place API.
+- **UI:** Real-time "Verification Engine" logs in `MatchConsensusPanel`.
+- **Database:** Added `verificationDetails` JSON field to persisted Match model.
 
 ### March 2026 - Full Stack Integration ✅
 - **Database:** 4 new models (squad_tactics, squad_treasury, treasury_transactions, transfer_offers)
