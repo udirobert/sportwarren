@@ -25,6 +25,7 @@ import { ScoutingReport } from '@/components/dashboard/ScoutingReport';
 import { MatchEnginePreview } from '@/components/dashboard/MatchEnginePreview';
 import { StaffRoom } from '@/components/dashboard/StaffRoom';
 import { AgenticConcierge } from '@/components/adaptive/AgenticConcierge';
+import { LensSocialHub } from '@/components/dashboard/LensSocialHub';
 
 interface DashboardWidget {
   id: string;
@@ -124,6 +125,13 @@ export const AdaptiveDashboard: React.FC = () => {
       requiredLevel: 'basic',
       category: 'social',
       component: <SquadGovernance squadId="demo-squad-id" />,
+    },
+    {
+      id: 'lens-social',
+      priority: 94,
+      requiredLevel: 'basic',
+      category: 'social',
+      component: <LensSocialHub />,
     },
     {
       id: 'nearby-squads',

@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { WalletState, UserPreferences } from '@/types';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 
 // Storage keys - centralized for consistency
 const STORAGE_KEYS = {
@@ -16,13 +17,14 @@ interface WalletContextType {
   address: string | null;
   connected: boolean;
   isGuest: boolean;
-  chain: 'algorand' | 'avalanche' | 'lens' | null;
+  loginMethod: 'wallet' | 'social' | 'guest' | null;
+  chain: 'algorand' | 'avalanche' | 'lens' | 'social' | null;
   balance: number;
-  connect: (chain: 'algorand' | 'avalanche' | 'lens') => Promise<void>;
+  connect: (method: 'algorand' | 'avalanche' | 'lens' | 'google' | 'discord') => Promise<void>;
   loginAsGuest: () => void;
   disconnect: () => void;
   preferences: UserPreferences | null;
-  setPreferredChain: (chain: 'algorand' | 'avalanche' | 'lens') => void;
+  setPreferredChain: (chain: 'algorand' | 'avalanche' | 'lens' | 'social') => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -41,10 +43,14 @@ interface WalletProviderProps {
 
 export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [address, setAddress] = useState<string | null>(null);
-  const [chain, setChain] = useState<'algorand' | 'avalanche' | 'lens' | null>(null);
+  const [chain, setChain] = useState<'algorand' | 'avalanche' | 'lens' | 'social' | null>(null);
   const [balance, setBalance] = useState<number>(0);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [isGuest, setIsGuest] = useState<boolean>(false);
+  const [loginMethod, setLoginMethod] = useState<'wallet' | 'social' | 'guest' | null>(null);
+
+  const { login, logout: privyLogout, authenticated, user, ready } = usePrivy();
+  const { wallets } = useWallets();
 
   const loadPreferences = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -85,34 +91,43 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    const savedPrefs = loadPreferences();
+    if (ready && authenticated && user) {
+      if (user.wallet) {
+        setAddress(user.wallet.address);
+        setChain('social'); // Or detect if it's lens/base
+        setLoginMethod('social');
+        setIsGuest(false);
+      }
+    } else if (ready && !authenticated) {
+      const savedPrefs = loadPreferences();
 
-    const savedAlgorand = localStorage.getItem(STORAGE_KEYS.ALGORAND_ADDRESS);
-    const savedAvalanche = localStorage.getItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
-    const savedLens = localStorage.getItem(STORAGE_KEYS.LENS_ADDRESS);
-    const savedChain = localStorage.getItem(STORAGE_KEYS.PREFERRED_CHAIN) as 'algorand' | 'avalanche' | 'lens' | null;
+      const savedAlgorand = localStorage.getItem(STORAGE_KEYS.ALGORAND_ADDRESS);
+      const savedAvalanche = localStorage.getItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
+      const savedLens = localStorage.getItem(STORAGE_KEYS.LENS_ADDRESS);
+      const savedChain = localStorage.getItem(STORAGE_KEYS.PREFERRED_CHAIN) as 'algorand' | 'avalanche' | 'lens' | null;
 
-    if (savedAlgorand) {
-      setAddress(savedAlgorand);
-      setChain('algorand');
-      fetchAlgorandBalance(savedAlgorand);
-    } else if (savedAvalanche) {
-      setAddress(savedAvalanche);
-      setChain('avalanche');
-      fetchAvalancheBalance(savedAvalanche);
-    } else if (savedLens) {
-      setAddress(savedLens);
-      setChain('lens');
-      fetchLensBalance(savedLens);
-    } else if (localStorage.getItem('sw_is_guest') === 'true') {
-      setIsGuest(true);
-      setAddress('0xGUEST_ADDRESS_HACKNEY_MARSHES');
-      setChain('lens');
-      setBalance(1000); // Guest gets some local currency to play with
-    } else if (savedPrefs?.preferredChain) {
-      setChain(savedPrefs.preferredChain);
+      if (savedAlgorand) {
+        setAddress(savedAlgorand);
+        setChain('algorand');
+        fetchAlgorandBalance(savedAlgorand);
+      } else if (savedAvalanche) {
+        setAddress(savedAvalanche);
+        setChain('avalanche');
+        fetchAvalancheBalance(savedAvalanche);
+      } else if (savedLens) {
+        setAddress(savedLens);
+        setChain('lens');
+        fetchLensBalance(savedLens);
+      } else if (localStorage.getItem('sw_is_guest') === 'true') {
+        setIsGuest(true);
+        setAddress('0xGUEST_ADDRESS_HACKNEY_MARSHES');
+        setChain('lens');
+        setBalance(1000);
+      } else if (savedPrefs?.preferredChain) {
+        setChain(savedPrefs.preferredChain);
+      }
     }
-  }, [loadPreferences]);
+  }, [loadPreferences, ready, authenticated, user]);
 
   const fetchAlgorandBalance = async (addr: string) => {
     try {
@@ -150,9 +165,15 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     }
   };
 
-  const connect = async (selectedChain: 'algorand' | 'avalanche' | 'lens') => {
+  const connect = async (method: 'algorand' | 'avalanche' | 'lens' | 'google' | 'discord') => {
     try {
-      if (selectedChain === 'algorand') {
+      if (method === 'google' || method === 'discord') {
+        // ── Social Onboarding Flow (Progressive Identity) via Privy ──
+        login();
+        return;
+      }
+
+      if (method === 'algorand') {
         // ── Step 1: Get address from browser wallet ──
         let walletAddress = '';
         const peraWallet = (window as any).peraWallet;
@@ -206,7 +227,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         }
         fetchAlgorandBalance(walletAddress);
 
-      } else if (selectedChain === 'avalanche') {
+      } else if (method === 'avalanche') {
         // ── EIP-1193: MetaMask / any EVM wallet ──
         if (typeof window === 'undefined' || !(window as any).ethereum) {
           throw new Error('No EVM wallet found. Please install MetaMask.');
@@ -233,7 +254,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         localStorage.setItem('sw_auth_timestamp', String(timestamp));
         fetchAvalancheBalance(walletAddress);
 
-      } else if (selectedChain === 'lens') {
+      } else if (method === 'lens') {
         // ── Lens Chain: also EVM via MetaMask ──
         if (typeof window === 'undefined' || !(window as any).ethereum) {
           throw new Error('No EVM wallet found. Please install MetaMask.');
@@ -298,13 +319,19 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   };
 
   const disconnect = () => {
+    if (authenticated) {
+      privyLogout();
+    }
     setAddress(null);
     setChain(null);
     setBalance(0);
     setIsGuest(false);
+    setLoginMethod(null);
     localStorage.removeItem(STORAGE_KEYS.ALGORAND_ADDRESS);
     localStorage.removeItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
     localStorage.removeItem(STORAGE_KEYS.LENS_ADDRESS);
+    localStorage.removeItem('sw_social_address');
+    localStorage.removeItem('sw_login_method');
     localStorage.removeItem('sw_is_guest');
     // Clear auth tokens — prevent signature reuse after logout
     localStorage.removeItem('sw_auth_signature');
@@ -312,7 +339,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     localStorage.removeItem('sw_auth_timestamp');
   };
 
-  const setPreferredChain = (newChain: 'algorand' | 'avalanche' | 'lens') => {
+  const setPreferredChain = (newChain: 'algorand' | 'avalanche' | 'lens' | 'social') => {
     setPreferences(prev => {
       const updated: UserPreferences = {
         ...prev,
@@ -350,6 +377,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         address,
         connected: !!address,
         isGuest,
+        loginMethod,
         chain,
         balance,
         connect,

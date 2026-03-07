@@ -12,7 +12,8 @@ import {
     Trophy,
     Users,
     Zap,
-    MousePointer2
+    MousePointer2,
+    Share2
 } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
@@ -64,6 +65,15 @@ const TOUR_STEPS: TourStep[] = [
         emoji: '🎩',
         icon: Users,
         position: 'bottom',
+    },
+    {
+        id: 'lens-social-step',
+        targetId: 'lens-social',
+        title: "The Social Graph",
+        content: "This is where your reputation goes global. By connecting your Lens Identity, you can share 'Phygital Proof' and compete in the World Grassroots Rankings.",
+        emoji: '🌿',
+        icon: Share2,
+        position: 'top',
     },
     {
         id: 'rpg-stats',

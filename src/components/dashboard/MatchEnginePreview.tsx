@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSquadDetails } from '@/hooks/squad/useSquad';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
+import { trpc } from '@/lib/trpc-client';
 
 type ReputationTier = 'bronze' | 'silver' | 'gold' | 'platinum';
 
@@ -48,6 +49,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
     const [activeMatch, setActiveMatch] = useState<string>('m1');
     const [daoAlert, setDaoAlert] = useState<string | null>(null);
     const [tempo, setTempo] = useState(1);
+    const [isFinalizing, setIsFinalizing] = useState(false);
 
     const { address, isGuest } = useWallet();
     const env = useEnvironment();
@@ -107,6 +109,32 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
         { id: 'm3', home: 'ALG', away: 'AVAL', homeScore: 2, awayScore: 2, status: 'live' },
     ];
 
+    const submitMatchMutation = trpc.match.submit.useMutation({
+        onSuccess: () => {
+            addCommentary("MATCH FINALIZED & POSTED TO BLOCKCHAIN (DEMO)", "incident");
+            setIsFinalizing(false);
+        }
+    });
+
+    const finalizeMatch = useCallback(async () => {
+        if (!squadId || isGuest || isFinalizing) return;
+
+        setIsFinalizing(true);
+        addCommentary("FINALIZING MATCH DATA...", "incident");
+
+        // Find a random opponent squad for the demo
+        // In real app, this would be the actual opponent squad ID
+        const awaySquadId = "rival-squad-hackney";
+
+        submitMatchMutation.mutate({
+            homeSquadId: squadId,
+            awaySquadId: awaySquadId,
+            homeScore: score.home,
+            awayScore: score.away,
+            matchDate: new Date()
+        });
+    }, [squadId, isGuest, score, env, isFinalizing, submitMatchMutation]);
+
     // Initialize players with Physics-enabled agents
     useEffect(() => {
         const createPlayer = (id: string, name: string, x: number, y: number, team: 'home' | 'away', role: string, stats: any): any => ({
@@ -117,11 +145,21 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
         });
 
         if (!membersLoading && members && members.length > 0) {
-            const homePlayers = members.slice(0, 3).map((m, i) => createPlayer(
-                m.id, m.name.split(' ')[0],
-                i === 0 ? 45 : 30, i === 0 ? 50 : (i === 1 ? 35 : 65),
-                'home', m.role, { level: m.stats?.level || 5, pace: 75, agility: 80, strength: 70 }
-            ));
+            const homePlayers = members.slice(0, 3).map((m, i) => {
+                // Use level to derive stats for now, or match existing attributes if we had them
+                const level = m.stats?.level || 5;
+                const baseStat = 60 + (level * 1.5);
+                return createPlayer(
+                    m.id, m.name.split(' ')[0],
+                    i === 0 ? 45 : 30, i === 0 ? 50 : (i === 1 ? 35 : 65),
+                    'home', m.role, {
+                    level,
+                    pace: Math.min(99, baseStat + (m.role === 'player' ? 5 : 0)),
+                    agility: Math.min(99, baseStat + 2),
+                    strength: Math.min(99, baseStat - 5)
+                }
+                );
+            });
             const awayPlayers = [
                 createPlayer('a1', env.rivals.away.split(' ')[0], 55, 50, 'away', 'CB', { level: 13, pace: 65, agility: 60, strength: 85 }),
                 createPlayer('a2', env.rivals.away.split(' ')[1] || 'Rival', 70, 40, 'away', 'CB', { level: 11, pace: 68, agility: 62, strength: 82 }),
@@ -137,7 +175,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
             ];
             setPlayers(fallbackPlayers);
         }
-    }, [members, membersLoading]);
+    }, [members, membersLoading, env.rivals.away]);
 
     const addCommentary = (text: string, type: MatchCommentary['type'] = 'action') => {
         const timeStr = `${Math.floor(time / 20)}:00`; // Slower time for more detail
@@ -239,7 +277,12 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                     addCommentary(`GOAL! ${p.name} finds the net!`, 'goal');
                     setScore(s => ({ ...s, [scoringTeam]: s[scoringTeam] + 1 }));
                     setIsPlaying(false);
-                    setTimeout(reset, 2000);
+
+                    // Finalize match after scoring (demo flow)
+                    setTimeout(() => {
+                        finalizeMatch();
+                        setTimeout(reset, 3000);
+                    }, 500);
                 }
             }
 

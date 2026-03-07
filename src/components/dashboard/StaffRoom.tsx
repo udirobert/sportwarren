@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { trpc } from '@/lib/trpc-client';
 import { useSquadDetails } from '@/hooks/squad/useSquad';
+import { ContractNegotiationModal } from './ContractNegotiationModal';
 
 interface StaffMember {
     id: string;
@@ -53,6 +54,22 @@ const STAFF_MEMBERS: StaffMember[] = [
         avatar: '🪁',
         mood: 'happy',
         biography: 'AI-driven tactical analyst. Thinks in nodes and probability matrices.'
+    },
+    {
+        id: 'physio-1',
+        name: 'The Physio',
+        role: 'Health & Recovery',
+        avatar: '🏥',
+        mood: 'focused',
+        biography: 'Specializes in biometric recovery and injury prevention. Monitors real-world activity levels via the Phygital link.'
+    },
+    {
+        id: 'comms-1',
+        name: 'Commercial Lead',
+        role: 'Sponsorships & PR',
+        avatar: '📈',
+        mood: 'happy',
+        biography: 'Maximizes Lens-based reputation for brand deals. Thinks every tackle is a marketing opportunity.'
     }
 ];
 
@@ -65,6 +82,8 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(STAFF_MEMBERS[0]);
     const [chatHistory, setChatHistory] = useState<Array<{ sender: string, text: string }>>([]);
     const [isTyping, setIsTyping] = useState(false);
+    const [isNegotiationOpen, setIsNegotiationOpen] = useState(false);
+    const [negotiatingPlayer, setNegotiatingPlayer] = useState<string>('');
 
     // Fetch real-time data for functional responses
     const { data: treasury } = trpc.squad.getTreasury.useQuery(
@@ -103,11 +122,17 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                 const formation = tactics?.formation || '4-4-2';
                 response = `Current setup is ${formation}. I've run the numbers; our win probability against average Hackney sides is currently ${Math.floor(Math.random() * 20) + 60}%.`;
             } else if (text.includes("Renegotiate") && text.includes("Contract")) {
-                const playerName = text.split("'")[0].split(" ").pop();
-                response = `I've already sent a preliminary feeler to ${playerName}'s camp. They're looking for a 15% bump in the win-bonus, but I think I can talk them down.`;
+                const playerName = text.replace("Renegotiate ", "").replace("'s Contract", "");
+                setNegotiatingPlayer(playerName);
+                setTimeout(() => setIsNegotiationOpen(true), 1000);
+                response = `I've opened the secure line with ${playerName}'s rep. The contract details are on your screen now, Boss.`;
             } else if (text === "Squad Morale Check") {
                 const avgLevel = members?.length ? Math.round(members.reduce((acc, m) => acc + (m.stats?.level || 0), 0) / members.length) : 5;
                 response = `Morale is decent. The squad's average experience level of ${avgLevel} is keeping them grounded but hungry.`;
+            } else if (text === "Fitness Status Report") {
+                response = `I've checked the biometric feeds. 85% of the squad is at peak recovery. One minor strain in the youth ranks, but nothing concerning.`;
+            } else if (text === "Sponsorship Opportunity") {
+                response = `A local Hackney coffee brand is interested in a shirt deal. They're impressed by our Lens engagement numbers. Suggested value: 5,000 credits.`;
             } else {
                 response = getStaffResponse(selectedStaff?.id || '', text);
             }
@@ -262,6 +287,17 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     </div>
                 </div>
             </Card>
+
+            <ContractNegotiationModal
+                playerName={negotiatingPlayer}
+                currentWage={500}
+                isOpen={isNegotiationOpen}
+                onClose={() => setIsNegotiationOpen(false)}
+                onFinalize={(newWage) => {
+                    setIsNegotiationOpen(false);
+                    setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Staff', text: `Excellent. ${negotiatingPlayer} is signed for ${newWage} credits per week. The paperwork is finalized.` }]);
+                }}
+            />
         </motion.div>
     );
 };
@@ -282,6 +318,16 @@ function getStaffResponse(staffId: string, query: string): string {
             "The Match Engine is calculating our offensive probability as high, but our defensive recovery is lacking. I suggest a 4-3-3 setup.",
             "I've noticed the squad's morale is dipping after the last loss. Maybe a light training session tomorrow?",
             "Tactical directive: We need to utilize the wings more. The Lens reputation of our wide players should be exploited."
+        ],
+        'physio-1': [
+            "Recovery periods are shortening thanks to the new sleep-tracking integration. The squad is ready for the double-header.",
+            "I'm seeing high lactic acid levels in our mid-field. We should rotation them for the Tuesday night match.",
+            "Biometric verification complete. All participating players are physically cleared for the upcoming turf-war."
+        ],
+        'comms-1': [
+            "Our social reach is up 40% after the last highlight post. The phantom-fans are starting to buy real-world merch.",
+            "I've negotiated a bounty with the local sports shop. Anyone who checks in there gets a 10% XP boost.",
+            "Brand alignment is perfect. We're the most 'Phygital' club in the London circuit right now."
         ]
     };
 
@@ -294,6 +340,8 @@ function getQuickActions(staffId: string): string[] {
         case 'agent-1': return ["Renegotiate Marcus' Contract", "Balance Sheet Review", "Transfer Budget Inquiry"];
         case 'scout-1': return ["Hackney Academy Report", "Rival Team Analysis", "Search for Midfielders"];
         case 'coach-1': return ["Tactical Briefing", "Squad Morale Check", "Training Optimization"];
+        case 'physio-1': return ["Fitness Status Report", "Recovery Logistics", "Injury Prevention"];
+        case 'comms-1': return ["Sponsorship Opportunity", "Social Engagement Stats", "Brand Reputation"];
         default: return ["Status Report", "Next Match Preparation"];
     }
 }

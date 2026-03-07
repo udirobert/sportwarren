@@ -3,10 +3,10 @@ import { NextResponse } from 'next/server';
 import { getMarcusResponse } from '@/lib/ai/marcus';
 
 export async function POST(request: Request) {
-    const { message, city, venue, history } = await request.json();
+    const { message, city, venue, history, userId } = await request.json();
 
     try {
-        const response = await getMarcusResponse(message, { city, venue, history });
+        const response = await getMarcusResponse(message, { city, venue, history, userId });
         return NextResponse.json({ response });
     } catch (error: any) {
         console.error('[VENICE-AI] Chat failed:', error);
