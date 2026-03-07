@@ -14,6 +14,7 @@ import {
     HelpCircle
 } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { Button } from '@/components/ui/Button';
 
 interface Message {
@@ -26,13 +27,14 @@ interface Message {
 
 export const AgenticConcierge: React.FC = () => {
     const { isGuest, address } = useWallet();
+    const { city } = useEnvironment();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    const guestWelcome = "Welcome to Hackney Marshes! I'm Marcus, your Academy Director. Since you're in Guest Mode, I've initialized a live simulation for you. Ask me anything about how the Phygital Engine works!";
+    const guestWelcome = `Welcome to the ${city} Chapter! I'm Marcus, your Academy Director. Since you're in Guest Mode, I've initialized a live simulation at your local ground. Ask me anything!`;
     const memberWelcome = "Welcome back, Manager. The squad is looking sharp today. How can I assist with your tactical preparations?";
 
     useEffect(() => {
@@ -48,6 +50,28 @@ export const AgenticConcierge: React.FC = () => {
             ]);
         }
     }, [isGuest]);
+
+    // Listen for Tour Steps
+    useEffect(() => {
+        const handleTourStep = (e: any) => {
+            if (e.detail?.id === 'staff-room') {
+                setIsOpen(true);
+                setIsTyping(true);
+                setTimeout(() => {
+                    setIsTyping(false);
+                    setMessages(prev => [...prev.slice(0, 2), {
+                        id: 'tour-msg',
+                        role: 'agent',
+                        content: "I've just finished analyzing the match engine data. Hackney Hammers are playing a high-line—we should exploit their right flank once you connect your identity.",
+                        timestamp: new Date(),
+                        agentType: 'concierge'
+                    }]);
+                }, 1000);
+            }
+        };
+        window.addEventListener('sw-tour-step', handleTourStep);
+        return () => window.removeEventListener('sw-tour-step', handleTourStep);
+    }, []);
 
     useEffect(() => {
         if (scrollRef.current) {
