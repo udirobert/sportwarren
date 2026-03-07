@@ -27,12 +27,13 @@ interface Message {
 
 export const AgenticConcierge: React.FC = () => {
     const { isGuest, address } = useWallet();
-    const { city } = useEnvironment();
+    const { city, rivals, venue } = useEnvironment();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isTyping, setIsTyping] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
+    const tourStepProcessed = useRef<Set<string>>(new Set());
 
     const guestWelcome = `Welcome to the ${city} Chapter! I'm Marcus, your Academy Director. Since you're in Guest Mode, I've initialized a live simulation at your local ground. Ask me anything!`;
     const memberWelcome = "Welcome back, Manager. The squad is looking sharp today. How can I assist with your tactical preparations?";
@@ -54,24 +55,46 @@ export const AgenticConcierge: React.FC = () => {
     // Listen for Tour Steps
     useEffect(() => {
         const handleTourStep = (e: any) => {
-            if (e.detail?.id === 'staff-room') {
+            const stepId = e.detail?.id;
+            if (stepId === 'staff-room' && !tourStepProcessed.current.has(stepId)) {
+                tourStepProcessed.current.add(stepId);
                 setIsOpen(true);
                 setIsTyping(true);
-                setTimeout(() => {
-                    setIsTyping(false);
-                    setMessages(prev => [...prev.slice(0, 2), {
-                        id: 'tour-msg',
-                        role: 'agent',
-                        content: "I've just finished analyzing the match engine data. Hackney Hammers are playing a high-line—we should exploit their right flank once you connect your identity.",
-                        timestamp: new Date(),
-                        agentType: 'concierge'
-                    }]);
-                }, 1000);
+
+                const fetchAnalysis = async () => {
+                    try {
+                        const res = await fetch('/api/ai/chat', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                message: `I'm observing the simulation at ${venue}. The squad is facing the ${rivals.away}. Provide a quick tactical analysis of their formation (e.g. they are playing a high-line) and suggest that the manager should connect their identity to take control.`,
+                                city,
+                                venue,
+                                history: []
+                            })
+                        });
+                        const data = await res.json();
+                        setMessages(prev => [...prev, {
+                            id: `tour-${Date.now()}`,
+                            role: 'agent',
+                            content: data.response,
+                            timestamp: new Date(),
+                            agentType: 'concierge'
+                        }]);
+                    } catch (err) {
+                        console.error("Tour analysis failed:", err);
+                    } finally {
+                        setIsTyping(false);
+                    }
+                };
+
+                // Wait 1s for the UI to settle before firing
+                setTimeout(fetchAnalysis, 1000);
             }
         };
         window.addEventListener('sw-tour-step', handleTourStep);
         return () => window.removeEventListener('sw-tour-step', handleTourStep);
-    }, []);
+    }, [venue, rivals, city]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -93,30 +116,44 @@ export const AgenticConcierge: React.FC = () => {
         setInputValue('');
         setIsTyping(true);
 
-        // Simulate AI Thinking
-        setTimeout(() => {
-            let response = "";
-            const lower = inputValue.toLowerCase();
+        try {
+            const history = messages.map(m => ({
+                role: m.role === 'agent' ? 'assistant' : 'user',
+                content: m.content
+            }));
 
-            if (lower.includes("how") && lower.includes("work")) {
-                response = "We use Chainlink CRE to verify your real-world GPS and weather. If you play a match at Hackney Marshes, we bridge that data to Algorand/Avalanche to mint your XP.";
-            } else if (lower.includes("guest")) {
-                response = "Guest mode is a sandbox. Your progress is local. To 'Secure your Legacy', you'll need to connect a wallet—this is where the true RPG journey begins.";
-            } else if (lower.includes("token") || lower.includes("money")) {
-                response = "The economic engine is driven by reputation. High reputation squads attract better on-chain sponsorships and larger match prizes.";
-            } else {
-                response = "That's a strategic priority. I'll flag that for our Scout. By the way, have you checked the 'Tactical' feed lately? We're seeing high spatial pressure from the Northside rivals.";
-            }
+            const res = await fetch('/api/ai/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: inputValue,
+                    city,
+                    venue,
+                    history
+                })
+            });
+
+            const data = await res.json();
 
             setMessages(prev => [...prev, {
                 id: (Date.now() + 1).toString(),
                 role: 'agent',
-                content: response,
+                content: data.response || data.error,
                 timestamp: new Date(),
                 agentType: 'concierge'
             }]);
+        } catch (error) {
+            console.error("AI Chat failed:", error);
+            setMessages(prev => [...prev, {
+                id: (Date.now() + 1).toString(),
+                role: 'agent',
+                content: "My connection to the tactical feed is unstable. Let's stick to the basics for now.",
+                timestamp: new Date(),
+                agentType: 'concierge'
+            }]);
+        } finally {
             setIsTyping(false);
-        }, 1500);
+        }
     };
 
     return (
