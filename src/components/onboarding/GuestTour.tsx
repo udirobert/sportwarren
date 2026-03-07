@@ -92,7 +92,6 @@ export const GuestTour: React.FC = () => {
     const [hasSeenTour, setHasSeenTour] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, height: 0 });
 
-    // Dynamic steps based on environment
     const localizedSteps = TOUR_STEPS.map(step => {
         if (step.id === 'welcome') {
             return {
@@ -108,15 +107,15 @@ export const GuestTour: React.FC = () => {
         const seen = localStorage.getItem('sw_guest_tour_seen');
         if (isGuest && !seen) {
             // Delay start for better experience
-            const timer = setTimeout(() => setActiveStep(0), 1500);
+            const timer = setTimeout(() => setActiveStep(0), 1000);
             return () => clearTimeout(timer);
         }
     }, [isGuest]);
 
     const updateCoords = useCallback(() => {
-        if (activeStep < 0 || activeStep >= TOUR_STEPS.length) return;
+        if (activeStep < 0 || activeStep >= localizedSteps.length) return;
 
-        const step = TOUR_STEPS[activeStep];
+        const step = localizedSteps[activeStep];
         const element = document.getElementById(step.targetId);
 
         if (element) {
@@ -135,7 +134,7 @@ export const GuestTour: React.FC = () => {
         } else if (step.position === 'center') {
             setCoords({ top: window.innerHeight / 2, left: window.innerWidth / 2, width: 0, height: 0 });
         }
-    }, [activeStep]);
+    }, [activeStep, localizedSteps]);
 
     useEffect(() => {
         updateCoords();
@@ -150,15 +149,15 @@ export const GuestTour: React.FC = () => {
     // Dispatch event to sync other components (MatchEngine, Concierge)
     useEffect(() => {
         if (activeStep >= 0) {
-            const step = TOUR_STEPS[activeStep];
+            const step = localizedSteps[activeStep];
             window.dispatchEvent(new CustomEvent('sw-tour-step', {
                 detail: { id: step.id, activeStep }
             }));
         }
-    }, [activeStep]);
+    }, [activeStep, localizedSteps]);
 
     const handleNext = () => {
-        if (activeStep < TOUR_STEPS.length - 1) {
+        if (activeStep < localizedSteps.length - 1) {
             setActiveStep(prev => prev + 1);
         } else {
             handleComplete();
@@ -179,7 +178,7 @@ export const GuestTour: React.FC = () => {
 
     if (activeStep < 0 || !isGuest) return null;
 
-    const step = TOUR_STEPS[activeStep];
+    const step = localizedSteps[activeStep];
     const Icon = step.icon;
 
     // Smart positioning logic
@@ -188,27 +187,27 @@ export const GuestTour: React.FC = () => {
             return { top: '40%', left: '50%', transform: 'translate(-50%, -40%)' };
         }
 
-        const margin = 20;
+        const margin = 24;
         const popupWidth = 320;
-        const popupHeight = 280;
+        const popupHeight = 240;
 
         let top = coords.top + coords.height + margin;
         let left = coords.left + (coords.width / 2) - (popupWidth / 2);
 
-        // Adjust based on step preference, but sanitize for screen edges
+        // Adjust based on step preference
         if (step.position === 'top') {
             top = coords.top - popupHeight - margin;
         } else if (step.position === 'left' && window.innerWidth > 800) {
-            top = coords.top;
+            top = coords.top + (coords.height / 2) - (popupHeight / 2);
             left = coords.left - popupWidth - margin;
         } else if (step.position === 'right' && window.innerWidth > 800) {
-            top = coords.top;
+            top = coords.top + (coords.height / 2) - (popupHeight / 2);
             left = coords.left + coords.width + margin;
         }
 
-        // Screen boundary safety
-        left = Math.max(10, Math.min(left, window.innerWidth - popupWidth - 10));
-        top = Math.max(10, Math.min(top, window.innerHeight - popupHeight - 10));
+        // Screen boundary safety - keep within viewport
+        left = Math.max(16, Math.min(left, window.innerWidth - popupWidth - 16));
+        top = Math.max(16, Math.min(top, window.innerHeight - popupHeight - 16));
 
         return { top, left };
     };
@@ -232,10 +231,10 @@ export const GuestTour: React.FC = () => {
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={activeStep}
-                        initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                        className="absolute flex flex-col items-center justify-center p-4 w-full"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="fixed z-[350]"
                         style={getPopupStyle()}
                     >
                         <div className="bg-white rounded-3xl p-6 shadow-2xl w-[320px] relative overflow-hidden group">
