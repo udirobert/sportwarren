@@ -170,20 +170,37 @@ See `prisma/schema.prisma` and `prisma/migrations/001_init.sql` for full schema.
 3. Identity is unified under a single SportWarren Profile in PostgreSQL
 4. App handles cross-chain routing based on feature (e.g., Match XP on Algorand, DAO on Avalanche, Agent Fees on Kite, Highlights on Lens Network)
 
-### Chainlink CRE (Runtime Environment)
-The match verification uses a specialized CRE workflow to orchestrate real-world data:
-1. **Weather Action**: Cross-references match time/location with OpenWeatherMap.
-2. **Location Action**: Verifies pitch authenticity via Google Maps API.
-3. **Consensus Logic**: Calculates a confidence score (0-100) based on source entropy.
+## 🏆 Chainlink CRE Hackathon Submission
 
-To test the CRE logic without real API keys:
+### 🚨 The Problem: "The Phygital Trust Gap"
+Real-world amateur sports lack an immutable, trustless record of truth. Matches are often disputed, and player performance data (XP) is centralized and easy to manipulate. Captains often disagree on match outcomes, and verification typically requires centralized human oversight or brittle oracle calls.
+
+### ⚽ The Solution: "Sovereign Phygital Engine"
+SportWarren provides a "Parallel Season" where every real-world match is verified by a decentralized consensus engine. Players earn XP, attributes, and rewards that are secured on-chain (Algorand/Avalanche), with **Sovereign Agentic Inference** (Venice AI) providing the tactical narrative layer.
+
+### 🛠 How we used Chainlink Oracles & CRE
+We used the **Chainlink Runtime Environment (CRE)** to collapse the complexity of multi-modal real-world data and AI-driven inference into a single, verifiable confidence score for every match.
+
+1.  **Orchestration (Parallel Actions)**:
+    *   **Action A (Weather)**: Uses OpenWeatherMap API to fetch conditions at the match's precise $GPS + timestamp$.
+    *   **Action B (Location)**: Uses Google Maps to verify if coordinates match a registered stadium or pitch.
+    *   **Action C (Inference)**: Calls **Venice AI** (Sovereign LLM) to synthesize Phygital data into a "Captain's Report."
+2.  **Weighted Consensus (Computation)**:
+    *   A weighted algorithm ($60\%$ Location / $40\%$ Weather) computes a **"Phygital Confidence Score"**.
+    *   *Result:* A match played at a stadium during verified weather conditions receives a high trust score, automatically promoting the record to the "Platinum" on-chain tier.
+3.  **Autonomous Narrative**: The Agent Captains (Kite Invicta & Neon Strikers) use **Llama-3.1 via Venice AI** to "decide" if a match result is valid, providing an expert tactical bridge between raw data and player rewards.
+4.  **Traceability**: Every verification generates a unique `workflowId` (e.g., `cre_mw_pibhj`) that is persisted in our PostgreSQL DB and cross-referenced with Algorand transaction logs.
+
+### 🧪 Proof of Verification
+Run our CRE consensus logic proof:
 ```bash
-# Runs the comprehensive consensus logic test suite
 npx tsx scripts/test-cre-logic.ts
 ```
 
-### Development Mode
-In development, signature verification is skipped for easier testing. Set `NODE_ENV=development` in `.env.local`.
+### 🔗 Public Repo & Contracts
+*   **Main Repo**: [udirobert/sportwarren](https://github.com/udirobert/sportwarren)
+*   **CRE Workflow Code**: `server/services/blockchain/cre/match-verification.ts`
+*   **Verification UI**: `src/components/match/MatchConsensus.tsx`
 
 ---
 

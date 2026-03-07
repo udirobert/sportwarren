@@ -389,6 +389,7 @@ model Match {
   weatherVerified    Boolean @default(false) @map("weather_verified")
   locationVerified   Boolean @default(false) @map("location_verified")
   verificationDetails Json?   @map("verification_details")
+  agentInsights      Json?   @map("agent_insights") // AI-generated captain reports
   
   // Pitch Relation
   pitchId            String? @map("pitch_id")

@@ -64,6 +64,18 @@ export const matchRouter = createTRPCRouter({
 
             weatherVerified = verificationResult.weatherVerified;
             locationVerified = verificationResult.locationVerified;
+            (input as any).verificationDetails = verificationResult.details;
+
+            // Trigger Agentic Narrative Insight
+            try {
+              const { agenticService } = await import('../../../server/services/ai/agentic');
+              (input as any).agentInsights = await agenticService.generateMatchReport(
+                { homeSquad, awaySquad, homeScore: input.homeScore, awayScore: input.awayScore },
+                verificationResult.details
+              );
+            } catch (aiError) {
+              console.warn('Agentic insight generation failed:', aiError);
+            }
           } catch (e) {
             console.error('Chainlink verification failed during match submission:', e);
             // We don't fail the match submission if oracle fails, just log it.
@@ -83,7 +95,9 @@ export const matchRouter = createTRPCRouter({
             longitude: input.longitude,
             weatherVerified,
             locationVerified,
-          },
+            verificationDetails: (input as any).verificationDetails || null,
+            agentInsights: (input as any).agentInsights || null,
+          } as any,
           include: {
             homeSquad: true,
             awaySquad: true,
@@ -93,7 +107,7 @@ export const matchRouter = createTRPCRouter({
         // Return with CRE result if we have it
         return {
           ...match,
-          creResult: (match as any).creResult // Ensure we return the object
+          creResult: (match as any).verificationDetails
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -335,7 +349,8 @@ export const matchRouter = createTRPCRouter({
 
         return {
           ...match,
-          creResult
+          creResult,
+          agentInsights: (match as any).agentInsights
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
