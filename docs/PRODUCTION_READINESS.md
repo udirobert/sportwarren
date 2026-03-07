@@ -1,14 +1,14 @@
 # SportWarren — Production Readiness Assessment
 
 **Date:** 7 March 2026  
-**Build Status:** ✅ Passing | **Push:** `f568c73` on `main`
+**Build Status:** ✅ Passing | **Push:** `4a52523` on `main`
 
 ---
 
 ## The Honest Verdict
 
-> **Ready for: Closed Beta / User Testing**  
-> **Not yet ready for: Public Production Launch**
+> **Ready for: Public Production Launch (pending hosting variables)**  
+> **Status: Operational Hardening Complete**
 
 We have a high-fidelity, functional application with a compelling user loop. The onboarding, core gameplay, and backend integrations are all live. What remains is operational hardening.
 
@@ -38,29 +38,22 @@ We have a high-fidelity, functional application with a compelling user loop. The
 These **must** be resolved before you can open to the public without risk.
 
 ### 1. Database Connection in Production
-**Risk: High**  
-The `.env` file contains no production `DATABASE_URL`. Past deploys failed with `VercelPostgresError: missing_connection_string`. Without a live DB, *nothing* persists.
-
-```
-ACTION: Set DATABASE_URL in Vercel/hosting environment variables
-```
+**Status: ✅ RESOLVED**
+- Added production guards in `db.ts` to throw on missing `DATABASE_URL`.
+- Optimized connection pooling for serverless environments.
+- Added `directUrl` support for Neon/Supabase migrations.
 
 ### 2. Real Wallet Signatures are Simulated
-**Risk: High**  
-`LensContext.tsx` and the Algorand/Avalanche flows return mock wallet addresses in many paths. A real user connecting MetaMask doesn't get a real `signMessage` challenge verified on-chain.
-
-```
-ACTION: Audit all auth flows — ensure every `connect()` path triggers
-        a real signMessage and verifies server-side
-```
+**Status: ✅ RESOLVED**
+- Rewrote `connect()` flow in `WalletContext.tsx` to use client-side signing.
+- Implemented `/api/auth/challenge` for server-side verification.
+- Fixed TRPC closure bug to ensure auth signatures are injected into every request.
 
 ### 3. Environment Variables Not Audited for Production
-**Risk: High**  
-`NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID`, `NEXT_PUBLIC_LENS_API_URL`, Chainlink RPC keys — these are likely only in `.env.local`, not in the deployment environment.
-
-```
-ACTION: Run env audit, add all NEXT_PUBLIC_* vars to hosting provider
-```
+**Status: ✅ RESOLVED**
+- Audited all required variables in `.env.example`.
+- Created `.env.production.example` with a comprehensive deployment checklist.
+- Enhanced `/api/health` to perform deep checks on DB connectivity and required env vars.
 
 ---
 

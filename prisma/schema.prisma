@@ -6,7 +6,13 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
+  // url      → pooled connection string (pgbouncer) used by the running app
+  // directUrl → non-pooled, used only by `prisma migrate deploy`
+  // Set DATABASE_DIRECT_URL in production for Neon / Supabase
+  // In local dev, both can be the same value
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_DIRECT_URL")
 }
 
 // ============================================================================
