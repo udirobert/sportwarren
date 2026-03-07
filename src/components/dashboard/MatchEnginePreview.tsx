@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSquadDetails } from '@/hooks/squad/useSquad';
 import { useWallet } from '@/contexts/WalletContext';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 type ReputationTier = 'bronze' | 'silver' | 'gold' | 'platinum';
 
@@ -49,6 +50,44 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
     const [tempo, setTempo] = useState(1);
 
     const { address, isGuest } = useWallet();
+    const env = useEnvironment();
+
+    // Performance adaptation
+    const [fps, setFps] = useState(60);
+    const [lowPowerMode, setLowPowerMode] = useState(false);
+
+    useEffect(() => {
+        let lastTime = performance.now();
+        let frames = 0;
+        const checkFps = () => {
+            const now = performance.now();
+            frames++;
+            if (now > lastTime + 1000) {
+                const currentFps = Math.round((frames * 1000) / (now - lastTime));
+                setFps(currentFps);
+                if (currentFps < 30) setLowPowerMode(true);
+                lastTime = now;
+                frames = 0;
+            }
+            requestAnimationFrame(checkFps);
+        };
+        const id = requestAnimationFrame(checkFps);
+        return () => cancelAnimationFrame(id);
+    }, []);
+
+    // Listen for Tour Steps to drive dynamics
+    useEffect(() => {
+        const handleTourStep = (e: any) => {
+            const stepId = e.detail?.id;
+            if (stepId === 'match-engine') {
+                setIsPlaying(true);
+            } else if (stepId === 'welcome' || stepId === 'phygital-consensus') {
+                setIsPlaying(false);
+            }
+        };
+        window.addEventListener('sw-tour-step', handleTourStep);
+        return () => window.removeEventListener('sw-tour-step', handleTourStep);
+    }, []);
 
     // Initialize players with real data or high-fidelity fallback
     useEffect(() => {
@@ -63,7 +102,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
     const { members, loading: membersLoading } = useSquadDetails(squadId);
 
     const matches: LiveMatch[] = [
-        { id: 'm1', home: 'HOU', away: 'RIV', homeScore: score.home, awayScore: score.away, status: 'live' },
+        { id: 'm1', home: env.rivals.home.split(' ')[0], away: env.rivals.away.split(' ')[0], homeScore: score.home, awayScore: score.away, status: 'live' },
         { id: 'm2', home: 'LNS', away: 'BASE', homeScore: 1, awayScore: 0, status: 'ht' },
         { id: 'm3', home: 'ALG', away: 'AVAL', homeScore: 2, awayScore: 2, status: 'live' },
     ];
@@ -84,8 +123,8 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                 'home', m.role, { level: m.stats?.level || 5, pace: 75, agility: 80, strength: 70 }
             ));
             const awayPlayers = [
-                createPlayer('a1', 'Rival 1', 55, 50, 'away', 'CB', { level: 10, pace: 65, agility: 60, strength: 85 }),
-                createPlayer('a2', 'Rival 2', 70, 40, 'away', 'CB', { level: 8, pace: 68, agility: 62, strength: 82 }),
+                createPlayer('a1', env.rivals.away.split(' ')[0], 55, 50, 'away', 'CB', { level: 13, pace: 65, agility: 60, strength: 85 }),
+                createPlayer('a2', env.rivals.away.split(' ')[1] || 'Rival', 70, 40, 'away', 'CB', { level: 11, pace: 68, agility: 62, strength: 82 }),
             ];
             setPlayers([...homePlayers, ...awayPlayers]);
         } else if (!membersLoading) {
@@ -93,8 +132,8 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                 createPlayer('h1', 'Marcus', 40, 50, 'home', 'ST', { level: 20, pace: 92, agility: 88, strength: 75 }),
                 createPlayer('h2', 'Jamie', 25, 35, 'home', 'CM', { level: 12, pace: 75, agility: 80, strength: 65 }),
                 createPlayer('h3', 'Alex', 25, 65, 'home', 'CM', { level: 10, pace: 72, agility: 78, strength: 68 }),
-                createPlayer('a1', 'Rival 1', 60, 50, 'away', 'CB', { level: 15, pace: 65, agility: 60, strength: 85 }),
-                createPlayer('a2', 'Rival 2', 75, 40, 'away', 'CB', { level: 12, pace: 68, agility: 62, strength: 82 }),
+                createPlayer('a1', env.rivals.away.split(' ')[0], 60, 50, 'away', 'CB', { level: 15, pace: 65, agility: 60, strength: 85 }),
+                createPlayer('a2', env.rivals.away.split(' ')[1] || 'Rival', 75, 40, 'away', 'CB', { level: 12, pace: 68, agility: 62, strength: 82 }),
             ];
             setPlayers(fallbackPlayers);
         }
@@ -204,7 +243,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                 }
             }
 
-            const newHistory = p.reputationTier === 'platinum'
+            const newHistory = (p.reputationTier === 'platinum' && !lowPowerMode)
                 ? [{ x: p.x, y: p.y }, ...p.history].slice(0, 5)
                 : [];
 
@@ -282,7 +321,23 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                     </div>
                 </div>
 
-                <div className="relative aspect-[16/9] bg-gradient-to-b from-green-900/40 to-green-900/60 rounded-xl border border-white/5 overflow-hidden">
+                <div className={`relative aspect-[16/9] rounded-xl border border-white/5 overflow-hidden transition-colors duration-1000 ${env.isNight ? 'bg-gradient-to-b from-gray-950 to-green-950' : 'bg-gradient-to-b from-green-900/40 to-green-900/60'}`}>
+                    {/* Night Match Floodlight Effect */}
+                    {env.isNight && (
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.1),transparent_70%)] pointer-events-none z-30" />
+                    )}
+                    {/* Phygital Proximity Overlay */}
+                    <div className="absolute bottom-4 left-4 z-40">
+                        <div className="bg-black/60 backdrop-blur-md px-3 py-2 rounded-xl border border-white/10 flex items-center space-x-2">
+                            <div className="relative">
+                                <Activity className="w-3 h-3 text-green-500" />
+                                <div className="absolute inset-0 bg-green-500 blur-sm opacity-50 animate-pulse" />
+                            </div>
+                            <div className="text-[9px] font-black text-white uppercase tracking-tighter">
+                                Proximity: <span className="text-green-400">{env.proximity}</span>
+                            </div>
+                        </div>
+                    </div>
                     {/* DAO Overlay */}
                     <AnimatePresence>
                         {daoAlert && (
@@ -366,8 +421,8 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                     </motion.div>
                 </div>
 
-                {/* Commentary Box - Augmented with DAO events */}
-                <div className="mt-4 grid md:grid-cols-3 gap-4">
+                {/* Commentary Box & Reality Feed */}
+                <div className="mt-4 grid md:grid-cols-4 gap-4">
                     <div className="md:col-span-2 p-3 bg-black/40 h-28 overflow-hidden rounded-xl border border-white/5">
                         <div className="space-y-1.5">
                             {commentary.map((c, i) => (
@@ -386,13 +441,54 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                             ))}
                         </div>
                     </div>
+
+                    {/* Reality Feed - Pure Phygital USP */}
+                    <div className="bg-green-600/5 p-3 rounded-xl border border-green-500/10 flex flex-col justify-between">
+                        <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center space-x-1.5">
+                                <Activity className="w-3 h-3 text-green-400" />
+                                <span className="text-[9px] font-black text-green-400 uppercase tracking-widest">Reality Feed</span>
+                            </div>
+                            <span className="text-[8px] text-gray-500 font-mono italic">CRE Verified</span>
+                        </div>
+                        <div className="space-y-1">
+                            <div className="flex justify-between text-[10px]">
+                                <span className="text-gray-400">Venue</span>
+                                <span className="text-white font-bold">{env.venue}</span>
+                            </div>
+                            <div className="flex justify-between text-[10px]">
+                                <span className="text-gray-400">Conditions</span>
+                                <span className="text-white font-bold">{env.temp} • {env.weather}</span>
+                            </div>
+                        </div>
+                        <div className="mt-2 pt-2 border-t border-green-500/10">
+                            <div className="text-[8px] font-black text-green-400 uppercase leading-none mb-1">Impact</div>
+                            <div className="text-[10px] text-gray-300 italic leading-tight">Pitch friction decreased. Agility penalty active.</div>
+                        </div>
+                    </div>
+
+                    {/* Phygital Mission Banner */}
+                    <div className="bg-yellow-600/10 p-3 rounded-xl border border-yellow-500/20 flex flex-col justify-between">
+                        <div className="flex items-center space-x-1.5 mb-1">
+                            <Zap className="w-3 h-3 text-yellow-500" />
+                            <span className="text-[9px] font-black text-yellow-500 uppercase tracking-widest italic">Local Mission</span>
+                        </div>
+                        <div>
+                            <div className="text-[10px] font-black text-white leading-tight mb-1">{env.localMission.title}</div>
+                            <div className="text-[9px] text-yellow-200/60 leading-tight">Visit <span className="text-yellow-400 font-bold">{env.localMission.landmark}</span> to activate your bounty.</div>
+                        </div>
+                        <div className="mt-2 bg-yellow-500/20 rounded-lg py-1 px-2 border border-yellow-500/30">
+                            <div className="text-[9px] font-bold text-yellow-400 text-center uppercase tracking-tighter">{env.localMission.bonus}</div>
+                        </div>
+                    </div>
+
                     <div className="bg-blue-600/10 p-3 rounded-xl border border-blue-500/20 flex flex-col justify-center">
                         <div className="flex items-center space-x-2 mb-1">
                             <Shield className="w-3 h-3 text-blue-400" />
                             <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Active DAO Policy</span>
                         </div>
                         <p className="text-[10px] text-blue-100 italic leading-tight">
-                            "High-intensity pressing authorized for this quarter. XP rewards increased for successful tackles."
+                            "High-intensity pressing authorized. XP rewards increased for ball recovery."
                         </p>
                     </div>
                 </div>

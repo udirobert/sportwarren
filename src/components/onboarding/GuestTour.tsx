@@ -15,6 +15,7 @@ import {
     MousePointer2
 } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { Button } from '@/components/ui/Button';
 
 interface TourStep {
@@ -80,15 +81,28 @@ const TOUR_STEPS: TourStep[] = [
         content: "Ready to start your own season? Connect your wallet to bridge your real-world football skills to the blockchain.",
         emoji: '⚡',
         icon: Zap,
-        position: 'center',
+        position: 'bottom',
     }
 ];
 
 export const GuestTour: React.FC = () => {
     const { isGuest } = useWallet();
+    const { venue } = useEnvironment();
     const [activeStep, setActiveStep] = useState(-1);
     const [hasSeenTour, setHasSeenTour] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, height: 0 });
+
+    // Dynamic steps based on environment
+    const localizedSteps = TOUR_STEPS.map(step => {
+        if (step.id === 'welcome') {
+            return {
+                ...step,
+                title: `Welcome to ${venue.split(' ')[0]}`,
+                content: `You're currently in Guest Mode. This is a real-time 'Phygital' simulation at ${venue}. Let's see how the local squads are doing.`
+            };
+        }
+        return step;
+    });
 
     useEffect(() => {
         const seen = localStorage.getItem('sw_guest_tour_seen');
@@ -132,6 +146,16 @@ export const GuestTour: React.FC = () => {
             window.removeEventListener('scroll', updateCoords);
         };
     }, [updateCoords]);
+
+    // Dispatch event to sync other components (MatchEngine, Concierge)
+    useEffect(() => {
+        if (activeStep >= 0) {
+            const step = TOUR_STEPS[activeStep];
+            window.dispatchEvent(new CustomEvent('sw-tour-step', {
+                detail: { id: step.id, activeStep }
+            }));
+        }
+    }, [activeStep]);
 
     const handleNext = () => {
         if (activeStep < TOUR_STEPS.length - 1) {
