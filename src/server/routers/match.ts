@@ -61,7 +61,7 @@ export const matchRouter = createTRPCRouter({
               homeTeam: homeSquad.name,
               awayTeam: awaySquad.name,
             });
-            
+
             weatherVerified = verificationResult.weatherVerified;
             locationVerified = verificationResult.locationVerified;
           } catch (e) {
@@ -89,8 +89,12 @@ export const matchRouter = createTRPCRouter({
             awaySquad: true,
           },
         });
-        
-        return match;
+
+        // Return with CRE result if we have it
+        return {
+          ...match,
+          creResult: (match as any).creResult // Ensure we return the object
+        };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
@@ -179,17 +183,17 @@ export const matchRouter = createTRPCRouter({
             try {
               const { algodClient, deployerAccount } = await import('../../../server/services/blockchain/algorand');
               const appId = parseInt(process.env.ALGORAND_MATCH_VERIFICATION_APP_ID || '0');
-              
+
               if (appId > 0) {
                 const params = await algodClient.getTransactionParams().do();
                 const encoder = new TextEncoder();
-                
+
                 // Op: verify_match, Args: [match_id, type (1=confirm), weight]
                 const appArgs = [
                   encoder.encode('verify_match'),
-                  algosdk.encodeUint64(parseInt(matchId.replace(/\D/g, '').slice(0, 10)) || 1), 
-                  algosdk.encodeUint64(1), 
-                  algosdk.encodeUint64(100), 
+                  algosdk.encodeUint64(parseInt(matchId.replace(/\D/g, '').slice(0, 10)) || 1),
+                  algosdk.encodeUint64(1),
+                  algosdk.encodeUint64(100),
                 ];
 
                 const txn = algosdk.makeApplicationNoOpTxnFromObject({
@@ -211,7 +215,7 @@ export const matchRouter = createTRPCRouter({
 
           await ctx.prisma.match.update({
             where: { id: matchId },
-            data: { 
+            data: {
               status: newStatus,
               txId: txId || undefined
             },
@@ -240,7 +244,7 @@ export const matchRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const { status, squadId, limit, offset } = input;
-        
+
         const where: any = {};
         if (status) where.status = status;
         if (squadId) {
@@ -286,15 +290,15 @@ export const matchRouter = createTRPCRouter({
             homeSquad: true,
             awaySquad: true,
             verifications: {
-              include: { 
-                verifier: { 
-                  select: { 
+              include: {
+                verifier: {
+                  select: {
                     name: true,
                     playerProfile: {
                       select: { reputationScore: true }
                     }
-                  } 
-                } 
+                  }
+                }
               },
             },
             playerStats: {
@@ -306,12 +310,33 @@ export const matchRouter = createTRPCRouter({
             },
           },
         });
-        
+
         if (!match) {
           throw new TRPCError(Errors.MATCH_NOT_FOUND);
         }
-        
-        return match;
+
+        // ENHANCEMENT: On-the-fly CRE enrichment for demo/hackathon
+        // If we have coordinates but no persisted CRE result, run it now
+        let creResult = (match as any).verificationDetails;
+        if (!creResult && match.latitude !== null && match.longitude !== null) {
+          try {
+            const verification = await chainlinkService.verifyMatch({
+              latitude: match.latitude,
+              longitude: match.longitude,
+              timestamp: Math.floor(match.matchDate.getTime() / 1000),
+              homeTeam: match.homeSquad.name,
+              awayTeam: match.awaySquad.name,
+            });
+            creResult = verification.details;
+          } catch (e) {
+            console.error('CRE Enrichment failed:', e);
+          }
+        }
+
+        return {
+          ...match,
+          creResult
+        };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({

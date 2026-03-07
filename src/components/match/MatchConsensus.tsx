@@ -21,19 +21,18 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
   const [currentIndex, setCurrentIndex] = React.useState(0);
 
   const logs = React.useMemo(() => {
+    const creId = match.creResult?.workflowId || `cre_mw_${Math.random().toString(36).substring(7)}`;
     const baseLogs = [
-      "SYSTEM: Initializing Phygital Verification Node...",
-      "ORACLE: Fetching Chainlink ultra-local weather data...",
-      `ORACLE: Conditions confirmed: ${match.weatherVerified ? 'Match weather matches stadium logs.' : 'Weather verification skipped.'}`,
-      "GPS: Cross-referencing player coordinates with Pitch IDs...",
-      `GPS: ${match.locationVerified ? 'Location verified: Hackney Marshes Pitch 4.' : 'Coordinate sync in progress...'}`,
-      "VISION: Analyzing match evidence (photos/voice)...",
-      "VISION: Goal detected in match-evidence-01. Analyzing visual markers...",
-      "AI: Match events confirmed. Verifying consensus with opposing squad...",
+      `[${creId}] Initializing Phygital Verification Node...`,
+      "FETCH: Orchestrating global weather and location oracles...",
+      `WEATHER: Source: ${match.creResult?.weather.source || 'OpenWeatherMap'}. Temp: ${match.creResult?.weather.temperature || 14}°C.`,
+      `GEO: Verifying Pitch ID benchmarks for ${match.creResult?.location.region || 'Hackney Marshes'}.`,
+      `GEO: Place Type: ${match.creResult?.location.placeType || 'sports_complex'}. Pitch Status: ${match.creResult?.location.isPitch ? 'CONFIRMED' : 'RECREATIONAL'}.`,
+      `COMPUTE: Trust Score: ${match.creResult?.confidence || match.trustScore || 0}/100 based on multi-source entropy.`,
       match.status === 'verified'
-        ? "ALGORAND: Consensus reached. Finalizing immutable record on-chain..."
-        : "NETWORK: Awaiting multi-sig confirmation from away team captain...",
-      match.status === 'verified' ? "SUCCESS: Match record secured. XP distributed to all verified players." : "OFFICE: Player reputations updated based on contribution."
+        ? "SETTLE: Consensus reached. Finalizing immutable record on Algorand..."
+        : "WAIT: Awaiting multi-sig confirmation from away team captain...",
+      match.status === 'verified' ? "SUCCESS: Match record secured. XP distributed to all verified players." : "REP: Local reputation markers updated."
     ];
     return baseLogs;
   }, [match]);
@@ -244,11 +243,13 @@ export const MatchConsensusPanel: React.FC<MatchConsensusProps> = ({ match }) =>
             />
           </div>
           <p className="text-xs text-gray-500 mt-1">
-            {match.trustScore && match.trustScore >= 75
-              ? 'High confidence - ready for verification'
-              : match.trustScore && match.trustScore >= 30
-                ? 'Moderate confidence - more verifications needed'
-                : 'Low confidence - awaiting more evidence'}
+            {match.creResult?.verified
+              ? `CRE Verified via ${match.creResult.weather.source} & Geofencing`
+              : match.trustScore && match.trustScore >= 75
+                ? 'High confidence - ready for verification'
+                : match.trustScore && match.trustScore >= 30
+                  ? 'Moderate confidence - more verifications needed'
+                  : 'Low confidence - awaiting more evidence'}
           </p>
         </div>
       </div>

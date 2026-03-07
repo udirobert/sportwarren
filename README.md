@@ -170,6 +170,18 @@ See `prisma/schema.prisma` and `prisma/migrations/001_init.sql` for full schema.
 3. Identity is unified under a single SportWarren Profile in PostgreSQL
 4. App handles cross-chain routing based on feature (e.g., Match XP on Algorand, DAO on Avalanche, Agent Fees on Kite, Highlights on Lens Network)
 
+### Chainlink CRE (Runtime Environment)
+The match verification uses a specialized CRE workflow to orchestrate real-world data:
+1. **Weather Action**: Cross-references match time/location with OpenWeatherMap.
+2. **Location Action**: Verifies pitch authenticity via Google Maps API.
+3. **Consensus Logic**: Calculates a confidence score (0-100) based on source entropy.
+
+To test the CRE logic without real API keys:
+```bash
+# Runs the comprehensive consensus logic test suite
+npx tsx scripts/test-cre-logic.ts
+```
+
 ### Development Mode
 In development, signature verification is skipped for easier testing. Set `NODE_ENV=development` in `.env.local`.
 

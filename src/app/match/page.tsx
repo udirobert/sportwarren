@@ -18,13 +18,13 @@ export default function MatchPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("capture");
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [showXPSummary, setShowXPSummary] = useState(false);
-  
-  const { 
-    matches, 
-    activeMatch, 
-    submitMatchResult, 
+
+  const {
+    matches,
+    activeMatch,
+    submitMatchResult,
     verifyMatch,
-    getMatchById 
+    getMatchById
   } = useMatchVerification();
 
   const { calculateMatchXPGain } = useXPGain();
@@ -32,7 +32,15 @@ export default function MatchPage() {
   const selectedMatch = selectedMatchId ? getMatchById(selectedMatchId) : null;
 
   const handleMatchSubmit = async (result: any) => {
-    await submitMatchResult(result);
+    await submitMatchResult({
+      homeSquadId: result.homeSquadId || 'home-squad-id', // Placeholder or from context
+      awaySquadId: result.awaySquadId || 'away-squad-id',
+      homeScore: result.homeScore,
+      awayScore: result.awayScore,
+      matchDate: result.timestamp,
+      latitude: result.evidence?.gps?.lat,
+      longitude: result.evidence?.gps?.lng,
+    });
     // Show XP summary after match submission
     setShowXPSummary(true);
     setViewMode("xp-summary");
@@ -62,22 +70,20 @@ export default function MatchPage() {
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
         <button
           onClick={() => setViewMode("capture")}
-          className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all ${
-            viewMode === "capture"
+          className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all ${viewMode === "capture"
               ? "bg-white text-green-600 shadow-sm"
               : "text-gray-600 hover:text-gray-900"
-          }`}
+            }`}
         >
           <Activity className="w-4 h-4" />
           <span className="font-medium">Track Match</span>
         </button>
         <button
           onClick={() => setViewMode("verify")}
-          className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all ${
-            viewMode === "verify"
+          className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all ${viewMode === "verify"
               ? "bg-white text-blue-600 shadow-sm"
               : "text-gray-600 hover:text-gray-900"
-          }`}
+            }`}
         >
           <Shield className="w-4 h-4" />
           <span className="font-medium">Verify ({matches.filter(m => m.status === "pending").length})</span>
@@ -96,8 +102,8 @@ export default function MatchPage() {
       {viewMode === "verify" && (
         <div className="space-y-4">
           {matches.map((match) => (
-            <Card 
-              key={match.id} 
+            <Card
+              key={match.id}
               className="cursor-pointer hover:shadow-md transition-shadow"
               onClick={() => {
                 setSelectedMatchId(match.id);
@@ -118,11 +124,10 @@ export default function MatchPage() {
                     </div>
                   </div>
                   <div className="flex items-center space-x-3 text-sm">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      match.status === "verified" ? "bg-green-100 text-green-800" :
-                      match.status === "disputed" ? "bg-red-100 text-red-800" :
-                      "bg-yellow-100 text-yellow-800"
-                    }`}>
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${match.status === "verified" ? "bg-green-100 text-green-800" :
+                        match.status === "disputed" ? "bg-red-100 text-red-800" :
+                          "bg-yellow-100 text-yellow-800"
+                      }`}>
                       {match.status.toUpperCase()}
                     </span>
                     <span className="text-gray-500">
@@ -148,16 +153,16 @@ export default function MatchPage() {
 
       {viewMode === "detail" && selectedMatch && (
         <div className="space-y-4">
-          <Button 
+          <Button
             onClick={() => setViewMode("verify")}
             variant="outline"
             className="mb-4"
           >
             ← Back to Matches
           </Button>
-          
+
           <MatchConsensusPanel match={selectedMatch} />
-          
+
           <MatchConfirmation
             match={selectedMatch}
             userAddress="CURRENT_USER_ADDR"
@@ -174,7 +179,7 @@ export default function MatchPage() {
 
       {viewMode === "xp-summary" && showXPSummary && (
         <div className="space-y-4">
-          <Button 
+          <Button
             onClick={() => {
               setShowXPSummary(false);
               setViewMode("verify");
@@ -184,19 +189,19 @@ export default function MatchPage() {
           >
             ← Back to Matches
           </Button>
-          
-          <XPGainSummary 
+
+          <XPGainSummary
             totalXP={MOCK_XP_SUMMARY.totalXP}
             attributeGains={MOCK_XP_SUMMARY.attributeGains}
           />
-          
+
           <Card className="text-center py-6">
             <Sparkles className="w-12 h-12 text-yellow-500 mx-auto mb-3" />
             <h3 className="text-lg font-semibold text-gray-900 mb-2">XP Applied!</h3>
             <p className="text-gray-600 mb-4">
               Your attributes have been updated based on this match performance.
             </p>
-            <Button 
+            <Button
               onClick={() => {
                 setShowXPSummary(false);
                 setViewMode("verify");
