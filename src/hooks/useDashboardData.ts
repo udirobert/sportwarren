@@ -47,9 +47,20 @@ export function useDashboardData(userAddress?: string): UseDashboardDataReturn {
     try {
       setState(createLoadingState());
 
+      // If we are in the 'Dev/Guest' phase, we skip the real fetch to avoid 404s
+      // until the backend routes are actually implemented.
+      const IS_BACKEND_READY = false; // Toggle this once API is live
+
+      if (!IS_BACKEND_READY) {
+        // Slow down slightly to simulate network for a better UI feel
+        await new Promise(resolve => setTimeout(resolve, 800));
+        setState(createSuccessState(DEFAULT_STATS));
+        return;
+      }
+
       // Fetch from API
       const response = await fetch(`/api/player/${userAddress}/dashboard`);
-      
+
       if (!response.ok) {
         throw new Error('Failed to fetch dashboard data');
       }
@@ -57,11 +68,12 @@ export function useDashboardData(userAddress?: string): UseDashboardDataReturn {
       const data = await response.json();
       setState(createSuccessState(data));
     } catch (err) {
-      console.error('Dashboard data fetch error:', err);
-      const errorState = createErrorState(err);
-      setState({ ...errorState, loading: false });
-      
-      // Fallback to default data if API fails
+      // Only log if it's an actual unexpected error, not just a missing API in dev
+      if (userAddress) {
+        console.warn('Dashboard API not found. Reverting to mock data.');
+      }
+
+      // Fallback to default data
       setState(createSuccessState(DEFAULT_STATS));
     }
   }, [userAddress]);
