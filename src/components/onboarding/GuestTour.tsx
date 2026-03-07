@@ -108,14 +108,14 @@ export const GuestTour: React.FC = () => {
         if (element) {
             const rect = element.getBoundingClientRect();
             setCoords({
-                top: rect.top + window.scrollY,
-                left: rect.left + window.scrollX,
+                top: rect.top,
+                left: rect.left,
                 width: rect.width,
                 height: rect.height
             });
 
-            // Scroll into view if needed
-            if (activeStep !== 0 && activeStep !== TOUR_STEPS.length - 1) {
+            // Scroll into view if not visible
+            if (activeStep !== 0 && (rect.top < 0 || rect.bottom > window.innerHeight)) {
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
         } else if (step.position === 'center') {
@@ -126,7 +126,11 @@ export const GuestTour: React.FC = () => {
     useEffect(() => {
         updateCoords();
         window.addEventListener('resize', updateCoords);
-        return () => window.removeEventListener('resize', updateCoords);
+        window.addEventListener('scroll', updateCoords, { passive: true });
+        return () => {
+            window.removeEventListener('resize', updateCoords);
+            window.removeEventListener('scroll', updateCoords);
+        };
     }, [updateCoords]);
 
     const handleNext = () => {
@@ -154,6 +158,37 @@ export const GuestTour: React.FC = () => {
     const step = TOUR_STEPS[activeStep];
     const Icon = step.icon;
 
+    // Smart positioning logic
+    const getPopupStyle = () => {
+        if (step.position === 'center') {
+            return { top: '40%', left: '50%', transform: 'translate(-50%, -40%)' };
+        }
+
+        const margin = 20;
+        const popupWidth = 320;
+        const popupHeight = 280;
+
+        let top = coords.top + coords.height + margin;
+        let left = coords.left + (coords.width / 2) - (popupWidth / 2);
+
+        // Adjust based on step preference, but sanitize for screen edges
+        if (step.position === 'top') {
+            top = coords.top - popupHeight - margin;
+        } else if (step.position === 'left' && window.innerWidth > 800) {
+            top = coords.top;
+            left = coords.left - popupWidth - margin;
+        } else if (step.position === 'right' && window.innerWidth > 800) {
+            top = coords.top;
+            left = coords.left + coords.width + margin;
+        }
+
+        // Screen boundary safety
+        left = Math.max(10, Math.min(left, window.innerWidth - popupWidth - 10));
+        top = Math.max(10, Math.min(top, window.innerHeight - popupHeight - 10));
+
+        return { top, left };
+    };
+
     return (
         <div className="fixed inset-0 z-[300] pointer-events-none">
             {/* Backdrop with hole */}
@@ -177,16 +212,7 @@ export const GuestTour: React.FC = () => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -20, scale: 0.95 }}
                         className="absolute flex flex-col items-center justify-center p-4 w-full"
-                        style={{
-                            top: step.position === 'center' ? '40%' :
-                                step.position === 'bottom' ? coords.top + coords.height + 20 :
-                                    step.position === 'top' ? coords.top - 320 :
-                                        step.position === 'left' ? coords.top : coords.top,
-                            left: step.position === 'center' ? 0 :
-                                step.position === 'left' ? coords.left - 340 :
-                                    step.position === 'right' ? coords.left + coords.width + 20 :
-                                        coords.left + (coords.width / 2) - 160,
-                        }}
+                        style={getPopupStyle()}
                     >
                         <div className="bg-white rounded-3xl p-6 shadow-2xl w-[320px] relative overflow-hidden group">
                             {/* Decorative elements */}

@@ -39,14 +39,14 @@ interface LiveMatch {
 
 export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) => {
     const [isPlaying, setIsPlaying] = useState(false);
-    const [ball, setBall] = useState({ x: 50, y: 50, ownerId: null as string | null });
-    const [players, setPlayers] = useState<PlayerPuck[]>([]);
+    const [ball, setBall] = useState({ x: 50, y: 50, vx: 0, vy: 0, ownerId: null as string | null });
+    const [players, setPlayers] = useState<any[]>([]);
     const [commentary, setCommentary] = useState<MatchCommentary[]>([]);
     const [time, setTime] = useState(0);
     const [score, setScore] = useState({ home: 0, away: 0 });
     const [activeMatch, setActiveMatch] = useState<string>('m1');
     const [daoAlert, setDaoAlert] = useState<string | null>(null);
-    const [tempo, setTempo] = useState(1); // 1 = normal, 1.5 = fast (DAO triggered)
+    const [tempo, setTempo] = useState(1);
 
     const { address, isGuest } = useWallet();
 
@@ -68,48 +68,40 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
         { id: 'm3', home: 'ALG', away: 'AVAL', homeScore: 2, awayScore: 2, status: 'live' },
     ];
 
-    // Initialize players with real data or high-fidelity fallback
+    // Initialize players with Physics-enabled agents
     useEffect(() => {
+        const createPlayer = (id: string, name: string, x: number, y: number, team: 'home' | 'away', role: string, stats: any): any => ({
+            id, name, x, y, vx: 0, vy: 0, team, role, stats,
+            homePos: { x, y },
+            reputationTier: stats.level > 15 ? 'platinum' : stats.level > 8 ? 'gold' : 'silver',
+            history: []
+        });
+
         if (!membersLoading && members && members.length > 0) {
-            // Map real members to pucks (max 3 for the preview engine complexity)
-            const homePlayers: PlayerPuck[] = members.slice(0, 3).map((m, i) => ({
-                id: m.id,
-                name: m.name.split(' ')[0],
-                x: i === 0 ? 45 : 30,
-                y: i === 0 ? 50 : (i === 1 ? 40 : 60),
-                team: 'home',
-                role: m.role.toUpperCase(),
-                stats: {
-                    pace: m.stats?.level ? Math.min(99, 60 + m.stats.level * 2) : 75,
-                    agility: 80,
-                    strength: 70,
-                    passing: 80
-                },
-                reputationTier: (m.stats?.level ?? 0) > 15 ? 'platinum' : (m.stats?.level ?? 0) > 8 ? 'gold' : 'silver',
-                history: []
-            }));
-
-            const awayPlayers: PlayerPuck[] = [
-                { id: 'a1', name: 'Rival 1', x: 55, y: 50, team: 'away', role: 'CB', stats: { pace: 65, agility: 60, strength: 85, passing: 60 }, reputationTier: 'gold', history: [] },
-                { id: 'a2', name: 'Rival 2', x: 70, y: 40, team: 'away', role: 'CB', stats: { pace: 68, agility: 62, strength: 82, passing: 65 }, reputationTier: 'silver', history: [] },
+            const homePlayers = members.slice(0, 3).map((m, i) => createPlayer(
+                m.id, m.name.split(' ')[0],
+                i === 0 ? 45 : 30, i === 0 ? 50 : (i === 1 ? 35 : 65),
+                'home', m.role, { level: m.stats?.level || 5, pace: 75, agility: 80, strength: 70 }
+            ));
+            const awayPlayers = [
+                createPlayer('a1', 'Rival 1', 55, 50, 'away', 'CB', { level: 10, pace: 65, agility: 60, strength: 85 }),
+                createPlayer('a2', 'Rival 2', 70, 40, 'away', 'CB', { level: 8, pace: 68, agility: 62, strength: 82 }),
             ];
-
             setPlayers([...homePlayers, ...awayPlayers]);
         } else if (!membersLoading) {
-            // Traditional fallback data
-            const fallbackPlayers: PlayerPuck[] = [
-                { id: 'h1', name: 'Marcus', x: 45, y: 50, team: 'home', role: 'ST', stats: { pace: 92, agility: 88, strength: 75, passing: 80 }, reputationTier: 'platinum', history: [] },
-                { id: 'h2', name: 'Jamie', x: 30, y: 40, team: 'home', role: 'CM', stats: { pace: 70, agility: 75, strength: 65, passing: 82 }, reputationTier: 'gold', history: [] },
-                { id: 'h3', name: 'Alex', x: 30, y: 60, team: 'home', role: 'CM', stats: { pace: 72, agility: 78, strength: 68, passing: 80 }, reputationTier: 'silver', history: [] },
-                { id: 'a1', name: 'Rival 1', x: 55, y: 50, team: 'away', role: 'CB', stats: { pace: 65, agility: 60, strength: 85, passing: 60 }, reputationTier: 'gold', history: [] },
-                { id: 'a2', name: 'Rival 2', x: 70, y: 40, team: 'away', role: 'CB', stats: { pace: 68, agility: 62, strength: 82, passing: 65 }, reputationTier: 'silver', history: [] },
+            const fallbackPlayers = [
+                createPlayer('h1', 'Marcus', 40, 50, 'home', 'ST', { level: 20, pace: 92, agility: 88, strength: 75 }),
+                createPlayer('h2', 'Jamie', 25, 35, 'home', 'CM', { level: 12, pace: 75, agility: 80, strength: 65 }),
+                createPlayer('h3', 'Alex', 25, 65, 'home', 'CM', { level: 10, pace: 72, agility: 78, strength: 68 }),
+                createPlayer('a1', 'Rival 1', 60, 50, 'away', 'CB', { level: 15, pace: 65, agility: 60, strength: 85 }),
+                createPlayer('a2', 'Rival 2', 75, 40, 'away', 'CB', { level: 12, pace: 68, agility: 62, strength: 82 }),
             ];
             setPlayers(fallbackPlayers);
         }
     }, [members, membersLoading]);
 
     const addCommentary = (text: string, type: MatchCommentary['type'] = 'action') => {
-        const timeStr = `${Math.floor(time / 10)}:00`;
+        const timeStr = `${Math.floor(time / 20)}:00`; // Slower time for more detail
         setCommentary(prev => [{ time: timeStr, text, type }, ...prev].slice(0, 5));
     };
 
@@ -120,76 +112,121 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
         addCommentary(`DAO INSTRUCTION: ${cmd}`, 'dao');
         if (cmd.includes("TEMPO")) setTempo(1.5);
         setTimeout(() => setDaoAlert(null), 3000);
-    }, []);
+    }, [time]);
 
     const movePlayers = useCallback(() => {
-        let currentBallOwnerId = ball.ownerId;
-        let newBallPos = { ...ball };
+        let currentOwnerId = ball.ownerId;
+        const friction = 0.98;
+        const drag = 0.92; // Player air resistance
 
-        // Randomly trigger DAO instruction
-        if (time > 0 && time % 100 === 0 && Math.random() > 0.5) {
-            triggerDaoCommand();
-        }
+        // 1. Update Ball Physics
+        let nextBallX = ball.x + ball.vx;
+        let nextBallY = ball.y + ball.vy;
+        let nextBallVx = ball.vx * friction;
+        let nextBallVy = ball.vy * friction;
 
+        // Ball boundary bounce
+        if (nextBallX < 2 || nextBallX > 98) nextBallVx *= -0.5;
+        if (nextBallY < 2 || nextBallY > 98) nextBallVy *= -0.5;
+
+        // 2. Update Player Steering
         const updatedPlayers = players.map(p => {
-            const isOwner = p.id === currentBallOwnerId;
-            const targetX = isOwner ? (p.team === 'home' ? 95 : 5) : ball.x;
-            const targetY = isOwner ? 50 : ball.y;
+            const isOwner = p.id === currentOwnerId;
+            let targetX = p.homePos.x;
+            let targetY = p.homePos.y;
 
+            // Simple Goal-Based AI
+            if (isOwner) {
+                // Attacker: Run toward opponent goal
+                targetX = p.team === 'home' ? 95 : 5;
+                targetY = 50;
+                // Add some zig-zag if defender close
+                const defender = players.find(d => d.team !== p.team && Math.abs(d.x - p.x) < 10);
+                if (defender) targetY = p.y > 50 ? 30 : 70;
+            } else {
+                // Chasers: Seek the ball if it's in their half/zone
+                const distToBall = Math.sqrt((p.x - ball.x) ** 2 + (p.y - ball.y) ** 2);
+                const isClosest = !players.some(other => other.team === p.team && other.id !== p.id &&
+                    Math.sqrt((other.x - ball.x) ** 2 + (other.y - ball.y) ** 2) < distToBall);
+
+                if (isClosest || distToBall < 30) {
+                    targetX = ball.x;
+                    targetY = ball.y;
+                }
+            }
+
+            // Steering Logic
             const dx = targetX - p.x;
             const dy = targetY - p.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
 
-            if (dist < 1.5 && !isOwner) {
-                if (!currentBallOwnerId) {
-                    currentBallOwnerId = p.id;
-                    addCommentary(`${p.name} gathers possession.`, 'action');
-                } else if (p.id !== currentBallOwnerId) {
-                    const owner = players.find(pl => pl.id === currentBallOwnerId);
-                    if (owner && (p.stats.strength + (p.reputationTier === 'platinum' ? 10 : 0)) > owner.stats.strength + Math.random() * 25) {
-                        currentBallOwnerId = p.id;
-                        addCommentary(`${p.name} dispossesses ${owner.name}! Reputation gap visible.`, 'action');
+            // Desired velocity - Scaled by real reputation
+            const reputationBonus = (p.stats.level / 20); // 0.1 to 1.0 boost
+            const maxSpeed = (p.stats.pace / 100) * (isOwner ? 0.35 : 0.6) * tempo * (1 + (reputationBonus * 0.2));
+            let dvx = dist > 0 ? (dx / dist) * maxSpeed : 0;
+            let dvy = dist > 0 ? (dy / dist) * maxSpeed : 0;
+
+            // Steering force (accel) - Agility link
+            const agilityBase = p.stats.agility / 1000;
+            const ax = (dvx - p.vx) * agilityBase * (1 + (reputationBonus * 0.1));
+            const ay = (dvy - p.vy) * agilityBase * (1 + (reputationBonus * 0.1));
+
+            const nextPx = p.x + p.vx;
+            const nextPy = p.y + p.vy;
+            const nextPvx = (p.vx + ax) * drag;
+            const nextPvy = (p.vy + ay) * drag;
+
+            // Collision with ball (Possession Change)
+            if (!isOwner && dist < 1.5) {
+                if (!currentOwnerId) {
+                    currentOwnerId = p.id;
+                    addCommentary(`${p.name} recovers the ball.`, 'action');
+                } else {
+                    const owner = players.find(pl => pl.id === currentOwnerId);
+                    if (owner && owner.team !== p.team) {
+                        const tackleProb = (p.stats.strength + p.stats.agility) / 200;
+                        if (Math.random() < tackleProb * 0.4) {
+                            currentOwnerId = p.id;
+                            addCommentary(`${p.name} wins a crucial tackle!`, 'action');
+                        }
                     }
                 }
             }
 
-            const baseSpeed = (p.stats.pace / 100) * (isOwner ? 0.3 : 0.6);
-            const speed = baseSpeed * tempo;
-            const vx = dist > 0 ? (dx / dist) * speed : 0;
-            const vy = dist > 0 ? (dy / dist) * speed : 0;
+            // Scoring Logic
+            if (isOwner && ((p.team === 'home' && p.x > 94) || (p.team === 'away' && p.x < 6))) {
+                if (Math.abs(p.y - 50) < 10 && Math.random() < 0.15) {
+                    const scoringTeam = p.team === 'home' ? 'home' : 'away';
+                    addCommentary(`GOAL! ${p.name} finds the net!`, 'goal');
+                    setScore(s => ({ ...s, [scoringTeam]: s[scoringTeam] + 1 }));
+                    setIsPlaying(false);
+                    setTimeout(reset, 2000);
+                }
+            }
 
-            const newX = p.x + vx + (Math.random() - 0.5) * 0.3;
-            const newY = p.y + vy + (Math.random() - 0.5) * 0.3;
-
-            // Update trail history for high reputation players
             const newHistory = p.reputationTier === 'platinum'
-                ? [{ x: p.x, y: p.y }, ...p.history].slice(0, 3)
+                ? [{ x: p.x, y: p.y }, ...p.history].slice(0, 5)
                 : [];
 
-            if (isOwner) {
-                newBallPos = { x: newX, y: newY, ownerId: p.id };
-                if (p.team === 'home' && newX > 88) {
-                    if (Math.random() > (0.6 - (p.stats.agility / 200))) {
-                        addCommentary(`GOAL! ${p.name} scores for Hackney Marshes!`, 'goal');
-                        setScore(s => ({ ...s, home: s.home + 1 }));
-                        setIsPlaying(false);
-                        currentBallOwnerId = null;
-                        newBallPos = { x: 50, y: 50, ownerId: null };
-                        setTempo(1);
-                    } else {
-                        addCommentary(`${p.name} fires wide! High pressure situation.`, 'action');
-                        newBallPos = { x: 92, y: 50, ownerId: null };
-                        currentBallOwnerId = null;
-                    }
-                }
-            }
-
-            return { ...p, x: newX, y: newY, history: newHistory };
+            return { ...p, x: nextPx, y: nextPy, vx: nextPvx, vy: nextPvy, history: newHistory };
         });
 
+        // Sync ball to owner
+        if (currentOwnerId) {
+            const owner = updatedPlayers.find(p => p.id === currentOwnerId);
+            if (owner) {
+                nextBallX = owner.x + (owner.vx * 1.5);
+                nextBallY = owner.y + (owner.vy * 1.5);
+                nextBallVx = owner.vx;
+                nextBallVy = owner.vy;
+            }
+        }
+
         setPlayers(updatedPlayers);
-        setBall(newBallPos);
+        setBall({ x: nextBallX, y: nextBallY, vx: nextBallVx, vy: nextBallVy, ownerId: currentOwnerId });
         setTime(prev => prev + 1);
+
+        if (time % 150 === 0 && Math.random() > 0.7) triggerDaoCommand();
     }, [ball, players, time, tempo, triggerDaoCommand]);
 
     useEffect(() => {
@@ -202,7 +239,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
 
     const reset = () => {
         setIsPlaying(false);
-        setBall({ x: 50, y: 50, ownerId: null });
+        setBall({ x: 50, y: 50, vx: 0, vy: 0, ownerId: null });
         setTime(0);
         setScore({ home: 0, away: 0 });
         setTempo(1);
@@ -293,7 +330,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                     {players.map(p => (
                         <React.Fragment key={p.id}>
                             {/* Trails for Legendary players */}
-                            {p.history.map((h, i) => (
+                            {p.history.map((h: { x: number, y: number }, i: number) => (
                                 <div
                                     key={`trail-${p.id}-${i}`}
                                     className={`absolute w-2 h-2 rounded-full -translate-x-1/2 -translate-y-1/2 opacity-${(3 - i) * 20}`}
