@@ -113,7 +113,7 @@ npm run dev
 | ORM | Prisma 7 |
 | State | TanStack Query, Zustand |
 | Auth | Privy (Social + Multi-Chain Wallets) |
-| Blockchains | Algorand (XP), Avalanche (DAO), Kite AI (Agents) |
+| Blockchains | Algorand (XP), Avalanche (DAO), Kite AI (Agents), Lens Network (Social) |
 
 ---
 
@@ -168,7 +168,7 @@ See `prisma/schema.prisma` and `prisma/migrations/001_init.sql` for full schema.
 1. User logs in via Social (Google/Apple) or Wallet
 2. Privy provisions/connects Algorand and EVM (Avalanche/Kite) addresses
 3. Identity is unified under a single SportWarren Profile in PostgreSQL
-4. App handles cross-chain routing based on feature (e.g., Match XP on Algorand, DAO on Avalanche, Agent Fees on Kite)
+4. App handles cross-chain routing based on feature (e.g., Match XP on Algorand, DAO on Avalanche, Agent Fees on Kite, Highlights on Lens Network)
 
 ### Development Mode
 In development, signature verification is skipped for easier testing. Set `NODE_ENV=development` in `.env.local`.

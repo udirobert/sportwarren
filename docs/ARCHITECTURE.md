@@ -106,7 +106,8 @@ Treasury reward distributed
 | Auth | Wallet signatures (algosdk) |
 | Wallets | Pera, Defly (Algorand) |
 | On-Chain | Algorand Testnet (Match Verification) |
-| Oracles | Chainlink (via Server-as-Oracle pattern) |
+| Social | Lens Network (Social Highlights) |
+| Oracles | Chainlink CRE (Trustless Verification) |
 
 ---
 
@@ -306,7 +307,7 @@ squad.cancelTransferOffer({ offerId })
 POST /api/lens/challenge // SIWL challenge generation
 POST /api/lens/authenticate // SIWL signature verification
 POST /api/lens/post // Publication to Lens feed
-GET /api/base/balance // Base network balance
+GET /api/lens/balance // Lens Network balance
 ```
 
 **Total Endpoints:** 30+ (16 squad + 4 match + 8 player + Express APIs)

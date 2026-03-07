@@ -240,7 +240,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         }
         const provider = (window as any).ethereum;
 
-        // Request Lens Chain (chain ID 232)
+        // Request Lens Network (Lens Chain - chain ID 232)
         try {
           await provider.request({
             method: 'wallet_switchEthereumChain',
