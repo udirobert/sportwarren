@@ -312,11 +312,11 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                             <Zap className={`w-3 h-3 ${tempo > 1 ? 'text-yellow-400' : 'text-gray-500'}`} />
                             <span className="text-[10px] font-mono font-bold text-gray-300">TEMPO {tempo}x</span>
                         </div>
-                        <button onClick={() => setIsPlaying(!isPlaying)} className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-white">
-                            {isPlaying ? <Pause className="w-3 h-3" /> : <Play className="w-3 h-3" />}
+                        <button onClick={() => setIsPlaying(!isPlaying)} className="p-3 md:p-1.5 bg-blue-600 hover:bg-blue-700 rounded-xl md:rounded-lg text-white">
+                            {isPlaying ? <Pause className="w-4 h-4 md:w-3 md:h-3" /> : <Play className="w-4 h-4 md:w-3 md:h-3" />}
                         </button>
-                        <button onClick={reset} className="p-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-white">
-                            <RotateCcw className="w-3 h-3" />
+                        <button onClick={reset} className="p-3 md:p-1.5 bg-gray-800 hover:bg-gray-700 rounded-xl md:rounded-lg text-white">
+                            <RotateCcw className="w-4 h-4 md:w-3 md:h-3" />
                         </button>
                     </div>
                 </div>
@@ -421,9 +421,9 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                     </motion.div>
                 </div>
 
-                {/* Commentary Box & Reality Feed */}
-                <div className="mt-4 grid md:grid-cols-4 gap-4">
-                    <div className="md:col-span-2 p-3 bg-black/40 h-28 overflow-hidden rounded-xl border border-white/5">
+                {/* Commentary Box & Reality Feed - Responsive Grid */}
+                <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                    <div className="col-span-2 p-3 bg-black/40 h-32 md:h-28 overflow-hidden rounded-xl border border-white/5 order-1">
                         <div className="space-y-1.5">
                             {commentary.map((c, i) => (
                                 <motion.div
@@ -443,7 +443,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                     </div>
 
                     {/* Reality Feed - Pure Phygital USP */}
-                    <div className="bg-green-600/5 p-3 rounded-xl border border-green-500/10 flex flex-col justify-between">
+                    <div className="bg-green-600/5 p-3 rounded-xl border border-green-500/10 flex flex-col justify-between order-2 md:order-2">
                         <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center space-x-1.5">
                                 <Activity className="w-3 h-3 text-green-400" />
@@ -468,7 +468,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                     </div>
 
                     {/* Phygital Mission Banner */}
-                    <div className="bg-yellow-600/10 p-3 rounded-xl border border-yellow-500/20 flex flex-col justify-between">
+                    <div className="bg-yellow-600/10 p-3 rounded-xl border border-yellow-500/20 flex flex-col justify-between order-3 md:order-3">
                         <div className="flex items-center space-x-1.5 mb-1">
                             <Zap className="w-3 h-3 text-yellow-500" />
                             <span className="text-[9px] font-black text-yellow-500 uppercase tracking-widest italic">Local Mission</span>
@@ -482,7 +482,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                         </div>
                     </div>
 
-                    <div className="bg-blue-600/10 p-3 rounded-xl border border-blue-500/20 flex flex-col justify-center">
+                    <div className="bg-blue-600/10 p-3 rounded-xl border border-blue-500/20 flex flex-col justify-center order-4 md:order-4">
                         <div className="flex items-center space-x-2 mb-1">
                             <Shield className="w-3 h-3 text-blue-400" />
                             <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Active DAO Policy</span>

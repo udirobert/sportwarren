@@ -127,7 +127,7 @@ export const AgenticConcierge: React.FC = () => {
                         initial={{ opacity: 0, scale: 0.9, y: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="mb-4 w-[350px] bg-gray-900 border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[500px]"
+                        className="mb-4 w-[calc(100vw-32px)] max-w-[380px] bg-gray-900 border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[500px] max-h-[80vh]"
                     >
                         {/* Header */}
                         <div className="p-4 bg-gradient-to-r from-gray-900 to-black border-b border-white/5 flex items-center justify-between">
