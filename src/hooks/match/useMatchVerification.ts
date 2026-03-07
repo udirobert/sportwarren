@@ -16,6 +16,8 @@ interface UseMatchVerificationReturn {
     homeScore: number;
     awayScore: number;
     matchDate?: Date;
+    latitude?: number;
+    longitude?: number;
   }) => Promise<string>;
   verifyMatch: (matchId: string, verified: boolean, homeScore?: number, awayScore?: number) => Promise<void>;
   getMatchById: (matchId: string) => MatchResult | undefined;
@@ -54,18 +56,19 @@ function transformMatch(match: any): MatchResult {
       discrepancy: false,
       resolved: match.status === 'verified' || match.status === 'finalized',
     },
+    creResult: match.creResult,
   };
 }
 
 export function useMatchVerification(squadId?: string): UseMatchVerificationReturn {
   // Fetch matches with tRPC
-  const { 
-    data, 
-    isLoading, 
-    error, 
-    refetch 
+  const {
+    data,
+    isLoading,
+    error,
+    refetch
   } = trpc.match.list.useQuery(
-    { 
+    {
       squadId,
       limit: 20,
     },
@@ -98,6 +101,8 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
       homeScore: number;
       awayScore: number;
       matchDate?: Date;
+      latitude?: number;
+      longitude?: number;
     }
   ): Promise<string> => {
     const result = await submitMutation.mutateAsync(match);
@@ -105,7 +110,7 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
   }, [submitMutation]);
 
   const verifyMatch = useCallback(async (
-    matchId: string, 
+    matchId: string,
     verified: boolean,
     homeScore?: number,
     awayScore?: number

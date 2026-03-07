@@ -28,6 +28,24 @@ export interface MatchResult {
   trustScore?: number;
   weatherVerified?: boolean;
   locationVerified?: boolean;
+  creResult?: {
+    verified: boolean;
+    confidence: number;
+    weather: {
+      temperature: number;
+      conditions: string;
+      verified: boolean;
+      source: string;
+    };
+    location: {
+      region: string;
+      isPitch: boolean;
+      verified: boolean;
+      placeType: string;
+    };
+    timestamp: string;
+    workflowId: string;
+  };
 }
 
 export interface Verification {
