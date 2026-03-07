@@ -104,7 +104,7 @@ export class ChainlinkService {
 
       const wallet = new ethers.Wallet(privateKey, this.provider);
       const contractWithSigner = this.weatherOracleContract.connect(wallet);
-      
+
       // Use getFunction to properly call the contract method
       const requestWeatherData = contractWithSigner.getFunction('requestWeatherData');
       const tx = await requestWeatherData(lat, lon, ts);
@@ -210,6 +210,7 @@ export class ChainlinkService {
 
   /**
    * Comprehensive match verification using multiple oracles
+   * ENHANCEMENT: Switched to Chainlink CRE (Runtime Environment) Workflow pattern
    */
   async verifyMatch(matchData: {
     latitude: number;
@@ -224,6 +225,33 @@ export class ChainlinkService {
     locationVerified: boolean;
     details: any;
   }> {
+    // 1. Try to use the modern Chainlink CRE Workflow (Real data)
+    try {
+      const { matchVerificationWorkflow } = await import('./cre/match-verification');
+
+      const creResult = await matchVerificationWorkflow.execute({
+        latitude: matchData.latitude,
+        longitude: matchData.longitude,
+        timestamp: matchData.timestamp,
+        homeTeam: matchData.homeTeam,
+        awayTeam: matchData.awayTeam,
+      });
+
+      // If CRE workflow succeeded in getting real data, return it
+      if (creResult.confidence > 0) {
+        return {
+          verified: creResult.verified,
+          confidence: creResult.confidence,
+          weatherVerified: creResult.weather.verified,
+          locationVerified: creResult.location.verified,
+          details: creResult
+        };
+      }
+    } catch (creError) {
+      console.warn('[ChainlinkService] CRE Workflow failed, falling back to legacy oracles:', creError);
+    }
+
+    // 2. Fallback to Legacy Chainlink Oracles / Simulation
     const [weatherResult, locationResult] = await Promise.all([
       this.verifyWeather(matchData.latitude, matchData.longitude, matchData.timestamp),
       this.verifyLocation(matchData.latitude, matchData.longitude),
@@ -251,12 +279,13 @@ export class ChainlinkService {
     };
   }
 
+
   private async waitForOracleResponse(
     _requestId: string,
     timeout: number = 30000
   ): Promise<void> {
     const startTime = Date.now();
-    
+
     while (Date.now() - startTime < timeout) {
       await new Promise(resolve => setTimeout(resolve, 2000));
       // In production, check if oracle has responded
