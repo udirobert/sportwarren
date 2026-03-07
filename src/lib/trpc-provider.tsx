@@ -2,104 +2,60 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { trpc } from './trpc-client';
 import { useWallet } from '@/contexts/WalletContext';
 
-interface AuthState {
-  signature?: string;
-  message?: string;
-  timestamp?: number;
-}
-
-// Generate auth message on client
-const generateAuthMessage = (): { message: string; timestamp: number } => {
-  const timestamp = Date.now();
-  const message = `Sign this message to authenticate with SportWarren. Timestamp: ${timestamp}`;
-  return { message, timestamp };
-};
-
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
-  const { address, chain, connected } = useWallet();
-  const [authState, setAuthState] = useState<AuthState>({});
+  const { address, chain } = useWallet();
+
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: 5 * 1000,
         refetchOnWindowFocus: false,
+        retry: (failureCount, error: any) => {
+          // Don't retry auth errors
+          if (error?.data?.code === 'UNAUTHORIZED') return false;
+          return failureCount < 2;
+        },
       },
     },
   }));
 
-  // Function to sign authentication message
-  const signAuthMessage = useCallback(async () => {
-    if (!connected || !address || !chain) {
-      setAuthState({});
-      return;
-    }
-
-    // In development, skip signing
-    if (process.env.NODE_ENV === 'development') {
-      console.log('Development mode: Skipping wallet signature');
-      setAuthState({});
-      return;
-    }
-
-    try {
-      // Generate auth message
-      const { message, timestamp } = generateAuthMessage();
-      
-      // TODO: Implement actual wallet signing
-      // const signature = await wallet.signMessage(message);
-      
-      setAuthState({
-        message,
-        timestamp,
-        // signature, // Would be set after actual signing
-      });
-    } catch (error) {
-      console.error('Failed to sign auth message:', error);
-      setAuthState({});
-    }
-  }, [connected, address, chain]);
-
-  // Sign when wallet connects
-  useEffect(() => {
-    signAuthMessage();
-  }, [signAuthMessage]);
-
-  const [trpcClient] = useState(() =>
+  // Re-create the TRPC client whenever the connected wallet changes.
+  // This ensures all queries are re-issued under the new auth identity.
+  const trpcClient = useMemo(() =>
     trpc.createClient({
       links: [
         httpBatchLink({
           url: '/api/trpc',
+          // headers() is called fresh on every request — reads from localStorage
+          // so newly-signed credentials are always sent without stale closures.
           headers: () => {
             const headers: Record<string, string> = {};
-            
-            if (address) {
-              headers['x-wallet-address'] = address;
+
+            // Use address & chain from closure (they are reactive via useMemo dep)
+            if (address) headers['x-wallet-address'] = address;
+            if (chain) headers['x-chain'] = chain;
+
+            // Auth tokens written by WalletContext.connect() after local signing
+            if (typeof window !== 'undefined') {
+              const sig = localStorage.getItem('sw_auth_signature');
+              const msg = localStorage.getItem('sw_auth_message');
+              const ts = localStorage.getItem('sw_auth_timestamp');
+              if (sig) headers['x-wallet-signature'] = sig;
+              if (msg) headers['x-auth-message'] = msg;
+              if (ts) headers['x-auth-timestamp'] = ts;
             }
-            if (chain) {
-              headers['x-chain'] = chain;
-            }
-            
-            // Add auth headers if available
-            if (authState.signature) {
-              headers['x-wallet-signature'] = authState.signature;
-            }
-            if (authState.message) {
-              headers['x-auth-message'] = authState.message;
-            }
-            if (authState.timestamp) {
-              headers['x-auth-timestamp'] = authState.timestamp.toString();
-            }
-            
+
             return headers;
           },
         }),
       ],
-    })
-  );
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [address, chain]); // re-create when wallet identity changes
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
@@ -109,3 +65,5 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
     </trpc.Provider>
   );
 }
+
+
