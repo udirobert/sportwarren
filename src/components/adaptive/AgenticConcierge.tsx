@@ -70,7 +70,8 @@ export const AgenticConcierge: React.FC = () => {
                                 message: `I'm observing the simulation at ${venue}. The squad is facing the ${rivals.away}. Provide a quick tactical analysis of their formation (e.g. they are playing a high-line) and suggest that the manager should connect their identity to take control.`,
                                 city,
                                 venue,
-                                history: []
+                                history: [],
+                                userId: address || 'guest-marcus'
                             })
                         });
                         const data = await res.json();
@@ -129,7 +130,8 @@ export const AgenticConcierge: React.FC = () => {
                     message: inputValue,
                     city,
                     venue,
-                    history
+                    history,
+                    userId: address || 'guest-marcus'
                 })
             });
 

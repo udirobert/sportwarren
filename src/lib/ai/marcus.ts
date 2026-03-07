@@ -1,5 +1,6 @@
 
 import { getVeniceClient, VENICE_MODEL_ID } from './venice';
+import { getNarrativeLedger, updateNarrativeLedger } from './memory';
 
 export const MARCUS_SYSTEM_PROMPT = `You are Marcus, the Academy Director of SportWarren. 
 Professional, encouraging, and deeply technical about the "Phygital" bridge.
@@ -12,22 +13,48 @@ CORE RULES:
 4. ROLEPLAY: Never break character.
 `;
 
-export async function getMarcusResponse(message: string, context: { city?: string, venue?: string, history: any[] }) {
+// Simple in-memory cache to optimize costs
+const responseCache: Record<string, { reply: string, timestamp: number }> = {};
+const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+
+export async function getMarcusResponse(message: string, context: { city?: string, venue?: string, history: any[], userId?: string }) {
     const client = getVeniceClient();
-    const { city, venue, history } = context;
+    const { city, venue, history, userId } = context;
+
+    // Retrieve ledger if userId is available
+    const ledger = userId ? getNarrativeLedger(userId) : null;
+    const keyInsights = ledger?.keyInsights.join(". ") || "";
+
+    // Check cache
+    const cacheKey = `${userId || 'guest'}-${message}-${city || ''}-${venue || ''}`;
+    if (responseCache[cacheKey] && (Date.now() - responseCache[cacheKey].timestamp < CACHE_TTL)) {
+        return responseCache[cacheKey].reply;
+    }
 
     const contextPrefix = city && venue ? `[Context: ${city} Chapter near ${venue}] ` : '';
+    const memoryPrefix = keyInsights ? `[Previous Insights: ${keyInsights}] ` : '';
 
     const response = await client.chat.completions.create({
         model: VENICE_MODEL_ID,
         messages: [
             { role: 'system', content: MARCUS_SYSTEM_PROMPT },
             ...history,
-            { role: 'user', content: contextPrefix + message }
+            { role: 'user', content: contextPrefix + memoryPrefix + message }
         ],
         temperature: 0.7,
         max_tokens: 150,
     });
 
-    return response.choices[0]?.message?.content || "Signals weak. Focus on the tactical layout.";
+    const reply = response.choices[0]?.message?.content || "Signals weak. Focus on the tactical layout.";
+
+    // Save to cache
+    responseCache[cacheKey] = { reply, timestamp: Date.now() };
+
+    // Update ledger
+    if (userId) {
+        updateNarrativeLedger(userId, { role: 'user', content: message, timestamp: Date.now() });
+        updateNarrativeLedger(userId, { role: 'assistant', content: reply, timestamp: Date.now() });
+    }
+
+    return reply;
 }
