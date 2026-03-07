@@ -7,6 +7,7 @@ import { MatchConfirmation } from "@/components/match/MatchConfirmation";
 import { XPGainSummary } from "@/components/player/XPGainPopup";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { Cpu } from "lucide-react";
 import { useMatchVerification } from "@/hooks/match/useMatchVerification";
 import { useXPGain } from "@/hooks/player/useXPGain";
 import { Trophy, Shield, Activity, Sparkles } from "lucide-react";
@@ -71,8 +72,8 @@ export default function MatchPage() {
         <button
           onClick={() => setViewMode("capture")}
           className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all ${viewMode === "capture"
-              ? "bg-white text-green-600 shadow-sm"
-              : "text-gray-600 hover:text-gray-900"
+            ? "bg-white text-green-600 shadow-sm"
+            : "text-gray-600 hover:text-gray-900"
             }`}
         >
           <Activity className="w-4 h-4" />
@@ -81,8 +82,8 @@ export default function MatchPage() {
         <button
           onClick={() => setViewMode("verify")}
           className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all ${viewMode === "verify"
-              ? "bg-white text-blue-600 shadow-sm"
-              : "text-gray-600 hover:text-gray-900"
+            ? "bg-white text-blue-600 shadow-sm"
+            : "text-gray-600 hover:text-gray-900"
             }`}
         >
           <Shield className="w-4 h-4" />
@@ -125,17 +126,18 @@ export default function MatchPage() {
                   </div>
                   <div className="flex items-center space-x-3 text-sm">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${match.status === "verified" ? "bg-green-100 text-green-800" :
-                        match.status === "disputed" ? "bg-red-100 text-red-800" :
-                          "bg-yellow-100 text-yellow-800"
+                      match.status === "disputed" ? "bg-red-100 text-red-800" :
+                        "bg-yellow-100 text-yellow-800"
                       }`}>
                       {match.status.toUpperCase()}
                     </span>
                     <span className="text-gray-500">
                       {match.verifications.filter(v => v.verified).length}/{match.requiredVerifications} verified
                     </span>
-                    {match.trustScore !== undefined && (
-                      <span className="text-blue-600">
-                        Trust: {Math.round(match.trustScore)}%
+                    {match.creResult?.verified && (
+                      <span className="flex items-center space-x-1 px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-bold uppercase tracking-wider">
+                        <Cpu className="w-2.5 h-2.5" />
+                        <span>CRE Verified</span>
                       </span>
                     )}
                   </div>

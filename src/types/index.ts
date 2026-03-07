@@ -46,6 +46,13 @@ export interface MatchResult {
     timestamp: string;
     workflowId: string;
   };
+  agentInsights?: {
+    agentId: string;
+    agentName: string;
+    report: string;
+    decision: string;
+    timestamp: string;
+  };
 }
 
 export interface Verification {

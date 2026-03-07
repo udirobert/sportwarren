@@ -60,18 +60,27 @@ class MatchVerificationWorkflow {
 
         // Action 3: Multi-factor Verification Logic (The 'Consensus' part of the workflow)
         let confidence = 0;
+        let reasons: string[] = [];
 
         // Weather score (40% weight) - verifies match was possible in those conditions
         if (weatherData.verified) {
             confidence += 40;
+            reasons.push(`Weather confirmed by ${weatherData.source}: ${weatherData.conditions}, ${weatherData.temperature}°C`);
+        } else {
+            reasons.push('Weather verification failed or skipped.');
         }
 
         // Location score (60% weight) - verifies match happened at a valid venue
         if (locationData.verified) {
-            confidence += 20; // Verified location
             if (locationData.isPitch) {
-                confidence += 40; // High confidence: it's a sports facility
+                confidence += 60; // 100% location confidence for stadiums/pitches
+                reasons.push(`Match played at confirmed venue: ${locationData.region} (${locationData.placeType})`);
+            } else {
+                confidence += 30; // 50% location confidence for recognized regions that aren't specific pitches
+                reasons.push(`Location verified at ${locationData.region}, but venue type (${locationData.placeType}) is unconfirmed.`);
             }
+        } else {
+            reasons.push('Location verification failed - outside known perimeter.');
         }
 
         const verified = confidence >= 60;
@@ -80,7 +89,7 @@ class MatchVerificationWorkflow {
 
         return {
             verified,
-            confidence,
+            confidence: Math.min(100, confidence),
             weather: weatherData,
             location: locationData,
             timestamp: new Date().toISOString(),
@@ -97,40 +106,98 @@ class MatchVerificationWorkflow {
             return { temperature: 14, conditions: 'Cloudy', verified: true, source: 'simulator' };
         }
 
-        if (!this.OWE_API_KEY) {
-            return { temperature: 0, conditions: 'missing_key', verified: false, source: 'none' };
-        }
-
+        // 1. Try Open-Meteo (Zero-Key, Sovereign Default)
         try {
-            const isHistorical = (Date.now() / 1000) - input.timestamp > 3600; // More than 1h ago
+            const date = new Date(input.timestamp * 1000);
+            const dateStr = date.toISOString().split('T')[0];
+            const isHistorical = (Date.now() / 1000) - input.timestamp > 3600;
+
             const endpoint = isHistorical
-                ? `https://api.openweathermap.org/data/3.0/onecall/timemachine`
-                : `https://api.openweathermap.org/data/2.5/weather`;
+                ? `https://archive-api.open-meteo.com/v1/archive`
+                : `https://api.open-meteo.com/v1/forecast`;
 
             const response = await axios.get(endpoint, {
                 params: {
-                    lat: input.latitude,
-                    lon: input.longitude,
-                    dt: input.timestamp,
-                    appid: this.OWE_API_KEY,
-                    units: 'metric'
-                }
+                    latitude: input.latitude,
+                    longitude: input.longitude,
+                    ...(isHistorical
+                        ? { start_date: dateStr, end_date: dateStr, hourly: 'temperature_2m,weather_code' }
+                        : { current: 'temperature_2m,weather_code' }),
+                    timezone: 'UTC'
+                },
+                timeout: 5000
             });
 
-            const data = isHistorical ? response.data.data[0] : response.data;
-            const main = isHistorical ? data : data.main;
-            const weather = isHistorical ? data.weather[0] : data.weather[0];
+            let temperature = 0;
+            let weatherCode = 0;
+
+            if (isHistorical) {
+                // Find the closest hour in the archive
+                const hour = date.getUTCHours();
+                temperature = response.data.hourly.temperature_2m[hour];
+                weatherCode = response.data.hourly.weather_code[hour];
+            } else {
+                temperature = response.data.current.temperature_2m;
+                weatherCode = response.data.current.weather_code;
+            }
+
+            // Map WMO Weather Codes to SportWarren Conditions
+            const mapWmoToCondition = (code: number) => {
+                if (code === 0) return 'Clear';
+                if (code <= 3) return 'Cloudy';
+                if (code <= 48) return 'Fog';
+                if (code <= 55) return 'Drizzle';
+                if (code <= 65) return 'Rain';
+                if (code <= 77) return 'Snow';
+                if (code <= 82) return 'Showers';
+                return 'Thunderstorm';
+            };
 
             return {
-                temperature: main.temp,
-                conditions: weather.main,
+                temperature,
+                conditions: mapWmoToCondition(weatherCode),
                 verified: true,
-                source: 'OpenWeatherMap'
+                source: 'Open-Meteo (Sovereign)'
             };
         } catch (error) {
-            console.error('[CRE] Weather Action Error:', error instanceof Error ? error.message : error);
-            return { temperature: 0, conditions: 'error', verified: false, source: 'error' };
+            console.warn('[CRE] Open-Meteo action failed, checking for OpenWeatherMap fallback.');
         }
+
+        // 2. Fallback: OpenWeatherMap (Key-Based)
+        if (this.OWE_API_KEY) {
+            try {
+                const isHistorical = (Date.now() / 1000) - input.timestamp > 3600;
+                const endpoint = isHistorical
+                    ? `https://api.openweathermap.org/data/3.0/onecall/timemachine`
+                    : `https://api.openweathermap.org/data/2.5/weather`;
+
+                const response = await axios.get(endpoint, {
+                    params: {
+                        lat: input.latitude,
+                        lon: input.longitude,
+                        dt: input.timestamp,
+                        appid: this.OWE_API_KEY,
+                        units: 'metric'
+                    },
+                    timeout: 5000
+                });
+
+                const data = isHistorical ? response.data.data[0] : response.data;
+                const main = isHistorical ? data : data.main;
+                const weather = isHistorical ? data.weather[0] : data.weather[0];
+
+                return {
+                    temperature: main.temp,
+                    conditions: weather.main,
+                    verified: true,
+                    source: 'OpenWeatherMap'
+                };
+            } catch (error) {
+                console.error('[CRE] OpenWeatherMap fallback failed:', error instanceof Error ? error.message : error);
+            }
+        }
+
+        return { temperature: 0, conditions: 'unknown', verified: false, source: 'none' };
     }
 
     /**
@@ -141,40 +208,72 @@ class MatchVerificationWorkflow {
             return { region: 'Stamford Bridge', isPitch: true, verified: true, placeType: 'stadium' };
         }
 
-        if (!this.GEO_API_KEY) {
-            return { region: 'Missing Key', isPitch: false, verified: false, placeType: 'none' };
+        // 1. Try Google Maps / LocationIQ (Legacy/Key-Based)
+        if (this.GEO_API_KEY) {
+            try {
+                const response = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json`, {
+                    params: {
+                        latlng: `${input.latitude},${input.longitude}`,
+                        key: this.GEO_API_KEY
+                    },
+                    timeout: 5000
+                });
+
+                const results = response.data.results;
+                if (results && results.length > 0) {
+                    const types = results.flatMap((r: any) => r.types);
+                    const pitchTypes = ['stadium', 'sports_complex', 'park', 'gym', 'recreation_ground'];
+                    const isPitch = types.some((t: string) => pitchTypes.includes(t));
+                    const placeType = types.find((t: string) => pitchTypes.includes(t)) || types[0] || 'point_of_interest';
+
+                    return {
+                        region: results[0].formatted_address,
+                        isPitch,
+                        verified: true,
+                        placeType
+                    };
+                }
+            } catch (error) {
+                console.warn('[CRE] Primary Location Action (Key-based) failed, falling back to Nominatim.');
+            }
         }
 
+        // 2. Fallback: OpenStreetMap (Nominatim) - No Key Required (Hackathon Proof)
         try {
-            const response = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json`, {
+            const response = await axios.get(`https://nominatim.openstreetmap.org/reverse`, {
                 params: {
-                    latlng: `${input.latitude},${input.longitude}`,
-                    key: this.GEO_API_KEY
-                }
+                    lat: input.latitude,
+                    lon: input.longitude,
+                    format: 'json',
+                    addressdetails: 1
+                },
+                headers: {
+                    'User-Agent': `${process.env.NEXT_PUBLIC_APP_NAME || 'SportWarren'}-Hackathon-Verifier`
+                },
+                timeout: 5000
             });
 
-            const results = response.data.results;
-            if (!results || results.length === 0) {
-                return { region: 'Unknown', isPitch: false, verified: false, placeType: 'none' };
+            const data = response.data;
+            if (data && data.display_name) {
+                // Pitch detection for OSM
+                const pitchTypes = ['stadium', 'pitch', 'sports_centre', 'recreation_ground', 'park', 'leisure'];
+                const osmType = data.type || data.category || 'unknown';
+                const isPitch = pitchTypes.includes(osmType) ||
+                    data.extratags?.sport === 'soccer' ||
+                    data.display_name.toLowerCase().includes('stadium');
+
+                return {
+                    region: data.display_name,
+                    isPitch,
+                    verified: true,
+                    placeType: osmType
+                };
             }
-
-            const topResult = results[0];
-            const types = results.flatMap((r: any) => r.types);
-
-            const pitchTypes = ['stadium', 'sports_complex', 'park', 'gym', 'recreation_ground'];
-            const isPitch = types.some((t: string) => pitchTypes.includes(t));
-            const placeType = types.find((t: string) => pitchTypes.includes(t)) || types[0] || 'point_of_interest';
-
-            return {
-                region: topResult.formatted_address,
-                isPitch,
-                verified: true,
-                placeType
-            };
         } catch (error) {
-            console.error('[CRE] Location Action Error:', error instanceof Error ? error.message : error);
-            return { region: 'Error', isPitch: false, verified: false, placeType: 'none' };
+            console.error('[CRE] Fallback Location Action (OSM) failed:', error instanceof Error ? error.message : error);
         }
+
+        return { region: 'Unknown', isPitch: false, verified: false, placeType: 'none' };
     }
 }
 

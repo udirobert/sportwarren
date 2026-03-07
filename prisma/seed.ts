@@ -1,158 +1,115 @@
-import { PrismaClient } from '@prisma/client';
-import { hash } from 'crypto';
+import { prisma } from '../src/lib/db';
+import * as dotenv from 'dotenv';
 
-const prisma = new PrismaClient();
+dotenv.config();
 
 async function main() {
-  console.log('Seeding database...');
+  console.log('🌱 SEEDING SPORTWARREN PRODUCTION (NEON)...');
 
-  // 1. Seed AI Agents (Kite AI passports mocked)
-  console.log('Deploying Kite AI Agents...');
-  const aiAgents = [
-    {
-      agentId: 'agt_squad_manager_001',
-      passportId: 'pass_sqm_001',
-      name: 'SportWarren Squad Manager',
-      type: 'squad_manager',
-      description: 'AI agent for tactical analysis and squad rotation',
-      capabilities: ['tactics', 'formation_analysis', 'rotation_management'],
-    },
-    {
-      agentId: 'agt_scout_001',
-      passportId: 'pass_sct_001',
-      name: 'SportWarren Scout',
-      type: 'scout',
-      description: 'AI agent for opponent analysis and player scouting',
-      capabilities: ['opponent_analysis', 'player_scouting', 'weakness_detection'],
-    },
-    {
-      agentId: 'agt_fitness_001',
-      passportId: 'pass_fit_001',
-      name: 'SportWarren Fitness Coach',
-      type: 'fitness',
-      description: 'AI agent for fitness tracking and training recommendations',
-      capabilities: ['fitness_tracking', 'training_plans', 'injury_prevention'],
-    },
-  ];
-
-  for (const agent of aiAgents) {
-    await prisma.aiAgent.upsert({
-      where: { agentId: agent.agentId },
-      update: {},
-      create: agent,
-    });
-  }
-
-  // 2. Seed Mock Users
-  console.log('Creating mock users...');
-  const user1 = await prisma.user.upsert({
-    where: { walletAddress: '0x1234567890abcdef1234567890abcdef12345678' },
+  // 1. Create System/Bot Users (The Agents)
+  const agentUser = await prisma.user.upsert({
+    where: { walletAddress: '0xAGENT_KITE_SYSTEM_01' },
     update: {},
     create: {
-      walletAddress: '0x1234567890abcdef1234567890abcdef12345678',
-      chain: 'avalanche',
-      name: 'Marcus Rashford (Mock)',
-      position: 'Forward',
+      walletAddress: '0xAGENT_KITE_SYSTEM_01',
+      name: 'Kite Tactical Agent',
+      chain: 'base',
     },
   });
 
-  const user2 = await prisma.user.upsert({
-    where: { walletAddress: '0xabcdef1234567890abcdef1234567890abcdef12' },
+  const scoutUser = await prisma.user.upsert({
+    where: { walletAddress: '0xAGENT_SCOUT_SYSTEM_01' },
     update: {},
     create: {
-      walletAddress: '0xabcdef1234567890abcdef1234567890abcdef12',
-      chain: 'avalanche',
-      name: 'Bukayo Saka (Mock)',
-      position: 'Winger',
+      walletAddress: '0xAGENT_SCOUT_SYSTEM_01',
+      name: 'Vision Scout Agent',
+      chain: 'base',
     },
   });
 
-  // 3. Profiles
-  await prisma.playerProfile.upsert({
-    where: { userId: user1.id },
+  // 2. Create Agentic Squads
+  const invicta = await prisma.squad.upsert({
+    where: { id: 'squad_invicta_01' },
     update: {},
     create: {
-      userId: user1.id,
-      level: 5,
-      totalXP: 5000,
-      reputationScore: 95,
-      attributes: {
-        create: [
-          { attribute: 'pace', rating: 88, maxRating: 99 },
-          { attribute: 'shooting', rating: 85, maxRating: 99 },
-          { attribute: 'passing', rating: 78, maxRating: 99 },
-        ]
-      }
-    }
-  });
-
-  await prisma.playerProfile.upsert({
-    where: { userId: user2.id },
-    update: {},
-    create: {
-      userId: user2.id,
-      level: 4,
-      totalXP: 4200,
-      reputationScore: 92,
-      attributes: {
-        create: [
-          { attribute: 'pace', rating: 90, maxRating: 99 },
-          { attribute: 'shooting', rating: 80, maxRating: 99 },
-          { attribute: 'dribbling', rating: 86, maxRating: 99 },
-        ]
-      }
-    }
-  });
-
-  // 4. Squads
-  console.log('Creating mock squads...');
-  const squad1 = await prisma.squad.create({
-    data: {
-      name: 'Red Devils Sunday League',
-      shortName: 'RDSL',
-      treasuryBalance: 1000,
+      id: 'squad_invicta_01',
+      name: 'Kite Invicta',
+      shortName: 'KIV',
+      homeGround: 'Kite Virtual Stadium',
+      treasuryBalance: 5000,
+      tactics: {
+        create: {
+          formation: '4-3-3',
+          playStyle: 'high_press',
+          instructions: { width: 'wide', tempo: 'fast' },
+        },
+      },
       members: {
         create: {
-          userId: user1.id,
+          userId: agentUser.id,
           role: 'captain',
-        }
-      }
+        },
+      },
     },
   });
 
-  const squad2 = await prisma.squad.create({
-    data: {
-      name: 'Gunners FC',
-      shortName: 'GFC',
-      treasuryBalance: 800,
+  const neonStrikers = await prisma.squad.upsert({
+    where: { id: 'squad_neon_01' },
+    update: {},
+    create: {
+      id: 'squad_neon_01',
+      name: 'Neon Strikers',
+      shortName: 'NST',
+      homeGround: 'Neon Cloud Arena',
+      treasuryBalance: 2500,
+      tactics: {
+        create: {
+          formation: '4-4-2',
+          playStyle: 'direct',
+          instructions: { width: 'normal', tempo: 'normal' },
+        },
+      },
       members: {
         create: {
-          userId: user2.id,
+          userId: scoutUser.id,
           role: 'captain',
-        }
-      }
+        },
+      },
     },
   });
 
-  // 5. Match (with Chainlink mocked state)
-  console.log('Creating mock matches...');
+  // 3. Seed some "Phygital" Proven Matches (Chainlink CRE History)
   await prisma.match.create({
     data: {
-      homeSquadId: squad1.id,
-      awaySquadId: squad2.id,
-      homeScore: 2,
+      homeSquadId: invicta.id,
+      awaySquadId: neonStrikers.id,
+      homeScore: 3,
       awayScore: 1,
-      submittedBy: user1.id,
+      submittedBy: agentUser.id,
       status: 'verified',
-      matchDate: new Date(),
-      latitude: 53.4631, // Old Trafford coords
-      longitude: -2.2913,
+      matchDate: new Date(Date.now() - 86400000), // Yesterday
+      latitude: 51.5549, // Emirates
+      longitude: -0.1084,
       weatherVerified: true,
       locationVerified: true,
-    }
+      verificationDetails: {
+        verified: true,
+        confidence: 100,
+        weather: { temperature: 14, conditions: 'Clear', source: 'OpenWeatherMap' },
+        location: { region: 'London, UK', isPitch: true, placeType: 'stadium' },
+        workflowId: 'cre_seed_01'
+      },
+      agentInsights: {
+        agentId: 'kite_tactical_agent',
+        agentName: 'Kite Tactical Agent',
+        report: "Superior orbital tracking confirms match conditions at Emirates Stadium. Deploying maximum XP bonuses to the squad based on this high-confidence Phygital proof.",
+        decision: "APPROVE_XP_DISBURSEMENT",
+        timestamp: new Date().toISOString()
+      }
+    } as any,
   });
 
-  console.log('Database seeded successfully!');
+  console.log('✅ SEEDING COMPLETE: Neon Production is alive with Agentic Squads.');
 }
 
 main()

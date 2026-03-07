@@ -200,6 +200,28 @@ export const MatchConsensusPanel: React.FC<MatchConsensusProps> = ({ match }) =>
           </div>
         )}
 
+        {/* Agentic Analysis */}
+        {match.agentInsights && (
+          <div className="p-3 bg-blue-50/50 border border-blue-100 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <Cpu className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-bold text-blue-700 uppercase tracking-wider">
+                Agent Captain's Analysis: {match.agentInsights.agentName}
+              </span>
+            </div>
+            <p className="text-sm text-gray-700 italic leading-relaxed">
+              "{match.agentInsights.report}"
+            </p>
+            <div className="mt-2 text-[10px] font-mono text-blue-600 flex items-center space-x-2">
+              <span className="bg-blue-100 px-1.5 py-0.5 rounded">
+                INTENT: {match.agentInsights.decision}
+              </span>
+              <span>•</span>
+              <span className="text-gray-500">Processed at {new Date(match.agentInsights.timestamp).toLocaleTimeString()}</span>
+            </div>
+          </div>
+        )}
+
         {/* Verification List */}
         <div>
           <h4 className="text-sm font-medium text-gray-700 mb-2">Verifications</h4>
