@@ -13,6 +13,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { useMySquads } from '@/hooks/squad/useSquad';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
+import { GuestTour } from '@/components/onboarding/GuestTour';
 
 import { StaffFeed } from '@/components/adaptive/StaffFeed';
 import { NearbyRivals } from '@/components/dashboard/NearbyRivals';
@@ -23,6 +24,7 @@ import { SquadDynamics } from '@/components/dashboard/SquadDynamics';
 import { ScoutingReport } from '@/components/dashboard/ScoutingReport';
 import { MatchEnginePreview } from '@/components/dashboard/MatchEnginePreview';
 import { StaffRoom } from '@/components/dashboard/StaffRoom';
+import { AgenticConcierge } from '@/components/adaptive/AgenticConcierge';
 
 interface DashboardWidget {
   id: string;
@@ -61,6 +63,7 @@ export const AdaptiveDashboard: React.FC = () => {
         <OnboardingChecklist
           onStepAction={(id) => {
             if (id === 'open_office') handleOpenOffice();
+            if (id === 'claim_identity') window.location.reload(); // Simple way to trigger modal if logic is tied to mount or just show modal
           }}
         />
       ),
@@ -371,7 +374,7 @@ export const AdaptiveDashboard: React.FC = () => {
                 <Sparkles className="w-4 h-4" />
                 <span className="text-[10px] font-black uppercase tracking-widest leading-none">Guest Mode Active • Hackney Marshes Demo Experience</span>
               </div>
-              <Button size="sm" variant="outline" className="h-6 text-[8px] border-white/20 hover:bg-white/10 text-white" onClick={() => window.location.reload()}>
+              <Button id="connect-wallet-btn" size="sm" variant="outline" className="h-6 text-[8px] border-white/20 hover:bg-white/10 text-white" onClick={() => window.location.reload()}>
                 Connect Wallet
               </Button>
             </div>
@@ -379,7 +382,10 @@ export const AdaptiveDashboard: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div className="border-b border-gray-200 pb-4 mb-2 flex items-end justify-between">
+      <GuestTour />
+      <AgenticConcierge />
+
+      <div id="dashboard-header" className="border-b border-gray-200 pb-4 mb-2 flex items-end justify-between">
         <div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">
             Marcus <span className="text-gray-400 font-medium">/ Manager</span>
@@ -422,7 +428,7 @@ export const AdaptiveDashboard: React.FC = () => {
 
       <div className="space-y-6">
         {visibleWidgets.map((widget) => (
-          <div key={widget.id}>
+          <div key={widget.id} id={widget.id}>
             {widget.component}
           </div>
         ))}
