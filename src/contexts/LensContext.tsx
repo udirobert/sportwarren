@@ -54,10 +54,15 @@ export const LensProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       const { text } = await challengeRes.json();
 
-      // 2. In a real app, we'd prompt user to sign 'text' via wallet
-      // For this implementation, we'll simulate the signature/verification
-      // const signature = await signMessage(text);
-      const signature = "simulated_lens_v3_signature";
+      // 2. Real signature via ethereum provider
+      if (typeof window === 'undefined' || !(window as any).ethereum) {
+        throw new Error('No ethereum wallet found for Lens signature.');
+      }
+      const provider = (window as any).ethereum;
+      const signature = await provider.request({
+        method: 'personal_sign',
+        params: [text, address],
+      });
 
       // 3. Verify signature and get profile/token
       const authRes = await fetch('/api/lens/authenticate', {

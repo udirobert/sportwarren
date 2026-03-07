@@ -2,7 +2,7 @@
 
 **Phygital Football Platform | Real World + Championship Manager**
 
-**Last Updated:** March 2026: **Progress:** 95% Complete
+**Last Updated:** March 2026: **Progress:** 98% Complete
 
 ---
 
@@ -116,6 +116,8 @@
 - **Staff Office:** Launched the interactive Staff Room with functional budget and tactical advisors
 - **Draft Engine:** Real-time prospect signing with squad treasury impact and DB persistence
 - **Match Engine Sync:** Live squad data injection into the 2D match simulation engine
+- **Onboarding:** Cinematic 6-step wizard + persistent Getting Started checklist
+- **Production Hardening:** Real wallet signatures, DB guards, and Neon-ready infrastructure
 
 ---
 
