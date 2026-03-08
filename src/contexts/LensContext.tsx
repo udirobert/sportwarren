@@ -8,6 +8,7 @@ interface LensContextType extends LensConnectionState {
   login: () => Promise<void>;
   logout: () => void;
   postMatchProof: (matchData: any) => Promise<string | null>;
+  postHighlight: (content: string) => Promise<string | null>;
 }
 
 const LensContext = createContext<LensContextType | undefined>(undefined);
@@ -118,8 +119,31 @@ export const LensProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const postHighlight = async (content: string) => {
+    if (!state.accessToken || !state.profile) return null;
+
+    try {
+      const res = await fetch('/api/lens/post', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${state.accessToken}`
+        },
+        body: JSON.stringify({
+          profileId: state.profile.id,
+          content
+        }),
+      });
+      const { pubId } = await res.json();
+      return pubId;
+    } catch (error) {
+      console.error("Lens Post Failed:", error);
+      return null;
+    }
+  };
+
   return (
-    <LensContext.Provider value={{ ...state, login, logout, postMatchProof }}>
+    <LensContext.Provider value={{ ...state, login, logout, postMatchProof, postHighlight }}>
       {children}
     </LensContext.Provider>
   );

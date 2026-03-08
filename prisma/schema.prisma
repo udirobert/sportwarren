@@ -6,7 +6,7 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 // ============================================================================
@@ -14,25 +14,27 @@ datasource db {
 // ============================================================================
 
 model User {
-  id        String   @id @default(cuid())
-  email     String?  @unique
-  walletAddress String @unique @map("wallet_address")
-  chain     String   // 'algorand' or 'avalanche'
-  
+  id            String  @id @default(cuid())
+  email         String? @unique
+  walletAddress String  @unique @map("wallet_address")
+  chain         String // 'algorand' or 'avalanche'
+
   // Profile
-  name      String?
-  avatar    String?
-  position  String?  // Preferred position
-  
+  name     String?
+  avatar   String?
+  position String? // Preferred position
+
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   // Relations
-  playerProfile PlayerProfile?
-  squads        SquadMember[]
-  matchesSubmitted Match[] @relation("MatchSubmitter")
-  verifications MatchVerification[]
+  playerProfile    PlayerProfile?
+  squads           SquadMember[]
+  matchesSubmitted Match[]             @relation("MatchSubmitter")
+  verifications    MatchVerification[]
+  aiMemory         AiMemory?
+
   @@map("users")
 }
 
@@ -44,95 +46,95 @@ model PlayerProfile {
   id     String @id @default(cuid())
   userId String @unique @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   // Level & XP
-  level           Int      @default(1)
-  totalXP         Int      @default(0) @map("total_xp")
-  seasonXP        Int      @default(0) @map("season_xp")
-  
+  level    Int @default(1)
+  totalXP  Int @default(0) @map("total_xp")
+  seasonXP Int @default(0) @map("season_xp")
+
   // Career Stats
-  totalMatches    Int      @default(0) @map("total_matches")
-  totalGoals      Int      @default(0) @map("total_goals")
-  totalAssists    Int      @default(0) @map("total_assists")
-  
+  totalMatches Int @default(0) @map("total_matches")
+  totalGoals   Int @default(0) @map("total_goals")
+  totalAssists Int @default(0) @map("total_assists")
+
   // Weekly Schedule (0=Sunday, 1=Monday, etc.)
   matchDayPreference Int @default(0) @map("match_day_preference")
-  
+
   // Physical Condition (0-100)
-  sharpness       Int      @default(50) @map("sharpness")
-  
+  sharpness Int @default(50) @map("sharpness")
+
   // Reputation
-  reputationScore Int      @default(100) @map("reputation_score")
-  
+  reputationScore Int @default(100) @map("reputation_score")
+
   // Timestamps
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   // Relations
-  attributes PlayerAttribute[]
-  matchStats PlayerMatchStats[]
+  attributes  PlayerAttribute[]
+  matchStats  PlayerMatchStats[]
   formHistory FormEntry[]
-  activities PhysicalActivity[]
-  
+  activities  PhysicalActivity[]
+
   @@map("player_profiles")
 }
 
 model PhysicalActivity {
-  id          String   @id @default(cuid())
-  profileId   String   @map("profile_id")
-  profile     PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  type        String   // 'run', 'gym', 'hiit', 'field_training'
-  duration    Int      // minutes
-  intensity   String   // 'low', 'medium', 'high'
-  distance    Float?   // km, if applicable
-  calories    Int?
-  
+  id        String        @id @default(cuid())
+  profileId String        @map("profile_id")
+  profile   PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  type      String // 'run', 'gym', 'hiit', 'field_training'
+  duration  Int // minutes
+  intensity String // 'low', 'medium', 'high'
+  distance  Float? // km, if applicable
+  calories  Int?
+
   // Provider info
-  source      String   @default("manual") // 'manual', 'strava', 'apple_health'
-  externalId  String?  @map("external_id")
-  
+  source     String  @default("manual") // 'manual', 'strava', 'apple_health'
+  externalId String? @map("external_id")
+
   // Impact
-  xpGained    Int      @default(0) @map("xp_gained")
-  sharpnessGain Int    @default(0) @map("sharpness_gain")
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  
+  xpGained      Int @default(0) @map("xp_gained")
+  sharpnessGain Int @default(0) @map("sharpness_gain")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
   @@map("physical_activities")
 }
 
 model PlayerAttribute {
-  id       String @id @default(cuid())
-  profileId String @map("profile_id")
+  id        String        @id @default(cuid())
+  profileId String        @map("profile_id")
   profile   PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
+
   // Attribute type: pace, shooting, passing, dribbling, defending, physical
   attribute String
-  rating    Int     @default(50) // 0-99 FIFA style
-  xp        Int     @default(0)
-  xpToNext  Int     @default(100) @map("xp_to_next")
-  maxRating Int     @default(99) @map("max_rating")
-  
+  rating    Int    @default(50) // 0-99 FIFA style
+  xp        Int    @default(0)
+  xpToNext  Int    @default(100) @map("xp_to_next")
+  maxRating Int    @default(99) @map("max_rating")
+
   // History (last 5 match ratings for this attribute)
-  history   Int[]
-  
+  history Int[]
+
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   @@unique([profileId, attribute])
   @@map("player_attributes")
 }
 
 model FormEntry {
-  id        String   @id @default(cuid())
-  profileId String   @map("profile_id")
+  id        String        @id @default(cuid())
+  profileId String        @map("profile_id")
   profile   PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
-  matchId   String   @map("match_id")
-  rating    Float    // Match rating 1-10
-  formValue Int      @map("form_value") // Calculated -5 to +5
-  
+
+  matchId   String @map("match_id")
+  rating    Float // Match rating 1-10
+  formValue Int    @map("form_value") // Calculated -5 to +5
+
   createdAt DateTime @default(now()) @map("created_at")
-  
+
   @@map("form_entries")
 }
 
@@ -141,14 +143,14 @@ model FormEntry {
 // ============================================================================
 
 model Squad {
-  id          String   @id @default(cuid())
-  name        String
-  shortName   String   @map("short_name")
+  id        String @id @default(cuid())
+  name      String
+  shortName String @map("short_name")
 
   // Squad details
-  founded     DateTime @default(now())
-  homeGround  String?  @map("home_ground")
-  
+  founded    DateTime @default(now())
+  homeGround String?  @map("home_ground")
+
   // Weekly Schedule (0=Sunday, 1=Monday, etc.)
   preferredMatchDay Int @default(0) @map("preferred_match_day")
 
@@ -156,19 +158,19 @@ model Squad {
   treasuryBalance Int @default(0) @map("treasury_balance")
 
   // Timestamps
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  members     SquadMember[]
-  matchesHome Match[] @relation("MatchHomeSquad")
-  matchesAway Match[] @relation("MatchAwaySquad")
-  tactics     SquadTactics?
-  treasury    SquadTreasury?
-  transferOffersFrom TransferOffer[] @relation("TransferFromSquad")
-  transferOffersTo TransferOffer[] @relation("TransferToSquad")
-  challengesFrom MatchChallenge[] @relation("ChallengeFromSquad")
-  challengesTo   MatchChallenge[] @relation("ChallengeToSquad")
+  members            SquadMember[]
+  matchesHome        Match[]          @relation("MatchHomeSquad")
+  matchesAway        Match[]          @relation("MatchAwaySquad")
+  tactics            SquadTactics?
+  treasury           SquadTreasury?
+  transferOffersFrom TransferOffer[]  @relation("TransferFromSquad")
+  transferOffersTo   TransferOffer[]  @relation("TransferToSquad")
+  challengesFrom     MatchChallenge[] @relation("ChallengeFromSquad")
+  challengesTo       MatchChallenge[] @relation("ChallengeToSquad")
 
   // On-chain Governance
   governorAddress String? @map("governor_address")
@@ -178,15 +180,15 @@ model Squad {
 }
 
 model SquadMember {
-  id     String @id @default(cuid())
+  id      String @id @default(cuid())
   squadId String @map("squad_id")
   squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
 
-  userId  String @map("user_id")
-  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Role
-  role    String @default("player") // captain, vice_captain, player
+  role     String   @default("player") // captain, vice_captain, player
   joinedAt DateTime @default(now()) @map("joined_at")
 
   @@unique([squadId, userId])
@@ -223,7 +225,6 @@ model SquadTactics {
 
 // DAO GOVERNANCE (PROPOSALS & VOTING) - Moved to Avalanche Smart Contracts
 
-
 // ============================================================================
 // TREASURY & TRANSACTIONS
 // ============================================================================
@@ -250,28 +251,28 @@ model SquadTreasury {
 }
 
 model TreasuryTransaction {
-  id          String   @id @default(cuid())
-  treasuryId  String   @map("treasury_id")
-  treasury    SquadTreasury @relation(fields: [treasuryId], references: [id], onDelete: Cascade)
+  id         String        @id @default(cuid())
+  treasuryId String        @map("treasury_id")
+  treasury   SquadTreasury @relation(fields: [treasuryId], references: [id], onDelete: Cascade)
 
   // Transaction type
-  type        String   // income, expense
+  type String // income, expense
 
   // Category
-  category    String   // transfer_in, transfer_out, match_fee, tournament_prize, facility, wage
+  category String // transfer_in, transfer_out, match_fee, tournament_prize, facility, wage
 
   // Amount
-  amount      Int
+  amount Int
 
   // Description
   description String?
 
   // Verification (blockchain tx hash)
-  txHash      String?  @map("tx_hash")
-  verified    Boolean  @default(false)
+  txHash   String? @map("tx_hash")
+  verified Boolean @default(false)
 
   // Timestamps
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@map("treasury_transactions")
 }
@@ -281,29 +282,29 @@ model TreasuryTransaction {
 // ============================================================================
 
 model TransferOffer {
-  id          String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // From/To squads
-  fromSquadId String   @map("from_squad_id")
-  fromSquad   Squad    @relation("TransferFromSquad", fields: [fromSquadId], references: [id])
-  toSquadId   String   @map("to_squad_id")
-  toSquad     Squad    @relation("TransferToSquad", fields: [toSquadId], references: [id])
+  fromSquadId String @map("from_squad_id")
+  fromSquad   Squad  @relation("TransferFromSquad", fields: [fromSquadId], references: [id])
+  toSquadId   String @map("to_squad_id")
+  toSquad     Squad  @relation("TransferToSquad", fields: [toSquadId], references: [id])
 
   // Player (user ID)
-  playerId    String   @map("player_id")
+  playerId String @map("player_id")
 
   // Offer details
-  offerType   String   @map("offer_type") // permanent, loan
-  amount      Int
-  loanDuration Int?    @map("loan_duration") // months, if loan
+  offerType    String @map("offer_type") // permanent, loan
+  amount       Int
+  loanDuration Int?   @map("loan_duration") // months, if loan
 
   // Status
-  status      String   @default("pending") // pending, accepted, rejected, cancelled
+  status String @default("pending") // pending, accepted, rejected, cancelled
 
   // Timestamps
-  expiresAt   DateTime? @map("expires_at")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  expiresAt DateTime? @map("expires_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@map("transfer_offers")
 }
@@ -313,43 +314,43 @@ model TransferOffer {
 // ============================================================================
 
 model MatchChallenge {
-  id          String   @id @default(cuid())
-  
-  fromSquadId String   @map("from_squad_id")
-  fromSquad   Squad    @relation("ChallengeFromSquad", fields: [fromSquadId], references: [id])
-  toSquadId   String   @map("to_squad_id")
-  toSquad     Squad    @relation("ChallengeToSquad", fields: [toSquadId], references: [id])
-  
-  status      String   @default("pending") // pending, accepted, rejected, cancelled
-  
+  id String @id @default(cuid())
+
+  fromSquadId String @map("from_squad_id")
+  fromSquad   Squad  @relation("ChallengeFromSquad", fields: [fromSquadId], references: [id])
+  toSquadId   String @map("to_squad_id")
+  toSquad     Squad  @relation("ChallengeToSquad", fields: [toSquadId], references: [id])
+
+  status String @default("pending") // pending, accepted, rejected, cancelled
+
   // Proposed details
   proposedDate DateTime @map("proposed_date")
   pitchId      String?  @map("pitch_id")
   pitch        Pitch?   @relation(fields: [pitchId], references: [id])
   message      String?
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("match_challenges")
 }
 
 model Pitch {
-  id          String   @id @default(cuid())
-  name        String
-  location    String
-  latitude    Float
-  longitude   Float
-  
+  id        String @id @default(cuid())
+  name      String
+  location  String
+  latitude  Float
+  longitude Float
+
   // Territory Control
   controllingSquadId String? @map("controlling_squad_id")
-  
+
   // History
   challenges MatchChallenge[]
   matches    Match[]
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("pitches")
 }
@@ -359,50 +360,50 @@ model Pitch {
 // ============================================================================
 
 model Match {
-  id          String   @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Teams
-  homeSquadId String   @map("home_squad_id")
-  homeSquad   Squad    @relation("MatchHomeSquad", fields: [homeSquadId], references: [id])
-  awaySquadId String   @map("away_squad_id")
-  awaySquad   Squad    @relation("MatchAwaySquad", fields: [awaySquadId], references: [id])
-  
+  homeSquadId String @map("home_squad_id")
+  homeSquad   Squad  @relation("MatchHomeSquad", fields: [homeSquadId], references: [id])
+  awaySquadId String @map("away_squad_id")
+  awaySquad   Squad  @relation("MatchAwaySquad", fields: [awaySquadId], references: [id])
+
   // Score
-  homeScore   Int?     @map("home_score")
-  awayScore   Int?     @map("away_score")
-  
+  homeScore Int? @map("home_score")
+  awayScore Int? @map("away_score")
+
   // Submitter
-  submittedBy String   @map("submitted_by")
-  submitter   User     @relation("MatchSubmitter", fields: [submittedBy], references: [id])
-  
+  submittedBy String @map("submitted_by")
+  submitter   User   @relation("MatchSubmitter", fields: [submittedBy], references: [id])
+
   // Status
-  status      String   @default("pending") // pending, verified, disputed, finalized
-  
+  status String @default("pending") // pending, verified, disputed, finalized
+
   // Timestamps
-  matchDate   DateTime @map("match_date")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
+  matchDate DateTime @map("match_date")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   // Oracle Verification (Chainlink)
-  latitude           Float?
-  longitude          Float?
-  weatherVerified    Boolean @default(false) @map("weather_verified")
-  locationVerified   Boolean @default(false) @map("location_verified")
+  latitude            Float?
+  longitude           Float?
+  weatherVerified     Boolean @default(false) @map("weather_verified")
+  locationVerified    Boolean @default(false) @map("location_verified")
   verificationDetails Json?   @map("verification_details")
-  agentInsights      Json?   @map("agent_insights") // AI-generated captain reports
-  
+  agentInsights       Json?   @map("agent_insights") // AI-generated captain reports
+
   // Pitch Relation
-  pitchId            String? @map("pitch_id")
-  pitch              Pitch?  @relation(fields: [pitchId], references: [id])
-  
+  pitchId String? @map("pitch_id")
+  pitch   Pitch?  @relation(fields: [pitchId], references: [id])
+
   // Blockchain
-  txId        String?  @map("tx_id") // Algorand transaction ID
-  
+  txId String? @map("tx_id") // Algorand transaction ID
+
   // Relations
   verifications MatchVerification[]
   playerStats   PlayerMatchStats[]
   xpGains       XPGain[]
-  
+
   @@map("matches")
 }
 
@@ -410,20 +411,20 @@ model MatchVerification {
   id      String @id @default(cuid())
   matchId String @map("match_id")
   match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  
+
   verifierId String @map("verifier_id")
   verifier   User   @relation(fields: [verifierId], references: [id])
-  
+
   // Verification details
-  verified   Boolean
-  homeScore  Int?    @map("home_score")
-  awayScore  Int?    @map("away_score")
-  
+  verified  Boolean
+  homeScore Int?    @map("home_score")
+  awayScore Int?    @map("away_score")
+
   // Trust
-  trustTier  String  @map("trust_tier") // bronze, silver, gold, platinum
-  
-  createdAt  DateTime @default(now()) @map("created_at")
-  
+  trustTier String @map("trust_tier") // bronze, silver, gold, platinum
+
+  createdAt DateTime @default(now()) @map("created_at")
+
   @@unique([matchId, verifierId])
   @@map("match_verifications")
 }
@@ -433,26 +434,26 @@ model MatchVerification {
 // ============================================================================
 
 model PlayerMatchStats {
-  id      String @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   matchId String @map("match_id")
   match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  
-  profileId String @map("profile_id")
+
+  profileId String        @map("profile_id")
   profile   PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  
+
   // Stats
-  goals       Int @default(0)
-  assists     Int @default(0)
-  cleanSheet  Boolean @default(false) @map("clean_sheet")
-  rating      Float?  // 1-10 match rating
-  minutesPlayed Int @default(90) @map("minutes_played")
-  
+  goals         Int     @default(0)
+  assists       Int     @default(0)
+  cleanSheet    Boolean @default(false) @map("clean_sheet")
+  rating        Float? // 1-10 match rating
+  minutesPlayed Int     @default(90) @map("minutes_played")
+
   // Calculated XP
-  xpEarned    Int @default(0) @map("xp_earned")
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  
+  xpEarned Int @default(0) @map("xp_earned")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
   @@unique([matchId, profileId])
   @@map("player_match_stats")
 }
@@ -462,28 +463,28 @@ model PlayerMatchStats {
 // ============================================================================
 
 model XPGain {
-  id      String @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   matchId String? @map("match_id")
   match   Match?  @relation(fields: [matchId], references: [id])
-  
+
   profileId String @map("profile_id")
-  
+
   // XP breakdown
-  baseXP      Int @map("base_xp")
-  bonusXP     Int @default(0) @map("bonus_xp")
-  totalXP     Int @map("total_xp")
-  
+  baseXP  Int @map("base_xp")
+  bonusXP Int @default(0) @map("bonus_xp")
+  totalXP Int @map("total_xp")
+
   // Source
   source      String // match, training, achievement, etc.
   description String?
-  
+
   // Attribute distribution (JSON)
   attributeBreakdown Json? @map("attribute_breakdown")
   // Example: {"shooting": 50, "passing": 30, "physical": 20}
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  
+
+  createdAt DateTime @default(now()) @map("created_at")
+
   @@map("xp_gains")
 }
 
@@ -492,36 +493,36 @@ model XPGain {
 // ============================================================================
 
 model Achievement {
-  id          String @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Achievement type
   type        String @unique // hat_trick, clean_sheet, etc.
   title       String
   description String
-  
+
   // Requirements
   requirement Json // Flexible requirements
-  
+
   // Reward
-  xpReward    Int @default(0) @map("xp_reward")
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  
+  xpReward Int @default(0) @map("xp_reward")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
   // Relations
-  unlockedBy  PlayerAchievement[]
-  
+  unlockedBy PlayerAchievement[]
+
   @@map("achievements")
 }
 
 model PlayerAchievement {
-  id            String @id @default(cuid())
-  
-  profileId     String @map("profile_id")
-  achievementId String @map("achievement_id")
+  id String @id @default(cuid())
+
+  profileId     String      @map("profile_id")
+  achievementId String      @map("achievement_id")
   achievement   Achievement @relation(fields: [achievementId], references: [id])
-  
-  unlockedAt    DateTime @default(now()) @map("unlocked_at")
-  
+
+  unlockedAt DateTime @default(now()) @map("unlocked_at")
+
   @@unique([profileId, achievementId])
   @@map("player_achievements")
 }
@@ -531,18 +532,37 @@ model PlayerAchievement {
 // ============================================================================
 
 model AiAgent {
-  id              String   @id @default(cuid())
-  agentId         String   @unique @map("agent_id")
-  passportId      String   @unique @map("passport_id")
-  name            String
-  type            String   // squad_manager, scout, fitness, social
-  description     String
-  reputation      Int      @default(100)
-  capabilities    String[]
-  
+  id           String   @id @default(cuid())
+  agentId      String   @unique @map("agent_id")
+  passportId   String   @unique @map("passport_id")
+  name         String
+  type         String // squad_manager, scout, fitness, social
+  description  String
+  reputation   Int      @default(100)
+  capabilities String[]
+
   // Timestamps
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@map("ai_agents")
+}
+
+model AiMemory {
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Stored JSON representation of NarrativeEntry[]
+  history Json @default("[]")
+
+  // Array of strings or JSON for key insights
+  keyInsights Json @default("[]") @map("key_insights")
+
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId])
+  @@map("ai_memories")
 }
