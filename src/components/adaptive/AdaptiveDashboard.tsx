@@ -27,6 +27,8 @@ import { StaffRoom } from '@/components/dashboard/StaffRoom';
 import { AgenticConcierge } from '@/components/adaptive/AgenticConcierge';
 import { LensSocialHub } from '@/components/dashboard/LensSocialHub';
 
+import { CaptainsLog } from '@/components/dashboard/CaptainsLog';
+
 interface DashboardWidget {
   id: string;
   component: React.ReactNode;
@@ -67,6 +69,15 @@ export const AdaptiveDashboard: React.FC = () => {
             if (id === 'claim_identity') window.location.reload(); // Simple way to trigger modal if logic is tied to mount or just show modal
           }}
         />
+      ),
+    },
+    {
+      id: 'captains-log',
+      priority: 150,
+      requiredLevel: 'basic',
+      category: 'stats',
+      component: (
+        <CaptainsLog squadId={primarySquadId} />
       ),
     },
     {
