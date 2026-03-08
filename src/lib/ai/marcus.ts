@@ -22,7 +22,7 @@ export async function getMarcusResponse(message: string, context: { city?: strin
     const { city, venue, history, userId } = context;
 
     // Retrieve ledger if userId is available
-    const ledger = userId ? getNarrativeLedger(userId) : null;
+    const ledger = userId ? await getNarrativeLedger(userId) : null;
     const keyInsights = ledger?.keyInsights.join(". ") || "";
 
     // Check cache
@@ -52,8 +52,8 @@ export async function getMarcusResponse(message: string, context: { city?: strin
 
     // Update ledger
     if (userId) {
-        updateNarrativeLedger(userId, { role: 'user', content: message, timestamp: Date.now() });
-        updateNarrativeLedger(userId, { role: 'assistant', content: reply, timestamp: Date.now() });
+        await updateNarrativeLedger(userId, { role: 'user', content: message, timestamp: Date.now() });
+        await updateNarrativeLedger(userId, { role: 'assistant', content: reply, timestamp: Date.now() });
     }
 
     return reply;
