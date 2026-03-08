@@ -9,8 +9,10 @@ import { MOCK_AVAILABLE_PLAYERS } from '@/lib/mocks';
 
 import { trpc } from '@/lib/trpc-client';
 import { useOnboarding } from '@/hooks/useOnboarding';
+import { useWallet } from '@/contexts/WalletContext';
 
 export const DraftEngine: React.FC = () => {
+    const { isGuest } = useWallet();
     const [isDrafting, setIsDrafting] = useState(false);
     const [draftStep, setDraftStep] = useState(0);
     const [selectedProspect, setSelectedProspect] = useState<any>(null);
@@ -48,7 +50,25 @@ export const DraftEngine: React.FC = () => {
 
     const handleContract = () => {
         if (!selectedProspect) return;
-        signMutation.mutate({ playerId: selectedProspect.id });
+
+        if (isGuest) {
+            // Save to guest local storage instead
+            const currentDraftsStr = localStorage.getItem('sw_guest_drafts');
+            let drafts = [];
+            if (currentDraftsStr) {
+                try { drafts = JSON.parse(currentDraftsStr); } catch (e) { }
+            }
+            if (!drafts.includes(selectedProspect.id)) {
+                drafts.push(selectedProspect.id);
+                localStorage.setItem('sw_guest_drafts', JSON.stringify(drafts));
+            }
+            alert(`[GUEST MODE] ${selectedProspect.name} recruited! Connect wallet to permanently sign them.`);
+            completeChecklistItem('use_draft');
+            setIsDrafting(false);
+            setDraftStep(0);
+        } else {
+            signMutation.mutate({ playerId: selectedProspect.id });
+        }
     };
 
     return (

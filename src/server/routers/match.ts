@@ -247,6 +247,90 @@ export const matchRouter = createTRPCRouter({
       }
     }),
 
+  // Finalize a verified match and issue Reputation tracking SBT logic
+  finalize: protectedProcedure
+    .input(z.object({
+      matchId: z.string().min(1, 'Match ID is required')
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { matchId } = input;
+        const match = await ctx.prisma.match.findUnique({
+          where: { id: matchId },
+          include: {
+            homeSquad: { include: { members: { include: { user: true } } } },
+            awaySquad: { include: { members: { include: { user: true } } } }
+          }
+        });
+
+        if (!match) throw new TRPCError(Errors.MATCH_NOT_FOUND);
+
+        if (match.status !== 'verified') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Only verified matches can be finalized',
+          });
+        }
+
+        // Update match status to finalized
+        await ctx.prisma.match.update({
+          where: { id: matchId },
+          data: { status: 'finalized' }
+        });
+
+        // Mint On-Chain Reputation (Soulbound logic simulation) via Algorand Service
+        try {
+          const { algorandService } = await import('../../../server/services/blockchain/algorand');
+
+          // Determine who won to issue different reputation gains
+          const homeScore = match.homeScore || 0;
+          const awayScore = match.awayScore || 0;
+
+          const homeWon = homeScore > awayScore;
+          const awayWon = awayScore > homeScore;
+
+          const processTeam = async (members: any[], isWinner: boolean, isDraw: boolean) => {
+            const repGain = isDraw ? 2 : (isWinner ? 5 : 1); // 5 for win, 2 for draw, 1 for loss
+
+            for (const member of members) {
+              const user = member.user;
+              if (user && user.walletAddress && user.chain === 'algorand') {
+                // Issue reputation token/state update on-chain
+                await algorandService.updatePlayerReputation(
+                  user.walletAddress,
+                  repGain,
+                  `match_finalized:${matchId.substring(0, 8)}`
+                );
+              }
+
+              // Local DB update
+              await ctx.prisma.playerProfile.updateMany({
+                where: { userId: user.id },
+                data: { reputationScore: { increment: repGain } }
+              });
+            }
+          };
+
+          const isDraw = homeScore === awayScore;
+          await processTeam(match.homeSquad.members, homeWon, isDraw);
+          await processTeam(match.awaySquad.members, awayWon, isDraw);
+
+        } catch (algoError) {
+          console.error('Failed to issue on-chain reputation:', algoError);
+          // Non-blocking on DB finalize
+        }
+
+        return { success: true, message: 'Match finalized and reputation SBTs issued!' };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to finalize match',
+          cause: error,
+        });
+      }
+    }),
+
   // List matches with filtering
   list: publicProcedure
     .input(z.object({

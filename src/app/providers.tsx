@@ -6,6 +6,7 @@ import { LensProvider } from "@/contexts/LensContext";
 import { TRPCProvider } from "@/lib/trpc-provider";
 import { EnvironmentProvider } from "@/contexts/EnvironmentContext";
 import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
+import { GuestMigrationPrompt } from "@/components/onboarding/GuestMigrationPrompt";
 import { PrivyProvider } from '@privy-io/react-auth';
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -33,6 +34,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <TRPCProvider>
                 {children}
                 <OnboardingWizard />
+                <GuestMigrationPrompt />
               </TRPCProvider>
             </EnvironmentProvider>
           </LensProvider>
