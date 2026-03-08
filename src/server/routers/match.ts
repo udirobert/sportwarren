@@ -445,4 +445,77 @@ export const matchRouter = createTRPCRouter({
         });
       }
     }),
+
+  // Get Captain's Log (Summarize last 5 matches)
+  getCaptainsLog: protectedProcedure
+    .input(z.object({ squadId: z.string().min(1, 'Squad ID is required') }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const matches = await ctx.prisma.match.findMany({
+          where: {
+            OR: [
+              { homeSquadId: input.squadId },
+              { awaySquadId: input.squadId },
+            ],
+            status: 'finalized'
+          },
+          include: {
+            homeSquad: { select: { name: true } },
+            awaySquad: { select: { name: true } },
+          },
+          orderBy: { matchDate: 'desc' },
+          take: 5
+        });
+
+        if (matches.length === 0) {
+          return { summary: "No recent matches found. Get out there and play!", matchesFound: 0 };
+        }
+
+        const matchSummaries = matches.map(m => {
+          const isHome = m.homeSquadId === input.squadId;
+          const ourScore = isHome ? m.homeScore : m.awayScore;
+          const theirScore = isHome ? m.awayScore : m.homeScore;
+          const opponent = isHome ? m.awaySquad.name : m.homeSquad.name;
+          return `vs ${opponent}: ${ourScore} - ${theirScore} (${ourScore! > theirScore! ? 'Win' : ourScore! < theirScore! ? 'Loss' : 'Draw'})`;
+        });
+
+        try {
+          const { getVeniceClient, VENICE_MODEL_ID } = await import('../../lib/ai/venice');
+          const client = getVeniceClient();
+
+          const response = await client.chat.completions.create({
+            model: VENICE_MODEL_ID,
+            messages: [
+              {
+                role: 'system',
+                content: `You are Coach Kite analyzing the team's form. Provide a concise tactical summary of the last 5 matches. Keep it under 3 sentences. Be analytical, firm, but encouraging.`
+              },
+              {
+                role: 'user',
+                content: `Here are our last ${matches.length} results: ${matchSummaries.join(', ')}. What's your tactical "Captain's Log" analysis?`
+              }
+            ],
+            temperature: 0.7,
+            max_tokens: 150,
+          });
+
+          return {
+            summary: response.choices[0]?.message?.content || "Keep focusing on the fundamentals. The results will come.",
+            matchesFound: matches.length
+          };
+        } catch (aiError) {
+          console.error("AI summarization failed:", aiError);
+          return {
+            summary: "Tac-link offline. Based on the raw data, maintaining defensive shape is our priority right now.",
+            matchesFound: matches.length
+          };
+        }
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to generate Captain\'s Log',
+          cause: error,
+        });
+      }
+    }),
 });
