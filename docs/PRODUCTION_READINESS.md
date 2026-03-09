@@ -29,6 +29,7 @@ We have a high-fidelity, functional application with a compelling user loop. The
 | **Performance (Dynamic Imports)** | ✅ | 12 heavy dashboard components code-split via next/dynamic (ssr:false) |
 | **Test Coverage** | ✅ | Vitest suite: 20 tests across AgentContext reducer (11) and useAgentAlerts rules (9) |
 | **Match Verification** | ✅ | GPS, multi-party consensus, Algorand tx |
+| **Yellow Payments** | ✅ | Treasury live-wired; transfer + match shared-session flows implemented in app, pending production env rollout |
 | **Player XP & Attributes** | ✅ | TRPC + Prisma, FIFA-style progression |
 | **Squad DAO & Voting** | ✅ | Democratic challenge proposals |
 | **Territory Control** | ✅ | Real-world pitch dominance |
@@ -78,6 +79,14 @@ These **must** be resolved before you can open to the public without risk.
 - Notification feed: `EventFeed` component reads `useAgentAlerts`, renders per-category filtered event list with unread badge outside Staff Room.
 - Performance: 12 heavy dashboard components converted to `next/dynamic` (ssr:false) for code-splitting.
 - Test coverage: Vitest + React Testing Library installed; 20 tests across `AgentContext` reducer and `useAgentAlerts` rule engine.
+
+### 6. Yellow Payment Rail
+**Status: 🟡 IMPLEMENTED, OPERATIONAL ROLLOUT PENDING**
+- Browser-side ClearNode auth is wired through `useYellowSession`.
+- Treasury deposits/withdrawals accept real Yellow settlement refs and persist them through the existing ledger path.
+- Transfer escrow uses shared squad-leader sessions for create/cancel/respond when both parties have discoverable EVM wallets.
+- Match fees lock on submit and settle after consensus with an idempotent `yellow_fee_settled_at` guard.
+- Remaining production work is operational, not architectural: run the latest Prisma migration, set `NEXT_PUBLIC_YELLOW_PLATFORM_WALLET`, and test with two real squad-leader wallets on the live rail.
 
 ---
 
