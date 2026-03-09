@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Briefcase } from 'lucide-react';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Briefcase, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
+import { useRouter } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
 import { useMySquads } from '@/hooks/squad/useSquad';
 import { useOnboarding } from '@/hooks/useOnboarding';
@@ -55,6 +56,7 @@ export const AdaptiveDashboard: React.FC = () => {
   const userAddress = address || undefined;
 
   const { data: stats, loading } = useDashboardData(userAddress);
+  const router = useRouter();
   const { memberships, loading: squadLoading, refresh: refreshSquads } = useMySquads();
   const { completeChecklistItem, allChecklistDone } = useOnboarding();
 
@@ -67,6 +69,7 @@ export const AdaptiveDashboard: React.FC = () => {
         onCreated={async (id) => {
           setForcedSquadId(id);
           await refreshSquads();
+          router.push('/squad?tab=overview&new=1');
         }}
       />
     );
@@ -457,38 +460,61 @@ export const AdaptiveDashboard: React.FC = () => {
       <GuestTour />
       <AgenticConcierge />
 
-      <div id="dashboard-header" className="border-b border-gray-200 pb-4 mb-2 flex items-end justify-between">
-        <div>
-          <h1 className="text-3xl font-black text-gray-900 tracking-tight">
-            {memberships?.[0]?.squad?.name ?? (isGuest ? 'Demo Squad' : 'My Squad')}
+      <div id="dashboard-header" className="border-b border-gray-200 pb-3 mb-2">
+        {/* Mobile header — compact single row */}
+        <div className="flex items-center justify-between md:hidden">
+          <div className="min-w-0">
+            <h1 className="text-lg font-black text-gray-900 tracking-tight truncate">
+              {memberships?.[0]?.squad?.name ?? (isGuest ? 'Demo Squad' : 'My Squad')}
+            </h1>
             {address && (
-              <span className="text-gray-400 font-medium text-lg ml-2">
-                / {address.slice(0, 6)}…{address.slice(-4)}
-              </span>
+              <p className="text-[10px] text-gray-400 font-medium">
+                {address.slice(0, 6)}…{address.slice(-4)}
+              </p>
             )}
-          </h1>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-            {memberships?.[0]?.squad?.name ? `${memberships[0].squad.name} • Manager` : (isGuest ? 'Guest Mode • Demo Experience' : 'Connect wallet to get started')}
-          </p>
-        </div>
-        <div className="flex items-center space-x-3">
-          <Button
+          </div>
+          <button
             onClick={handleOpenOffice}
-            size="sm"
-            className="hidden md:flex bg-gray-900 hover:bg-black text-white border-white/5 font-black uppercase tracking-widest text-[10px] items-center space-x-2 px-4 shadow-xl"
+            className="ml-3 shrink-0 flex items-center gap-1.5 bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-lg"
           >
             <Briefcase className="w-3 h-3 text-blue-400" />
-            <span>Enter Office</span>
-          </Button>
-          <div className="hidden md:flex items-center space-x-4">
-            <div className="text-right">
-              <div className="text-[8px] font-black text-gray-400 uppercase">Club Status</div>
-              <div className="text-xs font-bold text-green-600">Stable</div>
-            </div>
-            <div className="w-px h-8 bg-gray-200" />
-            <div className="text-right">
-              <div className="text-[8px] font-black text-gray-400 uppercase">Rank</div>
-              <div className="text-xs font-bold text-gray-900">#42 Local</div>
+            Office
+          </button>
+        </div>
+        {/* Desktop header — full */}
+        <div className="hidden md:flex items-end justify-between">
+          <div>
+            <h1 className="text-3xl font-black text-gray-900 tracking-tight">
+              {memberships?.[0]?.squad?.name ?? (isGuest ? 'Demo Squad' : 'My Squad')}
+              {address && (
+                <span className="text-gray-400 font-medium text-lg ml-2">
+                  / {address.slice(0, 6)}…{address.slice(-4)}
+                </span>
+              )}
+            </h1>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+              {memberships?.[0]?.squad?.name ? `${memberships[0].squad.name} • Manager` : (isGuest ? 'Guest Mode • Demo Experience' : 'Connect wallet to get started')}
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <Button
+              onClick={handleOpenOffice}
+              size="sm"
+              className="bg-gray-900 hover:bg-black text-white border-white/5 font-black uppercase tracking-widest text-[10px] flex items-center space-x-2 px-4 shadow-xl"
+            >
+              <Briefcase className="w-3 h-3 text-blue-400" />
+              <span>Enter Office</span>
+            </Button>
+            <div className="flex items-center space-x-4">
+              <div className="text-right">
+                <div className="text-[8px] font-black text-gray-400 uppercase">Club Status</div>
+                <div className="text-xs font-bold text-green-600">Stable</div>
+              </div>
+              <div className="w-px h-8 bg-gray-200" />
+              <div className="text-right">
+                <div className="text-[8px] font-black text-gray-400 uppercase">Rank</div>
+                <div className="text-xs font-bold text-gray-900">#42 Local</div>
+              </div>
             </div>
           </div>
         </div>
@@ -515,11 +541,30 @@ export const AdaptiveDashboard: React.FC = () => {
         const progressWidgets = visibleWidgets.filter(w => progressIds.includes(w.id));
         const otherWidgets = visibleWidgets.filter(w => ![...todayIds, ...squadIds, ...progressIds].includes(w.id));
 
-        const Section = ({ title, widgets }: { title: string; widgets: typeof visibleWidgets }) =>
+        // Mobile: horizontal scroll carousel; desktop: vertical stack
+        const Section = ({ title, widgets, href }: { title: string; widgets: typeof visibleWidgets; href?: string }) =>
           widgets.length === 0 ? null : (
-            <div className="space-y-4">
-              <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2">{title}</h2>
-              <div className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{title}</h2>
+                {href && (
+                  <Link href={href} className="flex items-center gap-0.5 text-[10px] font-bold text-green-600 uppercase tracking-widest">
+                    See all <ChevronRight className="w-3 h-3" />
+                  </Link>
+                )}
+              </div>
+              {/* Mobile: horizontal snap scroll */}
+              <div className="md:hidden -mx-3 px-3">
+                <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
+                  {widgets.map(w => (
+                    <div key={w.id} id={w.id} className="snap-start shrink-0 w-[85vw] max-w-sm">
+                      {w.component}
+                    </div>
+                  ))}
+                </div>
+              </div>
+              {/* Desktop: vertical stack */}
+              <div className="hidden md:block space-y-4">
                 {widgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
               </div>
             </div>
@@ -527,9 +572,9 @@ export const AdaptiveDashboard: React.FC = () => {
 
         return (
           <div className="space-y-8">
-            <Section title="Today" widgets={todayWidgets} />
-            <Section title="Squad" widgets={squadWidgets} />
-            <Section title="Progress" widgets={progressWidgets} />
+            <Section title="Today" widgets={todayWidgets} href="/match" />
+            <Section title="Squad" widgets={squadWidgets} href="/squad" />
+            <Section title="Progress" widgets={progressWidgets} href="/stats" />
             {otherWidgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
           </div>
         );

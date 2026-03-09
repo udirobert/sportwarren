@@ -41,14 +41,19 @@ export default function SquadPage() {
   const squadCurrency = treasuryState.treasury?.currency ?? "ALGO";
   const activeOffers = transfersState.incomingOffers.length + transfersState.outgoingOffers.length;
 
+  const [isNewSquad, setIsNewSquad] = useState(false);
+
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
-
-    const tab = new URLSearchParams(window.location.search).get("tab");
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
     if (tab === "overview" || tab === "tactics" || tab === "transfers" || tab === "treasury" || tab === "governance") {
       setActiveTab(tab);
+    }
+    if (params.get("new") === "1") {
+      setIsNewSquad(true);
     }
   }, []);
 
@@ -69,17 +74,38 @@ export default function SquadPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-      {/* Header */}
-      <div className="text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center mx-auto mb-4">
-          <Shield className="w-8 h-8 text-white" />
+    <div className="max-w-6xl mx-auto px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+      {/* Header — compact on mobile */}
+      <div className="flex items-center gap-3 md:block md:text-center">
+        <div className="w-10 h-10 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shrink-0 md:mx-auto md:mb-4">
+          <Shield className="w-5 h-5 md:w-8 md:h-8 text-white" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Squad Management</h1>
-        <p className="text-gray-600">
-          {activeSquad ? `Manage ${activeSquad.name}` : "Manage your team, tactics, transfers, and finances"}
-        </p>
+        <div className="min-w-0">
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900 truncate">{activeSquad?.name ?? 'Squad Management'}</h1>
+          <p className="text-sm text-gray-500 truncate md:hidden">{activeSquad ? 'Manage your team' : 'Tactics · Transfers · Treasury'}</p>
+          <p className="hidden md:block text-gray-600 mt-1">{activeSquad ? `Manage ${activeSquad.name}` : 'Manage your team, tactics, transfers, and finances'}</p>
+        </div>
       </div>
+
+      {/* New squad welcome banner */}
+      {isNewSquad && (
+        <Card className="border-green-200 bg-green-50/70 py-4">
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center shrink-0">
+              <Shield className="w-4 h-4 text-white" />
+            </div>
+            <div className="flex-1">
+              <p className="font-semibold text-green-900">Squad created! Here's what to do next.</p>
+              <p className="mt-1 text-sm text-green-700">
+                Set your <button onClick={() => setActiveTab('tactics')} className="underline font-medium">formation</button>,
+                fund your <button onClick={() => setActiveTab('treasury')} className="underline font-medium">treasury</button>,
+                then <Link href="/match?mode=capture" className="underline font-medium">log your first match</Link> to start building reputation.
+              </p>
+            </div>
+            <button onClick={() => setIsNewSquad(false)} className="shrink-0 text-green-600 hover:text-green-800 text-lg leading-none">×</button>
+          </div>
+        </Card>
+      )}
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -119,8 +145,8 @@ export default function SquadPage() {
         </Card>
       )}
 
-      {/* Navigation Tabs */}
-      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg overflow-x-auto">
+      {/* Navigation Tabs — scrollable on mobile */}
+      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg overflow-x-auto scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
         {[
           { key: 'overview', label: 'Overview', icon: Users },
           { key: 'tactics', label: 'Tactics', icon: Target },
@@ -131,14 +157,14 @@ export default function SquadPage() {
           <button
             key={key}
             onClick={() => setActiveTab(key as SquadTab)}
-            className={`flex-1 flex items-center justify-center space-x-2 py-3 px-4 rounded-md transition-all whitespace-nowrap ${
+            className={`flex items-center justify-center gap-1.5 py-2.5 px-3 md:px-4 rounded-md transition-all whitespace-nowrap min-w-max touch-manipulation ${
               activeTab === key
                 ? 'bg-white text-blue-600 shadow-sm'
                 : 'text-gray-600 hover:text-gray-900'
             }`}
           >
-            <Icon className="w-4 h-4" />
-            <span className="font-medium">{label}</span>
+            <Icon className="w-4 h-4 shrink-0" />
+            <span className="font-medium text-sm">{label}</span>
           </button>
         ))}
       </div>
