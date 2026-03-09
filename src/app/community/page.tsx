@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { Target, Users, Trophy, Star, Shield } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
+import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
 
-export default function CommunityPage() {
+function CommunityPageInner() {
   const { data: leaderboard, isLoading: loadingLeaderboard } = trpc.player.getLeaderboard.useQuery({ type: 'overall', limit: 10 });
   const { data: squadsData, isLoading: loadingSquads } = trpc.squad.list.useQuery({ limit: 8 });
   const { data: recentMatches, isLoading: loadingMatches } = trpc.match.list.useQuery({ limit: 5 });
@@ -143,5 +144,13 @@ export default function CommunityPage() {
         )}
       </Card>
     </div>
+  );
+}
+
+export default function CommunityPage() {
+  return (
+    <TrpcErrorBoundary>
+      <CommunityPageInner />
+    </TrpcErrorBoundary>
   );
 }
