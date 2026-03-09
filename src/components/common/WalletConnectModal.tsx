@@ -68,12 +68,12 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
               <Wallet className="w-8 h-8 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              {connected && chain === 'lens' ? 'Social Identity' : 'Connect Your Wallet'}
+              {connected && chain === 'lens' ? 'Social Identity' : 'Get Started'}
             </h2>
             <p className="text-gray-600">
               {connected && chain === 'lens'
                 ? 'Link your Lens Profile to share highlights'
-                : 'Choose your preferred blockchain to get started'}
+                : 'Choose what you want to do'}
             </p>
           </div>
 
@@ -93,8 +93,8 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                 >
                   <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center font-bold text-white">A</div>
                   <div className="text-left flex-1">
-                    <h3 className="font-bold text-gray-900 leading-tight">Algorand</h3>
-                    <p className="text-xs text-gray-500">Core Loop & XP Storage</p>
+                    <h3 className="font-bold text-gray-900 leading-tight">Player Profile</h3>
+                    <p className="text-xs text-gray-500">Track stats, XP & reputation</p>
                   </div>
                   {selectedChain === 'algorand' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-blue-600" />}
                 </button>
@@ -106,8 +106,8 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                 >
                   <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center font-bold text-white text-xs text-center p-1">AVAX</div>
                   <div className="text-left flex-1">
-                    <h3 className="font-bold text-gray-900 leading-tight">Avalanche</h3>
-                    <p className="text-xs text-gray-500">Premium Agents & AI</p>
+                    <h3 className="font-bold text-gray-900 leading-tight">Squad Governance</h3>
+                    <p className="text-xs text-gray-500">Vote on decisions & manage treasury</p>
                   </div>
                   {selectedChain === 'avalanche' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-red-600" />}
                 </button>
@@ -119,8 +119,8 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                 >
                   <div className="w-12 h-12 bg-green-600 rounded-lg flex items-center justify-center font-bold text-white italic">L</div>
                   <div className="text-left flex-1">
-                    <h3 className="font-bold text-gray-900 leading-tight">Lens Chain</h3>
-                    <p className="text-xs text-gray-500">Lens v3 Social Graph</p>
+                    <h3 className="font-bold text-gray-900 leading-tight">Social</h3>
+                    <p className="text-xs text-gray-500">Share highlights & follow players</p>
                   </div>
                   {selectedChain === 'lens' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-green-600" />}
                 </button>
