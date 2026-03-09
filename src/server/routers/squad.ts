@@ -237,6 +237,8 @@ export const squadRouter = createTRPCRouter({
                     id: true,
                     name: true,
                     avatar: true,
+                    walletAddress: true,
+                    chain: true,
                     playerProfile: {
                       select: {
                         level: true,
@@ -908,10 +910,11 @@ export const squadRouter = createTRPCRouter({
     .input(z.object({
       offerId: z.string().min(1, 'Offer ID is required'),
       accept: z.boolean(),
+      yellowSettlement: yellowTreasurySettlementSchema.optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
-        const { offerId, accept } = input;
+        const { offerId, accept, yellowSettlement } = input;
         await expireTransferOffers(ctx.prisma);
 
         // Get offer
@@ -950,14 +953,16 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
-        const settlement = offer.yellowSessionId
-          ? await yellowService.settleTransferEscrow({
-              sessionId: offer.yellowSessionId,
-              offerId,
-              amount: offer.amount,
-              recipient: accept ? 'seller' : 'buyer',
-            })
-          : null;
+        const settlement = yellowSettlement
+          ? yellowService.recordClientSettlement(yellowSettlement)
+          : offer.yellowSessionId
+            ? await yellowService.settleTransferEscrow({
+                sessionId: offer.yellowSessionId,
+                offerId,
+                amount: offer.amount,
+                recipient: accept ? 'seller' : 'buyer',
+              })
+            : null;
 
         const updatedOffer = await ctx.prisma.transferOffer.update({
           where: { id: offerId },

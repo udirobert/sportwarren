@@ -107,7 +107,17 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
     },
   });
 
+  const getSquadLeaderWallets = useCallback(async (targetSquadId: string) => {
+    const squad = await utils.squad.getById.fetch({ id: targetSquadId });
+    return (squad.members || [])
+      .filter((member: any) => member.role === 'captain' || member.role === 'vice_captain')
+      .map((member: any) => member.user?.walletAddress)
+      .filter((walletAddress: string | null | undefined): walletAddress is Hex => Boolean(walletAddress) && isHex(walletAddress))
+      .slice(0, 2);
+  }, [utils.squad.getById]);
+
   const createYellowEscrow = useCallback(async (
+    toSquadId: string,
     amount: number,
     offerType: 'transfer' | 'loan',
     playerId: string,
@@ -125,27 +135,29 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
       return undefined;
     }
 
+    const counterpartyParticipants = await getSquadLeaderWallets(toSquadId);
+    const participants = Array.from(new Set([participant, ...counterpartyParticipants])) as Hex[];
+
     const asset = (process.env.NEXT_PUBLIC_YELLOW_ASSET_SYMBOL || yellowSession.assetSymbol || 'USDC').toLowerCase();
-    const allocations: RPCAppSessionAllocation[] = [
-      {
-        participant,
-        asset,
-        amount: toAtomicAmount(amount),
-      },
-    ];
+    const allocations: RPCAppSessionAllocation[] = participants.map((sessionParticipant, index) => ({
+      participant: sessionParticipant,
+      asset,
+      amount: index === 0 ? toAtomicAmount(amount) : '0',
+    }));
 
     const result = await yellowSession.createSession({
       definition: {
         application: `sportwarren-transfer-${offerType}-${playerId}-${Date.now()}`,
         protocol: DEFAULT_PROTOCOL,
-        participants: [participant],
-        weights: [100],
-        quorum: 100,
+        participants,
+        weights: participants.map(() => Math.floor(100 / participants.length)),
+        quorum: participants.length > 1 ? 50 : 100,
         challenge: DEFAULT_CHALLENGE_WINDOW,
       },
       allocations,
       sessionData: JSON.stringify({
         squadId,
+        toSquadId,
         playerId,
         offerType,
         amount,
@@ -159,12 +171,13 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
       version: result.version,
       settlementId: buildSettlementId(result.appSessionId, result.version),
     };
-  }, [squadId, yellowSession]);
+  }, [getSquadLeaderWallets, squadId, yellowSession]);
 
   const closeYellowEscrow = useCallback(async (
     sessionId: string | null | undefined,
     amount: number,
     offerId: string,
+    recipient: 'buyer' | 'seller',
   ): Promise<YellowSettlementInput | undefined> => {
     if (
       !sessionId ||
@@ -188,13 +201,14 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
     }
 
     const asset = (process.env.NEXT_PUBLIC_YELLOW_ASSET_SYMBOL || yellowSession.assetSymbol || 'USDC').toLowerCase();
-    const allocations: RPCAppSessionAllocation[] = [
-      {
-        participant,
-        asset,
-        amount: toAtomicAmount(amount),
-      },
-    ];
+    const allocations: RPCAppSessionAllocation[] = existingSession.participants.map((sessionParticipant: Hex, index: number) => ({
+      participant: sessionParticipant,
+      asset,
+      amount:
+        recipient === 'buyer'
+          ? index === 0 ? toAtomicAmount(amount) : '0'
+          : index === 1 ? toAtomicAmount(amount) : '0',
+    }));
 
     const result = await yellowSession.closeSession({
       appSessionId: sessionId as Hex,
@@ -203,6 +217,7 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
         offerId,
         amount,
         asset,
+        recipient,
         intent: RPCAppStateIntent.Withdraw,
         timestamp: new Date().toISOString(),
       }),
@@ -222,7 +237,7 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
     loanDuration?: number
   ) => {
     if (!squadId) return;
-    const yellowSettlement = await createYellowEscrow(amount, type, playerId);
+    const yellowSettlement = await createYellowEscrow(squadId, amount, type, playerId);
 
     await createMutation.mutateAsync({
       toSquadId: squadId,
@@ -236,8 +251,16 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
   }, [createMutation, createYellowEscrow, squadId]);
 
   const respondToOffer = useCallback(async (offerId: string, accept: boolean) => {
-    await respondMutation.mutateAsync({ offerId, accept });
-  }, [respondMutation]);
+    const offer = incomingData?.find((entry) => entry.id === offerId);
+    const yellowSettlement = await closeYellowEscrow(
+      offer?.yellowSessionId,
+      offer?.amount || 0,
+      offerId,
+      accept ? 'seller' : 'buyer',
+    );
+
+    await respondMutation.mutateAsync({ offerId, accept, yellowSettlement });
+  }, [closeYellowEscrow, incomingData, respondMutation]);
 
   const cancelOffer = useCallback(async (offerId: string) => {
     const offer = outgoingData?.find((entry) => entry.id === offerId);
@@ -245,6 +268,7 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
       offer?.yellowSessionId,
       offer?.amount || 0,
       offerId,
+      'buyer',
     );
 
     await cancelMutation.mutateAsync({ offerId, yellowSettlement });
