@@ -8,36 +8,39 @@
 
 ## 🟦 Algorand Testnet ✅
 
-### Match Verification Contract
+### Deployed Contracts
 
-| Property | Value |
-|----------|-------|
-| **App ID** | `756630713` |
-| **Creator** | `CO5MCLTB6IKXIKIEY3AYWUTLD4XHQYTGK3KPSCXEIFJX4PJETAT4GTPWHQ` |
-| **Created At Round** | 61,138,878 |
-| **Status** | ✅ Active (Not Deleted) |
-| **Network** | Algorand TestNet |
+| Contract | App ID | Explorer |
+|----------|--------|----------|
+| **MatchVerification** | `756828208` | [AlgoScan](https://testnet.algoscan.app/app/756828208) |
+| **ReputationSystem** | `756828211` | [AlgoScan](https://testnet.algoscan.app/app/756828211) |
+| **SquadDAO** | `756828561` | [AlgoScan](https://testnet.algoscan.app/app/756828561) |
+| **GlobalChallenges** | `756828229` | [AlgoScan](https://testnet.algoscan.app/app/756828229) |
 
-### State Schema
+**Creator:** `CO5MCLTB6IKXIKIEY3AYWUTLD4XHQYTGK3KPSCXEIFJX4PJETAT4GTPWHQ`  
+**Deployed:** March 9, 2026
 
-| Type | Byte Slice | Uint |
-|------|------------|------|
-| **Global** | 8 | 8 |
-| **Local** | 3 | 3 |
+### Contract Details
 
-### Explorer Links
-
-- [AlgoScan](https://testnet.algoscan.app/app/756630713)
-- [Pera Wallet Explorer](https://testnet.explorer.perawallet.app/app/756630713)
-- [AlgoExplorer](https://testnet.algoexplorer.io/application/756630713)
-
-### Usage
-
-This contract handles:
+#### MatchVerification
 - Multi-party match result verification
 - Immutable match statistics storage
-- Reputation tracking for players
-- Dispute resolution mechanisms
+- Chainlink CRE weather + location oracle integration
+
+#### ReputationSystem
+- Player XP and reputation tracking
+- On-chain attribute progression
+- ASA-based reputation tokens
+
+#### SquadDAO
+- Squad-level governance and voting
+- ASA-based membership tokens
+- Proposal creation and execution
+
+#### GlobalChallenges
+- Cross-squad challenge creation and tracking
+- Leaderboard and reward distribution
+- Tournament bracket management
 
 ---
 
@@ -140,7 +143,10 @@ Add these to your `.env` or `.env.local` file:
 
 ```bash
 # ── Algorand (Deployed) ─────────────────────────────────────
-ALGORAND_MATCH_VERIFICATION_APP_ID=756630713
+ALGORAND_MATCH_VERIFICATION_APP_ID=756828208
+ALGORAND_REPUTATION_SYSTEM_APP_ID=756828211
+ALGORAND_SQUAD_DAO_APP_ID=756828561
+ALGORAND_GLOBAL_CHALLENGES_APP_ID=756828229
 ALGORAND_NETWORK=testnet
 NEXT_PUBLIC_ALGORAND_NODE_URL=https://testnet-api.algonode.cloud
 NEXT_PUBLIC_ALGORAND_INDEXER_URL=https://testnet-idx.algonode.cloud
