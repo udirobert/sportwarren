@@ -236,6 +236,7 @@ model SquadTreasury {
 
   // Balance in smallest unit (e.g., microALGO)
   balance Int @default(0)
+  yellowSessionId String? @map("yellow_session_id")
 
   // Budgets (JSON)
   budgets Json? // { wages, transfers, facilities }
@@ -300,6 +301,7 @@ model TransferOffer {
 
   // Status
   status String @default("pending") // pending, accepted, rejected, cancelled
+  yellowSessionId String? @map("yellow_session_id")
 
   // Timestamps
   expiresAt DateTime? @map("expires_at")
@@ -398,6 +400,7 @@ model Match {
 
   // Blockchain
   txId String? @map("tx_id") // Algorand transaction ID
+  yellowFeeSessionId String? @map("yellow_fee_session_id")
 
   // Relations
   verifications MatchVerification[]

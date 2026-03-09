@@ -53,6 +53,12 @@ export interface MatchResult {
     decision: string;
     timestamp: string;
   };
+  paymentRail?: {
+    enabled: boolean;
+    assetSymbol: string;
+    sessionId?: string | null;
+    feeAmount?: number;
+  };
 }
 
 export interface Verification {
@@ -245,16 +251,35 @@ export interface Treasury {
     transferBudget: number;
     facilityUpgrades: number;
   };
+  paymentRail?: {
+    enabled: boolean;
+    mode: 'disabled' | 'simulated' | 'nitrolite';
+    assetSymbol: string;
+    sessionId?: string | null;
+    settledBalance: number;
+  };
 }
 
 export interface TreasuryTransaction {
   id: string;
   type: 'income' | 'expense';
-  category: 'match_fee' | 'sponsor' | 'prize' | 'transfer_in' | 'wages' | 'transfer_out' | 'facility';
+  category:
+    | 'deposit'
+    | 'match_fee'
+    | 'other'
+    | 'sponsor'
+    | 'prize'
+    | 'transfer_in'
+    | 'transfer_out'
+    | 'transfers'
+    | 'wages'
+    | 'facilities'
+    | 'facility';
   amount: number;
   description: string;
   timestamp: Date;
   verified: boolean;
+  txHash?: string;
 }
 
 export interface Tactics {
@@ -298,6 +323,12 @@ export interface TransferOffer {
   status: 'pending' | 'accepted' | 'rejected' | 'cancelled' | 'negotiating';
   timestamp: Date;
   expiry?: Date;
+  paymentSessionId?: string | null;
+  paymentRail?: {
+    enabled: boolean;
+    assetSymbol: string;
+    status: 'unavailable' | 'locked' | 'released' | 'refunded';
+  };
 }
 
 // ============================================================================

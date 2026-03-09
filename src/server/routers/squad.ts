@@ -1,6 +1,12 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
+import { yellowService } from '../../../server/services/blockchain/yellow';
+import {
+  ensureSquadTreasury,
+  postTreasuryLedgerEntry,
+  TreasuryBalanceError,
+} from '../../../server/services/economy/treasury-ledger';
 
 const formationSchema = z.enum([
   '4-4-2', '4-3-3', '4-2-3-1', '3-5-2', '5-3-2',
@@ -18,6 +24,108 @@ const instructionsSchema = z.object({
   pressing: z.enum(['low', 'medium', 'high']).optional(),
   defensiveLine: z.enum(['deep', 'normal', 'high']).optional(),
 });
+
+async function getSquadLeaderWallet(prisma: any, squadId: string) {
+  const leader = await prisma.squadMember.findFirst({
+    where: {
+      squadId,
+      role: { in: ['captain', 'vice_captain'] },
+    },
+    include: {
+      user: {
+        select: { walletAddress: true },
+      },
+    },
+    orderBy: {
+      joinedAt: 'asc',
+    },
+  });
+
+  return leader?.user.walletAddress ?? null;
+}
+
+async function movePlayerToSquad(prisma: any, offer: { playerId: string; fromSquadId: string; toSquadId: string }) {
+  const currentMembership = await prisma.squadMember.findUnique({
+    where: {
+      squadId_userId: {
+        squadId: offer.toSquadId,
+        userId: offer.playerId,
+      },
+    },
+  });
+
+  const destinationMembership = await prisma.squadMember.findUnique({
+    where: {
+      squadId_userId: {
+        squadId: offer.fromSquadId,
+        userId: offer.playerId,
+      },
+    },
+  });
+
+  await prisma.$transaction(async (tx: any) => {
+    if (currentMembership) {
+      await tx.squadMember.delete({
+        where: {
+          squadId_userId: {
+            squadId: offer.toSquadId,
+            userId: offer.playerId,
+          },
+        },
+      });
+    }
+
+    if (!destinationMembership) {
+      await tx.squadMember.create({
+        data: {
+          squadId: offer.fromSquadId,
+          userId: offer.playerId,
+          role: 'player',
+        },
+      });
+    }
+  });
+}
+
+async function expireTransferOffers(prisma: any, squadId?: string) {
+  const now = new Date();
+  const where: Record<string, unknown> = {
+    status: 'pending',
+    expiresAt: { lt: now },
+  };
+
+  if (squadId) {
+    where.OR = [{ fromSquadId: squadId }, { toSquadId: squadId }];
+  }
+
+  const expiredOffers = await prisma.transferOffer.findMany({ where });
+
+  for (const offer of expiredOffers) {
+    const settlement = offer.yellowSessionId
+      ? await yellowService.settleTransferEscrow({
+          sessionId: offer.yellowSessionId,
+          offerId: offer.id,
+          amount: offer.amount,
+          recipient: 'buyer',
+        })
+      : null;
+
+    await prisma.transferOffer.update({
+      where: { id: offer.id },
+      data: { status: 'cancelled' },
+    });
+
+    await postTreasuryLedgerEntry({
+      prisma,
+      squadId: offer.fromSquadId,
+      amountDelta: offer.amount,
+      type: 'income',
+      category: 'transfer_in',
+      description: `Escrow refunded after offer expiry for player ${offer.playerId}`,
+      txHash: settlement?.settlementId ?? null,
+    });
+  }
+}
 
 export const squadRouter = createTRPCRouter({
   // Create a new squad
