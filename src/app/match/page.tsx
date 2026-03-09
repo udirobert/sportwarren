@@ -206,7 +206,8 @@ export default function MatchPage() {
         </Card>
       </div>
 
-      <div className="flex flex-wrap gap-2 rounded-2xl bg-gray-100 p-1">
+      <div className="sticky top-0 z-10 -mx-4 px-4 py-2 bg-white/95 backdrop-blur-sm border-b border-gray-100 md:static md:mx-0 md:px-0 md:py-0 md:bg-transparent md:backdrop-blur-none md:border-0">
+        <div className="flex flex-wrap gap-2 rounded-2xl bg-gray-100 p-1">
         {[
           { key: "verify", label: `Verify (${pendingMatches.length})`, icon: Shield },
           { key: "capture", label: "Submit Match", icon: Activity },
@@ -215,7 +216,7 @@ export default function MatchPage() {
           <button
             key={key}
             onClick={() => setViewMode(key as ViewMode)}
-            className={`flex flex-1 items-center justify-center space-x-2 rounded-xl px-4 py-3 transition-all ${
+            className={`flex flex-1 items-center justify-center space-x-2 rounded-xl px-4 py-3 min-h-[44px] transition-all ${
               viewMode === key ? "bg-white text-emerald-700 shadow-sm" : "text-gray-600 hover:text-gray-900"
             }`}
           >
@@ -223,6 +224,7 @@ export default function MatchPage() {
             <span className="font-medium">{label}</span>
           </button>
         ))}
+        </div>
       </div>
 
       {/* First-visit hint — shown until the user has submitted their first match */}

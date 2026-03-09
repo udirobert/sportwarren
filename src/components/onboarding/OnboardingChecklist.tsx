@@ -19,6 +19,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
         totalCount,
         resetOnboarding,
     } = useOnboarding();
+    const [expanded, setExpanded] = React.useState(false);
 
     const progress = Math.round((completedCount / totalCount) * 100);
 
@@ -31,7 +32,25 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, height: 0 }}
             >
-                <Card className="bg-gradient-to-br from-gray-900 to-black border-gray-800 text-white overflow-hidden relative">
+                {/* Collapsed pill — shown on mobile when not expanded */}
+                <button
+                    onClick={() => setExpanded(true)}
+                    className={`md:hidden w-full flex items-center justify-between bg-gradient-to-r from-gray-900 to-black border border-gray-800 text-white rounded-xl px-4 py-3 min-h-[44px] ${expanded ? 'hidden' : 'flex'}`}
+                >
+                    <div className="flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-green-400" />
+                        <span className="text-sm font-bold uppercase tracking-tight">Getting Started</span>
+                        <span className="text-xs text-green-400 font-bold">{completedCount}/{totalCount}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                            <div className="h-full bg-green-500 rounded-full" style={{ width: `${progress}%` }} />
+                        </div>
+                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                    </div>
+                </button>
+
+                <Card className={`bg-gradient-to-br from-gray-900 to-black border-gray-800 text-white overflow-hidden relative ${expanded ? 'block' : 'hidden md:block'}`}>`
                     {/* Background decoration */}
                     <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
                         <Trophy className="w-40 h-40" />
@@ -125,13 +144,21 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                             <p className="text-[10px] text-gray-600 font-mono uppercase">
                                 Progress is saved automatically
                             </p>
-                            <button
-                                onClick={resetOnboarding}
-                                className="text-[9px] text-gray-700 hover:text-gray-400 flex items-center space-x-1 transition-colors uppercase font-bold"
-                            >
-                                <RotateCcw className="w-2.5 h-2.5" />
-                                <span>Restart Tour</span>
-                            </button>
+                            <div className="flex items-center gap-3">
+                                <button
+                                    onClick={resetOnboarding}
+                                    className="text-[9px] text-gray-700 hover:text-gray-400 flex items-center space-x-1 transition-colors uppercase font-bold"
+                                >
+                                    <RotateCcw className="w-2.5 h-2.5" />
+                                    <span>Restart Tour</span>
+                                </button>
+                                <button
+                                    onClick={() => setExpanded(false)}
+                                    className="md:hidden text-[9px] text-gray-700 hover:text-gray-400 uppercase font-bold transition-colors"
+                                >
+                                    Collapse
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </Card>
