@@ -2,7 +2,21 @@ import { z } from 'zod';
 import OpenAI from 'openai';
 import { createTRPCRouter, publicProcedure } from '../trpc';
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Venice AI (privacy-first) with OpenAI as fallback
+const veniceClient = process.env.VENICE_API_KEY
+  ? new OpenAI({
+      apiKey: process.env.VENICE_API_KEY,
+      baseURL: 'https://api.venice.ai/api/v1',
+    })
+  : null;
+
+const openaiClient = process.env.OPENAI_API_KEY
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
+
+// Venice model for chat; OpenAI fallback model
+const VENICE_MODEL = 'llama-3.3-70b';
+const OPENAI_MODEL = 'gpt-4o-mini';
 
 const STAFF_PERSONAS: Record<string, string> = {
   'agent-1': `You are The Agent — a sharp, streetwise contract negotiator for a Hackney-based football club in a Web3 sports management game called SportWarren. You specialise in reputation-based valuations, contract negotiations, and transfer market intelligence. You speak with confidence and dry wit. You always address the manager as "Boss". Keep responses concise (3–5 sentences max) and always end with a clear recommendation or question to drive the conversation forward.`,
@@ -50,17 +64,42 @@ export const agentRouter = createTRPCRouter({
         contextBlock && `\n\nCurrent squad data:\n${contextBlock}`,
       ].filter(Boolean).join('');
 
-      const completion = await openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message },
-        ],
-        max_tokens: 200,
-        temperature: 0.7,
-      });
+      const client = veniceClient ?? openaiClient;
+      const model = veniceClient ? VENICE_MODEL : OPENAI_MODEL;
 
-      const reply = completion.choices[0]?.message?.content?.trim() ?? "I'll look into that and get back to you, Boss.";
+      if (!client) {
+        return { reply: "I'll look into that and get back to you, Boss. (No AI provider configured — set VENICE_API_KEY or OPENAI_API_KEY.)" };
+      }
+
+      let reply: string;
+      try {
+        const completion = await client.chat.completions.create({
+          model,
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: message },
+          ],
+          max_tokens: 200,
+          temperature: 0.7,
+        });
+        reply = completion.choices[0]?.message?.content?.trim() ?? "I'll look into that and get back to you, Boss.";
+      } catch (veniceErr) {
+        // Venice failed — fall back to OpenAI if available
+        if (veniceClient && openaiClient) {
+          const fallback = await openaiClient.chat.completions.create({
+            model: OPENAI_MODEL,
+            messages: [
+              { role: 'system', content: systemPrompt },
+              { role: 'user', content: message },
+            ],
+            max_tokens: 200,
+            temperature: 0.7,
+          });
+          reply = fallback.choices[0]?.message?.content?.trim() ?? "I'll look into that and get back to you, Boss.";
+        } else {
+          throw veniceErr;
+        }
+      }
       return { reply };
     }),
 });
