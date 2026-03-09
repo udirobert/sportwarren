@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Target, BarChart3, Users, Trophy, MessageCircle, Menu, X, Plus, Activity } from 'lucide-react';
+import { Home, Target, BarChart3, Users, Trophy, MessageCircle, Menu, X, Plus, Activity, Settings } from 'lucide-react';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { ContextualHelp } from './ContextualHelp';
 
@@ -68,6 +68,13 @@ export const SmartNavigation: React.FC = () => {
       priority: 50,
       unlockLevel: 'intermediate' as const,
       showCondition: () => preferences.preferredFeatures.gamification !== 'none',
+    },
+    { 
+      path: '/settings', 
+      icon: Settings, 
+      label: 'Settings', 
+      priority: 10,
+      unlockLevel: 'basic' as const,
     },
   ];
 
