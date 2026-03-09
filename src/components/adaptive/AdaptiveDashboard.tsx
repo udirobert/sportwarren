@@ -15,21 +15,26 @@ import { useOnboarding } from '@/hooks/useOnboarding';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
 import { GuestTour } from '@/components/onboarding/GuestTour';
 
-import { StaffFeed } from '@/components/adaptive/StaffFeed';
-import { NearbyRivals } from '@/components/dashboard/NearbyRivals';
-import { TerritoryControl } from '@/components/dashboard/TerritoryControl';
-import { TrainingCenter } from '@/components/dashboard/TrainingCenter';
-import { SquadGovernance } from '@/components/dashboard/SquadGovernance';
-import { SquadDynamics } from '@/components/dashboard/SquadDynamics';
-import { ScoutingReport } from '@/components/dashboard/ScoutingReport';
-import { MatchEnginePreview } from '@/components/dashboard/MatchEnginePreview';
-import { StaffRoom } from '@/components/dashboard/StaffRoom';
-import { AgentProvider } from '@/context/AgentContext';
-import { AgenticConcierge } from '@/components/adaptive/AgenticConcierge';
-import { LensSocialHub } from '@/components/dashboard/LensSocialHub';
+import dynamic from 'next/dynamic';
 
-import { CaptainsLog } from '@/components/dashboard/CaptainsLog';
+// Statically imported (small / always visible)
+import { AgentProvider } from '@/context/AgentContext';
 import { CreateSquadFlow } from '@/components/squad/CreateSquadFlow';
+
+// Dynamically imported (code-split, loaded on demand)
+const StaffFeed        = dynamic(() => import('@/components/adaptive/StaffFeed').then(m => ({ default: m.StaffFeed })), { ssr: false });
+const NearbyRivals     = dynamic(() => import('@/components/dashboard/NearbyRivals').then(m => ({ default: m.NearbyRivals })), { ssr: false });
+const TerritoryControl = dynamic(() => import('@/components/dashboard/TerritoryControl').then(m => ({ default: m.TerritoryControl })), { ssr: false });
+const TrainingCenter   = dynamic(() => import('@/components/dashboard/TrainingCenter').then(m => ({ default: m.TrainingCenter })), { ssr: false });
+const SquadGovernance  = dynamic(() => import('@/components/dashboard/SquadGovernance').then(m => ({ default: m.SquadGovernance })), { ssr: false });
+const SquadDynamics    = dynamic(() => import('@/components/dashboard/SquadDynamics').then(m => ({ default: m.SquadDynamics })), { ssr: false });
+const ScoutingReport   = dynamic(() => import('@/components/dashboard/ScoutingReport').then(m => ({ default: m.ScoutingReport })), { ssr: false });
+const MatchEnginePreview = dynamic(() => import('@/components/dashboard/MatchEnginePreview').then(m => ({ default: m.MatchEnginePreview })), { ssr: false });
+const StaffRoom        = dynamic(() => import('@/components/dashboard/StaffRoom').then(m => ({ default: m.StaffRoom })), { ssr: false });
+const AgenticConcierge = dynamic(() => import('@/components/adaptive/AgenticConcierge').then(m => ({ default: m.AgenticConcierge })), { ssr: false });
+const LensSocialHub    = dynamic(() => import('@/components/dashboard/LensSocialHub').then(m => ({ default: m.LensSocialHub })), { ssr: false });
+const CaptainsLog      = dynamic(() => import('@/components/dashboard/CaptainsLog').then(m => ({ default: m.CaptainsLog })), { ssr: false });
+const EventFeed        = dynamic(() => import('@/components/dashboard/EventFeed').then(m => ({ default: m.EventFeed })), { ssr: false });
 
 interface DashboardWidget {
   id: string;
@@ -134,6 +139,15 @@ export const AdaptiveDashboard: React.FC = () => {
             onClick={() => trackFeatureUsage('stats-rating')}
           />
         </div>
+      ),
+    },
+    {
+      id: 'event-feed',
+      priority: 96,
+      requiredLevel: 'basic',
+      category: 'stats',
+      component: (
+        <EventFeed squadId={primarySquadId} />
       ),
     },
     {
