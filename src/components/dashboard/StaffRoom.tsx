@@ -132,6 +132,12 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     const [inputText, setInputText] = useState<string>('');
 
     const agentChat = trpc.agent.chat.useMutation();
+    const logDecision = trpc.memory.logDecision.useMutation();
+    const { data: decisionData } = trpc.memory.getDecisions.useQuery(
+        { staffId: selectedStaff?.id ?? 'agent-1', limit: 5 },
+        { enabled: !!selectedStaff }
+    );
+    const recentDecisions = decisionData?.decisions ?? [];
 
     const chatHistory = selectedStaff ? (chatHistories[selectedStaff.id] || []) : [];
     const setChatHistory = (updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
@@ -435,6 +441,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     {
                         staffId: selectedStaff?.id || 'agent-1',
                         message: text,
+                        recentDecisions,
                         squadContext: {
                             balance: treasury?.balance,
                             memberCount: members?.length,
@@ -578,9 +585,20 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                                 <button
                                                     key={ai}
                                                     onClick={() => {
-                                                        if (consumed) return;
-                                                        setUsedActions(prev => new Set(prev).add(actionKey));
-                                                        action.onClick();
+                                        if (consumed) return;
+                                        setUsedActions(prev => new Set(prev).add(actionKey));
+                                        const isConfirm = action.label.startsWith('✅');
+                                        const isDecline = action.label.startsWith('❌');
+                                        if ((isConfirm || isDecline) && selectedStaff) {
+                                            logDecision.mutate({
+                                                staffId: selectedStaff.id,
+                                                action: action.label.replace(/^[✅❌]\s*/, ''),
+                                                decision: isConfirm ? 'confirmed' : 'declined',
+                                                context: chatHistory[i]?.text?.slice(0, 80),
+                                                timestamp: new Date().toISOString(),
+                                            });
+                                        }
+                                        action.onClick();
                                                     }}
                                                     disabled={consumed}
                                                     className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${

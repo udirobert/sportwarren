@@ -5,6 +5,7 @@ import { squadRouter } from './routers/squad';
 import { marketRouter } from './routers/market';
 import { authRouter } from './routers/auth';
 import { agentRouter } from './routers/agent';
+import { memoryRouter } from './routers/memory';
 
 export const appRouter = createTRPCRouter({
   match: matchRouter,
@@ -13,6 +14,7 @@ export const appRouter = createTRPCRouter({
   market: marketRouter,
   auth: authRouter,
   agent: agentRouter,
+  memory: memoryRouter,
 });
 
 export type AppRouter = typeof appRouter;
