@@ -90,6 +90,7 @@ function transformMatch(match: any): MatchResult {
 }
 
 export function useMatchVerification(squadId?: string): UseMatchVerificationReturn {
+  const utils = trpc.useUtils();
   const yellowSession = useYellowSession();
   // Fetch matches with tRPC
   const {
@@ -124,6 +125,15 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
   const hasMore = data?.hasMore || false;
   const total = data?.total || 0;
 
+  const getSquadLeaderWallets = useCallback(async (targetSquadId: string) => {
+    const squad = await utils.squad.getById.fetch({ id: targetSquadId });
+    return (squad.members || [])
+      .filter((member: any) => member.role === 'captain' || member.role === 'vice_captain')
+      .map((member: any) => member.user?.walletAddress)
+      .filter((walletAddress: string | null | undefined): walletAddress is Hex => Boolean(walletAddress) && isHex(walletAddress))
+      .slice(0, 1);
+  }, [utils.squad.getById]);
+
   const createYellowMatchFeeLock = useCallback(async (
     match: {
       homeSquadId: string;
@@ -146,23 +156,33 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
       return undefined;
     }
 
+    const [homeLeaders, awayLeaders] = await Promise.all([
+      getSquadLeaderWallets(match.homeSquadId),
+      getSquadLeaderWallets(match.awaySquadId),
+    ]);
+    const participants = Array.from(new Set([...homeLeaders, ...awayLeaders])) as Hex[];
+    if (participants.length < 2) {
+      return undefined;
+    }
+    if (!participants.includes(participant)) {
+      return undefined;
+    }
+
     const asset = (process.env.NEXT_PUBLIC_YELLOW_ASSET_SYMBOL || yellowSession.assetSymbol || 'USDC').toLowerCase();
     const feeAmount = Number(process.env.NEXT_PUBLIC_YELLOW_MATCH_FEE_AMOUNT || 1);
-    const allocations: RPCAppSessionAllocation[] = [
-      {
-        participant,
-        asset,
-        amount: toAtomicAmount(feeAmount),
-      },
-    ];
+    const allocations: RPCAppSessionAllocation[] = participants.map((sessionParticipant) => ({
+      participant: sessionParticipant,
+      asset,
+      amount: toAtomicAmount(feeAmount),
+    }));
 
     const result = await yellowSession.createSession({
       definition: {
         application: `sportwarren-match-fee-${match.homeSquadId}-${match.awaySquadId}-${Date.now()}`,
         protocol: DEFAULT_PROTOCOL,
-        participants: [participant],
-        weights: [100],
-        quorum: 100,
+        participants,
+        weights: [50, 50],
+        quorum: 50,
         challenge: DEFAULT_CHALLENGE_WINDOW,
       },
       allocations,
@@ -183,7 +203,7 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
       version: result.version,
       settlementId: buildSettlementId(result.appSessionId, result.version),
     };
-  }, [squadId, yellowSession]);
+  }, [getSquadLeaderWallets, squadId, yellowSession]);
 
   const submitMatchResult = useCallback(async (
     match: {
