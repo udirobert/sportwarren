@@ -1,8 +1,9 @@
 # 🎬 SportWarren x Chainlink CRE - Demo Voiceover Script
 
-**Duration:** 2:30 - 3:00 minutes  
-**Format:** Screen recording with voiceover  
+**Duration:** 2:00 - 2:30 minutes
+**Format:** Screen recording with voiceover
 **Tone:** Professional, enthusiastic, clear
+**Key Message:** Sports is the demo—the reusable CRE pattern is the product
 
 ---
 
@@ -24,7 +25,7 @@
 **Visual:** Match Center homepage with hero section
 
 **Voiceover:**
-> "Every weekend, thousands of amateur football matches are played without any official record. Captain disputes, unreliable stats, no proof of performance. This is the 'Phygital Trust Gap' — and it's what SportWarren solves with Chainlink CRE."
+> "SportWarren demonstrates a generalizable Chainlink CRE pattern for real-world verification. We're using amateur football as our demo, but this weighted consensus engine applies to insurance claims, supply chain, disaster relief—any scenario requiring multi-source trustless verification."
 
 **Action:**
 - Scroll down to show the navigation tabs
@@ -37,21 +38,7 @@
 **Visual:** Track Match tab with match capture form
 
 **Voiceover:**
-> "Let me show you how it works. After a match, the captain submits the result — in this case, Northside United defeated Chelsea Legends 3-1 at Stamford Bridge. The GPS coordinates are automatically captured from the venue."
-
-**Action:**
-- Show the pre-filled form with Stamford Bridge coordinates (51.4817, -0.1910)
-- Click "Submit Match"
-- Transition to match detail page as CRE workflow triggers
-
----
-
-### **SCENE 3: CRE Workflow Animation (0:35 - 1:05)**
-
-**Visual:** Technical Commentary panel with animated logs
-
-**Voiceover:**
-> "Here's where the magic happens. Chainlink CRE orchestrates a verification workflow in real-time. First, it fetches weather data from Open-Meteo — a sovereign, keyless oracle. Then it verifies the location using OpenStreetMap to confirm this is a legitimate football stadium."
+> "Here's our demo use case. After a match, the captain submits the result—Northside United defeated Chelsea Legends 3-1 at Stamford Bridge. GPS coordinates are automatically captured. This is where the CRE pattern shines."
 
 **Action:**
 - Let the logs animate naturally (don't rush)
@@ -122,19 +109,18 @@
 
 ---
 
-### **SCENE 8: Closing & Call to Action (2:40 - 3:00)**
+### **SCENE 8: Closing & Call to Action (2:00 - 2:30)**
 
 **Visual:** Back to Match Center homepage, then GitHub repo
 
 **Voiceover:**
-> "SportWarren + Chainlink CRE = Trustless amateur sports verification. Players earn XP only from verified matches. Their attributes improve based on real performance, secured on-chain. This is the future of amateur football — built for the Chainlink CRE Hackathon 2026."
+> "While we're using football as our demo, this CRE pattern—multi-oracle consensus with weighted scoring—applies to any real-world event requiring trustless verification. Insurance claims. Pharmaceutical supply chains. Disaster relief allocation. The architecture is the product. Built for the Chainlink CRE Hackathon 2026."
 
 **Action:**
-- Show the XP summary screen briefly
 - Navigate to GitHub repo page
 - End screen with:
   - SportWarren logo
-  - "Powered by Chainlink CRE"
+  - "Generalizable CRE Pattern for Phygital Verification"
   - GitHub URL: `github.com/udirobert/sportwarren`
   - Devpost submission link
 
@@ -196,19 +182,21 @@ If you need a shorter demo for social media:
 
 ## 🎯 Key Messages to Emphasize
 
-1. **"Phygital Trust Gap"** - Real problem, clear framing
-2. **"Sovereign fallbacks"** - Open-Meteo + OSM (no API keys required)
-3. **"Weighted consensus"** - Not binary, but confidence scoring
+1. **"Generalizable CRE Pattern"** - Sports is the demo, architecture is the product
+2. **"Multi-Oracle Consensus"** - Weighted scoring (40% + 60% = confidence)
+3. **"Sovereign fallbacks"** - Open-Meteo + OSM (no API keys required)
 4. **"Workflow ID traceability"** - Auditable, verifiable on-chain
-5. **"Real use case"** - Amateur footballers need this today
+5. **"Reusable Architecture"** - Applies to insurance, supply chain, disaster relief
 
 ---
 
 ## 🔗 Links for Description
 
 ```
-🏆 SportWarren - Championship Manager Meets Web3
+🏆 SportWarren - Generalizable CRE Pattern for Phygital Verification
 🔗 Chainlink CRE Hackathon 2026 Submission
+
+**Key Message:** Sports is our demo. The reusable CRE architecture is the product.
 
 GitHub: https://github.com/udirobert/sportwarren
 Devpost: [Your Devpost submission link]
@@ -221,7 +209,11 @@ Tech Stack:
 - Algorand (On-Chain Settlement)
 - Next.js + tRPC + PostgreSQL
 
-Built with ❤️ for footballers everywhere.
+**Reusable Pattern Applies To:**
+- Insurance claims (weather + property data)
+- Pharma supply chain (temperature + GPS)
+- Disaster relief (satellite + ground sensors)
+- Event verification (identity + attendance)
 ```
 
 ---
