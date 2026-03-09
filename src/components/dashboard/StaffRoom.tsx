@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
@@ -20,6 +20,43 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { trpc } from '@/lib/trpc-client';
 import { useSquadDetails } from '@/hooks/squad/useSquad';
 import { ContractNegotiationModal } from './ContractNegotiationModal';
+
+// Simulated contract data per squad player
+const PLAYER_CONTRACTS: Record<string, { wage: number; weeksRemaining: number; totalWeeks: number; reputationTier: string; marketValuation: number; position: string }> = {
+    'Marcus': { wage: 500, weeksRemaining: 6, totalWeeks: 48, reputationTier: 'Gold', marketValuation: 7200, position: 'ST' },
+    'Jamie': { wage: 350, weeksRemaining: 18, totalWeeks: 48, reputationTier: 'Silver', marketValuation: 3800, position: 'MF' },
+    'Sarah': { wage: 300, weeksRemaining: 3, totalWeeks: 48, reputationTier: 'Bronze', marketValuation: 1900, position: 'DF' },
+    'Alex': { wage: 420, weeksRemaining: 24, totalWeeks: 48, reputationTier: 'Silver', marketValuation: 4500, position: 'GK' },
+    'Noah': { wage: 280, weeksRemaining: 10, totalWeeks: 48, reputationTier: 'Bronze', marketValuation: 1500, position: 'ST' },
+};
+
+// Scouting prospects data
+const SCOUTING_PROSPECTS: Record<string, { age: number; position: string; pace: number; technical: number; potential: string; location: string; trialCost: number }> = {
+    'Hackney Academy Report': { age: 17, position: 'MF', pace: 91, technical: 78, potential: '⭐⭐⭐⭐', location: 'Hackney Marshes Pitch 4', trialCost: 200 },
+    'Search for Midfielders': { age: 19, position: 'MF', pace: 84, technical: 85, potential: '⭐⭐⭐', location: 'Stratford Community League', trialCost: 150 },
+};
+
+// Tactical formations data
+const TACTICAL_SETUPS: Record<string, { formation: string; winRate: number; weaknesses: string; recommendation: string }> = {
+    '4-4-2': { formation: '4-4-2', winRate: 62, weaknesses: 'Vulnerable to high press in midfield', recommendation: 'Solid base. Consider shifting to 4-3-3 for more attacking output.' },
+    '4-3-3': { formation: '4-3-3', winRate: 71, weaknesses: 'Exposed on counter-attacks', recommendation: 'High risk, high reward. Best used against defensive sides.' },
+    '3-5-2': { formation: '3-5-2', winRate: 58, weaknesses: 'Wide areas can be exploited', recommendation: 'Good for possession-heavy games. Needs disciplined wing-backs.' },
+};
+
+// Fitness / injury data
+const SQUAD_FITNESS: Record<string, { status: string; recoveryDays: number; riskLevel: string; recommendation: string }> = {
+    'Marcus': { status: '🟢 Fit', recoveryDays: 0, riskLevel: 'Low', recommendation: 'Cleared for full training and match selection.' },
+    'Jamie': { status: '🟡 Monitoring', recoveryDays: 3, riskLevel: 'Medium', recommendation: 'Light training only. Reassess before Tuesday.' },
+    'Sarah': { status: '🔴 Injured', recoveryDays: 10, riskLevel: 'High', recommendation: 'Rest and physio sessions. Do not select for next two fixtures.' },
+};
+
+// Sponsorship deals data
+const SPONSORSHIP_DEALS: Record<string, { brand: string; value: number; duration: string; requirement: string; lensBoost: number }> = {
+    'Sponsorship Opportunity': { brand: 'Hackney Brew Co.', value: 5000, duration: '8 weeks', requirement: 'Min. 500 Lens followers', lensBoost: 15 },
+    'Brand Reputation': { brand: 'Phygital Sports Kit', value: 3200, duration: '12 weeks', requirement: 'Top 10 Hackney ranking', lensBoost: 10 },
+};
+
+type ChatMessage = { sender: string; text: string; actions?: { label: string; onClick: () => void }[] };
 
 interface StaffMember {
     id: string;
@@ -80,10 +117,12 @@ interface StaffRoomProps {
 
 export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(STAFF_MEMBERS[0]);
-    const [chatHistory, setChatHistory] = useState<Array<{ sender: string, text: string }>>([]);
+    const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+    const chatEndRef = useRef<HTMLDivElement>(null);
     const [isTyping, setIsTyping] = useState(false);
     const [isNegotiationOpen, setIsNegotiationOpen] = useState(false);
     const [negotiatingPlayer, setNegotiatingPlayer] = useState<string>('');
+    const [negotiatingWage, setNegotiatingWage] = useState<number>(500);
 
     // Fetch real-time data for functional responses
     const { data: treasury } = trpc.squad.getTreasury.useQuery(
@@ -104,6 +143,10 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
         }
     }, [selectedStaff]);
 
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatHistory, isTyping]);
+
     const handleSendMessage = (text: string) => {
         setChatHistory(prev => [...prev, { sender: 'You', text }]);
         setIsTyping(true);
@@ -114,31 +157,213 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
 
             if (text === "Transfer Budget Inquiry") {
                 const balance = treasury?.balance || 0;
-                response = `Our current transfer budget is looking at exactly ${balance.toLocaleString()} credits. We should be careful with our next moves.`;
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'The Agent',
+                        text: `Let me check the books, Boss.\n\n💰 Current Transfer Budget: ${balance.toLocaleString()} credits\n📊 Budget Health: ${balance >= 5000 ? '🟢 Strong — room to move in the market.' : balance >= 2000 ? '🟡 Moderate — be selective.' : '🔴 Tight — prioritise contract renewals over new signings.'}\n\n${balance >= 5000 ? 'We\'re in a good position to make a move if the right player comes up.' : 'I\'d recommend holding off on any big signings until we secure a sponsorship deal or match prize.'}\n\nWant me to identify the best value targets within our current budget?`,
+                        actions: [
+                            { label: '✅ Show Value Targets', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Agent', text: `Based on our budget, I'm flagging three targets: a Silver-tier midfielder at 1,800 credits, a Bronze striker at 900 credits, and a free agent goalkeeper. I'll have full dossiers ready within the hour.` }]) },
+                            { label: '❌ Not Right Now', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Agent', text: `Understood. The budget is there when you need it. Come back to me when you're ready to move.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null as unknown as string;
             } else if (text === "Balance Sheet Review") {
                 const txCount = treasury?.transactions?.length || 0;
-                response = `I've prepared the sheet. We have ${txCount} recent transactions. Salaries are our biggest drain atm, but the last match prize money helped.`;
-            } else if (text === "Tactical Briefing") {
-                const formation = tactics?.formation || '4-4-2';
-                response = `Current setup is ${formation}. I've run the numbers; our win probability against average Hackney sides is currently ${Math.floor(Math.random() * 20) + 60}%.`;
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'The Agent',
+                        text: `Here's the full financial picture, Boss.\n\n📋 Recent Transactions: ${txCount}\n💸 Biggest Outgoing: Squad wages (weekly drain)\n💰 Biggest Incoming: Last match prize money\n📈 Net Position: ${txCount > 5 ? 'Active — lots of movement this cycle.' : 'Quiet — relatively stable.'}\n\n${txCount > 10 ? '⚠️ High transaction volume. Worth reviewing for any anomalies.' : '✅ Books look clean. No red flags.'}\n\nShall I flag any transactions that look out of the ordinary?`,
+                        actions: [
+                            { label: '✅ Flag Anomalies', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Agent', text: `I've run the audit. No major anomalies detected. One duplicate entry on a training fee — I'll get that corrected. Everything else checks out.` }]) },
+                            { label: '❌ Looks Fine', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Agent', text: `Noted. I'll keep the books tidy and flag anything unusual as it comes in.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null as unknown as string;
             } else if (text.includes("Renegotiate") && text.includes("Contract")) {
                 const playerName = text.replace("Renegotiate ", "").replace("'s Contract", "");
                 setNegotiatingPlayer(playerName);
-                setTimeout(() => setIsNegotiationOpen(true), 1000);
-                response = `I've opened the secure line with ${playerName}'s rep. The contract details are on your screen now, Boss.`;
+                const contract = PLAYER_CONTRACTS[playerName];
+                if (contract) {
+                    setNegotiatingWage(contract.wage);
+                    const urgency = contract.weeksRemaining <= 6 ? '🔴 URGENT' : contract.weeksRemaining <= 12 ? '🟡 SOON' : '🟢 STABLE';
+                    const recommendation = contract.weeksRemaining <= 6
+                        ? `I strongly recommend we act now — we risk losing him on a free if we wait.`
+                        : contract.weeksRemaining <= 12
+                        ? `We have a window, but rival clubs are circling. Better to move soon.`
+                        : `No immediate pressure, but locking him in now avoids future inflation.`;
+                    setTimeout(() => {
+                        setChatHistory(prev => [...prev, {
+                            sender: selectedStaff?.name || 'The Agent',
+                            text: `Right, let me pull up ${playerName}'s file.\n\n📋 Current Wage: ${contract.wage.toLocaleString()} credits/wk\n⏳ Contract Status: ${urgency} — ${contract.weeksRemaining} weeks remaining of ${contract.totalWeeks}\n📊 Position: ${contract.position}\n🏅 Reputation Tier: ${contract.reputationTier}\n💰 Market Valuation: ${contract.marketValuation.toLocaleString()} credits\n\n${recommendation}\n\nShall I open the negotiation table, Boss?`,
+                            actions: [
+                                { label: '✅ Open Negotiations', onClick: () => setIsNegotiationOpen(true) },
+                                { label: '❌ Leave it for now', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Agent', text: `Understood, Boss. I'll keep monitoring the situation. Come back to me when you're ready.` }]) }
+                            ]
+                        }]);
+                        setIsTyping(false);
+                    }, 1500);
+                    response = null as unknown as string;
+                } else {
+                    response = `I'll pull up the contract details for ${playerName} now, Boss.`;
+                    setTimeout(() => setIsNegotiationOpen(true), 1500);
+                }
             } else if (text === "Squad Morale Check") {
                 const avgLevel = members?.length ? Math.round(members.reduce((acc, m) => acc + (m.stats?.level || 0), 0) / members.length) : 5;
-                response = `Morale is decent. The squad's average experience level of ${avgLevel} is keeping them grounded but hungry.`;
+                const moraleStatus = avgLevel >= 7 ? '🟢 HIGH' : avgLevel >= 4 ? '🟡 STEADY' : '🔴 LOW';
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'Coach Kite',
+                        text: `Right, let me pull the morale data.\n\n🧠 Squad Avg Level: ${avgLevel}\n📊 Morale Status: ${moraleStatus}\n💬 Dressing Room Vibe: ${avgLevel >= 7 ? 'Buzzing — the last win has them fired up.' : avgLevel >= 4 ? 'Steady. No major issues but they need a spark.' : 'Fragile. A poor result could cause real problems.'}\n\n${avgLevel < 4 ? 'I recommend a light session and a team talk before the next fixture.' : 'No immediate action needed, but keep an eye on rotation fatigue.'}\n\nWant me to schedule a morale-boosting training session, Boss?`,
+                        actions: [
+                            { label: '✅ Schedule Session', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Done. I've blocked out Thursday morning for a light tactical session with a team bonding element. The lads will appreciate it.` }]) },
+                            { label: '❌ Leave it for now', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Understood. I'll keep monitoring. Come back to me if the numbers dip further.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null as unknown as string;
+            } else if (text === "Tactical Briefing") {
+                const formation = tactics?.formation || '4-4-2';
+                const setup = TACTICAL_SETUPS[formation] || TACTICAL_SETUPS['4-4-2'];
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'Coach Kite',
+                        text: `Here's the current tactical picture, Boss.\n\n🗂️ Formation: ${setup.formation}\n📈 Win Rate: ${setup.winRate}% vs Hackney-tier sides\n⚠️ Weakness: ${setup.weaknesses}\n\n💡 My Read: ${setup.recommendation}\n\nShall I apply the recommended formation change for the next fixture?`,
+                        actions: [
+                            { label: '✅ Apply Formation', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Formation locked in. I've updated the match engine parameters. The squad will be briefed at tomorrow's session.` }]) },
+                            { label: '❌ Keep Current Setup', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Noted. We'll stick with ${setup.formation} for now. I'll revisit after the next match.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null as unknown as string;
+            } else if (text === "Training Optimization") {
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'Coach Kite',
+                        text: `I've run the load analysis across the squad.\n\n🏋️ High Load Players: Marcus, Jamie (need rotation)\n🟢 Fresh & Ready: Alex, Noah\n📉 Underperforming in Training: Sarah (fatigue indicators)\n\nRecommendation: Reduce intensity for the top two and push the fresher players in the next session. This should peak performance for matchday.\n\nShall I restructure this week's training plan accordingly?`,
+                        actions: [
+                            { label: '✅ Restructure Plan', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Training plan updated. Marcus and Jamie are on light duties Wednesday. Alex and Noah will lead the high-intensity drills. Expect a 10–15% performance uplift by Saturday.` }]) },
+                            { label: '❌ Keep Current Plan', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Understood. I'll flag it again if fatigue levels worsen before the weekend.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null as unknown as string;
+            } else if (text === "Hackney Academy Report" || text === "Search for Midfielders") {
+                const prospect = SCOUTING_PROSPECTS[text];
+                if (prospect) {
+                    setTimeout(() => {
+                        setChatHistory(prev => [...prev, {
+                            sender: selectedStaff?.name || 'The Scout',
+                            text: `I've been watching this one closely, Boss. Here's the full dossier.\n\n👤 Age: ${prospect.age}\n📍 Location: ${prospect.location}\n🏃 Position: ${prospect.position}\n⚡ Pace: ${prospect.pace} | 🎯 Technical: ${prospect.technical}\n🌟 Potential: ${prospect.potential}\n💰 Trial Cost: ${prospect.trialCost.toLocaleString()} credits\n\n${prospect.potential.length >= 4 ? 'This one is special. I wouldn\'t wait — other clubs are sniffing around.' : 'Solid prospect. Worth a look before committing.'}\n\nShall I arrange a trial, Boss?`,
+                            actions: [
+                                { label: '✅ Arrange Trial', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Trial booked. ${prospect.location}, this weekend. I'll have a full performance report on your desk by Monday. Cost: ${prospect.trialCost.toLocaleString()} credits deducted from scouting budget.` }]) },
+                                { label: '❌ Pass on This One', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Understood. I'll keep him on the watchlist and revisit in a few weeks if the situation changes.` }]) }
+                            ]
+                        }]);
+                        setIsTyping(false);
+                    }, 1500);
+                    response = null as unknown as string;
+                } else {
+                    response = `I'm compiling the latest scouting data now, Boss. Give me a moment.`;
+                }
+            } else if (text === "Rival Team Analysis") {
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'The Scout',
+                        text: `I've been tracking Northside FC all week. Here's what we're up against.\n\n🏟️ Opponent: Northside FC\n⚠️ Key Threat: Marcus Johnson (ST) — 88 pace, 84 finishing\n📊 Their Form: 🔥 4W 1D last 5\n🔍 Weakness: Slow to recover defensively after set pieces\n\nMy recommendation: Press high early, exploit their right-back who's been caught out of position. Target set pieces in the final third.\n\nShall I prepare a full opposition briefing document for the squad?`,
+                        actions: [
+                            { label: '✅ Prepare Briefing', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Briefing document prepared. I've flagged Marcus Johnson as Priority 1 threat and outlined three set-piece routines to exploit their defensive shape. Coach Kite has been copied in.` }]) },
+                            { label: '❌ Not Needed', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `No problem. The intel is here if you change your mind before matchday.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null as unknown as string;
             } else if (text === "Fitness Status Report") {
-                response = `I've checked the biometric feeds. 85% of the squad is at peak recovery. One minor strain in the youth ranks, but nothing concerning.`;
-            } else if (text === "Sponsorship Opportunity") {
-                response = `A local Hackney coffee brand is interested in a shirt deal. They're impressed by our Lens engagement numbers. Suggested value: 5,000 credits.`;
+                const injuredPlayers = Object.entries(SQUAD_FITNESS).filter(([, v]) => v.riskLevel !== 'Low');
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'The Physio',
+                        text: `I've run the full biometric sweep, Boss. Here's the picture.\n\n${Object.entries(SQUAD_FITNESS).map(([name, data]) => `${data.status} ${name} — ${data.riskLevel} risk${data.recoveryDays > 0 ? ` (${data.recoveryDays} days recovery)` : ''}`).join('\n')}\n\n${injuredPlayers.length > 0 ? `⚠️ ${injuredPlayers.length} player(s) need attention before the next fixture.` : '✅ Squad is in excellent shape.'}\n\nShall I update the match selection availability list accordingly?`,
+                        actions: [
+                            { label: '✅ Update Availability', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Availability list updated. Sarah is flagged as unavailable for the next two fixtures. Jamie is listed as a game-time decision. All others are cleared.` }]) },
+                            { label: '❌ I\'ll Handle It', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Understood. The data is here whenever you need it. I'll flag anything urgent immediately.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null as unknown as string;
+            } else if (text === "Recovery Logistics") {
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'The Physio',
+                        text: `Post-match recovery analysis is in, Boss.\n\n💤 Sleep Quality (avg): 7.2 / 10\n🧊 Ice Bath Compliance: 80%\n🏃 Active Recovery Sessions Completed: 3 / 4\n⚡ Lactic Acid Levels: Elevated in midfield (Jamie flagged)\n\nOverall the squad is recovering well, but Jamie needs an extra 48 hours before full training. I'd recommend we push his return to Thursday.\n\nShall I adjust his training schedule?`,
+                        actions: [
+                            { label: '✅ Adjust Schedule', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Done. Jamie is on rest and light mobility work until Thursday. I'll clear him for full training if the biometrics look good by Wednesday evening.` }]) },
+                            { label: '❌ Keep Him On Schedule', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Noted. I'll monitor closely and pull him if the numbers worsen. Your call, Boss.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null as unknown as string;
+            } else if (text === "Injury Prevention") {
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'The Physio',
+                        text: `I've run the predictive injury model across the squad.\n\n🔴 High Risk: Sarah — overloaded hamstring, recommend immediate load reduction\n🟡 Watch List: Marcus — minor knee inflammation, monitor daily\n🟢 Low Risk: Rest of squad\n\nIf we don't act on Sarah now, I'm projecting a 70% chance of a 3-week injury within the next two fixtures.\n\nShall I put her on a prevention protocol immediately?`,
+                        actions: [
+                            { label: '✅ Start Protocol', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Prevention protocol activated for Sarah. She's on reduced load, daily physio, and biometric monitoring. I'll reassess in 5 days. This should bring her risk level down to manageable.` }]) },
+                            { label: '❌ Not Yet', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Understood. I'll keep the flags live and escalate if the risk score increases. Don't leave it too long, Boss.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null as unknown as string;
+            } else if (text === "Sponsorship Opportunity" || text === "Brand Reputation") {
+                const deal = SPONSORSHIP_DEALS[text];
+                if (deal) {
+                    setTimeout(() => {
+                        setChatHistory(prev => [...prev, {
+                            sender: selectedStaff?.name || 'Commercial Lead',
+                            text: `I've got a live deal on the table, Boss. Here are the details.\n\n🏷️ Brand: ${deal.brand}\n💰 Deal Value: ${deal.value.toLocaleString()} credits\n📅 Duration: ${deal.duration}\n✅ Requirement: ${deal.requirement}\n📣 Lens Boost: +${deal.lensBoost}% engagement on activation\n\nThis is a solid fit for our current Phygital positioning. I'd recommend we move quickly — they're talking to two other Hackney clubs.\n\nShall I open formal negotiations with ${deal.brand}?`,
+                            actions: [
+                                { label: '✅ Open Negotiations', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Excellent. I've sent the opening terms to ${deal.brand}. Expect a response within 48 hours. I'll keep you posted on every move.` }]) },
+                                { label: '❌ Pass on This Deal', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Understood. I'll keep the pipeline warm and bring you something better when it comes in.` }]) }
+                            ]
+                        }]);
+                        setIsTyping(false);
+                    }, 1500);
+                    response = null as unknown as string;
+                } else {
+                    response = `Let me pull the latest commercial opportunities together for you, Boss.`;
+                }
+            } else if (text === "Social Engagement Stats") {
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'Commercial Lead',
+                        text: `Here's the Lens engagement breakdown for this week, Boss.\n\n📊 Followers: 1,240 (+18% WoW)\n❤️ Avg Post Engagement: 8.4%\n🔥 Top Post: Match highlight vs Eastside — 340 reactions\n🌍 Reach: 4,200 unique Lens profiles\n\nWe're outperforming 90% of Hackney clubs on Lens right now. The phantom-fan conversion rate is up too — 12 new real-world merch orders this week.\n\nWant me to boost the top post with a Lens promotion to push it further?`,
+                        actions: [
+                            { label: '✅ Boost Post', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Boost activated. I've allocated 50 credits from the marketing budget. Projected reach increase: +2,000 profiles over 48 hours. I'll report back on the results.` }]) },
+                            { label: '❌ Leave Organic', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Fair enough. Organic reach is strong enough for now. I'll flag the next high-performing post for a potential boost.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null as unknown as string;
             } else {
                 response = getStaffResponse(selectedStaff?.id || '', text);
             }
 
-            setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Staff', text: response }]);
-            setIsTyping(false);
+            if (response !== null) {
+                setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Staff', text: response }]);
+                setIsTyping(false);
+            }
         }, 1500);
     };
 
@@ -173,13 +398,13 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                 onClick={() => setSelectedStaff(member)}
                                 className={`w-full p-4 rounded-xl flex items-center space-x-4 transition-all ${selectedStaff?.id === member.id
                                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
-                                    : 'text-gray-400 hover:bg-white/5'
+                                    : 'text-gray-200 hover:bg-white/5'
                                     }`}
                             >
                                 <div className="text-2xl">{member.avatar}</div>
                                 <div className="text-left flex-1 min-w-0">
                                     <div className="text-sm font-black uppercase truncate">{member.name}</div>
-                                    <div className={`text-[9px] uppercase font-bold ${selectedStaff?.id === member.id ? 'text-blue-100' : 'text-gray-500'}`}>
+                                    <div className={`text-[9px] uppercase font-bold ${selectedStaff?.id === member.id ? 'text-blue-100' : 'text-gray-300'}`}>
                                         {member.role}
                                     </div>
                                 </div>
@@ -187,7 +412,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                             </button>
                         ))}
                     </div>
-                    <div className="p-4 bg-black/20 text-[9px] text-gray-600 font-mono flex items-center justify-between">
+                    <div className="p-4 bg-black/20 text-[9px] text-gray-400 font-mono flex items-center justify-between">
                         <span>SECURITY LEVEL: 4 (MANAGER)</span>
                         <ShieldCheck className="w-3 h-3" />
                     </div>
@@ -206,7 +431,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                         </div>
                         <div className="hidden lg:flex items-center space-x-4">
                             <div className="text-right">
-                                <div className="text-[9px] font-bold text-gray-500">NEGOTIATION POWER</div>
+                                <div className="text-[9px] font-bold text-gray-300">NEGOTIATION POWER</div>
                                 <div className="w-24 h-1 bg-gray-800 rounded-full mt-1 overflow-hidden">
                                     <div className="h-full bg-blue-500 w-3/4" />
                                 </div>
@@ -221,16 +446,30 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                 key={i}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className={`flex ${chat.sender === 'You' ? 'justify-end' : 'justify-start'}`}
+                                className={`flex flex-col ${chat.sender === 'You' ? 'items-end' : 'items-start'}`}
                             >
-                                <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed ${chat.sender === 'You'
+                                <div className={`max-w-[80%] p-4 rounded-2xl text-sm leading-relaxed whitespace-pre-line ${chat.sender === 'You'
                                     ? 'bg-blue-600 text-white shadow-xl shadow-blue-500/10'
                                     : 'bg-white/5 text-gray-200 border border-white/10'
                                     }`}>
                                     {chat.text}
                                 </div>
+                                {chat.actions && chat.actions.length > 0 && (
+                                    <div className="flex gap-2 mt-2 flex-wrap">
+                                        {chat.actions.map((action, ai) => (
+                                            <button
+                                                key={ai}
+                                                onClick={action.onClick}
+                                                className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white/10 border border-white/10 text-gray-200 hover:bg-white/20 hover:text-white transition-all"
+                                            >
+                                                {action.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
                             </motion.div>
                         ))}
+                        <div ref={chatEndRef} />
                         {isTyping && (
                             <div className="flex justify-start">
                                 <div className="bg-white/5 p-4 rounded-2xl flex space-x-1">
@@ -251,7 +490,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                     variant="outline"
                                     size="sm"
                                     onClick={() => handleSendMessage(action)}
-                                    className="bg-white/5 border-white/10 text-gray-400 hover:text-white hover:bg-white/10 text-[10px] font-black uppercase tracking-widest"
+                                    className="bg-white/5 border-white/10 text-gray-200 hover:text-white hover:bg-white/10 text-[10px] font-black uppercase tracking-widest"
                                 >
                                     {action}
                                 </Button>
@@ -262,18 +501,18 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
 
                 {/* Right Sidebar: Contextual Info */}
                 <div className="hidden lg:block w-72 bg-black/40 border-l border-white/5 p-6">
-                    <h4 className="text-[10px] font-black text-gray-500 uppercase tracking-[0.2em] mb-4">Dossier</h4>
-                    <p className="text-xs text-gray-400 leading-relaxed italic mb-6">
+                    <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em] mb-4">Dossier</h4>
+                    <p className="text-xs text-gray-200 leading-relaxed italic mb-6">
                         "{selectedStaff?.biography}"
                     </p>
 
                     <div className="space-y-4 pt-4 border-t border-white/5">
                         <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black text-gray-500 uppercase">Current Strategy</span>
+                            <span className="text-[10px] font-black text-gray-300 uppercase">Current Strategy</span>
                             <span className="text-[10px] font-bold text-blue-400">EXPANSION</span>
                         </div>
                         <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black text-gray-500 uppercase">Season Progress</span>
+                            <span className="text-[10px] font-black text-gray-300 uppercase">Season Progress</span>
                             <span className="text-[10px] font-bold text-white font-mono">24 / 48 Matches</span>
                         </div>
                     </div>
@@ -281,7 +520,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     <div className="mt-8 bg-blue-600/10 p-4 rounded-xl border border-blue-500/20">
                         <TrendingUp className="w-5 h-5 text-blue-500 mb-2" />
                         <h5 className="text-[10px] font-black text-white uppercase mb-1">Market Insight</h5>
-                        <p className="text-[9px] text-blue-200 leading-tight">
+                        <p className="text-[9px] text-blue-100 leading-tight">
                             Lens reputation scores are inflating. Now is the time to secure long-term contracts for "Gold" tier prospects before valuations skyrocket.
                         </p>
                     </div>
@@ -290,7 +529,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
 
             <ContractNegotiationModal
                 playerName={negotiatingPlayer}
-                currentWage={500}
+                currentWage={negotiatingWage}
                 isOpen={isNegotiationOpen}
                 onClose={() => setIsNegotiationOpen(false)}
                 onFinalize={(newWage) => {
@@ -337,7 +576,7 @@ function getStaffResponse(staffId: string, query: string): string {
 
 function getQuickActions(staffId: string): string[] {
     switch (staffId) {
-        case 'agent-1': return ["Renegotiate Marcus' Contract", "Balance Sheet Review", "Transfer Budget Inquiry"];
+        case 'agent-1': return ["Renegotiate Marcus' Contract", "Renegotiate Jamie's Contract", "Renegotiate Sarah's Contract", "Balance Sheet Review", "Transfer Budget Inquiry"];
         case 'scout-1': return ["Hackney Academy Report", "Rival Team Analysis", "Search for Midfielders"];
         case 'coach-1': return ["Tactical Briefing", "Squad Morale Check", "Training Optimization"];
         case 'physio-1': return ["Fitness Status Report", "Recovery Logistics", "Injury Prevention"];

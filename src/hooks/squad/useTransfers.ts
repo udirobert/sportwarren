@@ -3,12 +3,13 @@
 import { useCallback } from 'react';
 import { trpc } from '@/lib/trpc-client';
 import type { TransferOffer, SquadPlayer } from '@/types';
+import { useYellowSession } from '@/hooks/useYellowSession';
 
 interface UseTransfersReturn {
   incomingOffers: TransferOffer[];
   outgoingOffers: TransferOffer[];
   loading: boolean;
-  makeOffer: (player: SquadPlayer, amount: number, type: 'transfer' | 'loan', loanDuration?: number) => Promise<void>;
+  makeOffer: (playerId: string, amount: number, type: 'transfer' | 'loan', loanDuration?: number) => Promise<void>;
   respondToOffer: (offerId: string, accept: boolean) => Promise<void>;
   cancelOffer: (offerId: string) => Promise<void>;
   refreshOffers: () => Promise<void>;
@@ -29,10 +30,22 @@ function transformOffer(offer: any): TransferOffer {
     status: offer.status as TransferOffer['status'],
     timestamp: new Date(offer.createdAt),
     expiry: offer.expiresAt ? new Date(offer.expiresAt) : undefined,
+    paymentSessionId: offer.yellowSessionId || null,
+    paymentRail: {
+      enabled: Boolean(offer.yellowSessionId),
+      assetSymbol: 'USDC',
+      status:
+        offer.status === 'pending'
+          ? 'locked'
+          : offer.status === 'accepted'
+            ? 'released'
+            : 'refunded',
+    },
   };
 }
 
 export function useTransfers(squadId?: string): UseTransfersReturn {
+  const utils = trpc.useUtils();
   // Fetch incoming offers
   const { data: incomingData, isLoading: incomingLoading, refetch: refetchIncoming } = trpc.squad.getTransferOffers.useQuery(
     { squadId: squadId || '', type: 'incoming' },
@@ -46,7 +59,13 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
   );
 
   // Create offer mutation
-  const createMutation = trpc.squad.createTransferOffer.useMutation();
+  const createMutation = trpc.squad.createTransferOffer.useMutation({
+    onSuccess: () => {
+      if (!squadId) return;
+      utils.squad.getTransferOffers.invalidate({ squadId, type: 'incoming' });
+      utils.squad.getTransferOffers.invalidate({ squadId, type: 'outgoing' });
+    },
+  });
 
   // Respond mutation
   const respondMutation = trpc.squad.respondToTransferOffer.useMutation({
@@ -65,7 +84,7 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
   });
 
   const makeOffer = useCallback(async (
-    player: SquadPlayer,
+    playerId: string,
     amount: number,
     type: 'transfer' | 'loan',
     loanDuration?: number
@@ -74,15 +93,13 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
 
     await createMutation.mutateAsync({
       toSquadId: squadId,
-      playerId: player.id,
+      playerId,
       offerType: type === 'transfer' ? 'permanent' : 'loan',
       amount,
       loanDuration,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
     });
-
-    await refetchOutgoing();
-  }, [squadId, createMutation, refetchOutgoing]);
+  }, [squadId, createMutation]);
 
   const respondToOffer = useCallback(async (offerId: string, accept: boolean) => {
     await respondMutation.mutateAsync({ offerId, accept });
