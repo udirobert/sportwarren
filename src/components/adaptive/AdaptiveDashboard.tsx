@@ -505,13 +505,35 @@ export const AdaptiveDashboard: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div className="space-y-6">
-        {visibleWidgets.map((widget) => (
-          <div key={widget.id} id={widget.id}>
-            {widget.component}
+      {(() => {
+        const todayIds = ['pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine'];
+        const squadIds = ['treasury', 'transfers', 'governance', 'squad-dynamics', 'captains-log'];
+        const progressIds = ['quick-stats', 'training', 'achievements', 'scouting-report', 'lens-social', 'nearby-squads', 'territory', 'upcoming-fixtures'];
+
+        const todayWidgets = visibleWidgets.filter(w => todayIds.includes(w.id));
+        const squadWidgets = visibleWidgets.filter(w => squadIds.includes(w.id));
+        const progressWidgets = visibleWidgets.filter(w => progressIds.includes(w.id));
+        const otherWidgets = visibleWidgets.filter(w => ![...todayIds, ...squadIds, ...progressIds].includes(w.id));
+
+        const Section = ({ title, widgets }: { title: string; widgets: typeof visibleWidgets }) =>
+          widgets.length === 0 ? null : (
+            <div className="space-y-4">
+              <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 pb-2">{title}</h2>
+              <div className="space-y-4">
+                {widgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
+              </div>
+            </div>
+          );
+
+        return (
+          <div className="space-y-8">
+            <Section title="Today" widgets={todayWidgets} />
+            <Section title="Squad" widgets={squadWidgets} />
+            <Section title="Progress" widgets={progressWidgets} />
+            {otherWidgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
           </div>
-        ))}
-      </div>
+        );
+      })()}
 
       {preferences.featureDiscoveryLevel < 50 && preferences.uiComplexity !== 'simple' && (
         <Card className="mt-8 border-blue-200 bg-blue-50">
