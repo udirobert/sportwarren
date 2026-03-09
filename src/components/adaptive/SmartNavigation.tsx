@@ -25,7 +25,7 @@ export const SmartNavigation: React.FC = () => {
     { 
       path: '/match', 
       icon: Target, 
-      label: 'Match', 
+      label: 'Matches', 
       priority: 90,
       unlockLevel: 'basic' as const,
     },

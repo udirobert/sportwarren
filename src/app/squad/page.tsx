@@ -1,15 +1,16 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { SquadDAO } from "@/components/squad/SquadDAO";
 import { TacticsBoard } from "@/components/squad/TacticsBoard";
 import { TransferMarket } from "@/components/squad/TransferMarket";
 import { Treasury } from "@/components/squad/Treasury";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { 
+import {
   Users, Target, ArrowRightLeft, Wallet, 
-  Shield, Vote 
+  Shield, Vote, Activity
 } from "lucide-react";
 import { MOCK_SQUAD_PLAYERS } from "@/lib/mocks";
 import { trpc } from "@/lib/trpc-client";
@@ -160,6 +161,28 @@ export default function SquadPage() {
               </Button>
             </Card>
           </div>
+
+          <Card>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div>
+                <div className="mb-2 flex items-center space-x-3">
+                  <Activity className="w-6 h-6 text-emerald-600" />
+                  <h3 className="font-semibold text-gray-900">Match Operations</h3>
+                </div>
+                <p className="text-gray-600">
+                  Submit results, review pending verifications, and monitor match fee settlement from one place.
+                </p>
+              </div>
+              <div className="flex gap-3">
+                <Link href="/match?mode=verify">
+                  <Button variant="outline">Review Matches</Button>
+                </Link>
+                <Link href="/match?mode=capture">
+                  <Button>Open Match Center</Button>
+                </Link>
+              </div>
+            </div>
+          </Card>
         </div>
       )}
 
