@@ -826,7 +826,7 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
-        let offer = await ctx.prisma.transferOffer.create({
+        let offer: any = await ctx.prisma.transferOffer.create({
           data: {
             fromSquadId: fromMembership.squadId,
             toSquadId,

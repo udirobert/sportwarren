@@ -22,7 +22,7 @@ function transformOffer(offer: any): TransferOffer {
     toSquad: offer.toSquad.id,
     fromSquadName: offer.fromSquad.name,
     toSquadName: offer.toSquad.name,
-    player: { id: offer.playerId } as SquadPlayer,
+    player: { id: offer.playerId } as any,
     offerAmount: offer.amount,
     offerType: offer.offerType as 'transfer' | 'loan',
     loanDuration: offer.loanDuration || undefined,
@@ -115,7 +115,12 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
   return {
     incomingOffers: incomingData?.map(transformOffer) || [],
     outgoingOffers: outgoingData?.map(transformOffer) || [],
-    loading: incomingLoading || outgoingLoading || createMutation.isPending,
+    loading:
+      incomingLoading ||
+      outgoingLoading ||
+      createMutation.isPending ||
+      respondMutation.isPending ||
+      cancelMutation.isPending,
     makeOffer,
     respondToOffer,
     cancelOffer,

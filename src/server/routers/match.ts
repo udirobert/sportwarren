@@ -17,7 +17,10 @@ const Errors = {
   INVALID_SCORE: { code: 'BAD_REQUEST' as const, message: 'Invalid score provided' },
 };
 
-function getMatchFeeDistribution(match: { homeScore: number | null; awayScore: number | null }, status: string) {
+function getMatchFeeDistribution(
+  match: { homeScore: number | null; awayScore: number | null },
+  status: 'verified' | 'disputed',
+) {
   const feeAmount = yellowService.getMatchFeeAmount();
   const totalPool = feeAmount * 2;
   const platformAmount = Math.floor(totalPool * 0.2);
@@ -46,7 +49,7 @@ function getMatchFeeDistribution(match: { homeScore: number | null; awayScore: n
   const homeWon = (match.homeScore ?? 0) > (match.awayScore ?? 0);
 
   return {
-    result: homeWon ? 'home' : 'away',
+    result: (homeWon ? 'home' : 'away') as MatchSettlementResult,
     feeAmount,
     homeAmount: homeWon ? totalPool - platformAmount : 0,
     awayAmount: homeWon ? 0 : totalPool - platformAmount,
@@ -54,7 +57,7 @@ function getMatchFeeDistribution(match: { homeScore: number | null; awayScore: n
   };
 }
 
-async function settleMatchFee(prisma: any, match: any, status: string) {
+async function settleMatchFee(prisma: any, match: any, status: 'verified' | 'disputed') {
   if (!match.yellowFeeSessionId) {
     return null;
   }

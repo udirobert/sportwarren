@@ -46,12 +46,12 @@ export const ContractNegotiationModal: React.FC<ContractNegotiationModalProps> =
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex items-center justify-center p-4"
+                className="fixed inset-0 z-[110] bg-black/90 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-4"
             >
                 <motion.div
                     initial={{ scale: 0.9, y: 20 }}
                     animate={{ scale: 1, y: 0 }}
-                    className="w-full max-w-xl bg-gray-900 border border-gray-800 rounded-3xl overflow-hidden shadow-2xl"
+                    className="w-full max-w-xl bg-gray-900 border border-gray-800 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl max-h-[92vh] overflow-y-auto"
                 >
                     <div className="p-6 border-b border-white/5 flex items-center justify-between">
                         <div className="flex items-center space-x-3">
@@ -68,7 +68,7 @@ export const ContractNegotiationModal: React.FC<ContractNegotiationModalProps> =
                         </button>
                     </div>
 
-                    <div className="p-8">
+                    <div className="p-5 sm:p-8">
                         {negotiationStatus === 'idle' && (
                             <div className="space-y-8">
                                 <div className="bg-white/5 p-6 rounded-2xl border border-white/10">
@@ -88,7 +88,7 @@ export const ContractNegotiationModal: React.FC<ContractNegotiationModalProps> =
                                         step={50}
                                         value={offer}
                                         onChange={(e) => setOffer(parseInt(e.target.value))}
-                                        className="w-full h-1.5 bg-gray-800 rounded-full appearance-none cursor-pointer accent-blue-500"
+                                        className="w-full h-2 sm:h-1.5 bg-gray-800 rounded-full appearance-none cursor-pointer accent-blue-500"
                                     />
                                     <div className="flex justify-between text-[9px] font-bold text-gray-600 mt-2 uppercase">
                                         <span>Current: {currentWage.toLocaleString()}</span>
@@ -98,7 +98,7 @@ export const ContractNegotiationModal: React.FC<ContractNegotiationModalProps> =
 
                                 <div>
                                     <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest block mb-4">Performance Incentives</label>
-                                    <div className="grid grid-cols-2 gap-3">
+                                    <div className="grid grid-cols-2 gap-2 sm:gap-3">
                                         {[
                                             { id: 'goal', label: 'Goal Bonus', icon: Zap },
                                             { id: 'clean', label: 'Clean Sheet', icon: ShieldCheck },
@@ -108,7 +108,7 @@ export const ContractNegotiationModal: React.FC<ContractNegotiationModalProps> =
                                             <button
                                                 key={perk.id}
                                                 onClick={() => togglePerk(perk.id)}
-                                                className={`p-4 rounded-xl border flex items-center space-x-3 transition-all ${perks.includes(perk.id)
+                                                className={`p-3 sm:p-4 rounded-xl border flex items-center space-x-2 sm:space-x-3 transition-all ${perks.includes(perk.id)
                                                         ? 'bg-blue-600/10 border-blue-500 text-blue-400 shadow-lg shadow-blue-500/5'
                                                         : 'bg-white/5 border-white/5 text-gray-500 hover:border-white/10'
                                                     }`}

@@ -66,6 +66,12 @@ export const Treasury: React.FC<TreasuryProps> = ({
           <div>
             <p className="text-green-100 mb-1">Treasury Balance</p>
             <h2 className="text-4xl font-bold">{treasury.balance.toLocaleString()} {treasury.currency}</h2>
+            {treasury.paymentRail && (
+              <p className="mt-2 text-sm text-green-100">
+                Yellow {treasury.paymentRail.enabled ? treasury.paymentRail.mode : 'disabled'} •
+                Settled {treasury.paymentRail.settledBalance.toLocaleString()} {treasury.paymentRail.assetSymbol}
+              </p>
+            )}
           </div>
           <div className="w-16 h-16 bg-white/20 rounded-full flex items-center justify-center">
             <Wallet className="w-8 h-8 text-white" />

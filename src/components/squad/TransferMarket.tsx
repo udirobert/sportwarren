@@ -14,12 +14,20 @@ import { calculateMarketValuation } from '@/lib/utils/calculations';
 
 interface TransferMarketProps {
   squadBalance: number;
+  incomingOffers?: TransferOffer[];
+  outgoingOffers?: TransferOffer[];
+  currencyLabel?: string;
+  paymentRailEnabled?: boolean;
   onMakeOffer?: (playerId: string, amount: number, type: 'transfer' | 'loan') => void;
   onRespondToOffer?: (offerId: string, accept: boolean) => void;
 }
 
 export const TransferMarket: React.FC<TransferMarketProps> = ({
   squadBalance,
+  incomingOffers = MOCK_OFFERS.filter(o => o.toSquad === 'Northside United'),
+  outgoingOffers = MOCK_OFFERS.filter(o => o.fromSquad === 'Northside United'),
+  currencyLabel = 'ALGO',
+  paymentRailEnabled = false,
   onMakeOffer,
   onRespondToOffer,
 }) => {
@@ -35,9 +43,6 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
     const matchesPosition = positionFilter === 'all' || p.position === positionFilter;
     return matchesSearch && matchesPosition;
   });
-
-  const incomingOffers = MOCK_OFFERS.filter(o => o.toSquad === 'Northside United');
-  const outgoingOffers = MOCK_OFFERS.filter(o => o.fromSquad === 'Northside United');
 
   const handleMakeOffer = () => {
     if (selectedPlayer && offerAmount) {
@@ -63,7 +68,10 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
             <DollarSign className="w-5 h-5 text-green-600" />
             <div>
               <div className="text-sm text-gray-600">Squad Balance</div>
-              <div className="text-xl font-bold text-green-600">{squadBalance.toLocaleString()} ALGO</div>
+              <div className="text-xl font-bold text-green-600">{squadBalance.toLocaleString()} {currencyLabel}</div>
+              {paymentRailEnabled && (
+                <div className="text-xs text-gray-500">Escrow rail active via Yellow</div>
+              )}
             </div>
           </div>
         </div>
@@ -171,7 +179,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                   </div>
                   <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
                     <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Asking Price</div>
-                    <div className="text-sm font-bold text-blue-600">{player.askingPrice.toLocaleString()} ALGO</div>
+                    <div className="text-sm font-bold text-blue-600">{player.askingPrice.toLocaleString()} {currencyLabel}</div>
                   </div>
                 </div>
 
@@ -215,7 +223,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Offer Amount (ALGO)
+                    Offer Amount ({currencyLabel})
                   </label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -228,7 +236,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                     />
                   </div>
                   <p className="text-sm text-gray-500 mt-1">
-                    Asking price: {selectedPlayer.askingPrice.toLocaleString()} ALGO
+                    Asking price: {selectedPlayer.askingPrice.toLocaleString()} {currencyLabel}
                   </p>
                 </div>
                 <div className="flex space-x-3">
@@ -270,7 +278,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                         <div className="flex items-center space-x-4 mt-2 text-sm">
                           <span className="flex items-center text-green-600 font-bold">
                             <DollarSign className="w-4 h-4 mr-1" />
-                            {offer.offerAmount.toLocaleString()}
+                            {offer.offerAmount.toLocaleString()} {currencyLabel}
                           </span>
                           <span className="flex items-center text-gray-500">
                             <Clock className="w-4 h-4 mr-1" />
@@ -331,7 +339,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                         <div className="flex items-center space-x-4 mt-2 text-sm">
                           <span className="flex items-center text-green-600 font-bold">
                             <DollarSign className="w-4 h-4 mr-1" />
-                            {offer.offerAmount.toLocaleString()}
+                            {offer.offerAmount.toLocaleString()} {currencyLabel}
                           </span>
                           <span className="flex items-center text-gray-500">
                             <Clock className="w-4 h-4 mr-1" />

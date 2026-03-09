@@ -9,36 +9,46 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { 
   Users, Target, ArrowRightLeft, Wallet, 
-  Shield, Vote, Trophy 
+  Shield, Vote 
 } from "lucide-react";
 import { MOCK_SQUAD_PLAYERS } from "@/lib/mocks";
+import { trpc } from "@/lib/trpc-client";
+import { useTreasury } from "@/hooks/squad/useTreasury";
+import { useTransfers } from "@/hooks/squad/useTransfers";
 
 type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance";
 
 export default function SquadPage() {
   const [activeTab, setActiveTab] = useState<SquadTab>("overview");
-  const [squadBalance, setSquadBalance] = useState(15000);
+  const { data: memberships } = trpc.squad.getMySquads.useQuery(undefined, {
+    retry: false,
+  });
+
+  const activeMembership = memberships?.[0];
+  const activeSquad = activeMembership?.squad;
+  const activeSquadId = activeSquad?.id;
+
+  const treasuryState = useTreasury(activeSquadId);
+  const transfersState = useTransfers(activeSquadId);
+
+  const squadBalance = treasuryState.treasury?.balance ?? activeSquad?.treasuryBalance ?? 15000;
+  const squadCurrency = treasuryState.treasury?.currency ?? "ALGO";
+  const activeOffers = transfersState.incomingOffers.length + transfersState.outgoingOffers.length;
 
   const handleMakeOffer = (playerId: string, amount: number, type: 'transfer' | 'loan') => {
-    console.log(`Making ${type} offer for player ${playerId}: ${amount} ALGO`);
-    // Deduct from balance (mock)
-    if (type === 'transfer') {
-      setSquadBalance(prev => prev - amount);
-    }
+    return transfersState.makeOffer(playerId, amount, type);
   };
 
   const handleRespondToOffer = (offerId: string, accept: boolean) => {
-    console.log(`${accept ? 'Accepting' : 'Rejecting'} offer ${offerId}`);
+    return transfersState.respondToOffer(offerId, accept);
   };
 
   const handleDeposit = (amount: number) => {
-    console.log(`Depositing ${amount} ALGO`);
-    setSquadBalance(prev => prev + amount);
+    return treasuryState.deposit(amount);
   };
 
   const handleWithdraw = (amount: number, reason: string) => {
-    console.log(`Withdrawing ${amount} ALGO: ${reason}`);
-    setSquadBalance(prev => prev - amount);
+    return treasuryState.withdraw(amount, reason, "other");
   };
 
   return (
@@ -49,25 +59,27 @@ export default function SquadPage() {
           <Shield className="w-8 h-8 text-white" />
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Squad Management</h1>
-        <p className="text-gray-600">Manage your team, tactics, transfers, and finances</p>
+        <p className="text-gray-600">
+          {activeSquad ? `Manage ${activeSquad.name}` : "Manage your team, tactics, transfers, and finances"}
+        </p>
       </div>
 
       {/* Quick Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="text-center">
-          <div className="text-2xl font-bold text-gray-900">16</div>
+          <div className="text-2xl font-bold text-gray-900">{activeSquad?._count.members ?? 16}</div>
           <div className="text-sm text-gray-600">Players</div>
         </Card>
         <Card className="text-center">
           <div className="text-2xl font-bold text-green-600">{squadBalance.toLocaleString()}</div>
-          <div className="text-sm text-gray-600">ALGO Balance</div>
+          <div className="text-sm text-gray-600">{squadCurrency} Balance</div>
         </Card>
         <Card className="text-center">
           <div className="text-2xl font-bold text-blue-600">4-3-3</div>
           <div className="text-sm text-gray-600">Formation</div>
         </Card>
         <Card className="text-center">
-          <div className="text-2xl font-bold text-purple-600">3</div>
+          <div className="text-2xl font-bold text-purple-600">{activeOffers}</div>
           <div className="text-sm text-gray-600">Active Offers</div>
         </Card>
       </div>
@@ -100,13 +112,13 @@ export default function SquadPage() {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           <Card>
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Northside United</h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">{activeSquad?.name ?? "Northside United"}</h2>
             <div className="grid md:grid-cols-2 gap-6">
               <div>
                 <h3 className="font-semibold text-gray-700 mb-2">Squad Overview</h3>
                 <ul className="space-y-2 text-gray-600">
                   <li>• Founded: 2018</li>
-                  <li>• Home Ground: Hackney Marshes</li>
+                  <li>• Home Ground: {activeSquad?.homeGround ?? "Hackney Marshes"}</li>
                   <li>• League Position: 3rd</li>
                   <li>• Form: WWDLW</li>
                 </ul>
@@ -141,8 +153,8 @@ export default function SquadPage() {
                 <ArrowRightLeft className="w-6 h-6 text-blue-600" />
                 <h3 className="font-semibold text-gray-900">Transfer Activity</h3>
               </div>
-              <p className="text-gray-600">Incoming offers: 1</p>
-              <p className="text-gray-600">Outgoing offers: 2</p>
+              <p className="text-gray-600">Incoming offers: {transfersState.incomingOffers.length}</p>
+              <p className="text-gray-600">Outgoing offers: {transfersState.outgoingOffers.length}</p>
               <Button variant="outline" className="mt-4 w-full">
                 View Transfers
               </Button>
@@ -161,6 +173,10 @@ export default function SquadPage() {
       {activeTab === 'transfers' && (
         <TransferMarket
           squadBalance={squadBalance}
+          incomingOffers={transfersState.incomingOffers}
+          outgoingOffers={transfersState.outgoingOffers}
+          currencyLabel={squadCurrency}
+          paymentRailEnabled={Boolean(treasuryState.treasury?.paymentRail?.enabled)}
           onMakeOffer={handleMakeOffer}
           onRespondToOffer={handleRespondToOffer}
         />
@@ -168,6 +184,7 @@ export default function SquadPage() {
 
       {activeTab === 'treasury' && (
         <Treasury
+          treasury={treasuryState.treasury ?? undefined}
           onDeposit={handleDeposit}
           onWithdraw={handleWithdraw}
         />

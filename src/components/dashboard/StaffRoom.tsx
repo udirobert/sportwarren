@@ -21,14 +21,18 @@ import { trpc } from '@/lib/trpc-client';
 import { useSquadDetails } from '@/hooks/squad/useSquad';
 import { ContractNegotiationModal } from './ContractNegotiationModal';
 
-// Simulated contract data per squad player
-const PLAYER_CONTRACTS: Record<string, { wage: number; weeksRemaining: number; totalWeeks: number; reputationTier: string; marketValuation: number; position: string }> = {
-    'Marcus': { wage: 500, weeksRemaining: 6, totalWeeks: 48, reputationTier: 'Gold', marketValuation: 7200, position: 'ST' },
-    'Jamie': { wage: 350, weeksRemaining: 18, totalWeeks: 48, reputationTier: 'Silver', marketValuation: 3800, position: 'MF' },
-    'Sarah': { wage: 300, weeksRemaining: 3, totalWeeks: 48, reputationTier: 'Bronze', marketValuation: 1900, position: 'DF' },
-    'Alex': { wage: 420, weeksRemaining: 24, totalWeeks: 48, reputationTier: 'Silver', marketValuation: 4500, position: 'GK' },
-    'Noah': { wage: 280, weeksRemaining: 10, totalWeeks: 48, reputationTier: 'Bronze', marketValuation: 1500, position: 'ST' },
-};
+// Derive reputation tier from reputation score
+function reputationTierLabel(score: number): string {
+    if (score >= 800) return 'Platinum';
+    if (score >= 500) return 'Gold';
+    if (score >= 250) return 'Silver';
+    return 'Bronze';
+}
+
+// Derive market valuation from level and reputation score
+function calcMarketValuation(level: number, score: number): number {
+    return Math.round((level * 200 + score * 3) / 50) * 50;
+}
 
 // Scouting prospects data
 const SCOUTING_PROSPECTS: Record<string, { age: number; position: string; pace: number; technical: number; potential: string; location: string; trialCost: number }> = {
@@ -173,7 +177,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
 
         // Functional Response Logic
         setTimeout(() => {
-            let response = "";
+            let response: string | null = null;
 
             if (text === "Transfer Budget Inquiry") {
                 const balance = treasury?.balance || 0;
@@ -188,7 +192,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     }]);
                     setIsTyping(false);
                 }, 1500);
-                response = null as unknown as string;
+                response = null;
             } else if (text === "Balance Sheet Review") {
                 const txCount = treasury?.transactions?.length || 0;
                 setTimeout(() => {
@@ -202,42 +206,50 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     }]);
                     setIsTyping(false);
                 }, 1500);
-                response = null as unknown as string;
+                response = null;
             } else if (text.includes("Renegotiate") && text.includes("Contract")) {
                 const playerName = text.replace("Renegotiate ", "").replace("'s Contract", "");
                 setNegotiatingPlayer(playerName);
-                const contract = PLAYER_CONTRACTS[playerName];
-                if (contract) {
-                    setNegotiatingWage(contract.wage);
-                    const urgency = contract.weeksRemaining <= 6 ? '🔴 URGENT' : contract.weeksRemaining <= 12 ? '🟡 SOON' : '🟢 STABLE';
-                    const recommendation = contract.weeksRemaining <= 6
-                        ? `I strongly recommend we act now — we risk losing him on a free if we wait.`
-                        : contract.weeksRemaining <= 12
-                        ? `We have a window, but rival clubs are circling. Better to move soon.`
-                        : `No immediate pressure, but locking him in now avoids future inflation.`;
-                    setTimeout(() => {
-                        setChatHistory(prev => [...prev, {
-                            sender: selectedStaff?.name || 'The Agent',
-                            text: `Right, let me pull up ${playerName}'s file.\n\n📋 Current Wage: ${contract.wage.toLocaleString()} credits/wk\n⏳ Contract Status: ${urgency} — ${contract.weeksRemaining} weeks remaining of ${contract.totalWeeks}\n📊 Position: ${contract.position}\n🏅 Reputation Tier: ${contract.reputationTier}\n💰 Market Valuation: ${contract.marketValuation.toLocaleString()} credits\n\n${recommendation}\n\nShall I open the negotiation table, Boss?`,
-                            actions: [
-                                { label: '✅ Open Negotiations', onClick: () => setIsNegotiationOpen(true) },
-                                { label: '❌ Leave it for now', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Agent', text: `Understood, Boss. I'll keep monitoring the situation. Come back to me when you're ready.` }]) }
-                            ]
-                        }]);
-                        setIsTyping(false);
-                    }, 1500);
-                    response = null as unknown as string;
-                } else {
-                    response = `I'll pull up the contract details for ${playerName} now, Boss.`;
-                    setTimeout(() => setIsNegotiationOpen(true), 1500);
-                }
+                // Find live member data — fall back to sensible defaults if not yet loaded
+                const liveMember = members?.find(m => m.name.split(' ')[0] === playerName);
+                const liveLevel = liveMember?.stats?.level ?? 5;
+                const liveMatches = liveMember?.stats?.matches ?? 0;
+                // Derive contract fields from live data where possible
+                const wage = Math.max(200, liveLevel * 80 + liveMatches * 2);
+                const weeksRemaining = liveMember ? Math.max(2, 48 - liveMatches) : 12;
+                const totalWeeks = 48;
+                const reputationTier = reputationTierLabel(liveLevel * 50);
+                const marketValuation = calcMarketValuation(liveLevel, liveLevel * 50);
+                const position = liveMember?.role === 'captain' ? 'CAP' : 'Player';
+                setNegotiatingWage(wage);
+                const urgency = weeksRemaining <= 6 ? '🔴 URGENT' : weeksRemaining <= 12 ? '🟡 SOON' : '🟢 STABLE';
+                const recommendation = weeksRemaining <= 6
+                    ? `I strongly recommend we act now — we risk losing them on a free if we wait.`
+                    : weeksRemaining <= 12
+                    ? `We have a window, but rival clubs are circling. Better to move soon.`
+                    : `No immediate pressure, but locking them in now avoids future inflation.`;
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'The Agent',
+                        text: `Right, let me pull up ${playerName}'s file.\n\n📋 Current Wage: ${wage.toLocaleString()} credits/wk\n⏳ Contract Status: ${urgency} — ${weeksRemaining} weeks remaining of ${totalWeeks}\n📊 Role: ${position}\n🏅 Reputation Tier: ${reputationTier}\n💰 Market Valuation: ${marketValuation.toLocaleString()} credits\n🎯 Matches Played: ${liveMatches}\n\n${recommendation}\n\nShall I open the negotiation table, Boss?`,
+                        actions: [
+                            { label: '✅ Open Negotiations', onClick: () => setIsNegotiationOpen(true) },
+                            { label: '❌ Leave it for now', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Agent', text: `Understood, Boss. I'll keep monitoring the situation. Come back to me when you're ready.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null;
             } else if (text === "Squad Morale Check") {
                 const avgLevel = members?.length ? Math.round(members.reduce((acc, m) => acc + (m.stats?.level || 0), 0) / members.length) : 5;
                 const moraleStatus = avgLevel >= 7 ? '🟢 HIGH' : avgLevel >= 4 ? '🟡 STEADY' : '🔴 LOW';
+                const memberSummary = members?.length
+                    ? members.slice(0, 4).map(m => `• ${m.name} — Lvl ${m.stats?.level ?? 1} (${m.stats?.matches ?? 0} matches)`).join('\n')
+                    : '• No squad data loaded yet';
                 setTimeout(() => {
                     setChatHistory(prev => [...prev, {
                         sender: selectedStaff?.name || 'Coach Kite',
-                        text: `Right, let me pull the morale data.\n\n🧠 Squad Avg Level: ${avgLevel}\n📊 Morale Status: ${moraleStatus}\n💬 Dressing Room Vibe: ${avgLevel >= 7 ? 'Buzzing — the last win has them fired up.' : avgLevel >= 4 ? 'Steady. No major issues but they need a spark.' : 'Fragile. A poor result could cause real problems.'}\n\n${avgLevel < 4 ? 'I recommend a light session and a team talk before the next fixture.' : 'No immediate action needed, but keep an eye on rotation fatigue.'}\n\nWant me to schedule a morale-boosting training session, Boss?`,
+                        text: `Right, let me pull the morale data.\n\n🧠 Squad Avg Level: ${avgLevel}\n📊 Morale Status: ${moraleStatus}\n\n${memberSummary}\n\n💬 Dressing Room Vibe: ${avgLevel >= 7 ? 'Buzzing — the last win has them fired up.' : avgLevel >= 4 ? 'Steady. No major issues but they need a spark.' : 'Fragile. A poor result could cause real problems.'}\n\n${avgLevel < 4 ? 'I recommend a light session and a team talk before the next fixture.' : 'No immediate action needed, but keep an eye on rotation fatigue.'}\n\nWant me to schedule a morale-boosting training session, Boss?`,
                         actions: [
                             { label: '✅ Schedule Session', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Done. I've blocked out Thursday morning for a light tactical session with a team bonding element. The lads will appreciate it.` }]) },
                             { label: '❌ Leave it for now', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Understood. I'll keep monitoring. Come back to me if the numbers dip further.` }]) }
@@ -245,7 +257,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     }]);
                     setIsTyping(false);
                 }, 1500);
-                response = null as unknown as string;
+                response = null;
             } else if (text === "Tactical Briefing") {
                 const formation = tactics?.formation || '4-4-2';
                 const setup = TACTICAL_SETUPS[formation] || TACTICAL_SETUPS['4-4-2'];
@@ -260,7 +272,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     }]);
                     setIsTyping(false);
                 }, 1500);
-                response = null as unknown as string;
+                response = null;
             } else if (text === "Training Optimization") {
                 setTimeout(() => {
                     setChatHistory(prev => [...prev, {
@@ -273,7 +285,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     }]);
                     setIsTyping(false);
                 }, 1500);
-                response = null as unknown as string;
+                response = null;
             } else if (text === "Hackney Academy Report" || text === "Search for Midfielders") {
                 const prospect = SCOUTING_PROSPECTS[text];
                 if (prospect) {
@@ -304,13 +316,25 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     }]);
                     setIsTyping(false);
                 }, 1500);
-                response = null as unknown as string;
+                response = null;
             } else if (text === "Fitness Status Report") {
-                const injuredPlayers = Object.entries(SQUAD_FITNESS).filter(([, v]) => v.riskLevel !== 'Low');
+                // Use live member data to build fitness lines; fall back to static data if no members loaded
+                const fitnessLines = members?.length
+                    ? members.map(m => {
+                        const lvl = m.stats?.level ?? 1;
+                        const matches = m.stats?.matches ?? 0;
+                        const risk = matches > 30 ? '🔴 High' : matches > 15 ? '🟡 Medium' : '🟢 Low';
+                        const recovery = matches > 30 ? ' (rest recommended)' : '';
+                        return `${risk} ${m.name} — Lvl ${lvl}${recovery}`;
+                    })
+                    : ['🟢 Low Marcus — Fit', '🟡 Medium Jamie — Monitoring', '🔴 High Sarah — Injured (10 days)'];
+                const atRisk = members?.length
+                    ? members.filter(m => (m.stats?.matches ?? 0) > 15).length
+                    : 1;
                 setTimeout(() => {
                     setChatHistory(prev => [...prev, {
                         sender: selectedStaff?.name || 'The Physio',
-                        text: `I've run the full biometric sweep, Boss. Here's the picture.\n\n${Object.entries(SQUAD_FITNESS).map(([name, data]) => `${data.status} ${name} — ${data.riskLevel} risk${data.recoveryDays > 0 ? ` (${data.recoveryDays} days recovery)` : ''}`).join('\n')}\n\n${injuredPlayers.length > 0 ? `⚠️ ${injuredPlayers.length} player(s) need attention before the next fixture.` : '✅ Squad is in excellent shape.'}\n\nShall I update the match selection availability list accordingly?`,
+                        text: `I've run the full biometric sweep, Boss. Here's the picture.\n\n${fitnessLines.join('\n')}\n\n${atRisk > 0 ? `⚠️ ${atRisk} player(s) need attention before the next fixture.` : '✅ Squad is in excellent shape.'}\n\nShall I update the match selection availability list accordingly?`,
                         actions: [
                             { label: '✅ Update Availability', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Availability list updated. Sarah is flagged as unavailable for the next two fixtures. Jamie is listed as a game-time decision. All others are cleared.` }]) },
                             { label: '❌ I\'ll Handle It', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Understood. The data is here whenever you need it. I'll flag anything urgent immediately.` }]) }
@@ -318,7 +342,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     }]);
                     setIsTyping(false);
                 }, 1500);
-                response = null as unknown as string;
+                response = null;
             } else if (text === "Recovery Logistics") {
                 setTimeout(() => {
                     setChatHistory(prev => [...prev, {
@@ -331,7 +355,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     }]);
                     setIsTyping(false);
                 }, 1500);
-                response = null as unknown as string;
+                response = null;
             } else if (text === "Injury Prevention") {
                 setTimeout(() => {
                     setChatHistory(prev => [...prev, {
@@ -344,7 +368,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     }]);
                     setIsTyping(false);
                 }, 1500);
-                response = null as unknown as string;
+                response = null;
             } else if (text === "Sponsorship Opportunity" || text === "Brand Reputation") {
                 const deal = SPONSORSHIP_DEALS[text];
                 if (deal) {
@@ -375,7 +399,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     }]);
                     setIsTyping(false);
                 }, 1500);
-                response = null as unknown as string;
+                response = null;
             } else {
                 response = getStaffResponse(selectedStaff?.id || '', text);
             }
@@ -394,7 +418,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4"
         >
-            <Card className="w-full max-w-6xl h-[85vh] bg-gray-900 border-gray-800 overflow-hidden flex flex-col md:flex-row shadow-2xl relative">
+            <Card className="w-full max-w-6xl h-[90vh] md:h-[85vh] bg-gray-900 border-gray-800 overflow-hidden flex flex-col md:flex-row shadow-2xl relative">
                 <button
                     onClick={onClose}
                     className="absolute top-4 right-4 z-20 p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400"
@@ -403,7 +427,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                 </button>
 
                 {/* Left Sidebar: Staff Selection */}
-                <div className="w-full md:w-72 bg-black/40 border-r border-white/5 flex flex-col">
+                <div className="w-full md:w-72 bg-black/40 border-r border-white/5 flex flex-col shrink-0 max-h-48 md:max-h-full overflow-hidden">
                     <div className="p-6 border-b border-white/5">
                         <div className="flex items-center space-x-2 text-blue-400 mb-1">
                             <Coffee className="w-4 h-4" />
@@ -411,12 +435,12 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                         </div>
                         <h2 className="text-xl font-black text-white italic uppercase tracking-tighter">Office</h2>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                    <div className="flex md:flex-col flex-row overflow-x-auto md:overflow-y-auto p-4 gap-2 md:space-y-2">
                         {STAFF_MEMBERS.map(member => (
                             <button
                                 key={member.id}
                                 onClick={() => setSelectedStaff(member)}
-                                className={`w-full p-4 rounded-xl flex items-center space-x-4 transition-all ${selectedStaff?.id === member.id
+                                className={`shrink-0 md:w-full p-3 md:p-4 rounded-xl flex items-center space-x-3 md:space-x-4 transition-all ${selectedStaff?.id === member.id
                                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
                                     : 'text-gray-200 hover:bg-white/5'
                                     }`}
@@ -529,7 +553,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
 
                     {/* Quick Actions & Input */}
                     <div className="p-6 border-t border-white/5 bg-black/20">
-                        <div className="flex flex-wrap gap-2 mb-4">
+                        <div className="flex flex-wrap gap-2 mb-4 overflow-x-auto pb-1">
                             {getQuickActions(selectedStaff?.id || '').map((action, i) => (
                                 <Button
                                     key={i}
