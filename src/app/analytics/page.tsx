@@ -7,8 +7,9 @@ import { Target, BarChart3, TrendingUp, TrendingDown, Minus, Star } from "lucide
 import { trpc } from "@/lib/trpc-client";
 import { useWallet } from "@/contexts/WalletContext";
 import { usePlayerAttributes } from "@/hooks/player/usePlayerAttributes";
+import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
 
-export default function AnalyticsPage() {
+function AnalyticsPageInner() {
   const { address } = useWallet();
   const { attributes, loading: loadingAttrs } = usePlayerAttributes();
   const { data: form, isLoading: loadingForm } = trpc.player.getForm.useQuery(
@@ -142,5 +143,13 @@ export default function AnalyticsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function AnalyticsPage() {
+  return (
+    <TrpcErrorBoundary>
+      <AnalyticsPageInner />
+    </TrpcErrorBoundary>
   );
 }

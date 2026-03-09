@@ -7,8 +7,9 @@ import { Card } from "@/components/ui/Card";
 import { Target, History, CheckCircle, Clock } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { useMySquads } from "@/hooks/squad/useSquad";
+import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
 
-export default function ReputationPage() {
+function ReputationPageInner() {
   const { memberships } = useMySquads();
   const primarySquadId = memberships?.[0]?.squad?.id;
 
@@ -100,5 +101,13 @@ export default function ReputationPage() {
         )}
       </Card>
     </div>
+  );
+}
+
+export default function ReputationPage() {
+  return (
+    <TrpcErrorBoundary>
+      <ReputationPageInner />
+    </TrpcErrorBoundary>
   );
 }
