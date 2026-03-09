@@ -66,12 +66,12 @@
 - [x] Match fees → treasury (database)
 - [x] Facility upgrades (database)
 - [x] Transfer market (Live via Draft Engine)
-- [x] Staff Room / Office (Interactive Command Center)
+- [x] Staff Room / Office (Agentic dialog-first backroom, live data, mobile responsive)
 - [ ] Kit customization
 
 **Deliverables:** ✅ Core 3-Chain structure is live. AI agents are registered with passports, the economic settlement contracts are deployed, and the interactive Staff Office is functional.
 
-**Status:** 🟢 **95% Complete** - Multi-chain infrastructure + Agentic economic settlement active. Transfer Market and Staff Office are functional. Finalizing frontend Unified Wallet connection.
+**Status:** 🟢 **97% Complete** - Multi-chain infrastructure + Agentic economic settlement active. Transfer Market and Staff Office are fully agentic with live data. Finalizing frontend Unified Wallet connection.
 
 ---
 
@@ -105,6 +105,17 @@
 ---
 
 ## Recent Progress
+
+### March 2026 - Agentic Staff Room Sprint ✅
+- **Dialog-First UX:** All five staff members (Agent, Scout, Coach Kite, Physio, Commercial Lead) now present a full dossier before any action is committed — inline ✅/❌ buttons gate every modal
+- **Per-Staff Chat Persistence:** Each staff member retains their own conversation history across the session
+- **Consumed Action Buttons:** Inline confirm/cancel buttons disable after first click — no double-firing
+- **Live Data Wiring:** Contract dossiers, morale checks, and fitness reports now derive from real `useSquadDetails` tRPC data; static mock maps removed
+- **TypeScript Strict-Mode Pass:** `response` typed as `string | null`; all `null as unknown as string` casts removed
+- **Mobile Responsive Audit:** Staff sidebar scrolls horizontally on mobile; Contract modal anchors as bottom sheet with touch-friendly controls
+- **Squad Creation Gate:** New connected users without a squad see a 3-step creation wizard before the dashboard
+- **Favicon:** ⚽ soccer ball emoji favicon added via inline SVG data URI
+- **Contrast Improvements:** All Staff Room text upgraded to readable contrast levels on dark backgrounds
 
 ### March 2026 - Governance & Training Expansion ✅
 - **Squad DAO:** Implemented democratic voting for match challenges and squad decisions
