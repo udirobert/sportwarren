@@ -107,25 +107,6 @@ export default function SquadPage() {
         </Card>
       )}
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="text-center">
-          <div className="text-2xl font-bold text-gray-900">{activeSquad?._count.members ?? 16}</div>
-          <div className="text-sm text-gray-600">Players</div>
-        </Card>
-        <Card className="text-center">
-          <div className="text-2xl font-bold text-green-600">{squadBalance.toLocaleString()}</div>
-          <div className="text-sm text-gray-600">{squadCurrency} Balance</div>
-        </Card>
-        <Card className="text-center">
-          <div className="text-2xl font-bold text-blue-600">4-3-3</div>
-          <div className="text-sm text-gray-600">Formation</div>
-        </Card>
-        <Card className="text-center">
-          <div className="text-2xl font-bold text-purple-600">{activeOffers}</div>
-          <div className="text-sm text-gray-600">Active Offers</div>
-        </Card>
-      </div>
 
       {/* First-visit hint — shown until the user has opened the office/staff room */}
       {!squadChecklistDone && (
@@ -172,6 +153,26 @@ export default function SquadPage() {
       {/* Tab Content */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          {/* Quick Stats — moved here so tab bar is near the top on mobile */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Card className="text-center py-3">
+              <div className="text-2xl font-bold text-gray-900">{activeSquad?._count.members ?? 16}</div>
+              <div className="text-sm text-gray-600">Players</div>
+            </Card>
+            <Card className="text-center py-3">
+              <div className="text-2xl font-bold text-green-600">{squadBalance.toLocaleString()}</div>
+              <div className="text-sm text-gray-600">{squadCurrency} Balance</div>
+            </Card>
+            <Card className="text-center py-3">
+              <div className="text-2xl font-bold text-blue-600">4-3-3</div>
+              <div className="text-sm text-gray-600">Formation</div>
+            </Card>
+            <Card className="text-center py-3">
+              <div className="text-2xl font-bold text-purple-600">{activeOffers}</div>
+              <div className="text-sm text-gray-600">Active Offers</div>
+            </Card>
+          </div>
+
           <PendingActionsPanel squadId={activeSquadId} variant="compact" />
 
           <Card>

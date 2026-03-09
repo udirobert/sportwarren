@@ -548,19 +548,27 @@ export const AdaptiveDashboard: React.FC = () => {
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{title}</h2>
                 {href && (
-                  <Link href={href} className="flex items-center gap-0.5 text-[10px] font-bold text-green-600 uppercase tracking-widest">
+                  <Link href={href} className="flex items-center gap-0.5 text-[10px] font-bold text-green-600 uppercase tracking-widest min-h-[44px] md:min-h-0">
                     See all <ChevronRight className="w-3 h-3" />
                   </Link>
                 )}
               </div>
-              {/* Mobile: horizontal snap scroll */}
+              {/* Mobile: horizontal snap scroll — capped at 3 cards */}
               <div className="md:hidden -mx-3 px-3">
                 <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
-                  {widgets.map(w => (
+                  {widgets.slice(0, 3).map(w => (
                     <div key={w.id} id={w.id} className="snap-start shrink-0 w-[85vw] max-w-sm">
                       {w.component}
                     </div>
                   ))}
+                  {widgets.length > 3 && href && (
+                    <div className="snap-start shrink-0 w-[60vw] max-w-xs flex items-center justify-center">
+                      <Link href={href} className="flex flex-col items-center gap-2 text-green-600 font-bold text-sm min-h-[44px] justify-center">
+                        <ChevronRight className="w-6 h-6" />
+                        <span>See all</span>
+                      </Link>
+                    </div>
+                  )}
                 </div>
               </div>
               {/* Desktop: vertical stack */}
