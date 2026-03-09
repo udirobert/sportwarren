@@ -2,7 +2,7 @@
 
 **Instant Off-Chain Payments for SportWarren's Economic Layer**
 
-**Last Updated:** March 2026 | **Status:** Proposed
+**Last Updated:** March 2026 | **Status:** Implemented in-app, pending production env + migration rollout
 
 ---
 
@@ -28,6 +28,21 @@ Yellow SDK (`@erc7824/nitrolite`) provides state channel infrastructure for inst
 - **Chainlink CRE** — Oracle-based match verification
 
 Yellow handles **value transfer only** — the payment rail beneath the existing game logic.
+
+## Current Implementation Status
+
+### Shipped on `main`
+
+- **Treasury:** live Yellow-authenticated treasury deposits and withdrawals are wired through the existing tRPC endpoints and ledger model.
+- **Transfer Escrow:** transfer offers can create shared Yellow sessions across squad leaders, then close those sessions on cancel / accept / reject when both parties are discoverable.
+- **Match Fees:** match submission can lock Yellow fees; post-consensus verification can close the session and persist payouts exactly once.
+- **Data Model:** Prisma now stores `yellowSessionId` on treasury and transfer records, `yellowFeeSessionId` on matches, and `yellowFeeSettledAt` as an idempotent settlement marker.
+
+### Still Required in Production
+
+- Run the latest Prisma migration in every deployed environment.
+- Set all Yellow env vars, especially `NEXT_PUBLIC_YELLOW_PLATFORM_WALLET`, before expecting live match-fee payouts.
+- Ensure both participating squad leaders have discoverable EVM wallet addresses, otherwise the app intentionally falls back to the existing simulated/server settlement path.
 
 ---
 
@@ -75,7 +90,7 @@ Yellow handles **value transfer only** — the payment rail beneath the existing
 
 ### Current State
 
-Treasury is fully database-driven (`squad_treasury` + `treasury_transactions`). The `balance` field is a number, deposits/withdrawals are tRPC mutations that update PostgreSQL. No real funds move.
+Treasury is no longer DB-only on `main`. `squad_treasury` and `treasury_transactions` remain the audit source of truth, but deposits and withdrawals now accept real Yellow settlement refs from the browser whenever an authenticated Yellow session exists.
 
 **Files involved:**
 - `src/hooks/squad/useTreasury.ts` — Frontend hook
@@ -84,7 +99,7 @@ Treasury is fully database-driven (`squad_treasury` + `treasury_transactions`). 
 
 ### Yellow Integration
 
-Each squad gets a persistent Yellow application session. Squad members deposit USDC into the session; the captain (or quorum of members) authorizes withdrawals.
+Each squad now reuses a persistent Yellow application session. The browser hook resumes or creates that session, submits the next state during deposit or withdrawal, and the existing tRPC mutation persists the settlement reference into PostgreSQL.
 
 ```typescript
 import { Client, createAppSessionMessage, createCloseAppSessionMessage } from '@erc7824/nitrolite';
@@ -174,7 +189,7 @@ export function useTreasury(squadId?: string) {
 
 ### Current State
 
-Transfer offers (`transfer_offers` table) track amount, status, and type but no funds are locked or transferred. Accepting a transfer is a database status change.
+Transfer offers are no longer just DB rows. Offer creation can open a real shared Yellow escrow session; the DB record still remains the source of truth for lifecycle and audit.
 
 **Files involved:**
 - `src/hooks/squad/useTransfers.ts` — Frontend hook
@@ -183,7 +198,7 @@ Transfer offers (`transfer_offers` table) track amount, status, and type but no 
 
 ### Yellow Integration
 
-Each transfer creates a 2-party Yellow escrow session between the buying and selling squads. Funds are locked on offer creation and released on acceptance (or returned on rejection/expiry).
+Each transfer now attempts to create a shared Yellow session across squad leaders from the buying and selling squads. Funds are locked on offer creation, then the same session can be closed on seller accept/reject or buyer cancellation when the counterparty wallets are available.
 
 ```typescript
 // Transfer escrow session
@@ -212,11 +227,11 @@ const allocations = [
    → DB: transfer_offers.status = 'pending'
 
 2. Seller accepts
-   → Yellow: Update allocations (funds → seller), close session
+   → Yellow: Close shared session with seller payout allocations
    → DB: transfer_offers.status = 'accepted', move player
 
 3. Seller rejects (or offer expires)
-   → Yellow: Close session with original allocations (funds → buyer)
+   → Yellow: Close session with refund allocations (funds → buyer)
    → DB: transfer_offers.status = 'rejected'
 ```
 
@@ -287,6 +302,19 @@ respondToTransferOffer: protectedProcedure
 ## Integration 3: Match Fee Collection
 
 ### Current State
+
+Match fee locking and settlement are now wired into the existing verification flow. Match submission can create a shared Yellow fee session, and verification consensus can later close that session and persist payouts exactly once.
+
+### Yellow Integration
+
+- Match submit: lock fee amounts into a shared session across home leader, away leader, and optional platform wallet.
+- Match verify/dispute: once consensus flips the match into `verified` or `disputed`, the client closes the Yellow session and calls `match.settleFeeSession`.
+- Server closeout: payout ledger entries are recorded only once, guarded by `matches.yellow_fee_settled_at`.
+
+### Current Runtime Boundary
+
+- `NEXT_PUBLIC_YELLOW_PLATFORM_WALLET` must be configured for the platform fee split to be represented in the session.
+- Without both squad leader wallets, the live match fee path is skipped and the existing fallback path remains in place.
 
 Match fees are logged as `treasury_transactions` with `category: 'match_fee'` but no actual payment occurs. The `amount` is credited to the squad treasury balance in PostgreSQL.
 
@@ -412,6 +440,7 @@ model treasury_transactions {
 model matches {
   // ... existing fields
   yellowFeeSessionId  String?  // Yellow match fee session reference
+  yellowFeeSettledAt  DateTime? // idempotent payout guard
 }
 ```
 
@@ -420,6 +449,7 @@ model matches {
 ```sql
 ALTER TABLE transfer_offers ADD COLUMN yellow_session_id TEXT;
 ALTER TABLE matches ADD COLUMN yellow_fee_session_id TEXT;
+ALTER TABLE matches ADD COLUMN yellow_fee_settled_at TIMESTAMP;
 ```
 
 ---
@@ -430,7 +460,7 @@ ALTER TABLE matches ADD COLUMN yellow_fee_session_id TEXT;
 # Yellow SDK
 YELLOW_CLEARNODE_URL=wss://clearnet-sandbox.yellow.com/ws   # sandbox
 # YELLOW_CLEARNODE_URL=wss://clearnet.yellow.com/ws         # production
-YELLOW_PLATFORM_ADDRESS=0x...                                # platform fee recipient
+NEXT_PUBLIC_YELLOW_PLATFORM_WALLET=0x...                    # platform fee recipient in shared fee sessions
 YELLOW_PLATFORM_PRIVATE_KEY=                                 # platform signer (server-side only)
 NEXT_PUBLIC_YELLOW_ENABLED=true
 ```
@@ -457,45 +487,45 @@ Yellow settles on any of these EVM chains (user deposits on one, withdraws on an
 
 ## Implementation Phases
 
-### Phase 1: Foundation (1 week)
+### Phase 1: Foundation (completed)
 
-- [ ] Install `@erc7824/nitrolite`
-- [ ] Create `server/services/blockchain/yellow.ts` service module
-- [ ] Register for Yellow App ID at https://yellowdeveloper.com
-- [ ] Connect to sandbox ClearNode (`wss://clearnet-sandbox.yellow.com/ws`)
-- [ ] Add `useYellowSession` React hook for wallet authentication
-- [ ] Verify end-to-end with sandbox test tokens (`ytest.usd`)
+- [x] Install `@erc7824/nitrolite`
+- [x] Create `server/services/blockchain/yellow.ts` service module
+- [x] Register/configure Yellow App ID and ClearNode connectivity
+- [x] Connect browser auth to ClearNode via `useYellowSession`
+- [x] Verify local end-to-end build path with sandbox-compatible config
 
-### Phase 2: Squad Treasury (1 week)
+### Phase 2: Squad Treasury (completed)
 
-- [ ] Wire `depositToTreasury` tRPC endpoint to Yellow session
-- [ ] Wire `withdrawFromTreasury` with captain quorum signing
-- [ ] Dual-write: Yellow state channel + PostgreSQL audit trail
-- [ ] Treasury UI shows real USDC balance alongside DB balance
-- [ ] Test with 2-member squad (captain + vice-captain)
+- [x] Wire `depositToTreasury` to accept real Yellow settlements
+- [x] Wire `withdrawFromTreasury` to accept real Yellow settlements
+- [x] Keep dual-write audit model: Yellow state channel + PostgreSQL ledger
+- [x] Treasury UI surfaces Yellow rail status alongside DB balance
+- [ ] Exercise treasury flow with two real squad leaders against live ClearNode
 
-### Phase 3: Transfer Escrow (1 week)
+### Phase 3: Transfer Escrow (implemented, needs live counterpart testing)
 
-- [ ] Add `yellowSessionId` field to `transfer_offers` model
-- [ ] Create escrow session on `createTransferOffer`
-- [ ] Release/refund on `respondToTransferOffer`
-- [ ] Handle offer expiry (auto-refund via session timeout)
-- [ ] Test full transfer lifecycle: offer → accept/reject → settlement
+- [x] Add `yellowSessionId` field to `transfer_offers` model
+- [x] Create escrow session on `createTransferOffer`
+- [x] Release/refund on `respondToTransferOffer`
+- [x] Handle offer expiry and cancellation refund paths
+- [ ] Test full transfer lifecycle with two real squad-leader wallets
 
-### Phase 4: Match Fees (1 week)
+### Phase 4: Match Fees (implemented, needs production rollout)
 
-- [ ] Add `yellowFeeSessionId` to `matches` model
-- [ ] Create fee session on match submission
-- [ ] Distribute fees on match verification (win/draw/dispute)
-- [ ] Wire into existing CRE verification flow
-- [ ] Test with sandbox match: submit → verify → payout
+- [x] Add `yellowFeeSessionId` to `matches` model
+- [x] Add `yellowFeeSettledAt` idempotency guard
+- [x] Create fee session on match submission
+- [x] Distribute fees after match verification consensus
+- [x] Wire settlement into the existing CRE verification flow
+- [ ] Test sandbox/live match fee closeout with platform wallet configured
 
-### Phase 5: Production (1 week)
+### Phase 5: Production Rollout (remaining)
 
-- [ ] Switch to production ClearNode (`wss://clearnet.yellow.com/ws`)
-- [ ] Switch asset from `ytest.usd` to `usdc`
-- [ ] Configure platform fee address
-- [ ] Add error handling and retry logic for WebSocket disconnections
+- [ ] Run `prisma migrate deploy` everywhere
+- [ ] Switch to production ClearNode (`wss://clearnet.yellow.com/ws`) where applicable
+- [ ] Configure `NEXT_PUBLIC_YELLOW_PLATFORM_WALLET`
+- [ ] Add stronger retry/reconnect handling around WebSocket/session recovery
 - [ ] Monitor first 100 real transactions
 
 ---
