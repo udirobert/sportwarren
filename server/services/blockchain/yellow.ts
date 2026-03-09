@@ -10,6 +10,7 @@ export interface YellowRailStatus {
   assetSymbol: string;
   clearnodeUrl: string;
   matchFeeAmount: number;
+  appId?: string;
 }
 
 function readBooleanEnv(value: string | undefined, fallback = false) {
@@ -42,11 +43,17 @@ class YellowService {
 
     return {
       enabled,
-      mode: enabled ? 'simulated' : 'disabled',
+      mode:
+        enabled && process.env.YELLOW_APP_ID
+          ? 'nitrolite'
+          : enabled
+            ? 'simulated'
+            : 'disabled',
       assetSymbol: process.env.YELLOW_ASSET_SYMBOL ?? process.env.NEXT_PUBLIC_YELLOW_ASSET_SYMBOL ?? 'USDC',
       clearnodeUrl:
         process.env.YELLOW_CLEARNODE_URL ?? 'wss://clearnet-sandbox.yellow.com/ws',
       matchFeeAmount: readNumberEnv(process.env.YELLOW_MATCH_FEE_AMOUNT, 1),
+      appId: process.env.YELLOW_APP_ID,
     };
   }
 

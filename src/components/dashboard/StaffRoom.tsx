@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { trpc } from '@/lib/trpc-client';
 import { useSquadDetails } from '@/hooks/squad/useSquad';
 import { useAgentAlerts } from '@/hooks/squad/useAgentAlerts';
+import { useAgentContext } from '@/context/AgentContext';
 import { ContractNegotiationModal } from './ContractNegotiationModal';
 
 // Derive reputation tier from reputation score
