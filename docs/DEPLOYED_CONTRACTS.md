@@ -1,77 +1,75 @@
 # Deployed Smart Contracts
 
 **Last Updated:** March 9, 2026  
-**Status:** Active on Testnets
+**Status:** ✅ Active on Testnets (Algorand + Avalanche Fuji)  
+**Governance:** ✅ Initialized & Decentralized
 
 ---
 
 ## 🟦 Algorand Testnet ✅
 
-### Match Verification Contract
+### Deployed Contracts
 
-| Property | Value |
-|----------|-------|
-| **App ID** | `756630713` |
-| **Creator** | `CO5MCLTB6IKXIKIEY3AYWUTLD4XHQYTGK3KPSCXEIFJX4PJETAT4GTPWHQ` |
-| **Created At Round** | 61,138,878 |
-| **Status** | ✅ Active (Not Deleted) |
-| **Network** | Algorand TestNet |
+| Contract | App ID | Explorer |
+|----------|--------|----------|
+| **MatchVerification** | `756828208` | [AlgoScan](https://testnet.algoscan.app/app/756828208) |
+| **ReputationSystem** | `756828211` | [AlgoScan](https://testnet.algoscan.app/app/756828211) |
+| **SquadDAO** | `756828561` | [AlgoScan](https://testnet.algoscan.app/app/756828561) |
+| **GlobalChallenges** | `756828229` | [AlgoScan](https://testnet.algoscan.app/app/756828229) |
 
-### State Schema
+**Creator:** `CO5MCLTB6IKXIKIEY3AYWUTLD4XHQYTGK3KPSCXEIFJX4PJETAT4GTPWHQ`  
+**Deployed:** March 9, 2026
 
-| Type | Byte Slice | Uint |
-|------|------------|------|
-| **Global** | 8 | 8 |
-| **Local** | 3 | 3 |
+### Contract Details
 
-### Explorer Links
-
-- [AlgoScan](https://testnet.algoscan.app/app/756630713)
-- [Pera Wallet Explorer](https://testnet.explorer.perawallet.app/app/756630713)
-- [AlgoExplorer](https://testnet.algoexplorer.io/application/756630713)
-
-### Usage
-
-This contract handles:
+#### MatchVerification
 - Multi-party match result verification
 - Immutable match statistics storage
-- Reputation tracking for players
-- Dispute resolution mechanisms
+- Chainlink CRE weather + location oracle integration
+
+#### ReputationSystem
+- Player XP and reputation tracking
+- On-chain attribute progression
+- ASA-based reputation tokens
+
+#### SquadDAO
+- Squad-level governance and voting
+- ASA-based membership tokens
+- Proposal creation and execution
+
+#### GlobalChallenges
+- Cross-squad challenge creation and tracking
+- Leaderboard and reward distribution
+- Tournament bracket management
 
 ---
 
-## 🔺 Avalanche Fuji Testnet ⚠️
+## 🔺 Avalanche Fuji Testnet ✅ DEPLOYED
 
-**Status:** Private key not configured in `.env`
+**Deployer Address:** `0x29FA4181620358dA180CAD770dB1696fbA78F1Cd`  
+**Network:** Avalanche Fuji Testnet (Chain ID: 43113)  
+**Deployment Date:** March 9, 2026
 
-### Required Configuration
+### Deployed Contracts
 
-To deploy and verify Avalanche contracts, add to `.env`:
+| Contract | Address | Explorer |
+|----------|---------|----------|
+| **SquadToken** | `0x9ecDe1788E1cE1B40024F0fD9eA87f49a94781dB` | [Snowtrace](https://testnet.snowtrace.io/address/0x9ecDe1788E1cE1B40024F0fD9eA87f49a94781dB) |
+| **SquadTimelock** | `0xb3cF66142882b3eAf197167cA7191654d4Ea5A78` | [Snowtrace](https://testnet.snowtrace.io/address/0xb3cF66142882b3eAf197167cA7191654d4Ea5A78) |
+| **SquadGovernor** | `0x2e98aF1871bF208Ad361202884AB88F904eFf826` | [Snowtrace](https://testnet.snowtrace.io/address/0x2e98aF1871bF208Ad361202884AB88F904eFf826) |
+| **AchievementNFT** | `0xF8ae857B73DF377A4D9387600bA15c0f1e0e15C4` | [Snowtrace](https://testnet.snowtrace.io/address/0xF8ae857B73DF377A4D9387600bA15c0f1e0e15C4) |
+| **AgentEscrow** | `0xc675D1Dd85419C7Af28755830e06b0F54DB196c7` | [Snowtrace](https://testnet.snowtrace.io/address/0xc675D1Dd85419C7Af28755830e06b0F54DB196c7) |
 
-```bash
-AVALANCHE_PRIVATE_KEY=your_fuji_testnet_private_key
-```
+### Governance Status ✅ INITIALIZED
 
-### Expected Contracts
+**Status:** Decentralized (deployer admin revoked)
 
-Once deployed, the following contracts will be available:
-
-| Contract | Purpose | Status |
-|----------|---------|--------|
-| SquadToken | ERC20 governance token | ⏳ Pending deployment |
-| SquadTimelock | Timelock for governance | ⏳ Pending deployment |
-| SquadGovernor | DAO governance logic | ⏳ Pending deployment |
-| AchievementNFT | ERC721 achievement tokens | ⏳ Pending deployment |
-| AgentEscrow | Agent payment escrow | ⏳ Pending deployment |
-
-### Deployment Script
-
-```bash
-cd contracts/avalanche
-npx hardhat run scripts/deploy.ts --network fuji
-```
-
-After deployment, contract addresses will be logged and should be saved to `.env`.
+| Role | Holder | Purpose |
+|------|--------|---------|
+| `TIMELOCK_ADMIN_ROLE` | SquadGovernor | Admin control of timelock |
+| `PROPOSER_ROLE` | SquadGovernor | Create proposals to timelock |
+| `CANCELLER_ROLE` | SquadGovernor | Cancel malicious proposals |
+| `EXECUTOR_ROLE` | Anyone (0x0) | Execute after 48h delay |
 
 ---
 
@@ -96,22 +94,24 @@ Add these to your `.env` file:
 
 ```bash
 # ── Algorand (Deployed) ─────────────────────────────────────
-ALGORAND_MATCH_VERIFICATION_APP_ID=756630713
+ALGORAND_MATCH_VERIFICATION_APP_ID=756828208
+ALGORAND_REPUTATION_SYSTEM_APP_ID=756828211
+ALGORAND_SQUAD_DAO_APP_ID=756828561
+ALGORAND_GLOBAL_CHALLENGES_APP_ID=756828229
 ALGORAND_NETWORK=testnet
 NEXT_PUBLIC_ALGORAND_NODE_URL=https://testnet-api.algonode.cloud
 NEXT_PUBLIC_ALGORAND_INDEXER_URL=https://testnet-idx.algonode.cloud
 
-# ── Avalanche (Pending) ─────────────────────────────────────
+# ── Avalanche (Deployed) ────────────────────────────────────
 AVALANCHE_PRIVATE_KEY=your_private_key_here
 AVALANCHE_NETWORK=fuji
 AVALANCHE_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
 AVALANCHE_CHAIN_ID=43113
-# After deployment, add:
-# AVALANCHE_SQUAD_TOKEN_ADDRESS=0x...
-# AVALANCHE_GOVERNOR_ADDRESS=0x...
-# AVALANCHE_TIMELOCK_ADDRESS=0x...
-# AVALANCHE_ACHIEVEMENT_NFT_ADDRESS=0x...
-# AVALANCHE_AGENT_ESCROW_ADDRESS=0x...
+AVALANCHE_SQUAD_TOKEN_ADDRESS=0x9ecDe1788E1cE1B40024F0fD9eA87f49a94781dB
+AVALANCHE_TIMELOCK_ADDRESS=0xb3cF66142882b3eAf197167cA7191654d4Ea5A78
+AVALANCHE_GOVERNOR_ADDRESS=0x2e98aF1871bF208Ad361202884AB88F904eFf826
+AVALANCHE_ACHIEVEMENT_NFT_ADDRESS=0xF8ae857B73DF377A4D9387600bA15c0f1e0e15C4
+AVALANCHE_AGENT_ESCROW_ADDRESS=0xc675D1Dd85419C7Af28755830e06b0F54DB196c7
 
 # ── Kite AI (Planned) ───────────────────────────────────────
 KITE_API_URL=https://api.gokite.ai
