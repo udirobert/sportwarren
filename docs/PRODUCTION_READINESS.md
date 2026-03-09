@@ -1,7 +1,7 @@
 # SportWarren — Production Readiness Assessment
 
-**Date:** 7 March 2026  
-**Build Status:** ✅ Passing | **Push:** `4a52523` on `main`
+**Date:** 9 March 2026  
+**Build Status:** ✅ Passing | **Push:** `a0b15e5` on `main`
 
 ---
 
@@ -22,12 +22,13 @@ We have a high-fidelity, functional application with a compelling user loop. The
 | **Onboarding Flow** | ✅ | 6-step wizard + persistent checklist |
 | **Draft Engine** | ✅ | Signs to DB, deducts treasury |
 | **Match Engine** | ✅ | Uses real squad data, stat-driven physics |
-| **Staff Room** | ✅ | Live budget, formation, morale data |
+| **Staff Room** | ✅ | Agentic dialog-first flow, live tRPC data, per-staff chat, consumed actions, mobile responsive |
 | **Match Verification** | ✅ | GPS, multi-party consensus, Algorand tx |
 | **Player XP & Attributes** | ✅ | TRPC + Prisma, FIFA-style progression |
 | **Squad DAO & Voting** | ✅ | Democratic challenge proposals |
 | **Territory Control** | ✅ | Real-world pitch dominance |
 | **Lens Social Layer** | ✅ | Profile, highlight sharing on Base |
+| **Squad Creation Gate** | ✅ | 3-step wizard for new connected users with no squad |
 | **Guest Mode** | ✅ | Explore the full app without a wallet |
 | **Training Center** | ✅ | Logging, Sharpness, XP gains |
 
@@ -55,11 +56,20 @@ These **must** be resolved before you can open to the public without risk.
 - Created `.env.production.example` with a comprehensive deployment checklist.
 - Enhanced `/api/health` to perform deep checks on DB connectivity and required env vars.
 
+### 4. Agentic Staff Room — Sprint Items
+**Status: ✅ RESOLVED**
+- Consumed inline action buttons: grey out and disable after first click via `usedActions` Set — no double-firing.
+- Per-staff chat history: each staff member retains their own conversation across the session.
+- Loading and error banners: pulsing loader while tRPC queries are in-flight; red warning banner on treasury query error.
+- Squad creation gate: connected users with no squad see a 3-step creation wizard before the dashboard.
+- TypeScript strict-mode pass: `response` typed as `string | null`; all `null as unknown as string` casts removed.
+- Mobile responsive audit: Staff sidebar scrolls horizontally on small screens; Contract modal anchors as bottom sheet with touch-friendly controls.
+
 ---
 
 ## 🟡 Important — Fix Before Wide Beta
 
-### 4. Guest → Wallet Migration (Data Loss Risk)
+### 5. Guest → Wallet Migration (Data Loss Risk)
 A user drafts 3 players as Guest, then connects their wallet — their progress is lost. Testers will notice this immediately.
 
 ```
@@ -67,14 +77,14 @@ ACTION: Implement guest session migration in WalletContext.tsx
         when a wallet first connects
 ```
 
-### 5. Error Monitoring (Zero Visibility)
+### 6. Error Monitoring (Zero Visibility)
 There is no Sentry or equivalent. When a real user hits an error in production, you'll never know it happened.
 
 ```
 ACTION: Add @sentry/nextjs — 30 min job
 ```
 
-### 6. Real Prospect Data
+### 7. Real Prospect Data
 The draft pool is still `MOCK_AVAILABLE_PLAYERS`. In production the market router returns them as-is. Testers will see the same 5 names every time.
 
 ```

@@ -63,13 +63,18 @@
 ## 4. The Office & Draft Engine ✅
 
 ### Interactive Command Center
-- **Staff Room:** Conversational interface with the Agent, Scout, and Coach.
-- **Functional Advisors:** Staff respond with real-time squad data (Treasury balance, Formation, Morale).
+- **Staff Room:** Full agentic backroom with five staff members — Agent, Scout, Coach Kite, Physio, and Commercial Lead.
+- **Dialog-First Consultation:** Every action triggers a staff dossier/analysis first; inline ✅/❌ confirm buttons gate any modal or commitment — no immediate blind actions.
+- **Per-Staff Chat Persistence:** Each staff member maintains their own conversation history across the session; switching staff preserves all prior exchanges.
+- **Consumed Action Buttons:** Inline confirm/cancel buttons grey out and disable after first click — no double-firing, clear decision record.
+- **Live Squad Data:** Contract dossiers, morale checks, and fitness reports derive from real `useSquadDetails` data (wage from level/matches, reputation tier, market valuation) with graceful fallbacks.
 - **Draft Engine:** Discover and sign local academy prospects to your squad.
 - **Economic Impact:** Signing players deducts from the Squad Treasury and records a transaction.
 - **Match Engine Sync:** Newly signed players are immediately injected into the match simulation.
+- **Squad Creation Gate:** New connected users without a squad are routed through a 3-step creation wizard (name → archetype → confirm) before accessing the dashboard.
+- **Mobile Responsive:** Staff sidebar scrolls horizontally on small screens; Contract modal anchors to bottom sheet on mobile with touch-friendly controls.
 
-**Status:** ✅ Complete (Frontend + Backend + Database + AI Logic)
+**Status:** ✅ Complete (Frontend + Backend + Database + Agentic Dialog Flow + Live Data + Mobile)
 
 ---
 
