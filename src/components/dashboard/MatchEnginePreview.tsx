@@ -50,6 +50,8 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
     const [daoAlert, setDaoAlert] = useState<string | null>(null);
     const [tempo, setTempo] = useState(1);
     const [isFinalizing, setIsFinalizing] = useState(false);
+    const [latestEvent, setLatestEvent] = useState<string>('');
+    const ownerCarryTicks = useRef(0);
 
     const { address, isGuest } = useWallet();
     const env = useEnvironment();
@@ -168,30 +170,31 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                 return createPlayer(
                     m?.id || `h${i}`, m ? m.name.split(' ')[0] : homeNames[i],
                     x, y, 'home', role,
-                    { level, pace: Math.min(99, baseStat + (role === 'ST' || role.endsWith('W') ? 8 : 0)), agility: Math.min(99, baseStat + 2), strength: Math.min(99, baseStat - 5) }
+                    { level, pace: Math.min(99, baseStat + (role === 'ST' || role.endsWith('W') ? 8 : 0)), agility: Math.min(99, baseStat + 2), strength: Math.min(99, baseStat - 5), passing: Math.min(99, baseStat + (role === 'CM' ? 8 : 0)) }
                 );
             });
             const awayPlayers = away433.map(([x, y, role], i) =>
                 createPlayer(`a${i}`, awayNames[i], x, y, 'away', role,
-                    { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20) })
+                    { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20), passing: 65 + Math.floor(Math.random() * 20) })
             );
             setPlayers([...homePlayers, ...awayPlayers]);
         } else if (!membersLoading) {
             const homePlayers = home433.map(([x, y, role], i) =>
                 createPlayer(`h${i}`, homeNames[i], x, y, 'home', role,
-                    { level: 10 + Math.floor(Math.random() * 12), pace: 68 + Math.floor(Math.random() * 24), agility: 65 + Math.floor(Math.random() * 22), strength: 60 + Math.floor(Math.random() * 25) })
+                    { level: 10 + Math.floor(Math.random() * 12), pace: 68 + Math.floor(Math.random() * 24), agility: 65 + Math.floor(Math.random() * 22), strength: 60 + Math.floor(Math.random() * 25), passing: 68 + Math.floor(Math.random() * 22) })
             );
-            const awayPlayers = away433.map(([x, y, role], i) =>
+            const awayPlayers2 = away433.map(([x, y, role], i) =>
                 createPlayer(`a${i}`, awayNames[i], x, y, 'away', role,
-                    { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20) })
+                    { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20), passing: 65 + Math.floor(Math.random() * 20) })
             );
-            setPlayers([...homePlayers, ...awayPlayers]);
+            setPlayers([...homePlayers, ...awayPlayers2]);
         }
     }, [members, membersLoading, env.rivals.away]);
 
     const addCommentary = (text: string, type: MatchCommentary['type'] = 'action') => {
-        const timeStr = `${Math.floor(time / 20)}:00`; // Slower time for more detail
+        const timeStr = `${Math.floor(time / 20)}:00`;
         setCommentary(prev => [{ time: timeStr, text, type }, ...prev].slice(0, 5));
+        setLatestEvent(text);
     };
 
     const triggerDaoCommand = useCallback(() => {
@@ -213,10 +216,33 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
         let nextBallY = ball.y + ball.vy;
         let nextBallVx = ball.vx * friction;
         let nextBallVy = ball.vy * friction;
+        let shotFired = false;
 
-        // Ball boundary bounce
-        if (nextBallX < 2 || nextBallX > 98) nextBallVx *= -0.5;
-        if (nextBallY < 2 || nextBallY > 98) nextBallVy *= -0.5;
+        // Ball boundary bounce (sidelines)
+        if (nextBallX < 2) { nextBallVx = Math.abs(nextBallVx) * 0.5; nextBallX = 2; }
+        if (nextBallX > 98) { nextBallVx = -Math.abs(nextBallVx) * 0.5; nextBallX = 98; }
+        if (nextBallY < 2) { nextBallVy = Math.abs(nextBallVy) * 0.5; nextBallY = 2; }
+        if (nextBallY > 98) { nextBallVy = -Math.abs(nextBallVy) * 0.5; nextBallY = 98; }
+
+        // Goal detection: ball crosses goal line within post range
+        const inGoalMouth = nextBallY > 38 && nextBallY < 62;
+        if (!currentOwnerId && nextBallX <= 2 && inGoalMouth) {
+            const scoringTeam = 'away';
+            addCommentary(`⚽ GOAL! Away team scores!`, 'goal');
+            setScore(s => ({ ...s, [scoringTeam]: s[scoringTeam] + 1 }));
+            nextBallX = 50; nextBallY = 50;
+            nextBallVx = 0.8; nextBallVy = 0;
+            currentOwnerId = null;
+            ownerCarryTicks.current = 0;
+        } else if (!currentOwnerId && nextBallX >= 98 && inGoalMouth) {
+            const scoringTeam = 'home';
+            addCommentary(`⚽ GOAL! Home team scores!`, 'goal');
+            setScore(s => ({ ...s, [scoringTeam]: s[scoringTeam] + 1 }));
+            nextBallX = 50; nextBallY = 50;
+            nextBallVx = -0.8; nextBallVy = 0;
+            currentOwnerId = null;
+            ownerCarryTicks.current = 0;
+        }
 
         // 2. Update Player Steering
         const updatedPlayers = players.map(p => {
@@ -318,19 +344,48 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                 }
             }
 
-            // Scoring Logic
-            if (isOwner && ((p.team === 'home' && p.x > 94) || (p.team === 'away' && p.x < 6))) {
-                if (Math.abs(p.y - 50) < 10 && Math.random() < 0.15) {
-                    const scoringTeam = p.team === 'home' ? 'home' : 'away';
-                    addCommentary(`GOAL! ${p.name} finds the net!`, 'goal');
-                    setScore(s => ({ ...s, [scoringTeam]: s[scoringTeam] + 1 }));
-                    setIsPlaying(false);
+            // Shooting: when attacker is in shooting range, kick ball toward goal
+            if (isOwner && !shotFired) {
+                const inShootingRange = (p.team === 'home' && p.x > 75 && Math.abs(p.y - 50) < 25)
+                    || (p.team === 'away' && p.x < 25 && Math.abs(p.y - 50) < 25);
+                const isForward = ['ST', 'LW', 'RW', 'CM'].includes(p.role);
+                if (inShootingRange && isForward && Math.random() < 0.04) {
+                    const goalX = p.team === 'home' ? 99 : 1;
+                    const goalY = 50 + (Math.random() - 0.5) * 20;
+                    const dx = goalX - p.x;
+                    const dy = goalY - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const power = 3.5 + Math.random() * 1.5;
+                    nextBallVx = (dx / dist) * power;
+                    nextBallVy = (dy / dist) * power;
+                    currentOwnerId = null;
+                    shotFired = true;
+                    addCommentary(`${p.name} shoots!`, 'action');
+                }
+            }
 
-                    // Finalize match after scoring (demo flow)
-                    setTimeout(() => {
-                        finalizeMatch();
-                        setTimeout(reset, 3000);
-                    }, 500);
+            // Passing: ball carrier passes to nearest open teammate after carrying
+            if (isOwner && !shotFired) {
+                ownerCarryTicks.current += 1;
+                const carryLimit = 18 + Math.floor(Math.random() * 12);
+                if (ownerCarryTicks.current > carryLimit) {
+                    const teammates = players.filter(t => t.team === p.team && t.id !== p.id && t.role !== 'GK');
+                    const forwardTeammates = teammates.filter(t =>
+                        p.team === 'home' ? t.x > p.x - 5 : t.x < p.x + 5
+                    );
+                    const targets = forwardTeammates.length > 0 ? forwardTeammates : teammates;
+                    if (targets.length > 0) {
+                        const target = targets[Math.floor(Math.random() * targets.length)];
+                        const dx = target.x - p.x;
+                        const dy = target.y - p.y;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        const passSpeed = 2.2 + (p.stats.passing || 70) / 50;
+                        nextBallVx = (dx / dist) * passSpeed;
+                        nextBallVy = (dy / dist) * passSpeed;
+                        currentOwnerId = null;
+                        ownerCarryTicks.current = 0;
+                        addCommentary(`${p.name} plays it to ${target.name}.`, 'action');
+                    }
                 }
             }
 
@@ -341,8 +396,8 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
             return { ...p, x: nextPx, y: nextPy, vx: nextPvx, vy: nextPvy, history: newHistory };
         });
 
-        // Sync ball to owner
-        if (currentOwnerId) {
+        // Sync ball to owner (only if no shot/pass was fired this tick)
+        if (currentOwnerId && !shotFired) {
             const owner = updatedPlayers.find(p => p.id === currentOwnerId);
             if (owner) {
                 nextBallX = owner.x + (owner.vx * 1.5);
@@ -512,9 +567,30 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                     </motion.div>
                 </div>
 
-                {/* Commentary Box & Reality Feed - Responsive Grid */}
-                <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                    <div className="col-span-2 p-3 bg-black/40 h-32 md:h-28 overflow-hidden rounded-xl border border-white/5 order-1">
+                {/* Live commentary ticker — always visible below pitch */}
+                <div className="mt-2 bg-black/60 border border-white/5 rounded-lg px-3 py-1.5 overflow-hidden h-7 flex items-center">
+                    <AnimatePresence mode="wait">
+                        <motion.span
+                            key={latestEvent}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.3 }}
+                            className={`text-[11px] font-mono truncate ${
+                                latestEvent.includes('GOAL') ? 'text-yellow-400 font-bold' :
+                                latestEvent.includes('DAO') ? 'text-blue-400 font-bold' :
+                                latestEvent.includes('tackle') || latestEvent.includes('shoots') ? 'text-orange-300' :
+                                'text-gray-300'
+                            }`}
+                        >
+                            {latestEvent || 'Match Day Live — kick off!'}
+                        </motion.span>
+                    </AnimatePresence>
+                </div>
+
+                {/* Commentary Log & Reality Feed - Responsive Grid */}
+                <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+                    <div className="col-span-2 p-3 bg-black/40 h-28 overflow-hidden rounded-xl border border-white/5 order-1">
                         <div className="space-y-1.5">
                             {commentary.map((c, i) => (
                                 <motion.div
