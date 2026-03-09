@@ -82,6 +82,11 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                                                 {item.label}
                                             </div>
                                             <div className="text-[10px] text-gray-500 mt-0.5">{item.description}</div>
+                                            {!item.completed && (
+                                                <div className="mt-2 text-[9px] font-black uppercase tracking-[0.18em] text-emerald-300">
+                                                    {item.actionLabel}
+                                                </div>
+                                            )}
                                         </div>
                                         {!item.completed && (
                                             <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0" />

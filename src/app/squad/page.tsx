@@ -10,8 +10,9 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
   Users, Target, ArrowRightLeft, Wallet, 
-  Shield, Vote, Activity
+  Shield, Vote, Activity, Info
 } from "lucide-react";
+import { useOnboarding } from "@/hooks/useOnboarding";
 import { MOCK_SQUAD_PLAYERS } from "@/lib/mocks";
 import { trpc } from "@/lib/trpc-client";
 import { useTreasury } from "@/hooks/squad/useTreasury";
@@ -29,6 +30,9 @@ export default function SquadPage() {
   const activeMembership = memberships?.[0];
   const activeSquad = activeMembership?.squad;
   const activeSquadId = activeSquad?.id;
+
+  const { checklistItems } = useOnboarding();
+  const squadChecklistDone = checklistItems.find(i => i.id === 'open_office')?.completed ?? false;
 
   const treasuryState = useTreasury(activeSquadId);
   const transfersState = useTransfers(activeSquadId);
@@ -96,6 +100,24 @@ export default function SquadPage() {
           <div className="text-sm text-gray-600">Active Offers</div>
         </Card>
       </div>
+
+      {/* First-visit hint — shown until the user has opened the office/staff room */}
+      {!squadChecklistDone && (
+        <Card className="border-blue-200 bg-blue-50/70 py-4">
+          <div className="flex items-start gap-3">
+            <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+            <div className="flex-1">
+              <p className="font-semibold text-blue-900">Set up your squad</p>
+              <p className="mt-1 text-sm text-blue-700">
+                Use the <strong>Tactics</strong> tab to set your formation, <strong>Treasury</strong> to manage finances, and <strong>Transfers</strong> to respond to incoming offers. Head to the Dashboard to open the Staff Office.
+              </p>
+            </div>
+            <Link href="/" className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors">
+              Go to Dashboard
+            </Link>
+          </div>
+        </Card>
+      )}
 
       {/* Navigation Tabs */}
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg overflow-x-auto">

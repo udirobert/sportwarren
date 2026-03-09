@@ -100,6 +100,46 @@ export function usePlayerAttributes(userId?: string): UsePlayerAttributesReturn 
   };
 }
 
+export function useCurrentPlayerAttributes(enabled: boolean = true): UsePlayerAttributesReturn {
+  const {
+    data: profile,
+    isLoading,
+    error,
+    refetch
+  } = trpc.player.getCurrentProfile.useQuery(undefined, {
+    enabled,
+    retry: false,
+    staleTime: 30 * 1000,
+  });
+
+  const attributes = profile ? transformProfile(profile) : null;
+
+  const getAttributeProgress = useCallback((attribute: AttributeType) => {
+    if (!profile) return null;
+
+    const attr = profile.attributes.find((a: any) => a.attribute === attribute);
+    if (!attr) return null;
+
+    return {
+      current: attr.xp,
+      next: attr.xpToNext,
+      percentage: (attr.xp / attr.xpToNext) * 100,
+    };
+  }, [profile]);
+
+  const refreshAttributes = useCallback(async () => {
+    await refetch();
+  }, [refetch]);
+
+  return {
+    attributes,
+    loading: isLoading,
+    error: error?.message || null,
+    refreshAttributes,
+    getAttributeProgress,
+  };
+}
+
 // Hook for player form
 export function usePlayerForm(userId?: string, limit: number = 5) {
   const { data, isLoading, error } = trpc.player.getForm.useQuery(

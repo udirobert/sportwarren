@@ -2,283 +2,242 @@ Command finished with exit code 0.
 Command output:
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import React from 'react';
+import Link from 'next/link';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CheckCircle2, Circle, ChevronRight, Trophy, RotateCcw } from 'lucide-react';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { Card } from '@/components/ui/Card';
 
-export interface OnboardingStep {
-    id: string;
-    title: string;
-    description: string;
-    action: string;    // button label
-    emoji: string;
-    featureKey: string; // matches a dashboard widget ID or action
+interface OnboardingChecklistProps {
+    onStepAction?: (featureKey: string) => void;
 }
 
-export const ONBOARDING_STEPS: OnboardingStep[] = [
-    {
-        id: 'welcome',
-        title: 'Welcome to SportWarren',
-        description: 'Your Sunday League season just went Championship Manager. Real matches. Real stats. On-chain reputation.',
-        action: "Let's Go",
-        emoji: '⚽',
-        featureKey: 'welcome',
-    },
-    {
-        id: 'match-engine',
-        title: 'Watch Your Squad Simulated Live',
-        description: 'The Match Engine simulates your real pitch sessions using actual player stats and reputation tiers. See your squad move.',
-        action: 'Got It',
-        emoji: '🎮',
-        featureKey: 'match-engine',
-    },
-    {
-        id: 'draft-engine',
-        title: 'Scout & Sign Prospects',
-        description: 'Your AI Scout is watching local academies. Use the Draft Engine to find and contract talented players — it connects to your squad treasury.',
-        action: 'Sounds Good',
-        emoji: '🔭',
-        featureKey: 'draft-engine',
-    },
-    {
-        id: 'staff-room',
-        title: 'Meet Your Backroom Staff',
-        description: 'Click "Enter Office" to talk to your Agent, Scout, and Coach. Ask about your budget, tactics, or squad morale — they know your real data.',
-        action: 'Nice',
-        emoji: '🎩',
-        featureKey: 'staff-room',
-    },
-    {
-        id: 'match-verify',
-        title: 'Log Your Real Matches',
-        description: 'After your Sunday game, submit the result. Both teams confirm, Chainlink verifies the location — and your players earn XP on-chain.',
-        action: 'Ready',
-        emoji: '✅',
-        featureKey: 'recent-matches',
-    },
-    {
-        id: 'complete',
-        title: "You're Ready to Play",
-        description: "Build your legend. Every goal, every assist, every win — permanently recorded. This is your football career, on-chain.",
-        action: 'Enter SportWarren',
-        emoji: '🏆',
-        featureKey: 'complete',
-    },
-];
-
-export interface ChecklistItem {
-    id: string;
-    label: string;
-    description: string;
-    completed: boolean;
-    emoji: string;
-}
-
-const STORAGE_KEY = 'sw_onboarding_v2';
-
-interface OnboardingState {
-    wizardDone: boolean;
-    wizardStep: number;
-    checklistItems: Record<string, boolean>;
-}
-
-const DEFAULT_STATE: OnboardingState = {
-    wizardDone: false,
-    wizardStep: 0,
-    checklistItems: {
-        view_match_engine: false,
-        open_office: false,
-        use_draft: false,
-        verify_match: false,
-    },
-};
-
-export function useOnboarding() {
-    const [state, setState] = useState<OnboardingState>(DEFAULT_STATE);
-    const [hydrated, setHydrated] = useState(false);
-
-    useEffect(() => {
-        try {
-            const stored = localStorage.getItem(STORAGE_KEY);
-            if (stored) {
-                setState(JSON.parse(stored));
-            }
-        } catch {
-            // ignore
-        }
-        setHydrated(true);
-    }, []);
-
-    const persist = useCallback((next: OnboardingState) => {
-        setState(next);
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-        } catch { /* ignore */ }
-    }, []);
-
-    const advanceWizard = useCallback(() => {
-        setState(prev => {
-            const next = { ...prev, wizardStep: prev.wizardStep + 1 };
-            if (next.wizardStep >= ONBOARDING_STEPS.length) {
-                next.wizardDone = true;
-            }
-            persist(next);
-            return next;
-        });
-    }, [persist]);
-
-    const completeWizard = useCallback(() => {
-        persist({ ...state, wizardDone: true, wizardStep: ONBOARDING_STEPS.length });
-    }, [state, persist]);
-
-    const completeChecklistItem = useCallback((id: string) => {
-        setState(prev => {
-            const next = {
-                ...prev,
-                checklistItems: { ...prev.checklistItems, [id]: true },
-            };
-            persist(next);
-            return next;
-        });
-    }, [persist]);
-
-    const resetOnboarding = useCallback(() => {
-        persist(DEFAULT_STATE);
-    }, [persist]);
-
-    const checklistItems: ChecklistItem[] = [
-        {
-            id: 'view_match_engine',
-            label: 'Watch your first match simulation',
-            description: 'Hit ▶ Play on the Match Engine',
-            completed: state.checklistItems.view_match_engine ?? false,
-            emoji: '🎮',
-        },
-        {
-            id: 'open_office',
-            label: 'Visit the Staff Room',
-            description: 'Click "Enter Office" and chat to your Agent',
-            completed: state.checklistItems.open_office ?? false,
-            emoji: '🎩',
-        },
-        {
-            id: 'use_draft',
-            label: 'Draft your first prospect',
-            description: 'Use the Draft Engine to scout and sign a player',
-            completed: state.checklistItems.use_draft ?? false,
-            emoji: '📋',
-        },
-        {
-            id: 'verify_match',
-            label: 'Submit a real match result',
-            description: 'Log your Sunday game for XP and on-chain rep',
-            completed: state.checklistItems.verify_match ?? false,
-            emoji: '✅',
-        },
-        {
-            id: 'claim_identity',
-            label: 'Secure your Legacy',
-            description: 'Connect wallet to mint your guest stats to the blockchain',
-            completed: state.wizardDone, // If they did the wizard or connected, they might be done
-            emoji: '⚡',
-        },
-    ];
-
-    const allDone = checklistItems.every(i => i.completed);
-    const completedCount = checklistItems.filter(i => i.completed).length;
-
-    return {
-        hydrated,
-        wizardDone: state.wizardDone,
-        wizardStep: state.wizardStep,
-        currentStep: ONBOARDING_STEPS[state.wizardStep] ?? ONBOARDING_STEPS[ONBOARDING_STEPS.length - 1],
-        steps: ONBOARDING_STEPS,
+export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStepAction }) => {
+    const {
+        allChecklistDone,
         checklistItems,
-        allChecklistDone: allDone,
         completedCount,
-        totalCount: checklistItems.length,
-        advanceWizard,
-        completeWizard,
-        completeChecklistItem,
+        totalCount,
         resetOnboarding,
-    };
+    } = useOnboarding();
+
+    const progress = Math.round((completedCount / totalCount) * 100);
+
+    if (allChecklistDone) return null;
+
+    return (
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, height: 0 }}
+            >
+                <Card className="bg-gradient-to-br from-gray-900 to-black border-gray-800 text-white overflow-hidden relative">
+                    {/* Background decoration */}
+                    <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
+                        <Trophy className="w-40 h-40" />
+                    </div>
+
+                    <div className="relative z-10">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-6">
+                            <div>
+                                <div className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em] mb-1">
+                                    Getting Started
+                                </div>
+                                <h2 className="text-lg font-black uppercase tracking-tight">
+                                    Pre-Season Checklist
+                                </h2>
+                            </div>
+                            <div className="text-right">
+                                <div className="text-2xl font-black text-white">{completedCount}/{totalCount}</div>
+                                <div className="text-[9px] text-gray-500 uppercase font-bold">Complete</div>
+                            </div>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="h-1.5 bg-white/5 rounded-full mb-6 overflow-hidden">
+                            <motion.div
+                                className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full"
+                                initial={{ width: 0 }}
+                                animate={{ width: `${progress}%` }}
+                                transition={{ duration: 0.6, ease: 'easeOut' }}
+                            />
+                        </div>
+
+                        {/* Checklist items */}
+                        <div className="space-y-2">
+                            {checklistItems.map((item, index) => {
+                                const inner = (
+                                    <>
+                                        <div className="flex-shrink-0">
+                                            {item.completed ? (
+                                                <CheckCircle2 className="w-5 h-5 text-green-400" />
+                                            ) : (
+                                                <Circle className="w-5 h-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
+                                            )}
+                                        </div>
+                                        <div className="text-xl flex-shrink-0">{item.emoji}</div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className={`text-sm font-black uppercase tracking-tight leading-tight ${item.completed ? 'text-green-300 line-through decoration-green-500/50' : 'text-white'}`}>
+                                                {item.label}
+                                            </div>
+                                            <div className="text-[10px] text-gray-500 mt-0.5">{item.description}</div>
+                                            {!item.completed && (
+                                                <div className="mt-2 text-[9px] font-black uppercase tracking-[0.18em] text-emerald-300">
+                                                    {item.actionLabel}
+                                                </div>
+                                            )}
+                                        </div>
+                                        {!item.completed && (
+                                            <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                                        )}
+                                    </>
+                                );
+                                const rowClass = `w-full flex items-center space-x-4 p-3 rounded-xl transition-all text-left group ${item.completed
+                                    ? 'bg-green-500/10 border border-green-500/20 cursor-default'
+                                    : 'bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20'
+                                }`;
+                                return (
+                                    <motion.div
+                                        key={item.id}
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.07 }}
+                                    >
+                                        {item.completed ? (
+                                            <div className={rowClass}>{inner}</div>
+                                        ) : (
+                                            <Link
+                                                href={item.href}
+                                                onClick={() => onStepAction?.(item.id)}
+                                                className={rowClass}
+                                            >
+                                                {inner}
+                                            </Link>
+                                        )}
+                                    </motion.div>
+                                );
+                            })}
+                        </div>
+
+                        {/* Footer */}
+                        <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
+                            <p className="text-[10px] text-gray-600 font-mono uppercase">
+                                Progress is saved automatically
+                            </p>
+                            <button
+                                onClick={resetOnboarding}
+                                className="text-[9px] text-gray-700 hover:text-gray-400 flex items-center space-x-1 transition-colors uppercase font-bold"
+                            >
+                                <RotateCcw className="w-2.5 h-2.5" />
+                                <span>Restart Tour</span>
+                            </button>
+                        </div>
+                    </div>
+                </Card>
+            </motion.div>
+        </AnimatePresence>
+    );
+};
+===
+"use client";
+
+import Link from "next/link";
+import { PlayerReputation } from "@/components/player/PlayerReputation";
+import { Button } from "@/components/ui/Button";
+import { Card } from "@/components/ui/Card";
+import { Target, History } from "lucide-react";
+
+export default function ReputationPage() {
+  return (
+    <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+      {/* Contextual nav — connects reputation back to the match journey */}
+      <Card className="border-gray-100 bg-gray-50 py-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <p className="text-sm text-gray-600">
+            Reputation is earned through verified matches. Submit and verify results to grow your score.
+          </p>
+          <div className="flex gap-2 shrink-0">
+            <Link href="/match?mode=history">
+              <Button size="sm" variant="outline" className="flex items-center gap-1.5">
+                <History className="w-3.5 h-3.5" />
+                Match History
+              </Button>
+            </Link>
+            <Link href="/match">
+              <Button size="sm" className="flex items-center gap-1.5">
+                <Target className="w-3.5 h-3.5" />
+                Play a Match
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </Card>
+
+      <PlayerReputation />
+    </div>
+  );
 }
 ===
-import React from 'react';
-import { Card } from '@/components/ui/Card';
-import { StatCard } from '@/components/common/StatCard';
-import { Target, Users, Trophy, Shield, TrendingUp, Award, Star, Zap } from 'lucide-react';
+"use client";
 
-export const PlayerStats: React.FC = () => {
-  const performanceData = [
-    { month: 'Aug', goals: 4, assists: 2, rating: 7.8 },
-    { month: 'Sep', goals: 6, assists: 4, rating: 8.2 },
-    { month: 'Oct', goals: 3, assists: 5, rating: 7.9 },
-    { month: 'Nov', goals: 5, assists: 3, rating: 8.5 },
-    { month: 'Dec', goals: 8, assists: 6, rating: 9.1 },
-    { month: 'Jan', goals: 2, assists: 1, rating: 8.0 },
-  ];
+import React from "react";
+import Link from "next/link";
+import { BarChart3, Target, Trophy, TrendingUp, Shield, Zap, ArrowRight } from "lucide-react";
+import { Card } from "@/components/ui/Card";
+import { useWallet } from "@/contexts/WalletContext";
+import { usePlayerAttributes } from "@/hooks/player/usePlayerAttributes";
 
-  const positionStats = [
-    { position: 'Striker', appearances: 18, rating: 8.4, goals: 15, assists: 4 },
-    { position: 'Right Wing', appearances: 4, rating: 7.8, goals: 2, assists: 5 },
-    { position: 'CAM', appearances: 2, rating: 8.9, goals: 1, assists: 2 },
-  ];
-
-  const rivalryRecord = [
-    { team: 'Red Lions FC', played: 6, won: 4, drawn: 1, lost: 1, goalsDiff: '+5' },
-    { team: 'Sunday Legends', played: 5, won: 2, drawn: 1, lost: 2, goalsDiff: '-1' },
-    { team: 'Park Rangers', played: 4, won: 3, drawn: 0, lost: 1, goalsDiff: '+3' },
-    { team: 'Borough Rovers', played: 3, won: 2, drawn: 1, lost: 0, goalsDiff: '+2' },
-  ];
-
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  color,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+}) {
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-8">
-      {/* Player Overview */}
-      <div className="text-center mb-8">
-        <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-green-700 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-2xl font-bold text-white">MJ</span>
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Marcus Johnson</h1>
-        <div className="flex items-center justify-center space-x-4 text-gray-600">
-          <span>Position: Striker</span>
-          <span>•</span>
-          <span>Squad: Northside United</span>
-          <span>•</span>
-          <span>Season: 2024/25</span>
-        </div>
+    <div className={`rounded-2xl border p-4 ${color}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className="w-4 h-4 text-gray-600" />
+        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</span>
       </div>
+      <div className="text-2xl font-black text-gray-900">{value}</div>
+    </div>
+  );
+}
 
-      {/* Key Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-        <StatCard
-          title="Goals Scored"
-          value={18}
-          icon={Target}
-          trend={{ value: 12, positive: true }}
-          color="green"
-        />
-        <StatCard
-          title="Assists"
-          value={11}
-          icon={Users}
-          trend={{ value: 8, positive: true }}
-          color="blue"
-        />
-        <StatCard
-          title="Average Rating"
-          value="8.2"
-          icon={Star}
-          trend={{ value: 3, positive: true }}
-          color="orange"
-        />
-        <StatCard
-          title="Clean Sheets"
-          value={7}
-          icon={Shield}
-          color="purple"
-        />
-      </div>
+export default function StatsPage() {
+  const { address } = useWallet();
+  const { attributes, loading } = usePlayerAttributes(address ?? undefined);
 
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* Performance Chart */}
-        <Card>
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Monthly Performance</h2>
+  if (!address) {
+    return (
+      <main className="max-w-2xl mx-auto px-4 py-12 text-center">
+        <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+        <h1 className="text-2xl font-black text-gray-900 mb-2">Your Stats</h1>
+        <p className="text-gray-500 mb-6">Connect your wallet to see your verified on-chain stats.</p>
+        <Link
+          href="/settings"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors"
+        >
+          Connect Wallet <ArrowRight className="w-4 h-4" />
+        </Link>
+      </main>
+    );
+  }
+
+  if (loading) {
+    return (
+      <main className="max-w-4xl mx-auto px-4 py-12">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-100 rounded-xl w-48" />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-gray-100 rounded-2xl" />
+            ))}

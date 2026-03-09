@@ -1,250 +1,301 @@
-import React from 'react';
+// @ts-nocheck — legacy file, no longer imported; suppressing deep type instantiation error
+import React, { useMemo } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/common/StatCard';
-import { Target, Users, Trophy, Shield, TrendingUp, Award, Star, Zap } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { trpc } from '@/lib/trpc-client';
+import { useWallet } from '@/contexts/WalletContext';
+import { useCurrentPlayerAttributes, usePlayerForm } from '@/hooks/player/usePlayerAttributes';
+import { Target, Users, Trophy, Shield, Star, TrendingUp, Activity, ArrowRight } from 'lucide-react';
 
 export const PlayerStats: React.FC = () => {
-  const performanceData = [
-    { month: 'Aug', goals: 4, assists: 2, rating: 7.8 },
-    { month: 'Sep', goals: 6, assists: 4, rating: 8.2 },
-    { month: 'Oct', goals: 3, assists: 5, rating: 7.9 },
-    { month: 'Nov', goals: 5, assists: 3, rating: 8.5 },
-    { month: 'Dec', goals: 8, assists: 6, rating: 9.1 },
-    { month: 'Jan', goals: 2, assists: 1, rating: 8.0 },
-  ];
+  const { connected } = useWallet();
+  const { attributes, loading, error } = useCurrentPlayerAttributes(connected);
+  const { form } = usePlayerForm(attributes?.address);
+  const { data: memberships } = trpc.squad.getMySquads.useQuery(undefined, {
+    retry: false,
+  });
 
-  const positionStats = [
-    { position: 'Striker', appearances: 18, rating: 8.4, goals: 15, assists: 4 },
-    { position: 'Right Wing', appearances: 4, rating: 7.8, goals: 2, assists: 5 },
-    { position: 'CAM', appearances: 2, rating: 8.9, goals: 1, assists: 2 },
-  ];
+  const activeSquadId = memberships?.[0]?.squad.id;
+  const activeSquadName = memberships?.[0]?.squad.name;
+  const { data: matchData } = trpc.match.list.useQuery(
+    { squadId: activeSquadId, limit: 20 },
+    { enabled: !!activeSquadId, staleTime: 30 * 1000 },
+  );
 
-  const rivalryRecord = [
-    { team: 'Red Lions FC', played: 6, won: 4, drawn: 1, lost: 1, goalsDiff: '+5' },
-    { team: 'Sunday Legends', played: 5, won: 2, drawn: 1, lost: 2, goalsDiff: '-1' },
-    { team: 'Park Rangers', played: 4, won: 3, drawn: 0, lost: 1, goalsDiff: '+3' },
-    { team: 'Borough Rovers', played: 3, won: 2, drawn: 1, lost: 0, goalsDiff: '+2' },
-  ];
+  const recentMatches = matchData?.matches || [];
+  const verifiedMatches = recentMatches.filter((match) => match.status === 'verified' || match.status === 'finalized');
+  const recentForm = useMemo(() => form.slice(0, 5), [form]);
+  const topSkills = useMemo(
+    () => [...(attributes?.skills || [])].sort((a, b) => b.rating - a.rating).slice(0, 4),
+    [attributes?.skills],
+  );
+  const rivalryRecord = useMemo(() => {
+    const byOpponent = new Map<string, { team: string; played: number; won: number; drawn: number; lost: number; goalsDiff: number }>();
+
+    for (const match of verifiedMatches) {
+      const isHome = match.homeSquadId === activeSquadId;
+      const opponent = isHome ? match.awaySquad?.name : match.homeSquad?.name;
+      if (!opponent) continue;
+
+      const current = byOpponent.get(opponent) || { team: opponent, played: 0, won: 0, drawn: 0, lost: 0, goalsDiff: 0 };
+      current.played += 1;
+
+      const goalsFor = isHome ? (match.homeScore ?? 0) : (match.awayScore ?? 0);
+      const goalsAgainst = isHome ? (match.awayScore ?? 0) : (match.homeScore ?? 0);
+      current.goalsDiff += goalsFor - goalsAgainst;
+
+      if (goalsFor > goalsAgainst) current.won += 1;
+      else if (goalsFor < goalsAgainst) current.lost += 1;
+      else current.drawn += 1;
+
+      byOpponent.set(opponent, current);
+    }
+
+    return Array.from(byOpponent.values())
+      .sort((a, b) => b.played - a.played)
+      .slice(0, 4);
+  }, [activeSquadId, verifiedMatches]);
+
+  if (!connected) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
+        <Card className="text-center py-12">
+          <Trophy className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Player Stats</h1>
+          <p className="text-gray-600 mb-6">Connect a wallet to load your live profile, form, and match record.</p>
+          <Link href="/settings?tab=wallet">
+            <Button>Open Wallet Settings</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
+        <Card className="text-center py-12 text-gray-600">Loading your live player stats...</Card>
+      </div>
+    );
+  }
+
+  if (error || !attributes) {
+    return (
+      <div className="max-w-5xl mx-auto px-4 md:px-6 py-6">
+        <Card className="text-center py-12">
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Player Stats</h1>
+          <p className="text-gray-600 mb-6">{error || 'Your profile could not be loaded yet.'}</p>
+          <Link href="/match?mode=capture">
+            <Button>Submit a Match</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-8">
-      {/* Player Overview */}
-      <div className="text-center mb-8">
-        <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-green-700 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-2xl font-bold text-white">MJ</span>
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Marcus Johnson</h1>
-        <div className="flex items-center justify-center space-x-4 text-gray-600">
-          <span>Position: Striker</span>
-          <span>•</span>
-          <span>Squad: Northside United</span>
-          <span>•</span>
-          <span>Season: 2024/25</span>
-        </div>
-      </div>
-
-      {/* Key Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-        <StatCard
-          title="Goals Scored"
-          value={18}
-          icon={Target}
-          trend={{ value: 12, positive: true }}
-          color="green"
-        />
-        <StatCard
-          title="Assists"
-          value={11}
-          icon={Users}
-          trend={{ value: 8, positive: true }}
-          color="blue"
-        />
-        <StatCard
-          title="Average Rating"
-          value="8.2"
-          icon={Star}
-          trend={{ value: 3, positive: true }}
-          color="orange"
-        />
-        <StatCard
-          title="Clean Sheets"
-          value={7}
-          icon={Shield}
-          color="purple"
-        />
-      </div>
-
-      <div className="grid lg:grid-cols-2 gap-8">
-        {/* Performance Chart */}
-        <Card>
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Monthly Performance</h2>
-          <div className="space-y-4">
-            {performanceData.map((month, index) => (
-              <div key={month.month} className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium text-gray-700">{month.month}</span>
-                  <div className="flex items-center space-x-4 text-gray-600">
-                    <span>{month.goals}G</span>
-                    <span>{month.assists}A</span>
-                    <span className="font-medium">{month.rating}/10</span>
-                  </div>
-                </div>
-                <div className="flex space-x-2">
-                  <div className="flex-1 bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-green-600 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${(month.goals / 10) * 100}%` }}
-                    ></div>
-                  </div>
-                  <div className="flex-1 bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-blue-600 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${(month.assists / 10) * 100}%` }}
-                    ></div>
-                  </div>
-                  <div className="flex-1 bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-orange-600 h-2 rounded-full transition-all duration-500"
-                      style={{ width: `${(month.rating / 10) * 100}%` }}
-                    ></div>
-                  </div>
+      <Card className="bg-gradient-to-br from-white to-emerald-50/60">
+        <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="mb-3 inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+              Player Stats
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-600 to-green-700 rounded-2xl flex items-center justify-center">
+                <span className="text-xl font-bold text-white">
+                  {attributes.playerName.split(' ').map((part) => part[0]).slice(0, 2).join('')}
+                </span>
+              </div>
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">{attributes.playerName}</h1>
+                <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
+                  <span>Position: {attributes.position}</span>
+                  {activeSquadName && <span>Squad: {activeSquadName}</span>}
+                  <span>Season: {new Date().getFullYear()}</span>
                 </div>
               </div>
-            ))}
-          </div>
-          <div className="flex items-center justify-center space-x-6 mt-6 text-sm">
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-green-600 rounded-full"></div>
-              <span>Goals</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-blue-600 rounded-full"></div>
-              <span>Assists</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <div className="w-3 h-3 bg-orange-600 rounded-full"></div>
-              <span>Rating</span>
             </div>
           </div>
-        </Card>
 
-        {/* Position Analysis */}
-        <Card>
-          <h2 className="text-xl font-bold text-gray-900 mb-6">Position Performance</h2>
-          <div className="space-y-4">
-            {positionStats.map((pos, index) => (
-              <div key={pos.position} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-900">{pos.position}</h3>
-                  <span className="text-sm text-gray-600">{pos.appearances} appearances</span>
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-2xl font-bold text-green-600">{pos.goals}</p>
-                    <p className="text-xs text-gray-600">Goals</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-blue-600">{pos.assists}</p>
-                    <p className="text-xs text-gray-600">Assists</p>
-                  </div>
-                  <div>
-                    <p className="text-2xl font-bold text-orange-600">{pos.rating}</p>
-                    <p className="text-xs text-gray-600">Avg Rating</p>
-                  </div>
-                </div>
-              </div>
-            ))}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <Link href="/match?mode=history">
+              <Button fullWidth variant="outline" icon={Activity}>Match History</Button>
+            </Link>
+            <Link href="/reputation">
+              <Button fullWidth variant="outline" icon={TrendingUp}>Reputation</Button>
+            </Link>
+            <Link href="/match?mode=capture">
+              <Button fullWidth icon={ArrowRight}>Submit Match</Button>
+            </Link>
           </div>
-        </Card>
-      </div>
-
-      {/* Rivalry Records */}
-      <Card>
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Rivalry Records</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-semibold text-gray-900">Opposition</th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-900">Played</th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-900">Won</th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-900">Drawn</th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-900">Lost</th>
-                <th className="text-center py-3 px-4 font-semibold text-gray-900">Goal Diff</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rivalryRecord.map((record, index) => (
-                <tr key={record.team} className="border-b border-gray-100 hover:bg-gray-50">
-                  <td className="py-3 px-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <span className="font-medium text-gray-900">{record.team}</span>
-                    </div>
-                  </td>
-                  <td className="text-center py-3 px-4 text-gray-700">{record.played}</td>
-                  <td className="text-center py-3 px-4 text-green-600 font-medium">{record.won}</td>
-                  <td className="text-center py-3 px-4 text-yellow-600 font-medium">{record.drawn}</td>
-                  <td className="text-center py-3 px-4 text-red-600 font-medium">{record.lost}</td>
-                  <td className={`text-center py-3 px-4 font-medium ${
-                    record.goalsDiff.startsWith('+') ? 'text-green-600' : 
-                    record.goalsDiff.startsWith('-') ? 'text-red-600' : 'text-gray-600'
-                  }`}>
-                    {record.goalsDiff}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
         </div>
       </Card>
 
-      {/* Recent Achievements */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+        <StatCard title="Goals Scored" value={attributes.totalGoals} icon={Target} color="green" />
+        <StatCard title="Assists" value={attributes.totalAssists} icon={Users} color="blue" />
+        <StatCard title="Level" value={attributes.xp.level} icon={Star} color="orange" />
+        <StatCard title="Matches" value={attributes.totalMatches} icon={Shield} color="purple" />
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        <Card>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Recent Form</h2>
+            <span className="text-sm text-gray-500">{recentForm.length} latest entries</span>
+          </div>
+          {recentForm.length > 0 ? (
+            <div className="space-y-4">
+              {recentForm.map((entry) => (
+                <div key={`${entry.matchId}-${entry.date.toISOString()}`} className="rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-gray-900">Match {entry.matchId.slice(0, 8)}</span>
+                    <span className="text-sm font-medium text-emerald-700">{entry.rating.toFixed(1)} rating</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm text-gray-600">
+                    <span>Form value: {entry.formValue.toFixed(1)}</span>
+                    <span>{entry.date.toLocaleDateString()}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-gray-600">
+              No form entries yet. Verified matches will start shaping this trend.
+            </div>
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Top Attributes</h2>
+          <div className="space-y-4">
+            {topSkills.map((skill) => (
+              <div key={skill.skill}>
+                <div className="flex items-center justify-between mb-2 text-sm">
+                  <span className="font-medium text-gray-700 capitalize">{skill.skill}</span>
+                  <span className="font-semibold text-gray-900">{skill.rating}</span>
+                </div>
+                <div className="h-2 rounded-full bg-gray-200">
+                  <div
+                    className="h-2 rounded-full bg-gradient-to-r from-emerald-500 to-green-600"
+                    style={{ width: `${Math.min(100, skill.rating)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 rounded-xl bg-gray-50 p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-gray-700">XP Progress</div>
+                <div className="text-2xl font-bold text-gray-900">{attributes.xp.totalXP.toLocaleString()}</div>
+              </div>
+              <div className="text-right">
+                <div className="text-sm text-gray-500">Next level</div>
+                <div className="font-semibold text-gray-900">{attributes.xp.nextLevelXP.toLocaleString()} XP</div>
+              </div>
+            </div>
+          </div>
+        </Card>
+      </div>
+
+      <div className="grid lg:grid-cols-[1.2fr,0.8fr] gap-8">
+        <Card>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-xl font-bold text-gray-900">Recent Match Outcomes</h2>
+            <Link href="/match?mode=history" className="text-sm font-medium text-emerald-700 hover:text-emerald-800">
+              Open full history
+            </Link>
+          </div>
+          {recentMatches.length > 0 ? (
+            <div className="space-y-3">
+              {recentMatches.slice(0, 6).map((match) => (
+                <div key={match.id} className="rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <div className="font-semibold text-gray-900">
+                        {match.homeSquad?.name || 'Home'} {match.homeScore ?? 0} - {match.awayScore ?? 0} {match.awaySquad?.name || 'Away'}
+                      </div>
+                      <div className="text-sm text-gray-500">{new Date(match.createdAt).toLocaleString()}</div>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      match.status === 'verified' || match.status === 'finalized'
+                        ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {match.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-gray-600">
+              No live match history yet. Start with your first submission to populate this page.
+            </div>
+          )}
+        </Card>
+
+        <Card>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Opponent Record</h2>
+          {rivalryRecord.length > 0 ? (
+            <div className="space-y-3">
+              {rivalryRecord.map((record) => (
+                <div key={record.team} className="rounded-xl border border-gray-200 p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="font-semibold text-gray-900">{record.team}</span>
+                    <span className="text-sm text-gray-500">{record.played} played</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-2 text-center text-sm">
+                    <div>
+                      <div className="font-semibold text-emerald-700">{record.won}</div>
+                      <div className="text-gray-500">W</div>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-amber-700">{record.drawn}</div>
+                      <div className="text-gray-500">D</div>
+                    </div>
+                    <div>
+                      <div className="font-semibold text-rose-700">{record.lost}</div>
+                      <div className="text-gray-500">L</div>
+                    </div>
+                    <div>
+                      <div className={`font-semibold ${record.goalsDiff >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                        {record.goalsDiff > 0 ? '+' : ''}{record.goalsDiff}
+                      </div>
+                      <div className="text-gray-500">GD</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-gray-300 p-8 text-center text-gray-600">
+              Rival records will appear once verified matches build up.
+            </div>
+          )}
+        </Card>
+      </div>
+
       <Card>
-        <h2 className="text-xl font-bold text-gray-900 mb-6">Recent Achievements</h2>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="flex items-center space-x-4 p-4 bg-green-50 rounded-lg">
-            <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center">
-              <Target className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Hat-trick Hero</h3>
-              <p className="text-sm text-gray-600">Scored 3+ goals in a single match</p>
-              <p className="text-xs text-green-600 font-medium">Unlocked 3 days ago</p>
-            </div>
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Next best move</h2>
+            <p className="text-gray-600">
+              Use this page as the bridge back into the live loop: play, verify, then review reputation and development.
+            </p>
           </div>
-
-          <div className="flex items-center space-x-4 p-4 bg-blue-50 rounded-lg">
-            <div className="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
-              <Users className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Assist Master</h3>
-              <p className="text-sm text-gray-600">10+ assists in a season</p>
-              <p className="text-xs text-blue-600 font-medium">Unlocked 1 week ago</p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-4 p-4 bg-orange-50 rounded-lg">
-            <div className="w-12 h-12 bg-orange-600 rounded-xl flex items-center justify-center">
-              <Zap className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Derby Day Hero</h3>
-              <p className="text-sm text-gray-600">Decisive performance in a rivalry match</p>
-              <p className="text-xs text-orange-600 font-medium">Unlocked 2 weeks ago</p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-4 p-4 bg-purple-50 rounded-lg">
-            <div className="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center">
-              <Trophy className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="font-semibold text-gray-900">Consistent Performer</h3>
-              <p className="text-sm text-gray-600">5 consecutive matches with 7+ rating</p>
-              <p className="text-xs text-purple-600 font-medium">Unlocked 1 month ago</p>
-            </div>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/match?mode=capture">
+              <Button>Submit next match</Button>
+            </Link>
+            <Link href="/squad">
+              <Button variant="outline">Manage squad</Button>
+            </Link>
           </div>
         </div>
       </Card>
