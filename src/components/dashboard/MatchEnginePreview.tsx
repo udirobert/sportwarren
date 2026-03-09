@@ -144,36 +144,48 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
             history: []
         });
 
+        // 4-3-3 formation positions [x%, y%] for home (left→right) and away (right→left)
+        const home433: Array<[number, number, string]> = [
+            [8, 50, 'GK'],
+            [22, 20, 'LB'], [22, 40, 'CB'], [22, 60, 'CB'], [22, 80, 'RB'],
+            [38, 30, 'CM'], [38, 50, 'CM'], [38, 70, 'CM'],
+            [52, 20, 'LW'], [52, 50, 'ST'], [52, 80, 'RW'],
+        ];
+        const away433: Array<[number, number, string]> = [
+            [92, 50, 'GK'],
+            [78, 20, 'RB'], [78, 40, 'CB'], [78, 60, 'CB'], [78, 80, 'LB'],
+            [62, 30, 'CM'], [62, 50, 'CM'], [62, 70, 'CM'],
+            [48, 20, 'RW'], [48, 50, 'ST'], [48, 80, 'LW'],
+        ];
+        const homeNames = ['GK', 'Tunde', 'Kofi', 'Diallo', 'Eze', 'Yusuf', 'Marcus', 'Jamie', 'Kwame', 'Alex', 'Seun'];
+        const awayNames = ['GK', 'Rival', 'Stone', 'Park', 'Cruz', 'Osei', 'Nkosi', 'Levi', 'Dani', 'Ramos', 'Finn'];
+
         if (!membersLoading && members && members.length > 0) {
-            const homePlayers = members.slice(0, 3).map((m, i) => {
-                // Use level to derive stats for now, or match existing attributes if we had them
-                const level = m.stats?.level || 5;
+            const homePlayers = home433.map(([x, y, role], i) => {
+                const m = members[i];
+                const level = m?.stats?.level || 8;
                 const baseStat = 60 + (level * 1.5);
                 return createPlayer(
-                    m.id, m.name.split(' ')[0],
-                    i === 0 ? 45 : 30, i === 0 ? 50 : (i === 1 ? 35 : 65),
-                    'home', m.role, {
-                    level,
-                    pace: Math.min(99, baseStat + (m.role === 'player' ? 5 : 0)),
-                    agility: Math.min(99, baseStat + 2),
-                    strength: Math.min(99, baseStat - 5)
-                }
+                    m?.id || `h${i}`, m ? m.name.split(' ')[0] : homeNames[i],
+                    x, y, 'home', role,
+                    { level, pace: Math.min(99, baseStat + (role === 'ST' || role.endsWith('W') ? 8 : 0)), agility: Math.min(99, baseStat + 2), strength: Math.min(99, baseStat - 5) }
                 );
             });
-            const awayPlayers = [
-                createPlayer('a1', env.rivals.away.split(' ')[0], 55, 50, 'away', 'CB', { level: 13, pace: 65, agility: 60, strength: 85 }),
-                createPlayer('a2', env.rivals.away.split(' ')[1] || 'Rival', 70, 40, 'away', 'CB', { level: 11, pace: 68, agility: 62, strength: 82 }),
-            ];
+            const awayPlayers = away433.map(([x, y, role], i) =>
+                createPlayer(`a${i}`, awayNames[i], x, y, 'away', role,
+                    { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20) })
+            );
             setPlayers([...homePlayers, ...awayPlayers]);
         } else if (!membersLoading) {
-            const fallbackPlayers = [
-                createPlayer('h1', 'Marcus', 40, 50, 'home', 'ST', { level: 20, pace: 92, agility: 88, strength: 75 }),
-                createPlayer('h2', 'Jamie', 25, 35, 'home', 'CM', { level: 12, pace: 75, agility: 80, strength: 65 }),
-                createPlayer('h3', 'Alex', 25, 65, 'home', 'CM', { level: 10, pace: 72, agility: 78, strength: 68 }),
-                createPlayer('a1', env.rivals.away.split(' ')[0], 60, 50, 'away', 'CB', { level: 15, pace: 65, agility: 60, strength: 85 }),
-                createPlayer('a2', env.rivals.away.split(' ')[1] || 'Rival', 75, 40, 'away', 'CB', { level: 12, pace: 68, agility: 62, strength: 82 }),
-            ];
-            setPlayers(fallbackPlayers);
+            const homePlayers = home433.map(([x, y, role], i) =>
+                createPlayer(`h${i}`, homeNames[i], x, y, 'home', role,
+                    { level: 10 + Math.floor(Math.random() * 12), pace: 68 + Math.floor(Math.random() * 24), agility: 65 + Math.floor(Math.random() * 22), strength: 60 + Math.floor(Math.random() * 25) })
+            );
+            const awayPlayers = away433.map(([x, y, role], i) =>
+                createPlayer(`a${i}`, awayNames[i], x, y, 'away', role,
+                    { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20) })
+            );
+            setPlayers([...homePlayers, ...awayPlayers]);
         }
     }, [members, membersLoading, env.rivals.away]);
 
@@ -212,23 +224,59 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
             let targetX = p.homePos.x;
             let targetY = p.homePos.y;
 
-            // Simple Goal-Based AI
-            if (isOwner) {
-                // Attacker: Run toward opponent goal
-                targetX = p.team === 'home' ? 95 : 5;
-                targetY = 50;
-                // Add some zig-zag if defender close
-                const defender = players.find(d => d.team !== p.team && Math.abs(d.x - p.x) < 10);
-                if (defender) targetY = p.y > 50 ? 30 : 70;
-            } else {
-                // Chasers: Seek the ball if it's in their half/zone
-                const distToBall = Math.sqrt((p.x - ball.x) ** 2 + (p.y - ball.y) ** 2);
-                const isClosest = !players.some(other => other.team === p.team && other.id !== p.id &&
-                    Math.sqrt((other.x - ball.x) ** 2 + (other.y - ball.y) ** 2) < distToBall);
+            // Role-aware AI
+            const isGK = p.role === 'GK';
+            const isDefender = ['CB', 'LB', 'RB'].includes(p.role);
+            const isMidfielder = ['CM', 'DM', 'AM'].includes(p.role);
+            const isAttacker = ['ST', 'LW', 'RW'].includes(p.role);
+            const distToBall = Math.sqrt((p.x - ball.x) ** 2 + (p.y - ball.y) ** 2);
+            const ballInOwnHalf = (p.team === 'home' && ball.x < 50) || (p.team === 'away' && ball.x > 50);
 
-                if (isClosest || distToBall < 30) {
+            if (isOwner) {
+                // Ball carrier: drive toward goal with jink
+                targetX = p.team === 'home' ? 92 : 8;
+                targetY = 50 + Math.sin(time * 0.08 + p.homePos.y) * 18;
+                const nearDefender = players.find(d => d.team !== p.team && Math.sqrt((d.x - p.x) ** 2 + (d.y - p.y) ** 2) < 12);
+                if (nearDefender) targetY = p.y > 50 ? p.y - 20 : p.y + 20;
+            } else if (isGK) {
+                // GK: stay on line, track ball height
+                targetX = p.team === 'home' ? 5 : 95;
+                targetY = 30 + (ball.y / 100) * 40;
+            } else if (isDefender) {
+                if (ballInOwnHalf && distToBall < 35) {
+                    // Press ball carrier
+                    targetX = ball.x + (p.team === 'home' ? -3 : 3);
+                    targetY = ball.y;
+                } else {
+                    // Hold shape with slight drift toward ball lane
+                    targetX = p.homePos.x;
+                    targetY = p.homePos.y + (ball.y - 50) * 0.25;
+                }
+            } else if (isMidfielder) {
+                const isClosestMid = !players.some(other =>
+                    other.team === p.team && other.id !== p.id && ['CM','DM','AM'].includes(other.role) &&
+                    Math.sqrt((other.x - ball.x) ** 2 + (other.y - ball.y) ** 2) < distToBall
+                );
+                if (isClosestMid && distToBall < 40) {
                     targetX = ball.x;
                     targetY = ball.y;
+                } else {
+                    // Support run: drift into space
+                    targetX = p.homePos.x + (ball.x - 50) * 0.3;
+                    targetY = p.homePos.y + Math.sin(time * 0.05 + p.homePos.x) * 10;
+                }
+            } else if (isAttacker) {
+                if (ballInOwnHalf) {
+                    // Track back slightly
+                    targetX = p.homePos.x - (p.team === 'home' ? 10 : -10);
+                    targetY = p.homePos.y;
+                } else {
+                    // Make runs: spread wide or attack box
+                    const runPhase = Math.sin(time * 0.04 + p.homePos.y * 0.1);
+                    targetX = p.team === 'home'
+                        ? 70 + runPhase * 15
+                        : 30 - runPhase * 15;
+                    targetY = p.homePos.y + runPhase * 20;
                 }
             }
 
@@ -486,52 +534,52 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
                     </div>
 
                     {/* Reality Feed - Pure Phygital USP */}
-                    <div className="bg-green-600/5 p-3 rounded-xl border border-green-500/10 flex flex-col justify-between order-2 md:order-2">
-                        <div className="flex items-center justify-between mb-1">
+                    <div className="bg-green-900/40 p-3 rounded-xl border border-green-500/30 flex flex-col justify-between order-2 md:order-2">
+                        <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center space-x-1.5">
-                                <Activity className="w-3 h-3 text-green-400" />
-                                <span className="text-[9px] font-black text-green-400 uppercase tracking-widest">Reality Feed</span>
+                                <Activity className="w-3.5 h-3.5 text-green-400" />
+                                <span className="text-xs font-black text-green-300 uppercase tracking-widest">Reality Feed</span>
                             </div>
-                            <span className="text-[8px] text-gray-500 font-mono italic">CRE Verified</span>
+                            <span className="text-[10px] text-green-400 font-mono font-semibold">CRE Verified</span>
                         </div>
-                        <div className="space-y-1">
-                            <div className="flex justify-between text-[10px]">
+                        <div className="space-y-1.5">
+                            <div className="flex justify-between text-xs">
                                 <span className="text-gray-400">Venue</span>
                                 <span className="text-white font-bold">{env.venue}</span>
                             </div>
-                            <div className="flex justify-between text-[10px]">
+                            <div className="flex justify-between text-xs">
                                 <span className="text-gray-400">Conditions</span>
                                 <span className="text-white font-bold">{env.temp} • {env.weather}</span>
                             </div>
                         </div>
-                        <div className="mt-2 pt-2 border-t border-green-500/10">
-                            <div className="text-[8px] font-black text-green-400 uppercase leading-none mb-1">Impact</div>
-                            <div className="text-[10px] text-gray-300 italic leading-tight">Pitch friction decreased. Agility penalty active.</div>
+                        <div className="mt-2 pt-2 border-t border-green-500/20">
+                            <div className="text-[10px] font-black text-green-300 uppercase leading-none mb-1">Impact</div>
+                            <div className="text-xs text-gray-200 italic leading-tight">Pitch friction decreased. Agility penalty active.</div>
                         </div>
                     </div>
 
                     {/* Phygital Mission Banner */}
-                    <div className="bg-yellow-600/10 p-3 rounded-xl border border-yellow-500/20 flex flex-col justify-between order-3 md:order-3">
+                    <div className="bg-yellow-900/40 p-3 rounded-xl border border-yellow-500/30 flex flex-col justify-between order-3 md:order-3">
                         <div className="flex items-center space-x-1.5 mb-1">
-                            <Zap className="w-3 h-3 text-yellow-500" />
-                            <span className="text-[9px] font-black text-yellow-500 uppercase tracking-widest italic">Local Mission</span>
+                            <Zap className="w-3.5 h-3.5 text-yellow-400" />
+                            <span className="text-xs font-black text-yellow-300 uppercase tracking-widest italic">Local Mission</span>
                         </div>
                         <div>
-                            <div className="text-[10px] font-black text-white leading-tight mb-1">{env.localMission.title}</div>
-                            <div className="text-[9px] text-yellow-200/60 leading-tight">Visit <span className="text-yellow-400 font-bold">{env.localMission.landmark}</span> to activate your bounty.</div>
+                            <div className="text-xs font-black text-white leading-tight mb-1">{env.localMission.title}</div>
+                            <div className="text-[10px] text-yellow-200 leading-tight">Visit <span className="text-yellow-300 font-bold">{env.localMission.landmark}</span> to activate your bounty.</div>
                         </div>
                         <div className="mt-2 bg-yellow-500/20 rounded-lg py-1 px-2 border border-yellow-500/30">
-                            <div className="text-[9px] font-bold text-yellow-400 text-center uppercase tracking-tighter">{env.localMission.bonus}</div>
+                            <div className="text-[10px] font-bold text-yellow-300 text-center uppercase tracking-tighter">{env.localMission.bonus}</div>
                         </div>
                     </div>
 
-                    <div className="bg-blue-600/10 p-3 rounded-xl border border-blue-500/20 flex flex-col justify-center order-4 md:order-4">
-                        <div className="flex items-center space-x-2 mb-1">
-                            <Shield className="w-3 h-3 text-blue-400" />
-                            <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Active DAO Policy</span>
+                    <div className="bg-blue-900/40 p-3 rounded-xl border border-blue-500/30 flex flex-col justify-center order-4 md:order-4">
+                        <div className="flex items-center space-x-2 mb-1.5">
+                            <Shield className="w-3.5 h-3.5 text-blue-300" />
+                            <span className="text-xs font-black text-blue-200 uppercase tracking-widest">Active DAO Policy</span>
                         </div>
-                        <p className="text-[10px] text-blue-100 italic leading-tight">
-                            "High-intensity pressing authorized. XP rewards increased for ball recovery."
+                        <p className="text-xs text-blue-100 italic leading-tight">
+                            &ldquo;High-intensity pressing authorized. XP rewards increased for ball recovery.&rdquo;
                         </p>
                     </div>
                 </div>
