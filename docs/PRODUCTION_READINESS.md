@@ -1,7 +1,7 @@
 # SportWarren — Production Readiness Assessment
 
 **Date:** 9 March 2026  
-**Build Status:** ✅ Passing | **Push:** `a0b15e5` on `main`
+**Build Status:** ✅ Passing | **Push:** `4d8c73a` on `main`
 
 ---
 
@@ -23,6 +23,11 @@ We have a high-fidelity, functional application with a compelling user loop. The
 | **Draft Engine** | ✅ | Signs to DB, deducts treasury |
 | **Match Engine** | ✅ | Uses real squad data, stat-driven physics |
 | **Staff Room** | ✅ | Agentic dialog-first flow, live tRPC data, per-staff chat, consumed actions, mobile responsive |
+| **Cross-staff Context** | ✅ | AgentContext (React Context + useReducer) — Scout/Physio/Comms/Coach actions propagate to sibling staff chats |
+| **On-chain Approval Gates** | ✅ | Yellow payment + Lens post queued with ✅ Sign & Execute / ❌ Cancel UI; Lens router stub ready for SDK swap |
+| **Notification Feed** | ✅ | EventFeed widget — persistent backroom alerts outside Staff Room, per-category filters, unread badge |
+| **Performance (Dynamic Imports)** | ✅ | 12 heavy dashboard components code-split via next/dynamic (ssr:false) |
+| **Test Coverage** | ✅ | Vitest suite: 20 tests across AgentContext reducer (11) and useAgentAlerts rules (9) |
 | **Match Verification** | ✅ | GPS, multi-party consensus, Algorand tx |
 | **Player XP & Attributes** | ✅ | TRPC + Prisma, FIFA-style progression |
 | **Squad DAO & Voting** | ✅ | Democratic challenge proposals |
@@ -64,6 +69,15 @@ These **must** be resolved before you can open to the public without risk.
 - Squad creation gate: connected users with no squad see a 3-step creation wizard before the dashboard.
 - TypeScript strict-mode pass: `response` typed as `string | null`; all `null as unknown as string` casts removed.
 - Mobile responsive audit: Staff sidebar scrolls horizontally on small screens; Contract modal anchors as bottom sheet with touch-friendly controls.
+
+### 5. Agentic Platform — Advanced Sprints
+**Status: ✅ RESOLVED**
+- TS2589 type explosion in StaffRoom tactics inference fixed (cast via `Record<string, unknown>`).
+- Sprint 4: `AgentContext` (React Context + useReducer) — cross-staff context sharing; Scout trial/Physio injury/Comms deal/Coach formation dispatches propagate reactive messages to sibling staff chats.
+- Sprint 5: On-chain approval gate UI (yellow border banner); Scout trial queues Yellow payment action; Comms deal queues Lens post action; `lens.ts` tRPC router stub wired and ready for `@lens-protocol/client` swap.
+- Notification feed: `EventFeed` component reads `useAgentAlerts`, renders per-category filtered event list with unread badge outside Staff Room.
+- Performance: 12 heavy dashboard components converted to `next/dynamic` (ssr:false) for code-splitting.
+- Test coverage: Vitest + React Testing Library installed; 20 tests across `AgentContext` reducer and `useAgentAlerts` rule engine.
 
 ---
 

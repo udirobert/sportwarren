@@ -2,7 +2,7 @@
 
 **Phygital Football Platform | Real World + Championship Manager**
 
-**Last Updated:** March 2026: **Progress:** 98% Complete
+**Last Updated:** March 2026: **Progress:** 99% Complete
 
 ---
 
@@ -67,11 +67,16 @@
 - [x] Facility upgrades (database)
 - [x] Transfer market (Live via Draft Engine)
 - [x] Staff Room / Office (Agentic dialog-first backroom, live data, mobile responsive)
+- [x] Cross-staff context sharing (AgentContext — Scout/Physio/Comms/Coach propagate to sibling chats)
+- [x] On-chain approval gates (Yellow payment + Lens post with Sign & Execute / Cancel UI)
+- [x] Notification/event feed (EventFeed widget — persistent backroom alerts, per-category filters)
+- [x] Performance audit (12 heavy components code-split via next/dynamic)
+- [x] Test coverage (Vitest suite — 20 tests: AgentContext reducer + useAgentAlerts rules)
 - [ ] Kit customization
 
 **Deliverables:** ✅ Core 3-Chain structure is live. AI agents are registered with passports, the economic settlement contracts are deployed, and the interactive Staff Office is functional.
 
-**Status:** 🟢 **97% Complete** - Multi-chain infrastructure + Agentic economic settlement active. Transfer Market and Staff Office are fully agentic with live data. Finalizing frontend Unified Wallet connection.
+**Status:** 🟢 **99% Complete** - Multi-chain infrastructure + Agentic economic settlement active. Transfer Market and Staff Office are fully agentic with live data, cross-staff context, on-chain approval gates, notification feed, dynamic imports, and test coverage. Finalizing frontend Unified Wallet connection.
 
 ---
 
@@ -105,6 +110,14 @@
 ---
 
 ## Recent Progress
+
+### March 2026 - Agentic Platform Advanced Sprints ✅
+- **TS Fix:** TS2589 type explosion in StaffRoom tactics inference resolved
+- **Sprint 4 — Cross-staff Context:** `AgentContext` (React Context + useReducer) — Scout trial, Physio injury, Comms deal, Coach formation dispatches inject reactive messages into sibling staff chats
+- **Sprint 5 — On-chain Approval Gates:** Yellow payment + Lens post queued with ⛓️ approval banner; `lens.ts` tRPC router stub wired and ready for `@lens-protocol/client` swap
+- **Notification Feed:** `EventFeed` widget reads `useAgentAlerts`, renders per-category filtered event list with unread badge outside Staff Room
+- **Performance:** 12 heavy dashboard components converted to `next/dynamic` (ssr:false) for code-splitting
+- **Test Coverage:** Vitest + React Testing Library; 20 tests across `AgentContext` reducer (11) and `useAgentAlerts` rule engine (9)
 
 ### March 2026 - Agentic Staff Room Sprint ✅
 - **Dialog-First UX:** All five staff members (Agent, Scout, Coach Kite, Physio, Commercial Lead) now present a full dossier before any action is committed — inline ✅/❌ buttons gate every modal
