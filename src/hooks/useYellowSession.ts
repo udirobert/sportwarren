@@ -1,11 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
+  createAppSessionMessage,
   createAuthRequestMessage,
   createAuthVerifyMessageFromChallenge,
+  createCloseAppSessionMessage,
+  createECDSAMessageSigner,
   createEIP712AuthMessageSigner,
+  createGetAppSessionsMessageV2,
+  createSubmitAppStateMessage,
   parseAnyRPCResponse,
+  RPCAppStateIntent,
+  RPCProtocolVersion,
+  type RPCAppSessionAllocation,
 } from '@erc7824/nitrolite';
 import { createWalletClient, custom, type Hex } from 'viem';
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
@@ -30,6 +38,47 @@ interface YellowSessionState {
   error: string | null;
 }
 
+interface YellowRpcResponse {
+  method: string;
+  params: any;
+  requestId?: number;
+}
+
+export interface YellowAppDefinitionInput {
+  application: string;
+  participants: Hex[];
+  weights: number[];
+  quorum: number;
+  challenge: number;
+  nonce?: number;
+  protocol?: RPCProtocolVersion;
+}
+
+export interface YellowCreateSessionInput {
+  definition: YellowAppDefinitionInput;
+  allocations: RPCAppSessionAllocation[];
+  sessionData?: string;
+}
+
+export interface YellowSubmitStateInput {
+  appSessionId: Hex;
+  version: number;
+  allocations: RPCAppSessionAllocation[];
+  sessionData?: string;
+  intent?: RPCAppStateIntent;
+}
+
+export interface YellowCloseSessionInput {
+  appSessionId: Hex;
+  allocations: RPCAppSessionAllocation[];
+  sessionData?: string;
+}
+
+type PendingResolver = {
+  resolve: (value: YellowRpcResponse) => void;
+  reject: (reason?: unknown) => void;
+};
+
 const DEFAULT_STATE: YellowSessionState = {
   enabled: false,
   assetSymbol: 'USDC',
@@ -49,6 +98,21 @@ function isEvmChain(chain: string | null) {
   return chain === 'avalanche' || chain === 'lens';
 }
 
+function getRequestIdFromMessage(raw: string) {
+  const message = JSON.parse(raw) as { req?: [number]; res?: [number] };
+  if (message.req?.[0] !== undefined) {
+    return message.req[0];
+  }
+  if (message.res?.[0] !== undefined) {
+    return message.res[0];
+  }
+  throw new Error('Yellow RPC message is missing a request id.');
+}
+
+function createPendingError(message: string) {
+  return new Error(`Yellow RPC: ${message}`);
+}
+
 export function useYellowSession(sessionId?: string | null) {
   const { address, chain, connected } = useWallet();
   const [state, setState] = useState<YellowSessionState>(() => ({
@@ -58,7 +122,87 @@ export function useYellowSession(sessionId?: string | null) {
     sessionId: sessionId ?? null,
     status: readBooleanEnv(process.env.NEXT_PUBLIC_YELLOW_ENABLED) ? 'idle' : 'disabled',
   }));
+
   const websocketRef = useRef<WebSocket | null>(null);
+  const pendingRef = useRef<Map<number, PendingResolver>>(new Map());
+  const sessionSignerRef = useRef<ReturnType<typeof createECDSAMessageSigner> | null>(null);
+  const authenticatedRef = useRef(false);
+
+  const sendRawMessage = useCallback(async (rawMessage: string) => {
+    const socket = websocketRef.current;
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      throw new Error('Yellow ClearNode connection is not open.');
+    }
+
+    const requestId = getRequestIdFromMessage(rawMessage);
+
+    return await new Promise<YellowRpcResponse>((resolve, reject) => {
+      pendingRef.current.set(requestId, { resolve, reject });
+      socket.send(rawMessage);
+    });
+  }, []);
+
+  const ensureAuthenticated = useCallback(() => {
+    if (!authenticatedRef.current || !sessionSignerRef.current) {
+      throw new Error('Yellow session is not authenticated.');
+    }
+
+    return sessionSignerRef.current;
+  }, []);
+
+  const getAppSessions = useCallback(async (participant?: Hex) => {
+    const participantAddress = participant ?? (address as Hex | null);
+    if (!participantAddress) {
+      throw new Error('Yellow getAppSessions requires a participant address.');
+    }
+
+    const rawMessage = createGetAppSessionsMessageV2(participantAddress);
+    const response = await sendRawMessage(rawMessage);
+    return response.params.appSessions;
+  }, [address, sendRawMessage]);
+
+  const createSession = useCallback(async (input: YellowCreateSessionInput) => {
+    const signer = ensureAuthenticated();
+    const rawMessage = await createAppSessionMessage(signer, {
+      definition: {
+        application: input.definition.application,
+        protocol: input.definition.protocol ?? RPCProtocolVersion.NitroRPC_0_4,
+        participants: input.definition.participants,
+        weights: input.definition.weights,
+        quorum: input.definition.quorum,
+        challenge: input.definition.challenge,
+        nonce: input.definition.nonce,
+      },
+      allocations: input.allocations,
+      session_data: input.sessionData,
+    });
+    const response = await sendRawMessage(rawMessage);
+    return response.params as { appSessionId: Hex; version: number; status: string };
+  }, [ensureAuthenticated, sendRawMessage]);
+
+  const submitState = useCallback(async (input: YellowSubmitStateInput) => {
+    const signer = ensureAuthenticated();
+    const rawMessage = await createSubmitAppStateMessage(signer, {
+      app_session_id: input.appSessionId,
+      intent: input.intent ?? RPCAppStateIntent.Operate,
+      version: input.version,
+      allocations: input.allocations,
+      session_data: input.sessionData,
+    });
+    const response = await sendRawMessage(rawMessage);
+    return response.params as { appSessionId: Hex; version: number; status: string };
+  }, [ensureAuthenticated, sendRawMessage]);
+
+  const closeSession = useCallback(async (input: YellowCloseSessionInput) => {
+    const signer = ensureAuthenticated();
+    const rawMessage = await createCloseAppSessionMessage(signer, {
+      app_session_id: input.appSessionId,
+      allocations: input.allocations,
+      session_data: input.sessionData,
+    });
+    const response = await sendRawMessage(rawMessage);
+    return response.params as { appSessionId: Hex; version: number; status: string };
+  }, [ensureAuthenticated, sendRawMessage]);
 
   useEffect(() => {
     setState((current) => ({
@@ -76,6 +220,8 @@ export function useYellowSession(sessionId?: string | null) {
     const enabled = readBooleanEnv(process.env.NEXT_PUBLIC_YELLOW_ENABLED);
 
     if (!enabled) {
+      authenticatedRef.current = false;
+      sessionSignerRef.current = null;
       setState((current) => ({
         ...current,
         enabled: false,
@@ -86,6 +232,8 @@ export function useYellowSession(sessionId?: string | null) {
     }
 
     if (!connected || !address) {
+      authenticatedRef.current = false;
+      sessionSignerRef.current = null;
       setState((current) => ({
         ...current,
         enabled: true,
@@ -99,6 +247,8 @@ export function useYellowSession(sessionId?: string | null) {
     }
 
     if (!isEvmChain(chain)) {
+      authenticatedRef.current = false;
+      sessionSignerRef.current = null;
       setState((current) => ({
         ...current,
         enabled: true,
@@ -110,6 +260,8 @@ export function useYellowSession(sessionId?: string | null) {
     }
 
     if (typeof window === 'undefined' || !(window as any).ethereum) {
+      authenticatedRef.current = false;
+      sessionSignerRef.current = null;
       setState((current) => ({
         ...current,
         enabled: true,
@@ -130,6 +282,8 @@ export function useYellowSession(sessionId?: string | null) {
       process.env.NEXT_PUBLIC_YELLOW_ALLOWANCE_AMOUNT || '1000000000';
 
     if (!application) {
+      authenticatedRef.current = false;
+      sessionSignerRef.current = null;
       setState((current) => ({
         ...current,
         enabled: true,
@@ -141,7 +295,6 @@ export function useYellowSession(sessionId?: string | null) {
     }
 
     let cancelled = false;
-
     const appId = application;
 
     async function authenticate() {
@@ -157,7 +310,6 @@ export function useYellowSession(sessionId?: string | null) {
         const provider = (window as any).ethereum;
         const sessionPrivateKey = generatePrivateKey();
         const sessionAccount = privateKeyToAccount(sessionPrivateKey);
-
         const walletClient = createWalletClient({
           account: address as Hex,
           transport: custom(provider),
@@ -179,13 +331,38 @@ export function useYellowSession(sessionId?: string | null) {
           { name: domainName },
         );
 
+        const sessionSigner = createECDSAMessageSigner(sessionPrivateKey);
         const socket = new WebSocket(clearnodeUrl);
-        websocketRef.current = socket;
+
+        socket.onmessage = (event) => {
+          try {
+            const requestId = getRequestIdFromMessage(event.data);
+            const pending = pendingRef.current.get(requestId);
+            if (!pending) {
+              return;
+            }
+
+            pendingRef.current.delete(requestId);
+            const response = parseAnyRPCResponse(event.data) as YellowRpcResponse;
+            pending.resolve(response);
+          } catch (error) {
+            console.error('Failed to parse Yellow RPC response:', error);
+          }
+        };
+
+        socket.onerror = () => {
+          for (const [requestId, pending] of pendingRef.current.entries()) {
+            pending.reject(createPendingError(`socket error for request ${requestId}`));
+          }
+          pendingRef.current.clear();
+        };
 
         await new Promise<void>((resolve, reject) => {
           socket.onopen = () => resolve();
           socket.onerror = () => reject(new Error('Failed to connect to Yellow ClearNode.'));
         });
+
+        websocketRef.current = socket;
 
         const authRequest = await createAuthRequestMessage({
           address: address as Hex,
@@ -201,48 +378,28 @@ export function useYellowSession(sessionId?: string | null) {
           scope,
         });
 
-        const challenge = await new Promise<string>((resolve, reject) => {
-          socket.onmessage = (event) => {
-            try {
-              const response = parseAnyRPCResponse(event.data);
-              if (response.method === 'error') {
-                reject(new Error(response.params.error));
-                return;
-              }
-              if (response.method === 'auth_request') {
-                resolve(response.params.challengeMessage);
-              }
-            } catch (error) {
-              reject(error);
-            }
-          };
-          socket.send(authRequest);
-        });
+        const authChallengeResponse = await sendRawMessage(authRequest);
+        if (authChallengeResponse.method === 'error') {
+          throw new Error(authChallengeResponse.params.error);
+        }
 
-        const verifyMessage = await createAuthVerifyMessageFromChallenge(authSigner, challenge);
+        const verifyMessage = await createAuthVerifyMessageFromChallenge(
+          authSigner,
+          authChallengeResponse.params.challengeMessage,
+        );
 
-        const jwtToken = await new Promise<string | null>((resolve, reject) => {
-          socket.onmessage = (event) => {
-            try {
-              const response = parseAnyRPCResponse(event.data);
-              if (response.method === 'error') {
-                reject(new Error(response.params.error));
-                return;
-              }
-              if (response.method === 'auth_verify') {
-                resolve(response.params.jwtToken || null);
-              }
-            } catch (error) {
-              reject(error);
-            }
-          };
-          socket.send(verifyMessage);
-        });
+        const authVerifyResponse = await sendRawMessage(verifyMessage);
+        if (authVerifyResponse.method === 'error') {
+          throw new Error(authVerifyResponse.params.error);
+        }
 
         if (cancelled) {
           socket.close();
           return;
         }
+
+        authenticatedRef.current = true;
+        sessionSignerRef.current = sessionSigner;
 
         setState((current) => ({
           ...current,
@@ -250,10 +407,13 @@ export function useYellowSession(sessionId?: string | null) {
           status: 'authenticated',
           accountAddress: address,
           sessionKeyAddress: sessionAccount.address,
-          jwtToken,
+          jwtToken: authVerifyResponse.params.jwtToken || null,
           error: null,
         }));
       } catch (error) {
+        authenticatedRef.current = false;
+        sessionSignerRef.current = null;
+
         if (cancelled) {
           return;
         }
@@ -272,10 +432,19 @@ export function useYellowSession(sessionId?: string | null) {
 
     return () => {
       cancelled = true;
+      authenticatedRef.current = false;
+      sessionSignerRef.current = null;
       websocketRef.current?.close();
       websocketRef.current = null;
+      pendingRef.current.clear();
     };
-  }, [address, chain, connected]);
+  }, [address, chain, connected, sendRawMessage]);
 
-  return state;
+  return {
+    ...state,
+    getAppSessions,
+    createSession,
+    submitState,
+    closeSession,
+  };
 }

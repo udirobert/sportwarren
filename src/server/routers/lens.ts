@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { router, protectedProcedure } from '../trpc';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
 
 /**
  * Lens post router — logs post intent to AiMemory.
  * Swap the stub body for a real @lens-protocol/client call once the SDK is installed.
  */
-export const lensRouter = router({
+export const lensRouter = createTRPCRouter({
     postUpdate: protectedProcedure
         .input(z.object({
             text: z.string().min(1).max(500),
