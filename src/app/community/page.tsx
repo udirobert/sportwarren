@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Target, Users, Trophy, Star, Shield } from "lucide-react";
+import { Target, Users, Trophy, Star, Shield, Swords } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
 
@@ -99,6 +99,12 @@ function CommunityPageInner() {
                     <p className="text-sm font-medium text-gray-900 truncate">{squad.name}</p>
                     <p className="text-xs text-gray-500">{squad.shortName} · {squad._count?.members ?? 0} members</p>
                   </div>
+                  <Link href={`/match?mode=capture&opponentSquadId=${squad.id}`} className="shrink-0 ml-2">
+                    <Button size="sm" variant="outline" className="flex items-center gap-1 text-xs px-2 py-1 h-auto">
+                      <Swords className="w-3 h-3" />
+                      Challenge
+                    </Button>
+                  </Link>
                 </div>
               ))}
             </div>
