@@ -3,6 +3,8 @@ import { TRPCError } from '@trpc/server';
 import algosdk from 'algosdk';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { chainlinkService } from '../../../server/services/blockchain/chainlink';
+import { yellowService, type MatchSettlementResult } from '../../../server/services/blockchain/yellow';
+import { postTreasuryLedgerEntry } from '../../../server/services/economy/treasury-ledger';
 
 const MatchStatus = z.enum(['pending', 'verified', 'disputed', 'finalized']);
 
@@ -14,6 +16,85 @@ const Errors = {
   ALREADY_VERIFIED: { code: 'CONFLICT' as const, message: 'Already verified this match' },
   INVALID_SCORE: { code: 'BAD_REQUEST' as const, message: 'Invalid score provided' },
 };
+
+function getMatchFeeDistribution(match: { homeScore: number | null; awayScore: number | null }, status: string) {
+  const feeAmount = yellowService.getMatchFeeAmount();
+  const totalPool = feeAmount * 2;
+  const platformAmount = Math.floor(totalPool * 0.2);
+
+  if (status === 'disputed') {
+    return {
+      result: 'disputed' as MatchSettlementResult,
+      feeAmount,
+      homeAmount: feeAmount,
+      awayAmount: feeAmount,
+      platformAmount: 0,
+    };
+  }
+
+  if ((match.homeScore ?? 0) === (match.awayScore ?? 0)) {
+    const sharedAmount = Math.floor((totalPool - platformAmount) / 2);
+    return {
+      result: 'draw' as MatchSettlementResult,
+      feeAmount,
+      homeAmount: sharedAmount,
+      awayAmount: sharedAmount,
+      platformAmount,
+    };
+  }
+
+  const homeWon = (match.homeScore ?? 0) > (match.awayScore ?? 0);
+
+  return {
+    result: homeWon ? 'home' : 'away',
+    feeAmount,
+    homeAmount: homeWon ? totalPool - platformAmount : 0,
+    awayAmount: homeWon ? 0 : totalPool - platformAmount,
+    platformAmount,
+  };
+}
+
+async function settleMatchFee(prisma: any, match: any, status: string) {
+  if (!match.yellowFeeSessionId) {
+    return null;
+  }
+
+  const distribution = getMatchFeeDistribution(match, status);
+  const settlement = await yellowService.settleMatchFeeSession({
+    sessionId: match.yellowFeeSessionId,
+    matchId: match.id,
+    result: distribution.result,
+    homeAmount: distribution.homeAmount,
+    awayAmount: distribution.awayAmount,
+    platformAmount: distribution.platformAmount,
+  });
+
+  if (distribution.homeAmount > 0) {
+    await postTreasuryLedgerEntry({
+      prisma,
+      squadId: match.homeSquadId,
+      amountDelta: distribution.homeAmount,
+      type: 'income',
+      category: 'match_fee',
+      description: `Match fee payout for match ${match.id}`,
+      txHash: settlement.settlementId,
+    });
+  }
+
+  if (distribution.awayAmount > 0) {
+    await postTreasuryLedgerEntry({
+      prisma,
+      squadId: match.awaySquadId,
+      amountDelta: distribution.awayAmount,
+      type: 'income',
+      category: 'match_fee',
+      description: `Match fee payout for match ${match.id}`,
+      txHash: settlement.settlementId,
+    });
+  }
+
+  return settlement;
+}
 
 export const matchRouter = createTRPCRouter({
   // Submit a new match result
@@ -104,10 +185,63 @@ export const matchRouter = createTRPCRouter({
           },
         });
 
+        const matchFeeAmount = yellowService.getMatchFeeAmount();
+        if (yellowService.isEnabled() && matchFeeAmount > 0) {
+          try {
+            const [homeTreasury, awayTreasury] = await Promise.all([
+              ctx.prisma.squadTreasury.findUnique({ where: { squadId: input.homeSquadId } }),
+              ctx.prisma.squadTreasury.findUnique({ where: { squadId: input.awaySquadId } }),
+            ]);
+
+            const homeHasFunds = (homeTreasury?.balance ?? 0) >= matchFeeAmount;
+            const awayHasFunds = (awayTreasury?.balance ?? 0) >= matchFeeAmount;
+
+            if (homeHasFunds && awayHasFunds) {
+              const feeSession = await yellowService.createMatchFeeSession({
+                matchId: match.id,
+                homeSquadId: input.homeSquadId,
+                awaySquadId: input.awaySquadId,
+                feeAmount: matchFeeAmount,
+              });
+
+              if (feeSession.sessionId) {
+                await ctx.prisma.match.update({
+                  where: { id: match.id },
+                  data: { yellowFeeSessionId: feeSession.sessionId },
+                });
+
+                await postTreasuryLedgerEntry({
+                  prisma: ctx.prisma,
+                  squadId: input.homeSquadId,
+                  amountDelta: -matchFeeAmount,
+                  type: 'expense',
+                  category: 'match_fee',
+                  description: `Match fee locked for match ${match.id}`,
+                  txHash: feeSession.settlementId,
+                });
+
+                await postTreasuryLedgerEntry({
+                  prisma: ctx.prisma,
+                  squadId: input.awaySquadId,
+                  amountDelta: -matchFeeAmount,
+                  type: 'expense',
+                  category: 'match_fee',
+                  description: `Match fee locked for match ${match.id}`,
+                  txHash: feeSession.settlementId,
+                });
+
+                (match as any).yellowFeeSessionId = feeSession.sessionId;
+              }
+            }
+          } catch (yellowError) {
+            console.error('Yellow match fee session setup failed:', yellowError);
+          }
+        }
+
         // Return with CRE result if we have it
         return {
           ...match,
-          creResult: (match as any).verificationDetails
+          creResult: (match as any).verificationDetails,
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -234,6 +368,14 @@ export const matchRouter = createTRPCRouter({
               txId: txId || undefined
             },
           });
+
+          if (newStatus === 'verified' || newStatus === 'disputed') {
+            try {
+              await settleMatchFee(ctx.prisma, updatedMatch, newStatus);
+            } catch (yellowError) {
+              console.error('Failed to settle Yellow match fee:', yellowError);
+            }
+          }
         }
 
         return { success: true, newStatus };

@@ -4,7 +4,6 @@ import { useCallback } from 'react';
 import { trpc } from '@/lib/trpc-client';
 import type { MatchResult, Verification, MatchStatus, TrustTier } from '@/types';
 import { calculateTrustScore } from '@/lib/match/verification';
-import { useYellowSession } from '@/hooks/useYellowSession';
 
 interface UseMatchVerificationReturn {
   matches: MatchResult[];
@@ -60,9 +59,9 @@ function transformMatch(match: any): MatchResult {
     creResult: match.creResult,
     paymentRail: {
       enabled: Boolean(match.yellowFeeSessionId),
-      assetSymbol: 'USDC',
+      assetSymbol: process.env.NEXT_PUBLIC_YELLOW_ASSET_SYMBOL || 'USDC',
       sessionId: match.yellowFeeSessionId,
-      feeAmount: match.matchFeeAmount,
+      feeAmount: Number(process.env.NEXT_PUBLIC_YELLOW_MATCH_FEE_AMOUNT || 1),
     },
   };
 }

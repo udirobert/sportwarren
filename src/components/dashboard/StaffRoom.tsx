@@ -56,7 +56,7 @@ const SPONSORSHIP_DEALS: Record<string, { brand: string; value: number; duration
     'Brand Reputation': { brand: 'Phygital Sports Kit', value: 3200, duration: '12 weeks', requirement: 'Top 10 Hackney ranking', lensBoost: 10 },
 };
 
-type ChatMessage = { sender: string; text: string; actions?: { label: string; onClick: () => void }[] };
+type ChatMessage = { sender: string; text: string; actions?: { label: string; onClick: () => void }[]; id?: string };
 
 interface StaffMember {
     id: string;
@@ -117,31 +117,51 @@ interface StaffRoomProps {
 
 export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     const [selectedStaff, setSelectedStaff] = useState<StaffMember | null>(STAFF_MEMBERS[0]);
-    const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+    const [chatHistories, setChatHistories] = useState<Record<string, ChatMessage[]>>({});
+    const [usedActions, setUsedActions] = useState<Set<string>>(new Set());
     const chatEndRef = useRef<HTMLDivElement>(null);
     const [isTyping, setIsTyping] = useState(false);
     const [isNegotiationOpen, setIsNegotiationOpen] = useState(false);
     const [negotiatingPlayer, setNegotiatingPlayer] = useState<string>('');
     const [negotiatingWage, setNegotiatingWage] = useState<number>(500);
 
+    const chatHistory = selectedStaff ? (chatHistories[selectedStaff.id] || []) : [];
+    const setChatHistory = (updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
+        if (!selectedStaff) return;
+        const staffId = selectedStaff.id;
+        setChatHistories(prev => {
+            const current = prev[staffId] || [];
+            const next = typeof updater === 'function' ? updater(current) : updater;
+            return { ...prev, [staffId]: next };
+        });
+    };
+
     // Fetch real-time data for functional responses
-    const { data: treasury } = trpc.squad.getTreasury.useQuery(
+    const { data: treasury, isLoading: treasuryLoading, isError: treasuryError } = trpc.squad.getTreasury.useQuery(
         { squadId: squadId || '' },
         { enabled: !!squadId }
     );
-    const { data: tactics } = trpc.squad.getTactics.useQuery(
+    const { data: tactics, isLoading: tacticsLoading } = trpc.squad.getTactics.useQuery(
         { squadId: squadId || '' },
         { enabled: !!squadId }
     );
-    const { members } = useSquadDetails(squadId);
+    const { members, loading: membersLoading } = useSquadDetails(squadId);
+
+    const dataLoading = squadId && (treasuryLoading || tacticsLoading || membersLoading);
+    const dataError = squadId && treasuryError;
 
     useEffect(() => {
         if (selectedStaff) {
-            setChatHistory([
-                { sender: selectedStaff.name, text: `Welcome to the backroom, Boss. How can I help you today?` }
-            ]);
+            setChatHistories(prev => {
+                if (prev[selectedStaff.id]) return prev;
+                return {
+                    ...prev,
+                    [selectedStaff.id]: [{ sender: selectedStaff.name, text: `Welcome to the backroom, Boss. How can I help you today?` }]
+                };
+            });
+            setUsedActions(new Set());
         }
-    }, [selectedStaff]);
+    }, [selectedStaff?.id]);
 
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -441,6 +461,19 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
 
                     {/* Messages */}
                     <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-none">
+                        {dataLoading && (
+                            <div className="flex items-center justify-center py-4">
+                                <div className="flex items-center space-x-2 text-gray-500 text-[10px] font-black uppercase tracking-widest">
+                                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
+                                    <span>Loading squad data...</span>
+                                </div>
+                            </div>
+                        )}
+                        {dataError && (
+                            <div className="mx-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-[10px] font-bold text-red-400 uppercase tracking-widest">
+                                ⚠️ Could not load live squad data. Showing cached values.
+                            </div>
+                        )}
                         {chatHistory.map((chat, i) => (
                             <motion.div
                                 key={i}
@@ -456,15 +489,28 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                 </div>
                                 {chat.actions && chat.actions.length > 0 && (
                                     <div className="flex gap-2 mt-2 flex-wrap">
-                                        {chat.actions.map((action, ai) => (
-                                            <button
-                                                key={ai}
-                                                onClick={action.onClick}
-                                                className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-white/10 border border-white/10 text-gray-200 hover:bg-white/20 hover:text-white transition-all"
-                                            >
-                                                {action.label}
-                                            </button>
-                                        ))}
+                                        {chat.actions.map((action, ai) => {
+                                            const actionKey = `${i}-${ai}`;
+                                            const consumed = usedActions.has(actionKey);
+                                            return (
+                                                <button
+                                                    key={ai}
+                                                    onClick={() => {
+                                                        if (consumed) return;
+                                                        setUsedActions(prev => new Set(prev).add(actionKey));
+                                                        action.onClick();
+                                                    }}
+                                                    disabled={consumed}
+                                                    className={`px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all ${
+                                                        consumed
+                                                            ? 'bg-white/5 border-white/5 text-gray-600 cursor-not-allowed'
+                                                            : 'bg-white/10 border-white/10 text-gray-200 hover:bg-white/20 hover:text-white'
+                                                    }`}
+                                                >
+                                                    {action.label}
+                                                </button>
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </motion.div>

@@ -536,29 +536,30 @@ export const squadRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       try {
-        const treasury = await ctx.prisma.squadTreasury.findUnique({
-          where: { squadId: input.squadId },
-          include: {
-            transactions: {
-              orderBy: { createdAt: 'desc' },
-              take: 20,
+        const [treasury, yellowStatus] = await Promise.all([
+          ctx.prisma.squadTreasury.findUnique({
+            where: { squadId: input.squadId },
+            include: {
+              transactions: {
+                orderBy: { createdAt: 'desc' },
+                take: 20,
+              },
             },
-          },
-        });
-
-        // Return default treasury if none exists
-        if (!treasury) {
-          return {
-            balance: 0,
-            budgets: { wages: 0, transfers: 0, facilities: 0 },
-            transactions: [],
-          };
-        }
+          }),
+          Promise.resolve(yellowService.getRailStatus()),
+        ]);
 
         return {
-          balance: treasury.balance,
-          budgets: treasury.budgets,
-          transactions: treasury.transactions,
+          balance: treasury?.balance ?? 0,
+          budgets: treasury?.budgets ?? { wages: 0, transfers: 0, facilities: 0 },
+          transactions: treasury?.transactions ?? [],
+          paymentRail: {
+            enabled: yellowStatus.enabled,
+            mode: yellowStatus.mode,
+            assetSymbol: yellowStatus.assetSymbol,
+            sessionId: treasury?.yellowSessionId ?? null,
+            settledBalance: treasury?.balance ?? 0,
+          },
         };
       } catch (error) {
         throw new TRPCError({
@@ -597,41 +598,37 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
-        // Get or create treasury
-        let treasury = await ctx.prisma.squadTreasury.findUnique({
-          where: { squadId },
+        const treasury = await ensureSquadTreasury(ctx.prisma, squadId);
+        const settlement = await yellowService.depositToTreasury({
+          existingSessionId: treasury.yellowSessionId,
+          squadId,
+          walletAddress: ctx.walletAddress!,
+          amount,
         });
 
-        if (!treasury) {
-          treasury = await ctx.prisma.squadTreasury.create({
-            data: {
-              squadId,
-              balance: 0,
-              budgets: { wages: 0, transfers: 0, facilities: 0 },
-            },
+        if (settlement.sessionId && settlement.sessionId !== treasury.yellowSessionId) {
+          await ctx.prisma.squadTreasury.update({
+            where: { id: treasury.id },
+            data: { yellowSessionId: settlement.sessionId },
           });
         }
 
-        // Update balance and create transaction
-        const [updatedTreasury, transaction] = await ctx.prisma.$transaction([
-          ctx.prisma.squadTreasury.update({
-            where: { id: treasury.id },
-            data: { balance: { increment: amount } },
-          }),
-          ctx.prisma.treasuryTransaction.create({
-            data: {
-              treasuryId: treasury.id,
-              type: 'income',
-              category: 'deposit',
-              amount,
-              description: description || 'Treasury deposit',
-              verified: true,
-            },
-          }),
-        ]);
-
-        return { treasury: updatedTreasury, transaction };
+        return await postTreasuryLedgerEntry({
+          prisma: ctx.prisma,
+          squadId,
+          amountDelta: amount,
+          type: 'income',
+          category: 'deposit',
+          description: description || 'Treasury deposit via Yellow',
+          txHash: settlement.settlementId,
+        });
       } catch (error) {
+        if (error instanceof TreasuryBalanceError) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Insufficient treasury balance',
+          });
+        }
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -689,26 +686,36 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
-        // Update balance and create transaction
-        const [updatedTreasury, transaction] = await ctx.prisma.$transaction([
-          ctx.prisma.squadTreasury.update({
-            where: { id: treasury.id },
-            data: { balance: { increment: -amount } },
-          }),
-          ctx.prisma.treasuryTransaction.create({
-            data: {
-              treasuryId: treasury.id,
-              type: 'expense',
-              category,
-              amount,
-              description: reason,
-              verified: true,
-            },
-          }),
-        ]);
+        const settlement = await yellowService.withdrawFromTreasury({
+          existingSessionId: treasury.yellowSessionId,
+          squadId,
+          walletAddress: ctx.walletAddress!,
+          amount,
+        });
 
-        return { treasury: updatedTreasury, transaction };
+        if (settlement.sessionId && settlement.sessionId !== treasury.yellowSessionId) {
+          await ctx.prisma.squadTreasury.update({
+            where: { id: treasury.id },
+            data: { yellowSessionId: settlement.sessionId },
+          });
+        }
+
+        return await postTreasuryLedgerEntry({
+          prisma: ctx.prisma,
+          squadId,
+          amountDelta: -amount,
+          type: 'expense',
+          category,
+          description: reason,
+          txHash: settlement.settlementId,
+        });
       } catch (error) {
+        if (error instanceof TreasuryBalanceError) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Insufficient treasury balance',
+          });
+        }
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -731,6 +738,7 @@ export const squadRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const { squadId, type } = input;
+        await expireTransferOffers(ctx.prisma, squadId);
 
         const where = type === 'incoming'
           ? { toSquadId: squadId }
@@ -767,7 +775,7 @@ export const squadRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       try {
-        const { toSquadId, ...offerData } = input;
+        const { toSquadId } = input;
 
         // Get user's squad
         const fromMembership = await ctx.prisma.squadMember.findFirst({
@@ -784,6 +792,20 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
+        if (fromMembership.role !== 'captain' && fromMembership.role !== 'vice_captain') {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only captain or vice-captain can make transfer offers',
+          });
+        }
+
+        if (fromMembership.squadId === toSquadId) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Cannot create an offer for your own squad',
+          });
+        }
+
         // Check if player exists
         const player = await ctx.prisma.user.findUnique({
           where: { id: input.playerId },
@@ -796,7 +818,15 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
-        const offer = await ctx.prisma.transferOffer.create({
+        const treasury = await ensureSquadTreasury(ctx.prisma, fromMembership.squadId);
+        if (treasury.balance < input.amount) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Insufficient treasury balance to lock escrow',
+          });
+        }
+
+        let offer = await ctx.prisma.transferOffer.create({
           data: {
             fromSquadId: fromMembership.squadId,
             toSquadId,
@@ -813,8 +843,42 @@ export const squadRouter = createTRPCRouter({
           },
         });
 
+        const escrow = await yellowService.createTransferEscrow({
+          offerId: offer.id,
+          buyerAddress: ctx.walletAddress!,
+          sellerAddress: await getSquadLeaderWallet(ctx.prisma, toSquadId),
+          amount: input.amount,
+        });
+
+        if (escrow.sessionId) {
+          offer = await ctx.prisma.transferOffer.update({
+            where: { id: offer.id },
+            data: { yellowSessionId: escrow.sessionId },
+            include: {
+              fromSquad: { select: { id: true, name: true, shortName: true } },
+              toSquad: { select: { id: true, name: true, shortName: true } },
+            },
+          });
+        }
+
+        await postTreasuryLedgerEntry({
+          prisma: ctx.prisma,
+          squadId: fromMembership.squadId,
+          amountDelta: -input.amount,
+          type: 'expense',
+          category: 'transfer_out',
+          description: `Escrow locked for ${input.offerType} offer on player ${input.playerId}`,
+          txHash: escrow.settlementId,
+        });
+
         return offer;
       } catch (error) {
+        if (error instanceof TreasuryBalanceError) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Insufficient treasury balance to lock escrow',
+          });
+        }
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -833,6 +897,7 @@ export const squadRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const { offerId, accept } = input;
+        await expireTransferOffers(ctx.prisma);
 
         // Get offer
         const offer = await ctx.prisma.transferOffer.findUnique({
@@ -843,6 +908,13 @@ export const squadRouter = createTRPCRouter({
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'Offer not found',
+          });
+        }
+
+        if (offer.status !== 'pending') {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Only pending offers can be updated',
           });
         }
 
@@ -863,45 +935,46 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
+        const settlement = offer.yellowSessionId
+          ? await yellowService.settleTransferEscrow({
+              sessionId: offer.yellowSessionId,
+              offerId,
+              amount: offer.amount,
+              recipient: accept ? 'seller' : 'buyer',
+            })
+          : null;
+
         const updatedOffer = await ctx.prisma.transferOffer.update({
           where: { id: offerId },
           data: {
             status: accept ? 'accepted' : 'rejected',
           },
+          include: {
+            fromSquad: { select: { id: true, name: true, shortName: true } },
+            toSquad: { select: { id: true, name: true, shortName: true } },
+          },
         });
 
-        // If accepted, create treasury transaction for payment
         if (accept) {
-          // Get or create treasury
-          let treasury = await ctx.prisma.squadTreasury.findUnique({
-            where: { squadId: offer.toSquadId },
+          await postTreasuryLedgerEntry({
+            prisma: ctx.prisma,
+            squadId: offer.toSquadId,
+            amountDelta: offer.amount,
+            type: 'income',
+            category: 'transfer_in',
+            description: `Transfer settled for player ${offer.playerId}`,
+            txHash: settlement?.settlementId ?? null,
           });
-
-          if (!treasury) {
-            treasury = await ctx.prisma.squadTreasury.create({
-              data: {
-                squadId: offer.toSquadId,
-                balance: 0,
-              },
-            });
-          }
-
-          // Deduct from treasury
-          await ctx.prisma.squadTreasury.update({
-            where: { id: treasury.id },
-            data: { balance: { increment: -offer.amount } },
-          });
-
-          // Create transaction record
-          await ctx.prisma.treasuryTransaction.create({
-            data: {
-              treasuryId: treasury.id,
-              type: 'expense',
-              category: 'transfer_out',
-              amount: offer.amount,
-              description: `Transfer: ${offer.offerType} for player ${offer.playerId}`,
-              verified: true,
-            },
+          await movePlayerToSquad(ctx.prisma, offer);
+        } else {
+          await postTreasuryLedgerEntry({
+            prisma: ctx.prisma,
+            squadId: offer.fromSquadId,
+            amountDelta: offer.amount,
+            type: 'income',
+            category: 'transfer_in',
+            description: `Escrow refunded for player ${offer.playerId}`,
+            txHash: settlement?.settlementId ?? null,
           });
         }
 
@@ -924,6 +997,7 @@ export const squadRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const { offerId } = input;
+        await expireTransferOffers(ctx.prisma);
 
         // Get offer
         const offer = await ctx.prisma.transferOffer.findUnique({
@@ -934,6 +1008,13 @@ export const squadRouter = createTRPCRouter({
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'Offer not found',
+          });
+        }
+
+        if (offer.status !== 'pending') {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Only pending offers can be cancelled',
           });
         }
 
@@ -954,9 +1035,28 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
+        const settlement = offer.yellowSessionId
+          ? await yellowService.settleTransferEscrow({
+              sessionId: offer.yellowSessionId,
+              offerId,
+              amount: offer.amount,
+              recipient: 'buyer',
+            })
+          : null;
+
         await ctx.prisma.transferOffer.update({
           where: { id: offerId },
           data: { status: 'cancelled' },
+        });
+
+        await postTreasuryLedgerEntry({
+          prisma: ctx.prisma,
+          squadId: offer.fromSquadId,
+          amountDelta: offer.amount,
+          type: 'income',
+          category: 'transfer_in',
+          description: `Escrow refunded after cancellation for player ${offer.playerId}`,
+          txHash: settlement?.settlementId ?? null,
         });
 
         return { success: true };
