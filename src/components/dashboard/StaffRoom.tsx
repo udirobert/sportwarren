@@ -129,6 +129,9 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     const [isNegotiationOpen, setIsNegotiationOpen] = useState(false);
     const [negotiatingPlayer, setNegotiatingPlayer] = useState<string>('');
     const [negotiatingWage, setNegotiatingWage] = useState<number>(500);
+    const [inputText, setInputText] = useState<string>('');
+
+    const agentChat = trpc.agent.chat.useMutation();
 
     const chatHistory = selectedStaff ? (chatHistories[selectedStaff.id] || []) : [];
     const setChatHistory = (updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
@@ -424,7 +427,39 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                 }, 1500);
                 response = null;
             } else {
-                response = getStaffResponse(selectedStaff?.id || '', text);
+                // Free-text: call LLM with squad context
+                const avgLevel = members?.length
+                    ? Math.round(members.reduce((acc, m) => acc + (m.stats?.level || 0), 0) / members.length)
+                    : undefined;
+                agentChat.mutate(
+                    {
+                        staffId: selectedStaff?.id || 'agent-1',
+                        message: text,
+                        squadContext: {
+                            balance: treasury?.balance,
+                            memberCount: members?.length,
+                            avgLevel,
+                            formation: tactics?.formation ?? undefined,
+                            members: members?.slice(0, 8).map(m => ({
+                                name: m.name,
+                                level: m.stats?.level,
+                                matches: m.stats?.matches,
+                                role: m.role,
+                            })),
+                        },
+                    },
+                    {
+                        onSuccess: (data) => {
+                            setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Staff', text: data.reply }]);
+                            setIsTyping(false);
+                        },
+                        onError: () => {
+                            setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Staff', text: `Sorry Boss, I'm having trouble connecting right now. Try again in a moment.` }]);
+                            setIsTyping(false);
+                        },
+                    }
+                );
+                response = null;
             }
 
             if (response !== null) {
@@ -589,6 +624,32 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                 </Button>
                             ))}
                         </div>
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                const trimmed = inputText.trim();
+                                if (!trimmed || isTyping) return;
+                                setInputText('');
+                                handleSendMessage(trimmed);
+                            }}
+                            className="flex gap-2"
+                        >
+                            <input
+                                type="text"
+                                value={inputText}
+                                onChange={(e) => setInputText(e.target.value)}
+                                placeholder="Ask your staff anything..."
+                                disabled={isTyping}
+                                className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 disabled:opacity-50"
+                            />
+                            <button
+                                type="submit"
+                                disabled={!inputText.trim() || isTyping}
+                                className="px-4 py-2.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-xl text-white text-[10px] font-black uppercase tracking-widest transition-colors"
+                            >
+                                Send
+                            </button>
+                        </form>
                     </div>
                 </div>
 
@@ -634,38 +695,6 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     );
 };
 
-function getStaffResponse(staffId: string, query: string): string {
-    const responses: Record<string, string[]> = {
-        'agent-1': [
-            "I've been looking at the numbers. Based on the recent Hackney derby, your squad's valuation is up 12% on the secondary market.",
-            "Marcus has attracted interest from the Northside Elite. We might need to adjust his reputation-clause if we want to keep him.",
-            "The market is moving fast. If we don't finalize the draft picks soon, we'll lose the early-bird discount on the smart contracts."
-        ],
-        'scout-1': [
-            "Pitch 4 was lively today. I saw a kid with 95 pace and verified Algorand credentials. We should bring him in for a trial.",
-            "Our data suggests a gap in the midfield. My spatial analysis shows players are over-committing in the transition phase.",
-            "I've updated the Scouting Report with rival data. Watch out for Northside's new striker; he's got clinical finishing stats."
-        ],
-        'coach-1': [
-            "The Match Engine is calculating our offensive probability as high, but our defensive recovery is lacking. I suggest a 4-3-3 setup.",
-            "I've noticed the squad's morale is dipping after the last loss. Maybe a light training session tomorrow?",
-            "Tactical directive: We need to utilize the wings more. The Lens reputation of our wide players should be exploited."
-        ],
-        'physio-1': [
-            "Recovery periods are shortening thanks to the new sleep-tracking integration. The squad is ready for the double-header.",
-            "I'm seeing high lactic acid levels in our mid-field. We should rotation them for the Tuesday night match.",
-            "Biometric verification complete. All participating players are physically cleared for the upcoming turf-war."
-        ],
-        'comms-1': [
-            "Our social reach is up 40% after the last highlight post. The phantom-fans are starting to buy real-world merch.",
-            "I've negotiated a bounty with the local sports shop. Anyone who checks in there gets a 10% XP boost.",
-            "Brand alignment is perfect. We're the most 'Phygital' club in the London circuit right now."
-        ]
-    };
-
-    const options = responses[staffId] || ["I'll get back to you on that, Boss."];
-    return options[Math.floor(Math.random() * options.length)];
-}
 
 function getQuickActions(staffId: string): string[] {
     switch (staffId) {
