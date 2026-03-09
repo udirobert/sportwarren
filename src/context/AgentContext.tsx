@@ -33,11 +33,23 @@ export interface FormationFlag {
     flaggedAt: number;
 }
 
+export interface OnChainAction {
+    id: string;
+    type: 'yellow_payment' | 'lens_post';
+    description: string;
+    amount?: number;
+    assetSymbol?: string;
+    recipient?: string;
+    postText?: string;
+    queuedAt: number;
+}
+
 export interface AgentContextState {
     flaggedProspect: ProspectFlag | null;
     flaggedInjury: InjuryFlag | null;
     closedDeal: DealFlag | null;
     activeFormation: FormationFlag | null;
+    pendingOnChainAction: OnChainAction | null;
 }
 
 type AgentAction =
@@ -48,7 +60,9 @@ type AgentAction =
     | { type: 'SET_DEAL_CLOSED'; payload: Omit<DealFlag, 'flaggedAt'> }
     | { type: 'CLEAR_DEAL' }
     | { type: 'SET_FORMATION'; payload: Omit<FormationFlag, 'flaggedAt'> }
-    | { type: 'CLEAR_FORMATION' };
+    | { type: 'CLEAR_FORMATION' }
+    | { type: 'QUEUE_ONCHAIN_ACTION'; payload: Omit<OnChainAction, 'queuedAt'> }
+    | { type: 'CLEAR_ONCHAIN_ACTION' };
 
 // ── Reducer ──────────────────────────────────────────────────────────────────
 
@@ -57,6 +71,7 @@ const initialState: AgentContextState = {
     flaggedInjury: null,
     closedDeal: null,
     activeFormation: null,
+    pendingOnChainAction: null,
 };
 
 function agentReducer(state: AgentContextState, action: AgentAction): AgentContextState {
@@ -77,6 +92,10 @@ function agentReducer(state: AgentContextState, action: AgentAction): AgentConte
             return { ...state, activeFormation: { ...action.payload, flaggedAt: Date.now() } };
         case 'CLEAR_FORMATION':
             return { ...state, activeFormation: null };
+        case 'QUEUE_ONCHAIN_ACTION':
+            return { ...state, pendingOnChainAction: { ...action.payload, queuedAt: Date.now() } };
+        case 'CLEAR_ONCHAIN_ACTION':
+            return { ...state, pendingOnChainAction: null };
         default:
             return state;
     }
