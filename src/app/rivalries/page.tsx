@@ -1,11 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { RivalryTracker } from "@/components/rivalry/RivalryTracker";
-
+// /rivalries is consolidated into /match — rivalry context lives in the Matches hub
 export default function RivalriesPage() {
-  return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
-      <RivalryTracker userSquad="Northside United" />
-    </div>
-  );
+  redirect("/match");
 }

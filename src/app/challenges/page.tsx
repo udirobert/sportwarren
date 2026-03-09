@@ -1,7 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { GlobalChallenges } from "@/components/algorand/GlobalChallenges";
-
+// /challenges is consolidated into /squad — challenge setup lives in the Squad hub
 export default function ChallengesPage() {
-  return <GlobalChallenges />;
+  redirect("/squad");
 }
