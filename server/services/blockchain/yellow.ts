@@ -13,6 +13,12 @@ export interface YellowRailStatus {
   appId?: string;
 }
 
+export interface YellowClientSettlement {
+  sessionId: string;
+  version: number;
+  settlementId?: string | null;
+}
+
 function readBooleanEnv(value: string | undefined, fallback = false) {
   if (value === undefined) {
     return fallback;
@@ -63,6 +69,18 @@ class YellowService {
 
   getMatchFeeAmount() {
     return this.getRailStatus().matchFeeAmount;
+  }
+
+  recordClientSettlement(params: YellowClientSettlement) {
+    const status = this.getRailStatus();
+
+    return {
+      ...status,
+      sessionId: params.sessionId,
+      version: params.version,
+      settlementId:
+        params.settlementId ?? `${params.sessionId}:v${params.version}`,
+    };
   }
 
   async ensureTreasurySession(existingSessionId: string | null | undefined, squadId: string) {
