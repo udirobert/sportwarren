@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { trpc } from '@/lib/trpc-client';
 import { useSquadDetails } from '@/hooks/squad/useSquad';
+import { useAgentAlerts } from '@/hooks/squad/useAgentAlerts';
 import { ContractNegotiationModal } from './ContractNegotiationModal';
 
 // Derive reputation tier from reputation score
@@ -153,6 +154,9 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
 
     const dataLoading = squadId && (treasuryLoading || tacticsLoading || membersLoading);
     const dataError = squadId && treasuryError;
+    const dataReady = !dataLoading && !!squadId;
+
+    const agentAlerts = useAgentAlerts({ members, treasury: treasury ?? null, tactics: tactics ?? null, dataReady });
 
     useEffect(() => {
         if (selectedStaff) {
@@ -166,6 +170,25 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
             setUsedActions(new Set());
         }
     }, [selectedStaff?.id]);
+
+    // Inject proactive agent alerts once per staff member after data loads
+    const alertsInjectedRef = useRef<Set<string>>(new Set());
+    useEffect(() => {
+        if (!agentAlerts.length) return;
+        setChatHistories(prev => {
+            const next = { ...prev };
+            for (const alert of agentAlerts) {
+                const key = `${alert.staffId}:${alert.text.slice(0, 40)}`;
+                if (alertsInjectedRef.current.has(key)) continue;
+                alertsInjectedRef.current.add(key);
+                const existing = next[alert.staffId] || [
+                    { sender: STAFF_MEMBERS.find(s => s.id === alert.staffId)?.name ?? alert.sender, text: 'Welcome to the backroom, Boss. How can I help you today?' }
+                ];
+                next[alert.staffId] = [...existing, { sender: alert.sender, text: alert.text }];
+            }
+            return next;
+        });
+    }, [agentAlerts]);
 
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
