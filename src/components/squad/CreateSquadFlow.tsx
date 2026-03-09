@@ -28,7 +28,19 @@ export const CreateSquadFlow: React.FC<CreateSquadFlowProps> = ({ onCreated }) =
         if (!archetype) { setError('Pick a squad identity first.'); return; }
         setError('');
         try {
-            const result = await createSquad({ name: squadName.trim(), description: archetype });
+            const shortName = squadName
+                .trim()
+                .split(/\s+/)
+                .map(part => part[0] || '')
+                .join('')
+                .slice(0, 5)
+                .toUpperCase() || squadName.trim().slice(0, 5).toUpperCase();
+
+            const result = await createSquad({
+                name: squadName.trim(),
+                shortName,
+                homeGround: archetype,
+            });
             onCreated(result.id);
         } catch (e: unknown) {
             setError(e instanceof Error ? e.message : 'Something went wrong. Try again.');
