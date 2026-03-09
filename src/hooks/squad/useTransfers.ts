@@ -2,8 +2,7 @@
 
 import { useCallback } from 'react';
 import { trpc } from '@/lib/trpc-client';
-import type { TransferOffer, SquadPlayer } from '@/types';
-import { useYellowSession } from '@/hooks/useYellowSession';
+import type { TransferOffer } from '@/types';
 
 interface UseTransfersReturn {
   incomingOffers: TransferOffer[];

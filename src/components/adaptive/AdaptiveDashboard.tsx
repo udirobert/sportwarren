@@ -28,6 +28,7 @@ import { AgenticConcierge } from '@/components/adaptive/AgenticConcierge';
 import { LensSocialHub } from '@/components/dashboard/LensSocialHub';
 
 import { CaptainsLog } from '@/components/dashboard/CaptainsLog';
+import { CreateSquadFlow } from '@/components/squad/CreateSquadFlow';
 
 interface DashboardWidget {
   id: string;
@@ -42,13 +43,26 @@ export const AdaptiveDashboard: React.FC = () => {
   const { preferences, trackFeatureUsage } = useUserPreferences();
   const { address, isGuest } = useWallet();
   const [isStaffRoomOpen, setIsStaffRoomOpen] = React.useState(false);
+  const [forcedSquadId, setForcedSquadId] = React.useState<string | null>(null);
   const userAddress = address || undefined;
 
   const { data: stats, loading } = useDashboardData(userAddress);
-  const { memberships, loading: squadLoading } = useMySquads();
+  const { memberships, loading: squadLoading, refresh: refreshSquads } = useMySquads();
   const { completeChecklistItem, allChecklistDone } = useOnboarding();
 
-  const primarySquadId = memberships?.[0]?.squad.id;
+  const primarySquadId = forcedSquadId || memberships?.[0]?.squad.id;
+
+  // Show squad creation flow for connected (non-guest) users with no squad
+  if (!isGuest && !squadLoading && memberships.length === 0 && !forcedSquadId) {
+    return (
+      <CreateSquadFlow
+        onCreated={async (id) => {
+          setForcedSquadId(id);
+          await refreshSquads();
+        }}
+      />
+    );
+  }
 
   const handleOpenOffice = React.useCallback(() => {
     setIsStaffRoomOpen(true);
