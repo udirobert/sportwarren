@@ -1,3 +1,5 @@
+Command finished with exit code 0.
+Command output:
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -68,7 +70,6 @@ export interface ChecklistItem {
     description: string;
     completed: boolean;
     emoji: string;
-    href: string;
 }
 
 const STORAGE_KEY = 'sw_onboarding_v2';
@@ -150,23 +151,20 @@ export function useOnboarding() {
             description: 'Hit ▶ Play on the Match Engine',
             completed: state.checklistItems.view_match_engine ?? false,
             emoji: '🎮',
-            href: '/match',
         },
         {
             id: 'open_office',
             label: 'Visit the Staff Room',
-            description: 'Open the backroom feed and chat to your Agent',
+            description: 'Click "Enter Office" and chat to your Agent',
             completed: state.checklistItems.open_office ?? false,
             emoji: '🎩',
-            href: '/',
         },
         {
             id: 'use_draft',
             label: 'Draft your first prospect',
-            description: 'Use the transfer market to scout and sign a player',
+            description: 'Use the Draft Engine to scout and sign a player',
             completed: state.checklistItems.use_draft ?? false,
             emoji: '📋',
-            href: '/squad?tab=transfers',
         },
         {
             id: 'verify_match',
@@ -174,15 +172,13 @@ export function useOnboarding() {
             description: 'Log your Sunday game for XP and on-chain rep',
             completed: state.checklistItems.verify_match ?? false,
             emoji: '✅',
-            href: '/match?mode=capture',
         },
         {
             id: 'claim_identity',
             label: 'Secure your Legacy',
             description: 'Connect wallet to mint your guest stats to the blockchain',
-            completed: state.wizardDone,
+            completed: state.wizardDone, // If they did the wizard or connected, they might be done
             emoji: '⚡',
-            href: '/settings',
         },
     ];
 
@@ -205,3 +201,84 @@ export function useOnboarding() {
         resetOnboarding,
     };
 }
+===
+import React from 'react';
+import { Card } from '@/components/ui/Card';
+import { StatCard } from '@/components/common/StatCard';
+import { Target, Users, Trophy, Shield, TrendingUp, Award, Star, Zap } from 'lucide-react';
+
+export const PlayerStats: React.FC = () => {
+  const performanceData = [
+    { month: 'Aug', goals: 4, assists: 2, rating: 7.8 },
+    { month: 'Sep', goals: 6, assists: 4, rating: 8.2 },
+    { month: 'Oct', goals: 3, assists: 5, rating: 7.9 },
+    { month: 'Nov', goals: 5, assists: 3, rating: 8.5 },
+    { month: 'Dec', goals: 8, assists: 6, rating: 9.1 },
+    { month: 'Jan', goals: 2, assists: 1, rating: 8.0 },
+  ];
+
+  const positionStats = [
+    { position: 'Striker', appearances: 18, rating: 8.4, goals: 15, assists: 4 },
+    { position: 'Right Wing', appearances: 4, rating: 7.8, goals: 2, assists: 5 },
+    { position: 'CAM', appearances: 2, rating: 8.9, goals: 1, assists: 2 },
+  ];
+
+  const rivalryRecord = [
+    { team: 'Red Lions FC', played: 6, won: 4, drawn: 1, lost: 1, goalsDiff: '+5' },
+    { team: 'Sunday Legends', played: 5, won: 2, drawn: 1, lost: 2, goalsDiff: '-1' },
+    { team: 'Park Rangers', played: 4, won: 3, drawn: 0, lost: 1, goalsDiff: '+3' },
+    { team: 'Borough Rovers', played: 3, won: 2, drawn: 1, lost: 0, goalsDiff: '+2' },
+  ];
+
+  return (
+    <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-8">
+      {/* Player Overview */}
+      <div className="text-center mb-8">
+        <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-green-700 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="text-2xl font-bold text-white">MJ</span>
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Marcus Johnson</h1>
+        <div className="flex items-center justify-center space-x-4 text-gray-600">
+          <span>Position: Striker</span>
+          <span>•</span>
+          <span>Squad: Northside United</span>
+          <span>•</span>
+          <span>Season: 2024/25</span>
+        </div>
+      </div>
+
+      {/* Key Statistics */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+        <StatCard
+          title="Goals Scored"
+          value={18}
+          icon={Target}
+          trend={{ value: 12, positive: true }}
+          color="green"
+        />
+        <StatCard
+          title="Assists"
+          value={11}
+          icon={Users}
+          trend={{ value: 8, positive: true }}
+          color="blue"
+        />
+        <StatCard
+          title="Average Rating"
+          value="8.2"
+          icon={Star}
+          trend={{ value: 3, positive: true }}
+          color="orange"
+        />
+        <StatCard
+          title="Clean Sheets"
+          value={7}
+          icon={Shield}
+          color="purple"
+        />
+      </div>
+
+      <div className="grid lg:grid-cols-2 gap-8">
+        {/* Performance Chart */}
+        <Card>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Monthly Performance</h2>
