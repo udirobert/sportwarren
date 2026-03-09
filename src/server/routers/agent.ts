@@ -44,9 +44,15 @@ export const agentRouter = createTRPCRouter({
           role: z.string().optional(),
         })).optional(),
       }).optional(),
+    recentDecisions: z.array(z.object({
+      action: z.string(),
+      decision: z.enum(['confirmed', 'declined']),
+      context: z.string().optional(),
+      timestamp: z.string(),
+    })).optional(),
     }))
     .mutation(async ({ input }) => {
-      const { staffId, message, squadContext } = input;
+      const { staffId, message, squadContext, recentDecisions } = input;
 
       const persona = STAFF_PERSONAS[staffId] ?? STAFF_PERSONAS['agent-1'];
 
@@ -59,9 +65,14 @@ export const agentRouter = createTRPCRouter({
         squadContext.members?.length && `Squad: ${squadContext.members.map(m => `${m.name} (Lvl ${m.level ?? 1}, ${m.matches ?? 0} matches)`).join(', ')}`,
       ].filter(Boolean).join('\n') : '';
 
+      const decisionBlock = recentDecisions?.length
+        ? `\n\nRecent manager decisions (use these to personalise your response — reference them naturally when relevant):\n${recentDecisions.map(d => `- ${d.decision === 'confirmed' ? '✅' : '❌'} "${d.action}" on ${new Date(d.timestamp).toLocaleDateString()}${d.context ? ` (${d.context})` : ''}`).join('\n')}`
+        : '';
+
       const systemPrompt = [
         persona,
         contextBlock && `\n\nCurrent squad data:\n${contextBlock}`,
+        decisionBlock,
       ].filter(Boolean).join('');
 
       const client = veniceClient ?? openaiClient;
