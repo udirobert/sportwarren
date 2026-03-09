@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { SquadDAO } from "@/components/squad/SquadDAO";
 import { TacticsBoard } from "@/components/squad/TacticsBoard";
@@ -16,6 +16,7 @@ import { MOCK_SQUAD_PLAYERS } from "@/lib/mocks";
 import { trpc } from "@/lib/trpc-client";
 import { useTreasury } from "@/hooks/squad/useTreasury";
 import { useTransfers } from "@/hooks/squad/useTransfers";
+import { PendingActionsPanel } from "@/components/operations/PendingActionsPanel";
 
 type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance";
 
@@ -35,6 +36,17 @@ export default function SquadPage() {
   const squadBalance = treasuryState.treasury?.balance ?? activeSquad?.treasuryBalance ?? 15000;
   const squadCurrency = treasuryState.treasury?.currency ?? "ALGO";
   const activeOffers = transfersState.incomingOffers.length + transfersState.outgoingOffers.length;
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const tab = new URLSearchParams(window.location.search).get("tab");
+    if (tab === "overview" || tab === "tactics" || tab === "transfers" || tab === "treasury" || tab === "governance") {
+      setActiveTab(tab);
+    }
+  }, []);
 
   const handleMakeOffer = (playerId: string, amount: number, type: 'transfer' | 'loan') => {
     return transfersState.makeOffer(playerId, amount, type);
@@ -112,6 +124,8 @@ export default function SquadPage() {
       {/* Tab Content */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
+          <PendingActionsPanel squadId={activeSquadId} variant="compact" />
+
           <Card>
             <h2 className="text-xl font-bold text-gray-900 mb-4">{activeSquad?.name ?? "Northside United"}</h2>
             <div className="grid md:grid-cols-2 gap-6">

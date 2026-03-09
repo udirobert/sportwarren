@@ -21,6 +21,7 @@ import dynamic from 'next/dynamic';
 // Statically imported (small / always visible)
 import { AgentProvider } from '@/context/AgentContext';
 import { CreateSquadFlow } from '@/components/squad/CreateSquadFlow';
+import { PendingActionsPanel } from '@/components/operations/PendingActionsPanel';
 
 // Dynamically imported (code-split, loaded on demand)
 const StaffFeed        = dynamic(() => import('@/components/adaptive/StaffFeed').then(m => ({ default: m.StaffFeed })), { ssr: false });
@@ -90,6 +91,15 @@ export const AdaptiveDashboard: React.FC = () => {
             if (id === 'claim_identity') window.location.reload(); // Simple way to trigger modal if logic is tied to mount or just show modal
           }}
         />
+      ),
+    },
+    {
+      id: 'pending-actions',
+      priority: 160,
+      requiredLevel: 'basic',
+      category: 'matches',
+      component: (
+        <PendingActionsPanel squadId={primarySquadId} />
       ),
     },
     {

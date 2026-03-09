@@ -26,6 +26,7 @@ type ViewMode = "capture" | "verify" | "detail" | "xp-summary" | "history";
 
 export default function MatchPage() {
   const [requestedMode, setRequestedMode] = useState<string | null>(null);
+  const [requestedMatchId, setRequestedMatchId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>("capture");
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [showXPSummary, setShowXPSummary] = useState(false);
@@ -82,16 +83,23 @@ export default function MatchPage() {
 
     const params = new URLSearchParams(window.location.search);
     setRequestedMode(params.get("mode"));
+    setRequestedMatchId(params.get("matchId"));
   }, []);
 
   useEffect(() => {
+    if (requestedMode === "detail" && requestedMatchId) {
+      setSelectedMatchId(requestedMatchId);
+      setViewMode("detail");
+      return;
+    }
+
     if (requestedMode === "verify" || requestedMode === "capture" || requestedMode === "history") {
       setViewMode(requestedMode);
       return;
     }
 
     setViewMode(pendingMatches.length > 0 ? "verify" : "capture");
-  }, [pendingMatches.length, requestedMode]);
+  }, [pendingMatches.length, requestedMatchId, requestedMode]);
 
   const handleMatchSubmit = async (result: any) => {
     if (!activeSquadId || !selectedOpponentId) {
@@ -373,6 +381,19 @@ export default function MatchPage() {
             }}
           />
         </div>
+      )}
+
+      {viewMode === "detail" && selectedMatchId && !selectedMatch && (
+        <Card className="py-10 text-center">
+          <AlertCircle className="mx-auto mb-3 h-10 w-10 text-amber-500" />
+          <h2 className="text-lg font-semibold text-gray-900">Match not available</h2>
+          <p className="mt-1 text-gray-600">That match is no longer in your active queue. Return to the current verification list.</p>
+          <div className="mt-4">
+            <Button onClick={() => setViewMode("verify")} variant="outline">
+              Open verification queue
+            </Button>
+          </div>
+        </Card>
       )}
 
       {viewMode === "xp-summary" && showXPSummary && (
