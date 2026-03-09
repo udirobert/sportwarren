@@ -1,23 +1,27 @@
 # 🔗 SportWarren x Chainlink CRE Hackathon Demo
 
-**Generalizable CRE Pattern for Phygital Verification** | Sports is Just the Demo
+**Chainlink CRE-Powered Phygital Sports Platform** | Football is Just the Start
 
 ---
 
-## 🎯 The Real Product: Reusable CRE Architecture
+## 🎯 The Product: Owning the Sports Vertical with CRE
 
-**SportWarren demonstrates a generalizable Chainlink CRE pattern for multi-source real-world verification.** While we use amateur football as our demo use case, the weighted consensus engine (multi-oracle data → confidence scoring → on-chain settlement) applies to:
+**SportWarren is building the infrastructure layer for amateur sports using Chainlink CRE.** We start with football match verification, then expand through a clear roadmap:
 
-| Use Case | Oracle A | Oracle B | Consensus Logic |
-|----------|----------|----------|-----------------|
-| **Sports (Our Demo)** | Weather | Location (stadium) | Verify match occurred |
-| **Insurance Claims** | Weather data | Property records | Auto-payout if both confirm damage |
-| **Pharma Supply Chain** | Temperature | GPS location | Invalidate shipment if temp exceeded |
-| **Event Verification** | Identity (WorldID) | Attendance scan | Verify unique human presence |
-| **Disaster Relief** | Satellite imagery | Ground sensors | Allocate aid by damage confidence |
-| **Real Estate** | Property registry | IoT sensors | Trigger insurance on verified events |
+| Phase | Feature | CRE Integration | Impact |
+|-------|---------|-----------------|--------|
+| **Phase 1 (Now)** | Match Verification | Weather + Location oracles → Trust Score | Prevents captain disputes |
+| **Phase 2** | Player Identity | WorldID + Fitness Tracker Oracles | Prevents ringers, verifies training |
+| **Phase 3** | League Governance | Chainlink Automation + Functions | Auto-scheduling, dispute arbitration |
+| **Phase 4** | Multi-Sport | Sport-specific oracles per sport | Rugby, cricket, basketball |
 
-**The architecture is the product. Sports is just our demo.**
+**Why Sports?**
+- **$100B amateur sports market** - No official records, rampant fraud
+- **Clear CRE fit** - Real-world events need verifiable data
+- **Network effects** - Players, teams, leagues all on one platform
+- **Expandable** - Same pattern works for every sport
+
+**We're not a demo looking for a use case. We're a sports platform built on CRE.**
 
 ---
 

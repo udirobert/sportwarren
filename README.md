@@ -1,24 +1,23 @@
 # SportWarren
 
-**Generalizable CRE Pattern for Phygital Verification** | Sports is Our Demo
+**Chainlink CRE-Powered Phygital Sports Platform** | Football is Just the Start
 
 A next-generation football management platform built with Next.js and PostgreSQL, featuring real match verification, player progression, and squad management.
 
 ---
 
-## 🎯 The Real Product: Reusable CRE Architecture
+## 🎯 The Product: CRE-Powered Sports Infrastructure
 
-**SportWarren demonstrates a generalizable Chainlink CRE pattern for multi-source real-world verification.** While we use amateur football as our demo use case, the weighted consensus engine applies to insurance, supply chain, disaster relief, and event verification:
+**SportWarren is building the infrastructure layer for amateur sports using Chainlink CRE.** We start with football match verification, then expand to player identity, league governance, and multi-sport support. Our phased roadmap:
 
-| Use Case | Oracle A | Oracle B | Consensus Logic |
-|----------|----------|----------|-----------------|
-| **Sports (Our Demo)** | Weather | Location (stadium) | Verify match occurred |
-| **Insurance Claims** | Weather data | Property records | Auto-payout on damage |
-| **Pharma Supply Chain** | Temperature | GPS location | Invalidate if temp exceeded |
-| **Event Verification** | Identity (WorldID) | Attendance | Verify unique human |
-| **Disaster Relief** | Satellite | Ground sensors | Allocate aid by confidence |
+| Phase | Feature | CRE Integration | Impact |
+|-------|---------|-----------------|--------|
+| **Phase 1 (Now)** | Match Verification | Weather + Location oracles → Trust Score | Prevents captain disputes |
+| **Phase 2** | Player Identity | WorldID + Fitness Tracker Oracles | Prevents ringers, verifies training |
+| **Phase 3** | League Governance | Chainlink Automation + Functions | Auto-scheduling, dispute arbitration |
+| **Phase 4** | Multi-Ssport | Sport-specific oracles per sport | Rugby, cricket, basketball |
 
-**The architecture is the product. Sports is just our demo.**
+**We're owning the sports vertical with CRE at the core.**
 
 ---
 
