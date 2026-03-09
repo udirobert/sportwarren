@@ -1,4 +1,5 @@
-import { ethers, upgrades } from "hardhat";
+import { ethers } from "hardhat";
+import "@openzeppelin/hardhat-upgrades";
 
 async function main() {
   const [deployer] = await ethers.getSigners();

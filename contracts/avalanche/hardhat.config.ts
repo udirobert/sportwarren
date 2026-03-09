@@ -20,12 +20,12 @@ const config: HardhatUserConfig = {
     networks: {
         fuji: {
             url: "https://api.avax-test.network/ext/bc/C/rpc",
-            accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+            accounts: process.env.AVALANCHE_PRIVATE_KEY ? [process.env.AVALANCHE_PRIVATE_KEY] : []
         },
         kite: {
             url: "https://rpc-testnet.gokite.ai",
             chainId: 2368,
-            accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : []
+            accounts: process.env.AVALANCHE_PRIVATE_KEY ? [process.env.AVALANCHE_PRIVATE_KEY] : []
         }
     }
 };

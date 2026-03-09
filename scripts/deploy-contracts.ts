@@ -26,6 +26,7 @@ interface ContractConfig {
   globalBytes: number;
   localInts: number;
   localBytes: number;
+  prefundForInnerTxns?: boolean;
 }
 
 const __filename = fileURLToPath(import.meta.url);
@@ -95,6 +96,25 @@ const CONTRACTS: ContractConfig[] = [
     globalBytes: 6,
     localInts: 8,
     localBytes: 8,
+  },
+  {
+    name: "SquadDAO",
+    approvalPath: "contracts/squad_dao/approval.teal",
+    clearStatePath: "contracts/squad_dao/clear_state.teal",
+    globalInts: 8,
+    globalBytes: 8,
+    localInts: 4,
+    localBytes: 4,
+    prefundForInnerTxns: true,
+  },
+  {
+    name: "GlobalChallenges",
+    approvalPath: "contracts/global_challenges/approval.teal",
+    clearStatePath: "contracts/global_challenges/clear_state.teal",
+    globalInts: 8,
+    globalBytes: 8,
+    localInts: 4,
+    localBytes: 4,
   },
 ];
 
@@ -204,10 +224,9 @@ class ContractDeployer {
       });
 
       console.log(`📝 Creating application transaction...`);
+
       const signedTxn = createTxn.signTxn(this.deployerAccount.sk);
-      const txResponse = await this.algodClient
-        .sendRawTransaction(signedTxn)
-        .do();
+      const txResponse = await this.algodClient.sendRawTransaction(signedTxn).do();
       const txId = txResponse.txid;
 
       console.log(`⏳ Waiting for transaction confirmation...`);
@@ -226,15 +245,15 @@ class ContractDeployer {
       const fundTxn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
         sender: this.deployerAccount.addr.toString(),
         receiver: appAddress,
-        amount: 500000, // 0.5 ALGO
+        amount: 1000000, // 1 ALGO
         suggestedParams: fundParams,
       });
       await this.algodClient.sendRawTransaction(fundTxn.signTxn(this.deployerAccount.sk)).do();
       await this.waitForTransaction(fundTxn.txID());
 
-      // If ReputationSystem, call initialize
-      if (contractConfig.name === "ReputationSystem") {
-        console.log(`🎬 Initializing ReputationSystem...`);
+      // If ReputationSystem or SquadDAO, call initialize
+      if (contractConfig.name === "ReputationSystem" || contractConfig.name === "SquadDAO") {
+        console.log(`🎬 Initializing ${contractConfig.name}...`);
         const initParams = await this.algodClient.getTransactionParams().do();
         initParams.fee = 10000n;
         initParams.flatFee = true;

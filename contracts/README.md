@@ -179,10 +179,22 @@ avalanche subnet deploy sportwarren-local
 
 | Contract | Algorand (Testnet) | Avalanche (Fuji) |
 |----------|-------------------|------------------|
-| Squad DAO | `PENDING` | `PENDING` |
-| Match Verification | `PENDING` | `PENDING` |
+| Squad DAO / Token | `PENDING` | [`0x9ecDe1788E1cE1B40024F0fD9eA87f49a94781dB`](https://testnet.snowtrace.io/address/0x9ecDe1788E1cE1B40024F0fD9eA87f49a94781dB) ✅ |
+| Squad Timelock | `PENDING` | [`0xb3cF66142882b3eAf197167cA7191654d4Ea5A78`](https://testnet.snowtrace.io/address/0xb3cF66142882b3eAf197167cA7191654d4Ea5A78) ✅ |
+| Squad Governor | `PENDING` | [`0x2e98aF1871bF208Ad361202884AB88F904eFf826`](https://testnet.snowtrace.io/address/0x2e98aF1871bF208Ad361202884AB88F904eFf826) ✅ |
+| Match Verification | [`756630713`](https://testnet.algoscan.app/app/756630713) ✅ | `PENDING` |
+| Achievement NFT | `PENDING` | [`0xF8ae857B73DF377A4D9387600bA15c0f1e0e15C4`](https://testnet.snowtrace.io/address/0xF8ae857B73DF377A4D9387600bA15c0f1e0e15C4) ✅ |
+| Agent Escrow | `PENDING` | [`0xc675D1Dd85419C7Af28755830e06b0F54DB196c7`](https://testnet.snowtrace.io/address/0xc675D1Dd85419C7Af28755830e06b0F54DB196c7) ✅ |
 | Reputation | `PENDING` | `PENDING` |
 | Global Challenges | `PENDING` | `PENDING` |
+
+**Algorand Deployer:** `CO5MCLTB6IKXIKIEY3AYWUTLD4XHQYTGK3KPSCXEIFJX4PJETAT4GTPWHQ`
+
+**Avalanche Deployer:** `0x29FA4181620358dA180CAD770dB1696fbA78F1Cd`
+
+**Deployment Date:** March 9, 2026
+
+**Network:** Avalanche Fuji Testnet (Chain ID: 43113)
 
 ### Mainnet
 
