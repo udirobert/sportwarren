@@ -39,7 +39,35 @@ interface LiveMatch {
     status: 'live' | 'finishing' | 'ht';
 }
 
-export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) => {
+// Build formation positions for any player count (3–15), with optional keeper
+// Returns array of [x%, y%, role] for home team (left→right); away mirrors x
+function buildFormation(n: number, hasKeeper: boolean): Array<[number, number, string]> {
+    const positions: Array<[number, number, string]> = [];
+    let outfield = n;
+    if (hasKeeper && n >= 4) {
+        positions.push([8, 50, 'GK']);
+        outfield = n - 1;
+    }
+    // Distribute outfield into lines: defenders, midfielders, attackers
+    const lines = outfield <= 4 ? 2 : 3;
+    const perLine = Math.ceil(outfield / lines);
+    const lineXs = lines === 2 ? [30, 60] : [22, 42, 62];
+    const roles = lines === 2
+        ? ['DEF', 'ATT']
+        : ['DEF', 'MID', 'ATT'];
+    let placed = 0;
+    for (let l = 0; l < lines && placed < outfield; l++) {
+        const inLine = Math.min(perLine, outfield - placed);
+        for (let i = 0; i < inLine; i++) {
+            const ySpacing = 100 / (inLine + 1);
+            positions.push([lineXs[l], ySpacing * (i + 1), roles[l]]);
+            placed++;
+        }
+    }
+    return positions;
+}
+
+export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: number; hasKeeper?: boolean }> = ({ squadId, playersPerSide = 11, hasKeeper = true }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [ball, setBall] = useState({ x: 50, y: 50, vx: 0, vy: 0, ownerId: null as string | null });
     const [players, setPlayers] = useState<any[]>([]);
@@ -146,21 +174,14 @@ export const MatchEnginePreview: React.FC<{ squadId?: string }> = ({ squadId }) 
             history: []
         });
 
-        // 4-3-3 formation positions [x%, y%] for home (left→right) and away (right→left)
-        const home433: Array<[number, number, string]> = [
-            [8, 50, 'GK'],
-            [22, 20, 'LB'], [22, 40, 'CB'], [22, 60, 'CB'], [22, 80, 'RB'],
-            [38, 30, 'CM'], [38, 50, 'CM'], [38, 70, 'CM'],
-            [52, 20, 'LW'], [52, 50, 'ST'], [52, 80, 'RW'],
-        ];
-        const away433: Array<[number, number, string]> = [
-            [92, 50, 'GK'],
-            [78, 20, 'RB'], [78, 40, 'CB'], [78, 60, 'CB'], [78, 80, 'LB'],
-            [62, 30, 'CM'], [62, 50, 'CM'], [62, 70, 'CM'],
-            [48, 20, 'RW'], [48, 50, 'ST'], [48, 80, 'LW'],
-        ];
-        const homeNames = ['GK', 'Tunde', 'Kofi', 'Diallo', 'Eze', 'Yusuf', 'Marcus', 'Jamie', 'Kwame', 'Alex', 'Seun'];
-        const awayNames = ['GK', 'Rival', 'Stone', 'Park', 'Cruz', 'Osei', 'Nkosi', 'Levi', 'Dani', 'Ramos', 'Finn'];
+        // Dynamic formation based on playersPerSide + hasKeeper props
+        const homeFormation = buildFormation(playersPerSide, hasKeeper);
+        const awayFormation: Array<[number, number, string]> = homeFormation.map(([x, y, role]) => [100 - x, y, role]);
+        const allNames = ['GK', 'Tunde', 'Kofi', 'Diallo', 'Eze', 'Yusuf', 'Marcus', 'Jamie', 'Kwame', 'Alex', 'Seun', 'Bayo', 'Chidi', 'Emeka', 'Femi', 'Gbenga'];
+        const homeNames = allNames.slice(0, playersPerSide);
+        const awayNames = ['GK', 'Rival', 'Stone', 'Park', 'Cruz', 'Osei', 'Nkosi', 'Levi', 'Dani', 'Ramos', 'Finn', 'Musa', 'Sven', 'Ito', 'Bale', 'Zara'].slice(0, playersPerSide);
+        const home433 = homeFormation;
+        const away433 = awayFormation;
 
         if (!membersLoading && members && members.length > 0) {
             const homePlayers = home433.map(([x, y, role], i) => {

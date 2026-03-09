@@ -238,6 +238,110 @@ export const playerRouter = createTRPCRouter({
       }
     }),
 
+  // Auto-compute and apply XP from PlayerMatchStats (goals, assists, cleanSheet, participation)
+  // XP formula: participation +10, goal +25 each, assist +15 each, cleanSheet +30
+  // Attribute routing: goals → finishing, assists → passing, cleanSheet → defending, all → stamina
+  finalizeMatchXP: protectedProcedure
+    .input(z.object({ matchId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const { matchId } = input;
+
+      const match = await ctx.prisma.match.findUnique({
+        where: { id: matchId },
+        include: { playerStats: { include: { profile: { include: { attributes: true } } } } },
+      });
+
+      if (!match) throw new TRPCError({ code: 'NOT_FOUND', message: 'Match not found' });
+      if (match.status !== 'verified' && match.status !== 'finalized') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Match must be verified first' });
+      }
+
+      const results = [];
+
+      for (const stat of match.playerStats) {
+        const { profile } = stat;
+
+        // Compute XP breakdown
+        const baseXP = 10; // participation
+        const goalXP = stat.goals * 25;
+        const assistXP = stat.assists * 15;
+        const cleanSheetXP = stat.cleanSheet ? 30 : 0;
+        const bonusXP = goalXP + assistXP + cleanSheetXP;
+        const totalXP = baseXP + bonusXP;
+
+        const attributeBreakdown: Record<string, number> = {
+          stamina: baseXP,
+          ...(stat.goals > 0 ? { finishing: goalXP } : {}),
+          ...(stat.assists > 0 ? { passing: assistXP } : {}),
+          ...(stat.cleanSheet ? { defending: cleanSheetXP } : {}),
+        };
+
+        // Apply to each attribute
+        for (const [attrName, xpAmount] of Object.entries(attributeBreakdown)) {
+          const attr = profile.attributes.find(a => a.attribute === attrName);
+          if (!attr) continue;
+
+          let newXp = attr.xp + xpAmount;
+          let newRating = attr.rating;
+          let newXpToNext = attr.xpToNext;
+
+          while (newXp >= newXpToNext && newRating < attr.maxRating) {
+            newXp -= newXpToNext;
+            newRating += 1;
+            newXpToNext = Math.floor(newXpToNext * 1.2);
+          }
+
+          await ctx.prisma.playerAttribute.update({
+            where: { id: attr.id },
+            data: {
+              xp: newXp,
+              rating: Math.min(newRating, attr.maxRating),
+              xpToNext: newXpToNext,
+              history: { push: newRating },
+            },
+          });
+        }
+
+        // Record XP gain audit entry
+        await ctx.prisma.xPGain.create({
+          data: {
+            matchId,
+            profileId: profile.id,
+            baseXP,
+            bonusXP,
+            totalXP,
+            source: 'match_stats',
+            description: [
+              'Participation +10',
+              stat.goals > 0 ? `${stat.goals} goal(s) +${goalXP}` : '',
+              stat.assists > 0 ? `${stat.assists} assist(s) +${assistXP}` : '',
+              stat.cleanSheet ? `Clean sheet +30` : '',
+            ].filter(Boolean).join(', '),
+            attributeBreakdown,
+          },
+        });
+
+        // Update profile totals
+        await ctx.prisma.playerProfile.update({
+          where: { id: profile.id },
+          data: {
+            totalXP: { increment: totalXP },
+            seasonXP: { increment: totalXP },
+          },
+        });
+
+        // Update PlayerMatchStats xpEarned
+        await ctx.prisma.playerMatchStats.update({
+          where: { id: stat.id },
+          data: { xpEarned: totalXP },
+        });
+
+        results.push({ profileId: profile.id, totalXP, goals: stat.goals, assists: stat.assists, cleanSheet: stat.cleanSheet });
+      }
+
+      return { success: true, count: results.length, results };
+    }),
+
   // Get leaderboard
   getLeaderboard: publicProcedure
     .input(z.object({
