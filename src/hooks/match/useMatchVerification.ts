@@ -1,7 +1,13 @@
 "use client";
 
 import { useCallback } from 'react';
+import {
+  RPCProtocolVersion,
+  type RPCAppSessionAllocation,
+} from '@erc7824/nitrolite';
+import { isHex, type Hex } from 'viem';
 import { trpc } from '@/lib/trpc-client';
+import { useYellowSession } from '@/hooks/useYellowSession';
 import type { MatchResult, Verification, MatchStatus, TrustTier } from '@/types';
 import { calculateTrustScore } from '@/lib/match/verification';
 
@@ -24,6 +30,23 @@ interface UseMatchVerificationReturn {
   refreshMatches: () => Promise<void>;
   hasMore: boolean;
   total: number;
+}
+
+interface YellowSettlementInput {
+  sessionId: string;
+  version: number;
+  settlementId: string;
+}
+
+const DEFAULT_PROTOCOL = RPCProtocolVersion.NitroRPC_0_4;
+const DEFAULT_CHALLENGE_WINDOW = 24 * 60 * 60;
+
+function toAtomicAmount(amount: number) {
+  return Math.max(0, Math.round(amount * 1_000_000)).toString();
+}
+
+function buildSettlementId(sessionId: string, version: number) {
+  return `${sessionId}:v${version}`;
 }
 
 // Transform DB match to frontend type
@@ -67,6 +90,7 @@ function transformMatch(match: any): MatchResult {
 }
 
 export function useMatchVerification(squadId?: string): UseMatchVerificationReturn {
+  const yellowSession = useYellowSession();
   // Fetch matches with tRPC
   const {
     data,
@@ -100,6 +124,67 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
   const hasMore = data?.hasMore || false;
   const total = data?.total || 0;
 
+  const createYellowMatchFeeLock = useCallback(async (
+    match: {
+      homeSquadId: string;
+      awaySquadId: string;
+      homeScore: number;
+      awayScore: number;
+      matchDate?: Date;
+    },
+  ): Promise<YellowSettlementInput | undefined> => {
+    if (
+      !yellowSession.enabled ||
+      yellowSession.status !== 'authenticated' ||
+      !yellowSession.accountAddress
+    ) {
+      return undefined;
+    }
+
+    const participant = yellowSession.accountAddress as Hex;
+    if (!isHex(participant)) {
+      return undefined;
+    }
+
+    const asset = (process.env.NEXT_PUBLIC_YELLOW_ASSET_SYMBOL || yellowSession.assetSymbol || 'USDC').toLowerCase();
+    const feeAmount = Number(process.env.NEXT_PUBLIC_YELLOW_MATCH_FEE_AMOUNT || 1);
+    const allocations: RPCAppSessionAllocation[] = [
+      {
+        participant,
+        asset,
+        amount: toAtomicAmount(feeAmount),
+      },
+    ];
+
+    const result = await yellowSession.createSession({
+      definition: {
+        application: `sportwarren-match-fee-${match.homeSquadId}-${match.awaySquadId}-${Date.now()}`,
+        protocol: DEFAULT_PROTOCOL,
+        participants: [participant],
+        weights: [100],
+        quorum: 100,
+        challenge: DEFAULT_CHALLENGE_WINDOW,
+      },
+      allocations,
+      sessionData: JSON.stringify({
+        squadId,
+        homeSquadId: match.homeSquadId,
+        awaySquadId: match.awaySquadId,
+        homeScore: match.homeScore,
+        awayScore: match.awayScore,
+        matchDate: match.matchDate?.toISOString() ?? new Date().toISOString(),
+        asset,
+        feeAmount,
+      }),
+    });
+
+    return {
+      sessionId: result.appSessionId,
+      version: result.version,
+      settlementId: buildSettlementId(result.appSessionId, result.version),
+    };
+  }, [squadId, yellowSession]);
+
   const submitMatchResult = useCallback(async (
     match: {
       homeSquadId: string;
@@ -111,9 +196,13 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
       longitude?: number;
     }
   ): Promise<string> => {
-    const result = await submitMutation.mutateAsync(match);
+    const yellowSettlement = await createYellowMatchFeeLock(match);
+    const result = await submitMutation.mutateAsync({
+      ...match,
+      yellowSettlement,
+    });
     return result.id;
-  }, [submitMutation]);
+  }, [createYellowMatchFeeLock, submitMutation]);
 
   const verifyMatch = useCallback(async (
     matchId: string,
@@ -140,7 +229,11 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
   return {
     matches,
     activeMatch: matches[0] || null,
-    loading: isLoading || submitMutation.isPending || verifyMutation.isPending,
+    loading:
+      isLoading ||
+      submitMutation.isPending ||
+      verifyMutation.isPending ||
+      yellowSession.status === 'connecting',
     error: error?.message || submitMutation.error?.message || verifyMutation.error?.message || null,
     submitMatchResult,
     verifyMatch,
