@@ -165,7 +165,23 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     const dataError = squadId && treasuryError;
     const dataReady = !dataLoading && !!squadId;
 
-    const agentAlerts = useAgentAlerts({ members, treasury: treasury ?? null, tactics: tactics ?? null, dataReady });
+    const alertMembers: Array<{ id: string; name: string; role: 'captain' | 'vice_captain' | 'player'; stats?: { matches: number; goals: number; level: number } }> = members.map(member => ({
+        id: member.id,
+        name: member.name,
+        role: member.role,
+        stats: member.stats,
+    }));
+    const alertTreasury: { balance: number; transactions?: unknown[] } | null = treasury
+        ? { balance: treasury.balance, transactions: treasury.transactions }
+        : null;
+    const alertTactics: { formation?: string } | null = null;
+
+    const agentAlerts = useAgentAlerts({
+        members: alertMembers,
+        treasury: alertTreasury,
+        tactics: alertTactics,
+        dataReady,
+    });
 
     useEffect(() => {
         if (selectedStaff) {
