@@ -27,20 +27,20 @@ const STAFF_META: Record<string, { emoji: string; name: string; category: FeedEv
 };
 
 const CATEGORY_COLOURS: Record<FeedEvent['category'], string> = {
-    contract:   'border-blue-500/30 bg-blue-500/5',
-    fitness:    'border-green-500/30 bg-green-500/5',
-    scouting:   'border-purple-500/30 bg-purple-500/5',
-    tactical:   'border-orange-500/30 bg-orange-500/5',
-    commercial: 'border-yellow-500/30 bg-yellow-500/5',
-    system:     'border-gray-500/30 bg-gray-500/5',
+    contract:   'border-blue-200 bg-blue-50',
+    fitness:    'border-green-200 bg-green-50',
+    scouting:   'border-purple-200 bg-purple-50',
+    tactical:   'border-orange-200 bg-orange-50',
+    commercial: 'border-yellow-200 bg-yellow-50',
+    system:     'border-gray-200 bg-gray-50',
 };
 
 const CATEGORY_DOT: Record<FeedEvent['category'], string> = {
-    contract:   'bg-blue-400',
-    fitness:    'bg-green-400',
-    scouting:   'bg-purple-400',
-    tactical:   'bg-orange-400',
-    commercial: 'bg-yellow-400',
+    contract:   'bg-blue-500',
+    fitness:    'bg-green-500',
+    scouting:   'bg-purple-500',
+    tactical:   'bg-orange-500',
+    commercial: 'bg-yellow-500',
     system:     'bg-gray-400',
 };
 
@@ -137,11 +137,11 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
     ];
 
     return (
-        <div className="bg-black/40 border border-white/10 rounded-2xl overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-300">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">
                         📋 Backroom Feed
                     </span>
                     {unreadCount > 0 && (
@@ -161,15 +161,15 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
             </div>
 
             {/* Filters */}
-            <div className="flex gap-1.5 px-5 py-3 overflow-x-auto scrollbar-none border-b border-white/5">
+            <div className="flex gap-1.5 px-5 py-3 overflow-x-auto scrollbar-none border-b border-gray-100">
                 {FILTERS.map(f => (
                     <button
                         key={f.key}
                         onClick={() => setFilter(f.key)}
                         className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
                             filter === f.key
-                                ? 'bg-white/15 text-white'
-                                : 'bg-white/5 text-gray-500 hover:text-gray-300'
+                                ? 'bg-gray-900 text-white'
+                                : 'bg-gray-100 text-gray-500 hover:text-gray-700'
                         }`}
                     >
                         {f.label}
@@ -178,11 +178,11 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
             </div>
 
             {(primaryPendingMatch || incomingOfferCount > 0 || treasuryNeedsAttention) && (
-                <div className="flex flex-wrap gap-2 px-5 py-3 border-b border-white/5 bg-white/[0.03]">
+                <div className="flex flex-wrap gap-2 px-5 py-3 border-b border-gray-100 bg-gray-50">
                     {primaryPendingMatch && (
                         <Link
                             href={`/match?mode=detail&matchId=${primaryPendingMatch.id}`}
-                            className="rounded-full border border-yellow-400/30 bg-yellow-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-yellow-200 transition-colors hover:bg-yellow-500/20"
+                            className="rounded-full border border-yellow-300 bg-yellow-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-yellow-700 transition-colors hover:bg-yellow-100"
                         >
                             Review pending match
                         </Link>
@@ -190,7 +190,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                     {incomingOfferCount > 0 && (
                         <Link
                             href="/squad?tab=transfers"
-                            className="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-blue-200 transition-colors hover:bg-blue-500/20"
+                            className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-blue-700 transition-colors hover:bg-blue-100"
                         >
                             {incomingOfferCount} transfer {incomingOfferCount === 1 ? 'offer' : 'offers'}
                         </Link>
@@ -198,7 +198,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                     {treasuryNeedsAttention && (
                         <Link
                             href="/squad?tab=treasury"
-                            className="rounded-full border border-rose-400/30 bg-rose-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-rose-200 transition-colors hover:bg-rose-500/20"
+                            className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-rose-700 transition-colors hover:bg-rose-100"
                         >
                             Treasury needs attention
                         </Link>
@@ -207,10 +207,10 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
             )}
 
             {/* Events */}
-            <div className="divide-y divide-white/5 max-h-80 overflow-y-auto scrollbar-none">
+            <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto scrollbar-none">
                 <AnimatePresence initial={false}>
                     {filtered.length === 0 ? (
-                        <div className="px-5 py-8 text-center text-gray-600 text-[10px] font-black uppercase tracking-widest">
+                        <div className="px-5 py-8 text-center text-gray-400 text-[10px] font-black uppercase tracking-widest">
                             {dataReady ? 'No alerts — squad is in good shape.' : 'Loading squad data...'}
                         </div>
                     ) : (
@@ -221,23 +221,23 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                                 animate={{ opacity: 1, x: 0 }}
                                 exit={{ opacity: 0, x: 8 }}
                                 onClick={() => markRead(event.id)}
-                                className={`flex gap-3 px-5 py-4 cursor-pointer transition-colors hover:bg-white/5 border-l-2 ${
+                                className={`flex gap-3 px-5 py-4 cursor-pointer transition-colors hover:bg-gray-50 border-l-2 ${
                                     event.read ? 'border-transparent opacity-60' : CATEGORY_COLOURS[event.category].split(' ')[0]
                                 }`}
                             >
                                 <div className="flex-shrink-0 mt-0.5">
-                                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${event.read ? 'bg-gray-700' : CATEGORY_DOT[event.category]}`} />
+                                    <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${event.read ? 'bg-gray-300' : CATEGORY_DOT[event.category]}`} />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-gray-400">
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">
                                             {event.staffEmoji} {event.sender}
                                         </span>
-                                        <span className="text-[8px] text-gray-600">
+                                        <span className="text-[8px] text-gray-400">
                                             {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-gray-300 leading-relaxed line-clamp-2">
+                                    <p className="text-xs text-gray-700 leading-relaxed line-clamp-2">
                                         {event.text}
                                     </p>
                                 </div>
