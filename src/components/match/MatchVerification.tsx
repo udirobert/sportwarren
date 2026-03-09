@@ -4,6 +4,7 @@ import { Shield, Check, X, Clock, Users, AlertCircle, Trophy, Camera, Mic, MapPi
 import type { MatchResult, Verification, MatchStatus, TrustTier } from '@/types';
 
 import { HighlightCard } from '@/components/player/HighlightCard';
+import { useMatchVerification } from '@/hooks/match/useMatchVerification';
 
 interface PlayerStats {
   playerId: string;
@@ -13,6 +14,9 @@ interface PlayerStats {
   rating: number;
   verified: boolean;
 }
+
+// Algorand App ID for match verification (deployed on testnet)
+const ALGORAND_MATCH_VERIFICATION_APP_ID = process.env.NEXT_PUBLIC_ALGORAND_MATCH_VERIFICATION_APP_ID || '756630713';
 
 export const MatchVerification: React.FC = () => {
   const [matches, setMatches] = useState<MatchResult[]>([]);
@@ -378,7 +382,7 @@ export const MatchVerification: React.FC = () => {
                           <span>Highlight</span>
                         </button>
                         <a
-                          href={`https://testnet.algoexplorer.io/application/756828208`}
+                          href={`https://testnet.algoexplorer.io/application/${ALGORAND_MATCH_VERIFICATION_APP_ID}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
