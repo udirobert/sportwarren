@@ -21,6 +21,7 @@ import { trpc } from '@/lib/trpc-client';
 import { useSquadDetails } from '@/hooks/squad/useSquad';
 import { useAgentAlerts } from '@/hooks/squad/useAgentAlerts';
 import { useAgentContext } from '@/context/AgentContext';
+import { useYellowSession } from '@/hooks/useYellowSession';
 import { ContractNegotiationModal } from './ContractNegotiationModal';
 
 // Derive reputation tier from reputation score
@@ -181,6 +182,8 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
         : null;
 
     const { state: agentCtx, dispatch: agentDispatch } = useAgentContext();
+    const yellowSession = useYellowSession(squadId);
+    const lensPost = trpc.lens.postUpdate.useMutation();
 
     const agentAlerts = useAgentAlerts({
         members: alertMembers,
@@ -390,7 +393,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                             sender: selectedStaff?.name || 'The Scout',
                             text: `I've been watching this one closely, Boss. Here's the full dossier.\n\n👤 Age: ${prospect.age}\n📍 Location: ${prospect.location}\n🏃 Position: ${prospect.position}\n⚡ Pace: ${prospect.pace} | 🎯 Technical: ${prospect.technical}\n🌟 Potential: ${prospect.potential}\n💰 Trial Cost: ${prospect.trialCost.toLocaleString()} credits\n\n${prospect.potential.length >= 4 ? 'This one is special. I wouldn\'t wait — other clubs are sniffing around.' : 'Solid prospect. Worth a look before committing.'}\n\nShall I arrange a trial, Boss?`,
                             actions: [
-                                { label: '✅ Arrange Trial', onClick: () => { agentDispatch({ type: 'SET_PROSPECT', payload: { name: `Prospect (${prospect.position})`, position: prospect.position, age: prospect.age, potential: prospect.potential, trialCost: prospect.trialCost } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Trial booked. ${prospect.location}, this weekend. I'll have a full performance report on your desk by Monday. Cost: ${prospect.trialCost.toLocaleString()} credits deducted from scouting budget.` }]); } },
+                                { label: '✅ Arrange Trial', onClick: () => { agentDispatch({ type: 'SET_PROSPECT', payload: { name: `Prospect (${prospect.position})`, position: prospect.position, age: prospect.age, potential: prospect.potential, trialCost: prospect.trialCost } }); agentDispatch({ type: 'QUEUE_ONCHAIN_ACTION', payload: { id: `trial-${Date.now()}`, type: 'yellow_payment', description: `Trial fee for ${prospect.position} prospect`, amount: prospect.trialCost, assetSymbol: 'USDC' } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Trial booked. ${prospect.location}, this weekend. I'll have a full performance report on your desk by Monday. Cost: ${prospect.trialCost.toLocaleString()} credits deducted from scouting budget.` }]); } },
                                 { label: '❌ Pass on This One', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Understood. I'll keep him on the watchlist and revisit in a few weeks if the situation changes.` }]) }
                             ]
                         }]);
@@ -473,7 +476,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                             sender: selectedStaff?.name || 'Commercial Lead',
                             text: `I've got a live deal on the table, Boss. Here are the details.\n\n🏷️ Brand: ${deal.brand}\n💰 Deal Value: ${deal.value.toLocaleString()} credits\n📅 Duration: ${deal.duration}\n✅ Requirement: ${deal.requirement}\n📣 Lens Boost: +${deal.lensBoost}% engagement on activation\n\nThis is a solid fit for our current Phygital positioning. I'd recommend we move quickly — they're talking to two other Hackney clubs.\n\nShall I open formal negotiations with ${deal.brand}?`,
                             actions: [
-                                { label: '✅ Open Negotiations', onClick: () => { agentDispatch({ type: 'SET_DEAL_CLOSED', payload: { brand: deal.brand, value: deal.value, duration: deal.duration } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Excellent. I've sent the opening terms to ${deal.brand}. Expect a response within 48 hours. I'll keep you posted on every move.` }]); } },
+                                { label: '✅ Open Negotiations', onClick: () => { agentDispatch({ type: 'SET_DEAL_CLOSED', payload: { brand: deal.brand, value: deal.value, duration: deal.duration } }); agentDispatch({ type: 'QUEUE_ONCHAIN_ACTION', payload: { id: `deal-${Date.now()}`, type: 'lens_post', description: `Announce ${deal.brand} partnership on Lens`, postText: `🏆 Exciting news from the backroom — we've opened negotiations with ${deal.brand}! ${deal.duration} deal worth ${deal.value.toLocaleString()} credits. Big things coming. #SportWarren #Phygital` } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Excellent. I've sent the opening terms to ${deal.brand}. Expect a response within 48 hours. I'll keep you posted on every move.` }]); } },
                                 { label: '❌ Pass on This Deal', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Understood. I'll keep the pipeline warm and bring you something better when it comes in.` }]) }
                             ]
                         }]);
@@ -680,6 +683,56 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                             </motion.div>
                         ))}
                         <div ref={chatEndRef} />
+                        {agentCtx.pendingOnChainAction && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="flex flex-col items-start"
+                            >
+                                <div className="max-w-[90%] p-4 rounded-2xl text-sm leading-relaxed border border-yellow-500/30 bg-yellow-500/10">
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest">⛓️ On-chain Action Pending</span>
+                                    </div>
+                                    <p className="text-gray-200 text-xs mb-1">{agentCtx.pendingOnChainAction.description}</p>
+                                    {agentCtx.pendingOnChainAction.amount && (
+                                        <p className="text-yellow-300 text-[10px] font-bold">
+                                            💰 {agentCtx.pendingOnChainAction.amount.toLocaleString()} {agentCtx.pendingOnChainAction.assetSymbol || 'USDC'}
+                                        </p>
+                                    )}
+                                    {agentCtx.pendingOnChainAction.postText && (
+                                        <p className="text-gray-400 text-[10px] italic mt-1">&ldquo;{agentCtx.pendingOnChainAction.postText}&rdquo;</p>
+                                    )}
+                                    <div className="flex gap-2 mt-3">
+                                        <button
+                                            onClick={() => {
+                                                const action = agentCtx.pendingOnChainAction!;
+                                                if (action.type === 'yellow_payment') {
+                                                    // Initiate Yellow state channel session
+                                                    if (yellowSession.status === 'authenticated') {
+                                                        setChatHistory(prev => [...prev, { sender: '⛓️ Yellow Network', text: `✅ Payment of ${action.amount?.toLocaleString()} ${action.assetSymbol || 'USDC'} authorised via Yellow state channel. Transaction queued.` }]);
+                                                    } else {
+                                                        setChatHistory(prev => [...prev, { sender: '⛓️ Yellow Network', text: `⚠️ Yellow session not active (status: ${yellowSession.status}). Connect your EVM wallet to authorise payments via Yellow Network.` }]);
+                                                    }
+                                                } else if (action.type === 'lens_post') {
+                                                    lensPost.mutate({ text: action.postText || action.description, tags: ['SportWarren', 'Phygital'] });
+                                                    setChatHistory(prev => [...prev, { sender: '📡 Lens Protocol', text: `✅ Post queued for Lens. Once the Lens SDK is fully integrated, this will publish to your Lens profile automatically.` }]);
+                                                }
+                                                agentDispatch({ type: 'CLEAR_ONCHAIN_ACTION' });
+                                            }}
+                                            className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border bg-yellow-500/20 border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/30 transition-all"
+                                        >
+                                            ✅ Sign &amp; Execute
+                                        </button>
+                                        <button
+                                            onClick={() => agentDispatch({ type: 'CLEAR_ONCHAIN_ACTION' })}
+                                            className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border bg-white/5 border-white/10 text-gray-400 hover:text-gray-200 transition-all"
+                                        >
+                                            ❌ Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        )}
                         {isTyping && (
                             <div className="flex justify-start">
                                 <div className="bg-white/5 p-4 rounded-2xl flex space-x-1">
