@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card } from '@/components/ui/Card';
-import { Check, X, AlertCircle, Shield, Users, Cpu } from 'lucide-react';
+import { Check, X, AlertCircle, Shield, Users, Cpu, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { MatchResult, Verification, TrustTier } from '@/types';
 import {
@@ -11,28 +11,97 @@ import {
   getTrustTierIcon,
   TRUST_TIER_WEIGHTS
 } from '@/lib/match/verification';
+import { CREWorkflowDiagram } from './CREWorkflowDiagram';
 
 interface MatchConsensusProps {
   match: MatchResult;
 }
 
+interface LogEntry {
+  text: string;
+  timestamp: string;
+  type: 'info' | 'success' | 'warning' | 'error' | 'data';
+  data?: any;
+}
+
 const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
-  const [visibleLogs, setVisibleLogs] = React.useState<string[]>([]);
+  const [visibleLogs, setVisibleLogs] = React.useState<LogEntry[]>([]);
   const [currentIndex, setCurrentIndex] = React.useState(0);
+  const [showRawData, setShowRawData] = React.useState(false);
 
   const logs = React.useMemo(() => {
     const creId = match.creResult?.workflowId || `cre_mw_${Math.random().toString(36).substring(7)}`;
-    const baseLogs = [
-      `[${creId}] Initializing Phygital Verification Node...`,
-      "FETCH: Orchestrating global weather and location oracles...",
-      `WEATHER: Source: ${match.creResult?.weather.source || 'OpenWeatherMap'}. Temp: ${match.creResult?.weather.temperature || 14}°C.`,
-      `GEO: Verifying Pitch ID benchmarks for ${match.creResult?.location.region || 'Hackney Marshes'}.`,
-      `GEO: Place Type: ${match.creResult?.location.placeType || 'sports_complex'}. Pitch Status: ${match.creResult?.location.isPitch ? 'CONFIRMED' : 'RECREATIONAL'}.`,
-      `COMPUTE: Trust Score: ${match.creResult?.confidence || match.trustScore || 0}/100 based on multi-source entropy.`,
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+    const baseLogs: LogEntry[] = [
+      {
+        text: `[${creId}] Initializing Phygital Verification Node...`,
+        timestamp: timeStr,
+        type: 'info' as const
+      },
+      {
+        text: "FETCH: Orchestrating global weather and location oracles...",
+        timestamp: timeStr,
+        type: 'info' as const
+      },
+      {
+        text: `WEATHER: Source: ${match.creResult?.weather.source || 'Open-Meteo (Sovereign)'}. Temp: ${match.creResult?.weather.temperature || 14}°C.`,
+        timestamp: timeStr,
+        type: match.creResult?.weather.verified ? 'success' : 'warning',
+        data: match.creResult?.weather.verified ? {
+          temperature: `${match.creResult?.weather.temperature}°C`,
+          conditions: match.creResult?.weather.conditions,
+          source: match.creResult?.weather.source
+        } : undefined
+      },
+      {
+        text: `GEO: Verifying Pitch ID benchmarks for ${match.creResult?.location.region || 'Unknown Location'}.`,
+        timestamp: timeStr,
+        type: 'info' as const
+      },
+      {
+        text: `GEO: Place Type: ${match.creResult?.location.placeType || 'unknown'}. Pitch Status: ${match.creResult?.location.isPitch ? 'CONFIRMED' : 'RECREATIONAL'}.`,
+        timestamp: timeStr,
+        type: match.creResult?.location.isPitch ? 'success' : 'warning',
+        data: match.creResult?.location.verified ? {
+          region: match.creResult?.location.region?.split(',')[0],
+          placeType: match.creResult?.location.placeType,
+          isPitch: match.creResult?.location.isPitch
+        } : undefined
+      },
+      {
+        text: `COMPUTE: Trust Score: ${match.creResult?.confidence || match.trustScore || 0}/100 based on multi-source entropy.`,
+        timestamp: timeStr,
+        type: 'data' as const,
+        data: {
+          confidence: match.creResult?.confidence || match.trustScore || 0,
+          weatherWeight: match.creResult?.weather.verified ? 40 : 0,
+          locationWeight: match.creResult?.location.isPitch ? 60 : (match.creResult?.location.verified ? 30 : 0)
+        }
+      },
       match.status === 'verified'
-        ? "SETTLE: Consensus reached. Finalizing immutable record on Algorand..."
-        : "WAIT: Awaiting multi-sig confirmation from away team captain...",
-      match.status === 'verified' ? "SUCCESS: Match record secured. XP distributed to all verified players." : "REP: Local reputation markers updated."
+        ? {
+            text: "SETTLE: Consensus reached. Finalizing immutable record on Algorand...",
+            timestamp: timeStr,
+            type: 'success' as const
+          }
+        : {
+            text: "WAIT: Awaiting multi-sig confirmation from away team captain...",
+            timestamp: timeStr,
+            type: 'warning' as const
+          },
+      match.status === 'verified' 
+        ? {
+            text: "SUCCESS: Match record secured. XP distributed to all verified players.",
+            timestamp: timeStr,
+            type: 'success' as const
+          }
+        : {
+            text: "REP: Local reputation markers updated.",
+            timestamp: timeStr,
+            type: 'info' as const
+          }
     ];
     return baseLogs;
   }, [match]);
@@ -42,48 +111,195 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
       const timer = setTimeout(() => {
         setVisibleLogs(prev => [...prev, logs[currentIndex]]);
         setCurrentIndex(prev => prev + 1);
-      }, 800 + Math.random() * 1000);
+      }, 600 + Math.random() * 800);
       return () => clearTimeout(timer);
     }
   }, [currentIndex, logs]);
 
+  const getLogColor = (type: LogEntry['type']) => {
+    switch (type) {
+      case 'success': return 'text-green-400';
+      case 'warning': return 'text-yellow-400';
+      case 'error': return 'text-red-400';
+      case 'data': return 'text-blue-400';
+      default: return 'text-gray-300';
+    }
+  };
+
   return (
-    <div className="bg-gray-900 rounded-xl p-4 border border-blue-500/30 font-mono text-[10px] overflow-hidden">
-      <div className="flex items-center space-x-2 mb-3 border-b border-white/10 pb-2">
-        <Cpu className="w-3 h-3 text-blue-400 animate-pulse" />
-        <span className="text-blue-400 font-bold uppercase tracking-widest italic">Verification Engine v1.02</span>
+    <div className="space-y-3">
+      {/* Technical Commentary - Championship Manager Style */}
+      <div className="bg-gray-900 rounded-xl p-4 border border-blue-500/30 font-mono text-[10px] overflow-hidden">
+        <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
+          <div className="flex items-center space-x-2">
+            <Cpu className="w-3 h-3 text-blue-400 animate-pulse" />
+            <span className="text-blue-400 font-bold uppercase tracking-widest italic">Verification Engine v1.02</span>
+          </div>
+          {match.creResult?.workflowId && (
+            <a
+              href={`https://functions.chain.link/${match.creResult.workflowId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[9px] text-blue-400 hover:text-blue-300 flex items-center space-x-1"
+            >
+              <ExternalLink className="w-2.5 h-2.5" />
+              <span>View Workflow</span>
+            </a>
+          )}
+        </div>
+
+        <div className="space-y-1.5 min-h-[120px]">
+          <AnimatePresence mode="popLayout">
+            {visibleLogs.map((log, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: -5 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="flex items-start space-x-2"
+              >
+                <span className="text-gray-600 flex-shrink-0">[{log.timestamp}]</span>
+                <span className={getLogColor(log.type)}>
+                  {log.text}
+                </span>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          {currentIndex < logs.length && (
+            <motion.div
+              animate={{ opacity: [0, 1, 0] }}
+              transition={{ repeat: Infinity, duration: 0.8 }}
+              className="w-1.5 h-3 bg-blue-500 ml-1 inline-block"
+            />
+          )}
+        </div>
       </div>
 
-      <div className="space-y-1.5 min-h-[120px]">
-        <AnimatePresence mode="popLayout">
-          {visibleLogs.map((log, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, x: -5 }}
-              animate={{ opacity: 1, x: 0 }}
-              className="flex items-start space-x-2"
-            >
-              <span className="text-gray-600">[{new Date().toLocaleTimeString([], { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' })}]</span>
-              <span className={
-                log.startsWith('SUCCESS') ? 'text-green-400' :
-                  log.startsWith('ALGORAND') ? 'text-purple-400' :
-                    log.startsWith('ORACLE') ? 'text-blue-400' :
-                      log.startsWith('VISION') ? 'text-orange-400' :
-                        'text-gray-300'
-              }>
-                {log}
-              </span>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        {currentIndex < logs.length && (
-          <motion.div
-            animate={{ opacity: [0, 1, 0] }}
-            transition={{ repeat: Infinity, duration: 0.8 }}
-            className="w-1.5 h-3 bg-blue-500 ml-1 inline-block"
-          />
-        )}
-      </div>
+      {/* Raw Data Toggle */}
+      {match.creResult && (
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setShowRawData(!showRawData)}
+            className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+          >
+            <span className="text-sm font-semibold text-gray-700 flex items-center space-x-2">
+              <Cpu className="w-4 h-4" />
+              <span>CRE Verification Data</span>
+            </span>
+            {showRawData ? (
+              <ChevronUp className="w-4 h-4 text-gray-500" />
+            ) : (
+              <ChevronDown className="w-4 h-4 text-gray-500" />
+            )}
+          </button>
+
+          <AnimatePresence>
+            {showRawData && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="p-4 bg-white space-y-3">
+                  {/* Workflow ID */}
+                  <div className="flex items-center space-x-2 text-xs">
+                    <span className="text-gray-500 font-semibold">Workflow ID:</span>
+                    <code className="bg-gray-100 px-2 py-1 rounded text-blue-600 font-mono">
+                      {match.creResult.workflowId}
+                    </code>
+                  </div>
+
+                  {/* Weather Data */}
+                  <div className="grid grid-cols-3 gap-3 p-3 bg-blue-50 rounded-lg">
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 mb-1">Temperature</div>
+                      <div className="text-lg font-bold text-blue-600">
+                        {match.creResult.weather.temperature}°C
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 mb-1">Conditions</div>
+                      <div className="text-sm font-semibold text-blue-600">
+                        {match.creResult.weather.conditions}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 mb-1">Source</div>
+                      <div className="text-xs font-semibold text-blue-600">
+                        {match.creResult.weather.source}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Location Data */}
+                  <div className="grid grid-cols-3 gap-3 p-3 bg-green-50 rounded-lg">
+                    <div className="col-span-2 text-center">
+                      <div className="text-xs text-gray-500 mb-1">Location</div>
+                      <div className="text-sm font-semibold text-green-600 truncate">
+                        {match.creResult.location.region?.split(',').slice(0, 2).join(', ')}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-xs text-gray-500 mb-1">Type</div>
+                      <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${
+                        match.creResult.location.isPitch
+                          ? 'bg-green-200 text-green-700'
+                          : 'bg-yellow-200 text-yellow-700'
+                      }`}>
+                        {match.creResult.location.placeType?.toUpperCase()}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Confidence Score */}
+                  <div className="p-3 bg-gradient-to-r from-gray-900 to-gray-800 rounded-lg text-white">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold uppercase tracking-wider">Confidence Score</span>
+                      <span className="text-2xl font-black">
+                        {match.creResult.confidence}/100
+                      </span>
+                    </div>
+                    <div className="h-2 bg-gray-700 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${match.creResult.confidence}%` }}
+                        transition={{ delay: 0.3, duration: 0.5 }}
+                        className={`h-full rounded-full ${
+                          match.creResult.confidence >= 90
+                            ? 'bg-gradient-to-r from-green-500 to-emerald-500'
+                            : match.creResult.confidence >= 60
+                              ? 'bg-gradient-to-r from-yellow-500 to-orange-500'
+                              : 'bg-gradient-to-r from-red-500 to-rose-500'
+                        }`}
+                      />
+                    </div>
+                    <div className="mt-2 text-xs text-gray-400">
+                      Weather: {match.creResult.weather.verified ? '✓' : '✗'} ({match.creResult.weather.verified ? 40 : 0}%)
+                      {' • '}
+                      Location: {match.creResult.location.isPitch ? '✓ Stadium' : match.creResult.location.verified ? '✓ Verified' : '✗'} ({match.creResult.location.isPitch ? 60 : match.creResult.location.verified ? 30 : 0}%)
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* CRE Workflow Diagram */}
+      {match.creResult && (
+        <div className="border border-gray-200 rounded-xl overflow-hidden">
+          <div className="px-4 py-3 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200">
+            <span className="text-sm font-bold text-gray-800 flex items-center space-x-2">
+              <Cpu className="w-4 h-4 text-blue-600" />
+              <span>CRE Architecture Visualization</span>
+            </span>
+          </div>
+          <div className="bg-white">
+            <CREWorkflowDiagram creResult={match.creResult} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
