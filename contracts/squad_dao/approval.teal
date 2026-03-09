@@ -54,6 +54,10 @@ txna ApplicationArgs 0
 byte "execute_proposal"
 ==
 bnz main_l14
+txna ApplicationArgs 0
+byte "initialize"
+==
+bnz main_l22
 err
 main_l14:
 txn NumAppArgs
@@ -292,6 +296,19 @@ app_global_put
 byte "proposal_counter"
 int 0
 app_global_put
+int 1
+return
+main_l22:
+txn Sender
+byte "creator"
+app_global_get
+==
+assert
+byte "governance_token_id"
+app_global_get
+int 0
+==
+assert
 itxn_begin
 int acfg
 itxn_field TypeEnum
