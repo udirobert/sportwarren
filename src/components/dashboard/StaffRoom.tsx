@@ -175,7 +175,12 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     const alertTreasury: { balance: number; transactions?: unknown[] } | null = treasury
         ? { balance: treasury.balance, transactions: treasury.transactions }
         : null;
-    const alertTactics: { formation?: string } | null = null;
+    const tacticsAny = tactics as Record<string, unknown> | null | undefined;
+    const alertTactics: { formation?: string } | null = tacticsAny
+        ? { formation: typeof tacticsAny.formation === 'string' ? tacticsAny.formation : undefined }
+        : null;
+
+    const { state: agentCtx, dispatch: agentDispatch } = useAgentContext();
 
     const agentAlerts = useAgentAlerts({
         members: alertMembers,
@@ -219,6 +224,48 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [chatHistory, isTyping]);
+
+    // Cross-staff reactive messages — inject once when context flags change
+    const crossStaffInjectedRef = useRef<Set<string>>(new Set());
+    useEffect(() => {
+        const { flaggedProspect, flaggedInjury, closedDeal, activeFormation } = agentCtx;
+        setChatHistories(prev => {
+            const next = { ...prev };
+            const inject = (staffId: string, sender: string, text: string, key: string) => {
+                if (crossStaffInjectedRef.current.has(key)) return;
+                crossStaffInjectedRef.current.add(key);
+                const existing = next[staffId] || [
+                    { sender: STAFF_MEMBERS.find(s => s.id === staffId)?.name ?? sender, text: 'Welcome to the backroom, Boss. How can I help you today?' }
+                ];
+                next[staffId] = [...existing, { sender, text }];
+            };
+            if (flaggedProspect) {
+                const key = `prospect:${flaggedProspect.name}:${flaggedProspect.flaggedAt}`;
+                inject('agent-1', 'The Agent',
+                    `📋 Boss, The Scout just flagged ${flaggedProspect.name} (${flaggedProspect.position}, age ${flaggedProspect.age}) for a trial. If the report comes back positive, we should have contract terms ready. Based on their potential (${flaggedProspect.potential}), I'd estimate an opening offer around ${(flaggedProspect.trialCost * 3).toLocaleString()} credits/wk. Want me to draft a pre-contract framework now?`,
+                    key);
+            }
+            if (flaggedInjury) {
+                const key = `injury:${flaggedInjury.playerName}:${flaggedInjury.flaggedAt}`;
+                inject('coach-1', 'Coach Kite',
+                    `⚠️ The Physio has flagged ${flaggedInjury.playerName} as ${flaggedInjury.riskLevel} risk (${flaggedInjury.recoveryDays} days recovery). I've adjusted the training plan to cover their position. We may need to shift formation — want me to run the numbers on a contingency setup?`,
+                    key);
+            }
+            if (closedDeal) {
+                const key = `deal:${closedDeal.brand}:${closedDeal.flaggedAt}`;
+                inject('agent-1', 'The Agent',
+                    `💰 Commercial Lead just opened negotiations with ${closedDeal.brand} (${closedDeal.value.toLocaleString()} credits, ${closedDeal.duration}). That would boost our transfer budget significantly. I can start identifying targets in that range — shall I put together a shortlist?`,
+                    key);
+            }
+            if (activeFormation) {
+                const key = `formation:${activeFormation.formation}:${activeFormation.flaggedAt}`;
+                inject('physio-1', 'The Physio',
+                    `🏃 Coach Kite has switched to ${activeFormation.formation} (${activeFormation.winRate}% win rate). I'll adjust the conditioning programme to match the physical demands of that shape. High-press formations increase injury risk — I'll keep a close eye on the squad load.`,
+                    key);
+            }
+            return next;
+        });
+    }, [agentCtx]);
 
     const handleSendMessage = (text: string) => {
         setChatHistory(prev => [...prev, { sender: 'You', text }]);
@@ -315,7 +362,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                         sender: selectedStaff?.name || 'Coach Kite',
                         text: `Here's the current tactical picture, Boss.\n\n🗂️ Formation: ${setup.formation}\n📈 Win Rate: ${setup.winRate}% vs Hackney-tier sides\n⚠️ Weakness: ${setup.weaknesses}\n\n💡 My Read: ${setup.recommendation}\n\nShall I apply the recommended formation change for the next fixture?`,
                         actions: [
-                            { label: '✅ Apply Formation', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Formation locked in. I've updated the match engine parameters. The squad will be briefed at tomorrow's session.` }]) },
+                            { label: '✅ Apply Formation', onClick: () => { agentDispatch({ type: 'SET_FORMATION', payload: { formation: setup.formation, winRate: setup.winRate } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Formation locked in. I've updated the match engine parameters. The squad will be briefed at tomorrow's session.` }]); } },
                             { label: '❌ Keep Current Setup', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Noted. We'll stick with ${setup.formation} for now. I'll revisit after the next match.` }]) }
                         ]
                     }]);
@@ -343,7 +390,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                             sender: selectedStaff?.name || 'The Scout',
                             text: `I've been watching this one closely, Boss. Here's the full dossier.\n\n👤 Age: ${prospect.age}\n📍 Location: ${prospect.location}\n🏃 Position: ${prospect.position}\n⚡ Pace: ${prospect.pace} | 🎯 Technical: ${prospect.technical}\n🌟 Potential: ${prospect.potential}\n💰 Trial Cost: ${prospect.trialCost.toLocaleString()} credits\n\n${prospect.potential.length >= 4 ? 'This one is special. I wouldn\'t wait — other clubs are sniffing around.' : 'Solid prospect. Worth a look before committing.'}\n\nShall I arrange a trial, Boss?`,
                             actions: [
-                                { label: '✅ Arrange Trial', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Trial booked. ${prospect.location}, this weekend. I'll have a full performance report on your desk by Monday. Cost: ${prospect.trialCost.toLocaleString()} credits deducted from scouting budget.` }]) },
+                                { label: '✅ Arrange Trial', onClick: () => { agentDispatch({ type: 'SET_PROSPECT', payload: { name: `Prospect (${prospect.position})`, position: prospect.position, age: prospect.age, potential: prospect.potential, trialCost: prospect.trialCost } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Trial booked. ${prospect.location}, this weekend. I'll have a full performance report on your desk by Monday. Cost: ${prospect.trialCost.toLocaleString()} credits deducted from scouting budget.` }]); } },
                                 { label: '❌ Pass on This One', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Understood. I'll keep him on the watchlist and revisit in a few weeks if the situation changes.` }]) }
                             ]
                         }]);
@@ -411,7 +458,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                         sender: selectedStaff?.name || 'The Physio',
                         text: `I've run the predictive injury model across the squad.\n\n🔴 High Risk: Sarah — overloaded hamstring, recommend immediate load reduction\n🟡 Watch List: Marcus — minor knee inflammation, monitor daily\n🟢 Low Risk: Rest of squad\n\nIf we don't act on Sarah now, I'm projecting a 70% chance of a 3-week injury within the next two fixtures.\n\nShall I put her on a prevention protocol immediately?`,
                         actions: [
-                            { label: '✅ Start Protocol', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Prevention protocol activated for Sarah. She's on reduced load, daily physio, and biometric monitoring. I'll reassess in 5 days. This should bring her risk level down to manageable.` }]) },
+                            { label: '✅ Start Protocol', onClick: () => { agentDispatch({ type: 'SET_INJURY', payload: { playerName: 'Sarah', riskLevel: 'High', recoveryDays: 14 } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Prevention protocol activated for Sarah. She's on reduced load, daily physio, and biometric monitoring. I'll reassess in 5 days. This should bring her risk level down to manageable.` }]); } },
                             { label: '❌ Not Yet', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Understood. I'll keep the flags live and escalate if the risk score increases. Don't leave it too long, Boss.` }]) }
                         ]
                     }]);
@@ -426,7 +473,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                             sender: selectedStaff?.name || 'Commercial Lead',
                             text: `I've got a live deal on the table, Boss. Here are the details.\n\n🏷️ Brand: ${deal.brand}\n💰 Deal Value: ${deal.value.toLocaleString()} credits\n📅 Duration: ${deal.duration}\n✅ Requirement: ${deal.requirement}\n📣 Lens Boost: +${deal.lensBoost}% engagement on activation\n\nThis is a solid fit for our current Phygital positioning. I'd recommend we move quickly — they're talking to two other Hackney clubs.\n\nShall I open formal negotiations with ${deal.brand}?`,
                             actions: [
-                                { label: '✅ Open Negotiations', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Excellent. I've sent the opening terms to ${deal.brand}. Expect a response within 48 hours. I'll keep you posted on every move.` }]) },
+                                { label: '✅ Open Negotiations', onClick: () => { agentDispatch({ type: 'SET_DEAL_CLOSED', payload: { brand: deal.brand, value: deal.value, duration: deal.duration } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Excellent. I've sent the opening terms to ${deal.brand}. Expect a response within 48 hours. I'll keep you posted on every move.` }]); } },
                                 { label: '❌ Pass on This Deal', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Understood. I'll keep the pipeline warm and bring you something better when it comes in.` }]) }
                             ]
                         }]);
