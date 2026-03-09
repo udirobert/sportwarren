@@ -401,6 +401,7 @@ model Match {
   // Blockchain
   txId String? @map("tx_id") // Algorand transaction ID
   yellowFeeSessionId String? @map("yellow_fee_session_id")
+  yellowFeeSettledAt DateTime? @map("yellow_fee_settled_at")
 
   // Relations
   verifications MatchVerification[]

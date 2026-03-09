@@ -5,6 +5,7 @@ import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { chainlinkService } from '../../../server/services/blockchain/chainlink';
 import { yellowService, type MatchSettlementResult } from '../../../server/services/blockchain/yellow';
 import { postTreasuryLedgerEntry } from '../../../server/services/economy/treasury-ledger';
+import { getMatchFeeDistribution } from '../../lib/yellow/match-fees';
 
 const MatchStatus = z.enum(['pending', 'verified', 'disputed', 'finalized']);
 
@@ -23,60 +24,27 @@ const yellowMatchSettlementSchema = z.object({
   settlementId: z.string().min(1).optional(),
 });
 
-function getMatchFeeDistribution(
-  match: { homeScore: number | null; awayScore: number | null },
+async function settleMatchFee(
+  prisma: any,
+  match: any,
   status: 'verified' | 'disputed',
+  clientSettlement?: { sessionId: string; version: number; settlementId?: string | null },
 ) {
-  const feeAmount = yellowService.getMatchFeeAmount();
-  const totalPool = feeAmount * 2;
-  const platformAmount = Math.floor(totalPool * 0.2);
-
-  if (status === 'disputed') {
-    return {
-      result: 'disputed' as MatchSettlementResult,
-      feeAmount,
-      homeAmount: feeAmount,
-      awayAmount: feeAmount,
-      platformAmount: 0,
-    };
-  }
-
-  if ((match.homeScore ?? 0) === (match.awayScore ?? 0)) {
-    const sharedAmount = Math.floor((totalPool - platformAmount) / 2);
-    return {
-      result: 'draw' as MatchSettlementResult,
-      feeAmount,
-      homeAmount: sharedAmount,
-      awayAmount: sharedAmount,
-      platformAmount,
-    };
-  }
-
-  const homeWon = (match.homeScore ?? 0) > (match.awayScore ?? 0);
-
-  return {
-    result: (homeWon ? 'home' : 'away') as MatchSettlementResult,
-    feeAmount,
-    homeAmount: homeWon ? totalPool - platformAmount : 0,
-    awayAmount: homeWon ? 0 : totalPool - platformAmount,
-    platformAmount,
-  };
-}
-
-async function settleMatchFee(prisma: any, match: any, status: 'verified' | 'disputed') {
-  if (!match.yellowFeeSessionId) {
+  if (!match.yellowFeeSessionId || match.yellowFeeSettledAt) {
     return null;
   }
 
-  const distribution = getMatchFeeDistribution(match, status);
-  const settlement = await yellowService.settleMatchFeeSession({
-    sessionId: match.yellowFeeSessionId,
-    matchId: match.id,
-    result: distribution.result,
-    homeAmount: distribution.homeAmount,
-    awayAmount: distribution.awayAmount,
-    platformAmount: distribution.platformAmount,
-  });
+  const distribution = getMatchFeeDistribution(match, status, yellowService.getMatchFeeAmount());
+  const settlement = clientSettlement
+    ? yellowService.recordClientSettlement(clientSettlement)
+    : await yellowService.settleMatchFeeSession({
+        sessionId: match.yellowFeeSessionId,
+        matchId: match.id,
+        result: distribution.result as MatchSettlementResult,
+        homeAmount: distribution.homeAmount,
+        awayAmount: distribution.awayAmount,
+        platformAmount: distribution.platformAmount,
+      });
 
   if (distribution.homeAmount > 0) {
     await postTreasuryLedgerEntry({
@@ -101,6 +69,13 @@ async function settleMatchFee(prisma: any, match: any, status: 'verified' | 'dis
       txHash: settlement.settlementId,
     });
   }
+
+  await prisma.match.update({
+    where: { id: match.id },
+    data: {
+      yellowFeeSettledAt: new Date(),
+    },
+  });
 
   return settlement;
 }
@@ -272,10 +247,11 @@ export const matchRouter = createTRPCRouter({
       verified: z.boolean(),
       homeScore: z.number().min(0).optional(),
       awayScore: z.number().min(0).optional(),
+      yellowSettlement: yellowMatchSettlementSchema.optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
-        const { matchId, verified, homeScore, awayScore } = input;
+        const { matchId, verified, homeScore, awayScore, yellowSettlement } = input;
 
         // Check if match exists
         const match = await ctx.prisma.match.findUnique({
@@ -383,14 +359,27 @@ export const matchRouter = createTRPCRouter({
 
           if (newStatus === 'verified' || newStatus === 'disputed') {
             try {
-              await settleMatchFee(ctx.prisma, updatedMatch, newStatus);
+              const railStatus = yellowService.getRailStatus();
+              if (yellowSettlement) {
+                await settleMatchFee(ctx.prisma, updatedMatch, newStatus, yellowSettlement);
+              } else if (railStatus.mode !== 'nitrolite') {
+                await settleMatchFee(ctx.prisma, updatedMatch, newStatus);
+              }
             } catch (yellowError) {
               console.error('Failed to settle Yellow match fee:', yellowError);
             }
           }
         }
 
-        return { success: true, newStatus };
+        return {
+          success: true,
+          newStatus,
+          requiresYellowSettlement:
+            (newStatus === 'verified' || newStatus === 'disputed') &&
+            Boolean(updatedMatch.yellowFeeSessionId) &&
+            !updatedMatch.yellowFeeSettledAt &&
+            yellowService.getRailStatus().mode === 'nitrolite',
+        };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
@@ -399,6 +388,48 @@ export const matchRouter = createTRPCRouter({
           cause: error,
         });
       }
+    }),
+
+  settleFeeSession: protectedProcedure
+    .input(z.object({
+      matchId: z.string().min(1, 'Match ID is required'),
+      yellowSettlement: yellowMatchSettlementSchema,
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const match = await ctx.prisma.match.findUnique({
+        where: { id: input.matchId },
+      });
+
+      if (!match) {
+        throw new TRPCError(Errors.MATCH_NOT_FOUND);
+      }
+
+      if (!match.yellowFeeSessionId) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Match does not have a Yellow fee session',
+        });
+      }
+
+      if (match.yellowFeeSettledAt) {
+        return { success: true, alreadySettled: true };
+      }
+
+      if (match.status !== 'verified' && match.status !== 'disputed') {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Match fee settlement is only available after verification consensus',
+        });
+      }
+
+      await settleMatchFee(
+        ctx.prisma,
+        match,
+        match.status as 'verified' | 'disputed',
+        input.yellowSettlement,
+      );
+
+      return { success: true, alreadySettled: false };
     }),
 
   // Finalize a verified match and issue Reputation tracking SBT logic

@@ -10,6 +10,7 @@ import { trpc } from '@/lib/trpc-client';
 import { useYellowSession } from '@/hooks/useYellowSession';
 import type { MatchResult, Verification, MatchStatus, TrustTier } from '@/types';
 import { calculateTrustScore } from '@/lib/match/verification';
+import { getMatchFeeDistribution } from '@/lib/yellow/match-fees';
 
 interface UseMatchVerificationReturn {
   matches: MatchResult[];
@@ -36,6 +37,12 @@ interface YellowSettlementInput {
   sessionId: string;
   version: number;
   settlementId: string;
+}
+
+interface MatchFeeSessionMetadata {
+  homeParticipants?: Hex[];
+  awayParticipants?: Hex[];
+  platformParticipant?: Hex | null;
 }
 
 const DEFAULT_PROTOCOL = RPCProtocolVersion.NitroRPC_0_4;
@@ -120,6 +127,11 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
       refetch();
     },
   });
+  const settleFeeMutation = trpc.match.settleFeeSession.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
 
   const matches = data?.matches.map(transformMatch) || [];
   const hasMore = data?.hasMore || false;
@@ -160,7 +172,14 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
       getSquadLeaderWallets(match.homeSquadId),
       getSquadLeaderWallets(match.awaySquadId),
     ]);
-    const participants = Array.from(new Set([...homeLeaders, ...awayLeaders])) as Hex[];
+    const platformParticipant = process.env.NEXT_PUBLIC_YELLOW_PLATFORM_WALLET;
+    const participants = Array.from(
+      new Set([
+        ...homeLeaders,
+        ...awayLeaders,
+        ...(platformParticipant && isHex(platformParticipant) ? [platformParticipant as Hex] : []),
+      ]),
+    ) as Hex[];
     if (participants.length < 2) {
       return undefined;
     }
@@ -181,7 +200,12 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
         application: `sportwarren-match-fee-${match.homeSquadId}-${match.awaySquadId}-${Date.now()}`,
         protocol: DEFAULT_PROTOCOL,
         participants,
-        weights: [50, 50],
+        weights: participants.map((sessionParticipant) => {
+          if (platformParticipant && sessionParticipant.toLowerCase() === platformParticipant.toLowerCase()) {
+            return 0;
+          }
+          return 50;
+        }),
         quorum: 50,
         challenge: DEFAULT_CHALLENGE_WINDOW,
       },
@@ -195,6 +219,9 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
         matchDate: match.matchDate?.toISOString() ?? new Date().toISOString(),
         asset,
         feeAmount,
+        homeParticipants: homeLeaders,
+        awayParticipants: awayLeaders,
+        platformParticipant: platformParticipant && isHex(platformParticipant) ? platformParticipant : null,
       }),
     });
 
@@ -230,13 +257,87 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
     homeScore?: number,
     awayScore?: number
   ): Promise<void> => {
-    await verifyMutation.mutateAsync({
+    const result = await verifyMutation.mutateAsync({
       matchId,
       verified,
       homeScore,
       awayScore,
     });
-  }, [verifyMutation]);
+
+    if (
+      !result.requiresYellowSettlement ||
+      !yellowSession.enabled ||
+      yellowSession.status !== 'authenticated' ||
+      !yellowSession.accountAddress
+    ) {
+      return;
+    }
+
+    const match = await utils.match.getById.fetch({ id: matchId });
+    if (!match.yellowFeeSessionId || !isHex(match.yellowFeeSessionId)) {
+      return;
+    }
+
+    const participant = yellowSession.accountAddress as Hex;
+    if (!isHex(participant)) {
+      return;
+    }
+
+    const sessions = await yellowSession.getAppSessions(participant);
+    const existingSession = sessions.find((session: { appSessionId: string }) => session.appSessionId === match.yellowFeeSessionId);
+    if (!existingSession) {
+      return;
+    }
+
+    const distribution = getMatchFeeDistribution(
+      { homeScore: match.homeScore, awayScore: match.awayScore },
+      result.newStatus as 'verified' | 'disputed',
+      Number(process.env.NEXT_PUBLIC_YELLOW_MATCH_FEE_AMOUNT || 1),
+    );
+    const asset = (process.env.NEXT_PUBLIC_YELLOW_ASSET_SYMBOL || yellowSession.assetSymbol || 'USDC').toLowerCase();
+    const metadata = existingSession.sessionData
+      ? JSON.parse(existingSession.sessionData) as MatchFeeSessionMetadata
+      : null;
+    const allocations: RPCAppSessionAllocation[] = existingSession.participants.map((sessionParticipant: Hex) => {
+      if (metadata?.platformParticipant && sessionParticipant.toLowerCase() === metadata.platformParticipant.toLowerCase()) {
+        return {
+          participant: sessionParticipant,
+          asset,
+          amount: toAtomicAmount(distribution.platformAmount),
+        };
+      }
+
+      const isHomeParticipant = metadata?.homeParticipants?.some(
+        (homeParticipant) => homeParticipant.toLowerCase() === sessionParticipant.toLowerCase(),
+      );
+      return {
+        participant: sessionParticipant,
+        asset,
+        amount: toAtomicAmount(isHomeParticipant ? distribution.homeAmount : distribution.awayAmount),
+      };
+    });
+
+    const closeResult = await yellowSession.closeSession({
+      appSessionId: match.yellowFeeSessionId,
+      allocations,
+      sessionData: JSON.stringify({
+        matchId,
+        status: result.newStatus,
+        homeScore: match.homeScore,
+        awayScore: match.awayScore,
+        asset,
+      }),
+    });
+
+    await settleFeeMutation.mutateAsync({
+      matchId,
+      yellowSettlement: {
+        sessionId: closeResult.appSessionId,
+        version: closeResult.version,
+        settlementId: buildSettlementId(closeResult.appSessionId, closeResult.version),
+      },
+    });
+  }, [settleFeeMutation, utils.match.getById, verifyMutation, yellowSession]);
 
   const getMatchById = useCallback((matchId: string) => {
     return matches.find(m => m.id === matchId);
@@ -253,6 +354,7 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
       isLoading ||
       submitMutation.isPending ||
       verifyMutation.isPending ||
+      settleFeeMutation.isPending ||
       yellowSession.status === 'connecting',
     error: error?.message || submitMutation.error?.message || verifyMutation.error?.message || null,
     submitMatchResult,
