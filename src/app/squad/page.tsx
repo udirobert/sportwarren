@@ -74,7 +74,7 @@ export default function SquadPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-4 md:py-6 space-y-4 md:space-y-6">
+    <div className="max-w-6xl mx-auto px-4 py-4 md:py-6 pb-24 md:pb-6 space-y-4 md:space-y-6">
       {/* Header — compact on mobile */}
       <div className="flex items-center gap-3 md:block md:text-center">
         <div className="w-10 h-10 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shrink-0 md:mx-auto md:mb-4">

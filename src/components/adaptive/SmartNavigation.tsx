@@ -3,14 +3,16 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Target, BarChart3, Users, MessageCircle, Menu, X, Plus, Activity, Settings } from 'lucide-react';
+import { Home, Target, BarChart3, Users, MessageCircle, X, Plus, Activity, Settings, MoreHorizontal } from 'lucide-react';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { ContextualHelp } from './ContextualHelp';
+
+const BOTTOM_NAV_MAX = 5;
 
 export const SmartNavigation: React.FC = () => {
   const pathname = usePathname();
   const { preferences, trackFeatureUsage } = useUserPreferences();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
   // Define all navigation items with their unlock conditions
@@ -98,39 +100,32 @@ export const SmartNavigation: React.FC = () => {
     return b.priority - a.priority;
   });
 
-  const isActive = (path: string) => pathname === path;
+  // Split bottom nav: primary slots + overflow into More sheet
+  const primaryItems = visibleNavItems.slice(0, BOTTOM_NAV_MAX - 1);
+  const overflowItems = visibleNavItems.slice(BOTTOM_NAV_MAX - 1);
+  const hasOverflow = overflowItems.length > 0;
 
-  // Handle scroll effect
+  const isActive = (path: string) => pathname === path;
+  const activeLabel = visibleNavItems.find(i => isActive(i.path))?.label ?? 'SportWarren';
+
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-    window.addEventListener('scroll', handleScroll);
+    const handleScroll = () => setIsScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Close mobile menu when route changes
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
+  // Close More sheet on route change
+  useEffect(() => { setIsMoreOpen(false); }, [pathname]);
 
-  // Track navigation usage
+  // Lock body scroll when More sheet open
+  useEffect(() => {
+    document.body.style.overflow = isMoreOpen ? 'hidden' : '';
+    return () => { document.body.style.overflow = ''; };
+  }, [isMoreOpen]);
+
   const handleNavClick = (path: string) => {
-    const feature = path.slice(1) || 'dashboard';
-    trackFeatureUsage(feature);
+    trackFeatureUsage(path.slice(1) || 'dashboard');
   };
-
-  // Prevent body scroll when mobile menu is open
-  useEffect(() => {
-    if (isMobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isMobileMenuOpen]);
 
   const helpTips = [
     {
@@ -194,98 +189,102 @@ export const SmartNavigation: React.FC = () => {
         </div>
       </nav>
 
-      {/* Mobile Top Navigation */}
-      <nav className={`md:hidden fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? 'bg-white/95 backdrop-blur-lg shadow-lg' : 'bg-white/90 backdrop-blur-md'
+      {/* ── Mobile Top Bar — logo + active page title ─────────────── */}
+      <nav className={`md:hidden fixed top-0 left-0 right-0 z-50 transition-shadow duration-200 ${
+        isScrolled ? 'bg-white/95 backdrop-blur-lg shadow-md' : 'bg-white/90 backdrop-blur-md'
       } border-b border-gray-200`}>
-        <div className="px-4">
-          <div className="flex items-center justify-between h-14">
-            <Link 
-              href="/" 
-              className="flex items-center space-x-2 touch-manipulation"
-              onClick={() => handleNavClick('/')}
-            >
-              <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center">
-                <Target className="w-5 h-5 text-white" />
-              </div>
-              <h1 className="text-lg font-bold text-gray-900">SportWarren</h1>
-            </Link>
-
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="p-2 rounded-lg text-gray-700 hover:bg-gray-100 active:bg-gray-200 transition-colors touch-manipulation"
-              aria-label="Toggle menu"
-            >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Slide-out Menu */}
-        <div className={`absolute top-full left-0 right-0 bg-white border-b border-gray-200 transform transition-all duration-300 ease-in-out ${
-          isMobileMenuOpen 
-            ? 'translate-y-0 opacity-100 visible' 
-            : '-translate-y-full opacity-0 invisible'
-        }`}>
-          <div className="px-4 py-4 max-h-[calc(100vh-4rem)] overflow-y-auto">
-            <div className="grid gap-2">
-              {visibleNavItems.slice(1).map(({ path, icon: Icon, label }) => (
-                <Link
-                  key={path}
-                  href={path}
-                  onClick={() => handleNavClick(path)}
-                  className={`flex items-center space-x-3 p-4 rounded-xl transition-all touch-manipulation ${
-                    isActive(path)
-                      ? 'bg-green-600 text-white shadow-lg'
-                      : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200'
-                  }`}
-                >
-                  <Icon className="w-5 h-5" />
-                  <span className="font-medium">{label}</span>
-                </Link>
-              ))}
+        <div className="flex items-center h-14 px-4 gap-3">
+          <Link href="/" className="touch-manipulation shrink-0" onClick={() => handleNavClick('/')}>
+            <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center">
+              <Target className="w-5 h-5 text-white" />
             </div>
-          </div>
+          </Link>
+          <span className="flex-1 text-base font-semibold text-gray-900 truncate">{activeLabel}</span>
+          {preferences.primaryRole === 'organizer' ? (
+            <Link
+              href="/match?mode=capture"
+              onClick={() => handleNavClick('/match')}
+              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold touch-manipulation active:bg-green-700 transition-colors shrink-0"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              Log
+            </Link>
+          ) : (
+            <div className="w-16 shrink-0" />
+          )}
         </div>
       </nav>
 
-      {/* Mobile Bottom Navigation - Adaptive */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-gray-200 safe-area-pb">
-        <div className={`grid gap-1 p-2 ${
-          visibleNavItems.length <= 4 ? 'grid-cols-4' : 
-          visibleNavItems.length <= 5 ? 'grid-cols-5' : 'grid-cols-6'
+      {/* ── Mobile Bottom Tab Bar ─────────────────────────────────── */}
+      <div
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-gray-200"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className={`grid gap-0.5 px-1 pt-1 pb-1 ${
+          (primaryItems.length + (hasOverflow ? 1 : 0)) <= 4 ? 'grid-cols-4' : 'grid-cols-5'
         }`}>
-          {visibleNavItems.map(({ path, icon: Icon, label }) => (
+          {primaryItems.map(({ path, icon: Icon, label }) => (
             <Link
               key={path}
               href={path}
               onClick={() => handleNavClick(path)}
-              className={`flex flex-col items-center justify-center p-2 rounded-lg transition-all touch-manipulation min-h-[3.5rem] ${
-                isActive(path)
-                  ? 'text-green-600 bg-green-50 scale-105'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50 active:bg-gray-100'
+              className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-colors touch-manipulation min-h-[3.25rem] ${
+                isActive(path) ? 'text-green-600 bg-green-50' : 'text-gray-500 active:bg-gray-100'
               }`}
             >
-              <Icon className={`w-5 h-5 mb-1 transition-transform ${
-                isActive(path) ? 'scale-110' : ''
-              }`} />
-              <span className="text-xs font-medium leading-tight text-center">{label}</span>
+              <Icon className={`w-5 h-5 mb-0.5 transition-transform ${isActive(path) ? 'scale-110' : ''}`} />
+              <span className="text-[10px] font-medium leading-tight">{label}</span>
             </Link>
           ))}
+          {hasOverflow && (
+            <button
+              onClick={() => setIsMoreOpen(true)}
+              className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-colors touch-manipulation min-h-[3.25rem] ${
+                overflowItems.some(i => isActive(i.path)) ? 'text-green-600 bg-green-50' : 'text-gray-500 active:bg-gray-100'
+              }`}
+            >
+              <MoreHorizontal className="w-5 h-5 mb-0.5" />
+              <span className="text-[10px] font-medium leading-tight">More</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Mobile Menu Overlay */}
-      {isMobileMenuOpen && (
-        <div 
-          className="md:hidden fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
+      {/* ── More Sheet ───────────────────────────────────────────── */}
+      {isMoreOpen && (
+        <>
+          <div className="md:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-50" onClick={() => setIsMoreOpen(false)} />
+          <div
+            className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl"
+            style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+          >
+            <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-gray-100">
+              <span className="text-sm font-semibold text-gray-700">More</span>
+              <button onClick={() => setIsMoreOpen(false)} className="p-1.5 rounded-lg text-gray-500 active:bg-gray-100 touch-manipulation">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-2 p-4">
+              {overflowItems.map(({ path, icon: Icon, label }) => (
+                <Link
+                  key={path}
+                  href={path}
+                  onClick={() => handleNavClick(path)}
+                  className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-xl touch-manipulation transition-colors ${
+                    isActive(path) ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-700 active:bg-gray-100'
+                  }`}
+                >
+                  <Icon className="w-6 h-6" />
+                  <span className="text-xs font-medium text-center">{label}</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </>
       )}
 
-      {/* Spacer for fixed navigation */}
-      <div className="h-14 md:h-16"></div>
-      <div className="h-20 md:h-0"></div>
+      {/* Spacers for fixed bars */}
+      <div className="h-14 md:h-16" />
     </>
   );
 };

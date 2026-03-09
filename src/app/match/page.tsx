@@ -153,7 +153,7 @@ export default function MatchPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 pb-24 md:pb-6">
       <div className="rounded-3xl border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_45%),linear-gradient(135deg,#f5fffb,#ecfdf5)] p-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
