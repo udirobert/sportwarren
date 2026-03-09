@@ -247,22 +247,28 @@ async function seedDemoMatches() {
       }
 
       // Create match in database
+      const matchData: any = {
+        homeSquadId: homeSquad.id,
+        awaySquadId: awaySquad.id,
+        homeScore: demoMatch.homeScore,
+        awayScore: demoMatch.awayScore,
+        matchDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000), // Random time in last week
+        submittedBy: user.id,
+        status,
+        latitude: demoMatch.latitude,
+        longitude: demoMatch.longitude,
+        weatherVerified: creResult.weather.verified,
+        locationVerified: creResult.location.verified,
+        verificationDetails: creResult as any,
+      };
+      
+      // Only add txId if match is verified
+      if (creResult.verified) {
+        matchData.txId = `0x${Math.random().toString(16).substring(2, 10)}`;
+      }
+
       const match = await prisma.match.create({
-        data: {
-          homeSquadId: homeSquad.id,
-          awaySquadId: awaySquad.id,
-          homeScore: demoMatch.homeScore,
-          awayScore: demoMatch.awayScore,
-          matchDate: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000), // Random time in last week
-          submittedBy: user.id,
-          status,
-          latitude: demoMatch.latitude,
-          longitude: demoMatch.longitude,
-          weatherVerified: creResult.weather.verified,
-          locationVerified: creResult.location.verified,
-          verificationDetails: creResult as any,
-          txId: creResult.verified ? `0x${Math.random().toString(16).substring(2, 10)}` : null,
-        },
+        data: matchData,
         include: {
           homeSquad: true,
           awaySquad: true,
