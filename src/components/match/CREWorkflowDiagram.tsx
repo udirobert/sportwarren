@@ -89,8 +89,8 @@ const OracleNode: React.FC<OracleNodeProps> = ({
 
 interface ConsensusNodeProps {
   confidence: number;
-  weatherWeight: number;
-  locationWeight: number;
+  weatherWeight?: number;
+  locationWeight?: number;
   delay?: number;
 }
 
