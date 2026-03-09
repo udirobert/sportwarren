@@ -7,6 +7,51 @@ const AttributeType = z.enum([
   'gk_diving', 'gk_handling', 'gk_kicking', 'gk_reflexes', 'gk_speed', 'gk_positioning'
 ]);
 
+async function ensurePlayerProfile(prisma: any, userId: string) {
+  let profile = await prisma.playerProfile.findUnique({
+    where: { userId },
+    include: {
+      attributes: true,
+      user: { select: { name: true, avatar: true } }
+    },
+  });
+
+  if (profile) {
+    return profile;
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+  });
+
+  if (!user) {
+    throw new TRPCError({
+      code: 'NOT_FOUND',
+      message: 'User not found',
+    });
+  }
+
+  return prisma.playerProfile.create({
+    data: {
+      userId,
+      attributes: {
+        create: [
+          { attribute: 'pace', rating: 50, xp: 0, xpToNext: 100 },
+          { attribute: 'shooting', rating: 50, xp: 0, xpToNext: 100 },
+          { attribute: 'passing', rating: 50, xp: 0, xpToNext: 100 },
+          { attribute: 'dribbling', rating: 50, xp: 0, xpToNext: 100 },
+          { attribute: 'defending', rating: 50, xp: 0, xpToNext: 100 },
+          { attribute: 'physical', rating: 50, xp: 0, xpToNext: 100 },
+        ],
+      },
+    },
+    include: {
+      attributes: true,
+      user: { select: { name: true, avatar: true } }
+    },
+  });
+}
+
 export const playerRouter = createTRPCRouter({
   // Get player profile with stats
   getProfile: publicProcedure
@@ -15,55 +60,26 @@ export const playerRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       try {
-        let profile = await ctx.prisma.playerProfile.findUnique({
-          where: { userId: input.userId },
-          include: { 
-            attributes: true,
-            user: { select: { name: true, avatar: true } }
-          },
-        });
-        
-        if (!profile) {
-          // Check if user exists
-          const user = await ctx.prisma.user.findUnique({
-            where: { id: input.userId },
-          });
-          
-          if (!user) {
-            throw new TRPCError({
-              code: 'NOT_FOUND',
-              message: 'User not found',
-            });
-          }
-
-          // Create default profile with all attributes
-          profile = await ctx.prisma.playerProfile.create({
-            data: {
-              userId: input.userId,
-              attributes: {
-                create: [
-                  { attribute: 'pace', rating: 50, xp: 0, xpToNext: 100 },
-                  { attribute: 'shooting', rating: 50, xp: 0, xpToNext: 100 },
-                  { attribute: 'passing', rating: 50, xp: 0, xpToNext: 100 },
-                  { attribute: 'dribbling', rating: 50, xp: 0, xpToNext: 100 },
-                  { attribute: 'defending', rating: 50, xp: 0, xpToNext: 100 },
-                  { attribute: 'physical', rating: 50, xp: 0, xpToNext: 100 },
-                ],
-              },
-            },
-            include: { 
-              attributes: true,
-              user: { select: { name: true, avatar: true } }
-            },
-          });
-        }
-        
-        return profile;
+        return ensurePlayerProfile(ctx.prisma, input.userId);
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to fetch player profile',
+          cause: error,
+        });
+      }
+    }),
+
+  getCurrentProfile: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        return ensurePlayerProfile(ctx.prisma, ctx.userId!);
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch current player profile',
           cause: error,
         });
       }

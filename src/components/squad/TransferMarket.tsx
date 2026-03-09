@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { PaymentRailNotice } from '@/components/payments/PaymentRailNotice';
 import {
   ArrowRightLeft, DollarSign, Clock, Check, X,
   Search, Filter, TrendingUp, User, Trophy, Zap
@@ -101,6 +102,14 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
           </button>
         ))}
       </div>
+
+      <PaymentRailNotice
+        title="Transfer escrow rail"
+        assetSymbol={currencyLabel}
+        enabled={paymentRailEnabled}
+        mode={paymentRailEnabled ? 'shared session' : 'disabled'}
+        body="Incoming and outgoing offers can lock funds in Yellow escrow so both squads can settle the same transfer session."
+      />
 
       {/* Browse Players */}
       {activeTab === 'browse' && (

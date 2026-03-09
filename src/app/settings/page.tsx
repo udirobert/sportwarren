@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Settings, Wallet, User, Bell } from 'lucide-react';
 import { AlgorandWallet } from '@/components/algorand/AlgorandWallet';
 
@@ -14,6 +14,17 @@ type Tab = typeof tabs[number]['id'];
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('wallet');
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const tab = new URLSearchParams(window.location.search).get('tab');
+    if (tab === 'wallet' || tab === 'profile' || tab === 'notifications') {
+      setActiveTab(tab);
+    }
+  }, []);
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 space-y-6">

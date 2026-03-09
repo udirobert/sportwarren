@@ -19,8 +19,10 @@ import {
   AlertCircle,
   Clock3,
   CheckCircle2,
+  Info,
 } from "lucide-react";
 import { MOCK_XP_SUMMARY } from "@/lib/mocks";
+import { useOnboarding } from "@/hooks/useOnboarding";
 
 type ViewMode = "capture" | "verify" | "detail" | "xp-summary" | "history";
 
@@ -51,6 +53,9 @@ export default function MatchPage() {
     getMatchById,
     loading,
   } = useMatchVerification(activeSquadId);
+
+  const { checklistItems } = useOnboarding();
+  const matchChecklistDone = checklistItems.find(i => i.id === 'view_match_engine')?.completed ?? false;
 
   const selectedMatch = selectedMatchId ? getMatchById(selectedMatchId) : null;
   const availableOpponents = useMemo(
@@ -219,6 +224,24 @@ export default function MatchPage() {
           </button>
         ))}
       </div>
+
+      {/* First-visit hint — shown until the user has submitted their first match */}
+      {matches.length === 0 && !matchChecklistDone && (
+        <Card className="border-blue-200 bg-blue-50/70 py-4">
+          <div className="flex items-start gap-3">
+            <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+            <div className="flex-1">
+              <p className="font-semibold text-blue-900">Submit your first match result</p>
+              <p className="mt-1 text-sm text-blue-700">
+                Use <strong>Submit Match</strong> to log a result. Your opponent will receive a verification request — once both sides confirm, XP and reputation are awarded automatically.
+              </p>
+            </div>
+            <button onClick={() => setViewMode("capture")} className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors">
+              Get started
+            </button>
+          </div>
+        </Card>
+      )}
 
       {viewMode === "capture" && (
         <div className="space-y-4">

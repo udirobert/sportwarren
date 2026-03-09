@@ -69,6 +69,7 @@ export interface ChecklistItem {
     completed: boolean;
     emoji: string;
     href: string;
+    actionLabel: string;
 }
 
 const STORAGE_KEY = 'sw_onboarding_v2';
@@ -146,27 +147,30 @@ export function useOnboarding() {
     const checklistItems: ChecklistItem[] = [
         {
             id: 'view_match_engine',
-            label: 'Watch your first match simulation',
-            description: 'Hit ▶ Play on the Match Engine',
+            label: 'Open the Match Center',
+            description: 'Submit a result or review the current match queue',
             completed: state.checklistItems.view_match_engine ?? false,
             emoji: '🎮',
             href: '/match',
+            actionLabel: 'Open matches',
         },
         {
             id: 'open_office',
             label: 'Visit the Staff Room',
-            description: 'Open the backroom feed and chat to your Agent',
+            description: 'Open the dashboard staff tools and talk to your Agent',
             completed: state.checklistItems.open_office ?? false,
             emoji: '🎩',
             href: '/',
+            actionLabel: 'Open dashboard',
         },
         {
             id: 'use_draft',
-            label: 'Draft your first prospect',
-            description: 'Use the transfer market to scout and sign a player',
+            label: 'Open the transfer market',
+            description: 'Scout prospects and make your first squad move',
             completed: state.checklistItems.use_draft ?? false,
             emoji: '📋',
             href: '/squad?tab=transfers',
+            actionLabel: 'Open transfers',
         },
         {
             id: 'verify_match',
@@ -175,14 +179,16 @@ export function useOnboarding() {
             completed: state.checklistItems.verify_match ?? false,
             emoji: '✅',
             href: '/match?mode=capture',
+            actionLabel: 'Submit match',
         },
         {
             id: 'claim_identity',
-            label: 'Secure your Legacy',
-            description: 'Connect wallet to mint your guest stats to the blockchain',
+            label: 'Connect your wallet',
+            description: 'Unlock live squad, treasury, and on-chain progression',
             completed: state.wizardDone,
             emoji: '⚡',
-            href: '/settings',
+            href: '/settings?tab=wallet',
+            actionLabel: 'Open wallet settings',
         },
     ];
 

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { PaymentRailNotice } from '@/components/payments/PaymentRailNotice';
 import { 
   Wallet, ArrowUpRight, ArrowDownRight, Plus, Minus, 
   History, PieChart, TrendingUp, AlertCircle 
@@ -110,6 +111,16 @@ export const Treasury: React.FC<TreasuryProps> = ({
           Withdraw
         </Button>
       </div>
+
+      {treasury.paymentRail && (
+        <PaymentRailNotice
+          title="Treasury settlement rail"
+          assetSymbol={treasury.paymentRail.assetSymbol}
+          enabled={treasury.paymentRail.enabled}
+          mode={treasury.paymentRail.mode}
+          body="Deposits and withdrawals update the squad treasury ledger first, then settle against the Yellow session when the wallet path is available."
+        />
+      )}
 
       {/* Budget Allowances */}
       <Card>
