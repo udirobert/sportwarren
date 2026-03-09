@@ -1,9 +1,11 @@
+Command finished with exit code 0.
+Command output:
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Target, BarChart3, Users, MessageCircle, Menu, X, Plus, Activity, Settings } from 'lucide-react';
+import { Home, Target, BarChart3, Users, Trophy, MessageCircle, Menu, X, Plus, Activity, Settings } from 'lucide-react';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { ContextualHelp } from './ContextualHelp';
 
@@ -61,10 +63,14 @@ export const SmartNavigation: React.FC = () => {
       unlockLevel: 'intermediate' as const,
       showCondition: () => preferences.preferredFeatures.social === 'active',
     },
-    // /achievements redirects to /reputation — not a standalone nav destination
-    // /verification redirects to /match?mode=verify — not a standalone nav destination
-    // /rivalries redirects to /match — not a standalone nav destination
-    // /challenges redirects to /squad — not a standalone nav destination
+    { 
+      path: '/achievements', 
+      icon: Trophy, 
+      label: 'Achievements', 
+      priority: 50,
+      unlockLevel: 'intermediate' as const,
+      showCondition: () => preferences.preferredFeatures.gamification !== 'none',
+    },
     { 
       path: '/settings', 
       icon: Settings, 
