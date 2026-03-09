@@ -24,6 +24,7 @@ import { SquadDynamics } from '@/components/dashboard/SquadDynamics';
 import { ScoutingReport } from '@/components/dashboard/ScoutingReport';
 import { MatchEnginePreview } from '@/components/dashboard/MatchEnginePreview';
 import { StaffRoom } from '@/components/dashboard/StaffRoom';
+import { AgentProvider } from '@/context/AgentContext';
 import { AgenticConcierge } from '@/components/adaptive/AgenticConcierge';
 import { LensSocialHub } from '@/components/dashboard/LensSocialHub';
 
@@ -452,10 +453,12 @@ export const AdaptiveDashboard: React.FC = () => {
 
       <AnimatePresence>
         {isStaffRoomOpen && (
-          <StaffRoom
-            squadId={primarySquadId}
-            onClose={() => setIsStaffRoomOpen(false)}
-          />
+          <AgentProvider>
+            <StaffRoom
+              squadId={primarySquadId}
+              onClose={() => setIsStaffRoomOpen(false)}
+            />
+          </AgentProvider>
         )}
       </AnimatePresence>
 

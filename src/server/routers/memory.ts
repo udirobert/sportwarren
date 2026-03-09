@@ -21,7 +21,7 @@ export const memoryRouter = createTRPCRouter({
       const userId = (ctx as { userId?: string }).userId;
       if (!userId) return { ok: false };
 
-      const existing = await ctx.db.aiMemory.findUnique({ where: { userId } });
+      const existing = await ctx.prisma.aiMemory.findUnique({ where: { userId } });
       const history: MemoryHistory = existing
         ? (existing.history as MemoryHistory)
         : {};
@@ -30,7 +30,7 @@ export const memoryRouter = createTRPCRouter({
       // Keep last 20 decisions per staff member to avoid unbounded growth
       const updated = [...staffLog, input].slice(-20);
 
-      await ctx.db.aiMemory.upsert({
+      await ctx.prisma.aiMemory.upsert({
         where: { userId },
         create: {
           userId,
@@ -52,7 +52,7 @@ export const memoryRouter = createTRPCRouter({
       const userId = (ctx as { userId?: string }).userId;
       if (!userId) return { decisions: [] as StaffDecision[] };
 
-      const existing = await ctx.db.aiMemory.findUnique({ where: { userId } });
+      const existing = await ctx.prisma.aiMemory.findUnique({ where: { userId } });
       if (!existing) return { decisions: [] as StaffDecision[] };
 
       const history = existing.history as MemoryHistory;
