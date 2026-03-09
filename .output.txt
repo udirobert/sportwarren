@@ -1,3 +1,5 @@
+Command finished with exit code 0.
+Command output:
 "use client";
 
 import React, { useState } from 'react';
@@ -5,7 +7,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { 
   Target, Users, Mic, Camera, MapPin, Play, Square, 
-  Plus, Minus, FileText, Check, Shield
+  Plus, Minus, FileText, Check 
 } from 'lucide-react';
 import { useActiveMatch } from '@/hooks/match/useActiveMatch';
 import { useEvidenceCapture, formatDuration } from '@/hooks/match/useEvidenceCapture';
@@ -22,17 +24,6 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
   onSubmit 
 }) => {
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
-  const [playersPerSide, setPlayersPerSide] = useState(11);
-  const [hasKeeper, setHasKeeper] = useState(true);
-
-  const FORMAT_PRESETS = [
-    { label: '5v5', players: 5 },
-    { label: '7v7', players: 7 },
-    { label: '9v9', players: 9 },
-    { label: '11v11', players: 11 },
-  ];
-
-  const matchFormat = `${playersPerSide}v${playersPerSide}`;
   
   const {
     matchState,
@@ -62,10 +53,7 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
   };
 
   const confirmSubmit = () => {
-    const result = endMatch();
-    if (result && onSubmit) {
-      onSubmit({ ...result, matchFormat, playersPerSide, hasKeeper });
-    }
+    endMatch();
     setShowSubmitConfirm(false);
   };
 
@@ -90,68 +78,16 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
   // Match hasn't started yet
   if (!matchState.isActive && matchState.events.length === 0) {
     return (
-      <Card className="py-8 px-4 space-y-6">
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <Play className="w-8 h-8 text-white" />
-          </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Set Up Match</h2>
-          <p className="text-sm text-gray-500">Configure your format before kick-off</p>
+      <Card className="text-center py-12">
+        <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6">
+          <Play className="w-10 h-10 text-white" />
         </div>
-
-        {/* Format presets */}
-        <div>
-          <p className="text-sm font-semibold text-gray-700 mb-2">Players per side</p>
-          <div className="grid grid-cols-4 gap-2">
-            {FORMAT_PRESETS.map(p => (
-              <button
-                key={p.label}
-                onClick={() => setPlayersPerSide(p.players)}
-                className={`py-2 rounded-lg text-sm font-bold border transition-colors ${
-                  playersPerSide === p.players
-                    ? 'bg-green-600 text-white border-green-600'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-green-400'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-          {/* Custom slider for non-standard sizes */}
-          <div className="mt-3 flex items-center gap-3">
-            <span className="text-xs text-gray-500 w-20">Custom: {playersPerSide}v{playersPerSide}</span>
-            <input
-              type="range" min={3} max={15} value={playersPerSide}
-              onChange={e => setPlayersPerSide(Number(e.target.value))}
-              className="flex-1 accent-green-600"
-            />
-          </div>
-        </div>
-
-        {/* Keeper toggle */}
-        <div className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-semibold text-gray-700">Goalkeeper</span>
-            <span className="text-xs text-gray-400">(can rotate each week)</span>
-          </div>
-          <button
-            onClick={() => setHasKeeper(v => !v)}
-            className={`relative w-11 h-6 rounded-full transition-colors ${
-              hasKeeper ? 'bg-blue-600' : 'bg-gray-300'
-            }`}
-          >
-            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-              hasKeeper ? 'translate-x-5' : 'translate-x-0'
-            }`} />
-          </button>
-        </div>
-
-        <div className="text-center text-xs text-gray-400">
-          {matchFormat} • {hasKeeper ? 'With goalkeeper' : 'No goalkeeper / rotating keeper'}
-        </div>
-
-        <Button onClick={handleStartMatch} size="lg" className="w-full h-14 text-base font-bold shadow-lg shadow-green-600/20 active:scale-95 transition-transform">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Start Match</h2>
+        <p className="text-gray-600 mb-6 max-w-md mx-auto">
+          Begin tracking your match. Goals, events, and evidence will be recorded 
+          for blockchain verification.
+        </p>
+        <Button onClick={handleStartMatch} size="lg" className="w-full h-16 text-lg font-bold shadow-lg shadow-green-600/20 active:scale-95 transition-transform">
           Start Match Tracking
         </Button>
       </Card>
@@ -347,8 +283,6 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
             <h3 className="text-lg font-bold text-gray-900 mb-2">Submit Match Result?</h3>
             <p className="text-gray-600 mb-4">
               You are submitting: <strong>{homeTeam} {matchState.homeScore} - {matchState.awayScore} {awayTeam}</strong>
-              <br />
-              <span className="text-xs text-gray-500">{matchFormat} • {hasKeeper ? 'With goalkeeper' : 'No goalkeeper'}</span>
             </p>
             <p className="text-sm text-gray-500 mb-6">
               This result will be sent to the opposing team for confirmation. 

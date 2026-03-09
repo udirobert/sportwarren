@@ -370,6 +370,11 @@ model Match {
   awaySquadId String @map("away_squad_id")
   awaySquad   Squad  @relation("MatchAwaySquad", fields: [awaySquadId], references: [id])
 
+  // Match Format (flexible: 5-a-side to 15-a-side, optional keeper)
+  playersPerSide Int     @default(11) @map("players_per_side")
+  hasKeeper      Boolean @default(true) @map("has_keeper")
+  matchFormat    String  @default("11v11") @map("match_format") // e.g. "5v5", "7v7", "11v11"
+
   // Score
   homeScore Int? @map("home_score")
   awayScore Int? @map("away_score")
