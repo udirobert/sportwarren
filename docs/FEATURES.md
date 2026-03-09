@@ -113,7 +113,7 @@
 ## 7. Lens Social Graph ✅
 
 ### Web3 Identity & Engagement
-- **Login with Lens:** Sign-in with Lens (SIWL) on the Base network.
+- **Login with Lens:** Sign-in with Lens (SIWL) on Lens Chain.
 - **Athlete Profiles:** Link your SportWarren stats to your decentralized identity.
 - **Highlight Sharing:** Post "Pro-Style" highlight cards directly to Lens feed.
 - **Verified Credentials:** Decentralized proof of Sunday league legendary status.

@@ -33,7 +33,7 @@ We have a high-fidelity, functional application with a compelling user loop. The
 | **Player XP & Attributes** | ✅ | TRPC + Prisma, FIFA-style progression |
 | **Squad DAO & Voting** | ✅ | Democratic challenge proposals |
 | **Territory Control** | ✅ | Real-world pitch dominance |
-| **Lens Social Layer** | ✅ | Profile, highlight sharing on Base |
+| **Lens Social Layer** | ✅ | Profile, highlight sharing on Lens Chain |
 | **Squad Creation Gate** | ✅ | 3-step wizard for new connected users with no squad |
 | **Guest Mode** | ✅ | Explore the full app without a wallet |
 | **Training Center** | ✅ | Logging, Sharpness, XP gains |
@@ -86,7 +86,7 @@ These **must** be resolved before you can open to the public without risk.
 - Treasury deposits/withdrawals accept real Yellow settlement refs and persist them through the existing ledger path.
 - Transfer escrow uses shared squad-leader sessions for create/cancel/respond when both parties have discoverable EVM wallets.
 - Match fees lock on submit and settle after consensus with an idempotent `yellow_fee_settled_at` guard.
-- Remaining production work is operational, not architectural: run the latest Prisma migration, set `NEXT_PUBLIC_YELLOW_PLATFORM_WALLET`, and test with two real squad-leader wallets on the live rail.
+- Remaining production work is operational, not architectural: confirm `NEXT_PUBLIC_YELLOW_PLATFORM_WALLET` is set in live envs and test with two real squad-leader wallets on the live rail.
 
 ---
 

@@ -98,7 +98,7 @@
 
 ### Social
 - [x] Shareable highlight cards (Auto-generated with level-ups)
-- [x] Lens Protocol v3 integration (Live on Base)
+- [x] Lens Protocol v3 integration (Live on Lens Chain)
 - [x] Post highlights to Lens feed
 - [ ] Season stats infographics
 - [ ] Trophy cabinet
@@ -134,7 +134,7 @@
 - **Squad DAO:** Implemented democratic voting for match challenges and squad decisions
 - **Fitness Agent:** Launched the Training Center with real-world activity syncing (Sharpness/XP)
 - **Territory Control:** Added "King of the Hill" mechanics for real-world pitch dominance
-- **Lens Social:** Integrated Lens Protocol v3 on Base for decentralized athlete identity
+- **Lens Social:** Integrated Lens Protocol v3 on Lens Chain for decentralized athlete identity
 - **Resilience:** Full TypeScript build passing with ES2020 BigInt support and SDK v3 compatibility
 - **Matchmaking:** Automated challenge proposals tied directly to squad governance votes
 - **Staff Office:** Launched the interactive Staff Room with functional budget and tactical advisors
