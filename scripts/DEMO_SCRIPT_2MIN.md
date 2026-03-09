@@ -1,20 +1,20 @@
 # 🎬 SportWarren x Chainlink CRE - 2 Minute Demo Script
 
-**Key Message:** Sports is the demo. The reusable CRE architecture is the product.
+**Key Message:** We're building the CRE-powered sports infrastructure platform
 
 ---
 
-## **0:00-0:15 | Opening - The Real Product**
+## **0:00-0:15 | Opening - The Product**
 **Visual:** Match Center homepage
 
-> "SportWarren demonstrates a generalizable Chainlink CRE pattern for real-world verification. We're using amateur football as our demo, but this weighted consensus engine applies to insurance claims, supply chain, disaster relief—any scenario requiring multi-source trustless verification."
+> "SportWarren is the Chainlink CRE-powered phygital sports platform. We're building the infrastructure layer for amateur sports—starting with match verification, then expanding to player identity, league governance, and multi-sport support."
 
 ---
 
-## **0:15-0:35 | Demo Use Case: Match Submission**
+## **0:15-0:35 | Phase 1: Match Verification**
 **Visual:** Click on Stamford Bridge match (3-1 result)
 
-> "Here's our demo use case. After a match, the captain submits the result with GPS coordinates. Northside United defeated Chelsea Legends 3-1 at Stamford Bridge. The location is automatically captured. This is where the CRE pattern shines."
+> "Phase 1 is what you see here. After a match, the captain submits the result with GPS coordinates. Northside United defeated Chelsea Legends 3-1 at Stamford Bridge. Chainlink CRE verifies the weather and location, generating a trust score that prevents disputes."
 
 ---
 
@@ -28,23 +28,23 @@
 ## **1:00-1:25 | Data Deep Dive**
 **Visual:** Expand "CRE Verification Data" section
 
-> "Every verification generates a unique workflow ID—this one is `cre_mw_v9o5ud`—permanently linked to the match record. You can see the exact temperature, conditions, and data source. All verifiable, tamper-proof data fetched by Chainlink's decentralized oracle network. This same pattern works for insurance claims, pharmaceutical supply chains, or disaster relief verification."
+> "Every verification generates a unique workflow ID—this one is `cre_mw_v9o5ud`—permanently linked to the match record. Players earn XP from verified matches, building sovereign career profiles. This same CRE pattern will verify player identity, fitness data, and league governance as we expand."
 
 ---
 
-## **1:25-1:45 | Architecture Diagram**
+## **1:25-1:45 | Roadmap & Expansion**
 **Visual:** Scroll to CRE Workflow Diagram
 
-> "This diagram shows the reusable architecture. Weather oracle on the left, location oracle on the right. Both feed into the CRE Consensus Engine, which computes the trust score. Finally, the result settles on-chain with an auditable workflow ID. Swap in any two oracles—temperature and GPS for pharma, satellite and ground sensors for disaster relief—the pattern generalizes."
+> "Phase 2 adds player identity verification using WorldID to prevent ringers, plus fitness tracker oracles for verified training data. Phase 3 uses Chainlink Automation for league governance—auto-scheduling and dispute arbitration. Phase 4 expands to rugby, cricket, basketball—each with sport-specific oracle needs."
 
 ---
 
 ## **1:45-2:00 | Closing**
 **Visual:** Back to homepage, then GitHub
 
-> "While we're using football as our demo, this CRE pattern—multi-oracle consensus with weighted scoring—applies to any real-world event requiring trustless verification. Insurance claims. Pharmaceutical supply chains. Disaster relief allocation. The architecture is the product. Built for the Chainlink CRE Hackathon 2026."
+> "We're owning the amateur sports vertical with CRE at the core. A hundred billion dollar market with no official records, rampant fraud, and zero player ownership. SportWarren becomes the infrastructure layer for amateur sports globally. Built for the Chainlink CRE Hackathon 2026."
 
-**End screen:** GitHub URL + "Generalizable CRE Pattern for Phygital Verification"
+**End screen:** GitHub URL + "Chainlink CRE-Powered Sports Platform"
 
 ---
 
@@ -52,48 +52,49 @@
 
 | Section | Duration | Key Message |
 |---------|----------|-------------|
-| Opening | 0:00-0:15 | Generalizable CRE pattern |
-| Submission | 0:15-0:35 | Sports is the demo |
+| Opening | 0:00-0:15 | CRE-powered sports platform |
+| Phase 1 | 0:15-0:35 | Match verification demo |
 | CRE Workflow | 0:35-1:00 | Multi-oracle consensus |
-| Data Deep Dive | 1:00-1:25 | Workflow ID + reusability |
-| Architecture | 1:25-1:45 | Pattern generalizes |
-| Closing | 1:45-2:00 | Architecture is the product |
+| Data Deep Dive | 1:00-1:25 | Workflow ID + XP system |
+| Roadmap | 1:25-1:45 | Phases 2-4 expansion |
+| Closing | 1:45-2:00 | Owning sports vertical |
 
 ---
 
 ## 💡 **Pro Tips**
 
-- **Emphasize reusability** - Mention "generalizable" or "reusable" at least 3 times
-- **Name other use cases** - Insurance, pharma, disaster relief (pick 2-3)
+- **Emphasize the roadmap** - Mention Phases 2-4 explicitly
+- **Own the vertical** - "We're a sports platform, not a generic tool"
+- **Market size** - Mention "$100B amateur sports market"
 - **Let animations complete** - Pause briefly when workflow diagram loads
 - **Highlight workflow ID** - Point cursor at `cre_mw_...` when mentioned
-- **End on architecture** - Judges need to see this is a pattern, not just sports
+- **End on vision** - Infrastructure layer for amateur sports
 
 ---
 
 ## 📝 **Alternative Opening Lines** (pick one)
 
 **Option A (Direct):**
-> "This is a generalizable Chainlink CRE pattern for multi-source verification. Sports is our demo—the architecture is the product."
+> "SportWarren is the Chainlink CRE-powered phygital sports platform. We're building the infrastructure for amateur sports—match verification is phase one."
 
 **Option B (Problem-first):**
-> "Real-world events need trustless verification. Insurance claims, supply chains, disaster relief. We built a CRE pattern for this—using football as our demo."
+> "Amateur sports is a hundred billion dollar market with no official records. SportWarren fixes this using Chainlink CRE—starting with match verification."
 
-**Option C (Technical):**
-> "SportWarren demonstrates weighted consensus using Chainlink CRE. Two oracles, confidence scoring, on-chain settlement. Sports is the demo use case."
+**Option C (Roadmap-first):**
+> "Four phases. One platform. SportWarren uses Chainlink CRE to own the amateur sports vertical. Match verification is just the beginning."
 
 ---
 
 ## 🏆 **Key Phrases to Include**
 
-- ✅ "Generalizable CRE pattern"
-- ✅ "Sports is the demo, architecture is the product"
-- ✅ "Multi-oracle consensus with weighted scoring"
-- ✅ "Applies to insurance, supply chain, disaster relief"
-- ✅ "The architecture is the product"
+- ✅ "Chainlink CRE-powered sports platform"
+- ✅ "Infrastructure layer for amateur sports"
+- ✅ "Phases 2-4: Identity, Governance, Multi-sport"
+- ✅ "$100B amateur sports market"
+- ✅ "Owning the sports vertical with CRE"
 
 **Use at least 3 of these in your demo!**
 
 ---
 
-**Good luck!** 🚀🔗
+**Good luck!** 🚀⚽🔗

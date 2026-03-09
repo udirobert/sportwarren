@@ -3,7 +3,7 @@
 **Duration:** 2:00 - 2:30 minutes
 **Format:** Screen recording with voiceover
 **Tone:** Professional, enthusiastic, clear
-**Key Message:** Sports is the demo—the reusable CRE pattern is the product
+**Key Message:** We're building the CRE-powered sports infrastructure platform
 
 ---
 
@@ -25,7 +25,7 @@
 **Visual:** Match Center homepage with hero section
 
 **Voiceover:**
-> "SportWarren demonstrates a generalizable Chainlink CRE pattern for real-world verification. We're using amateur football as our demo, but this weighted consensus engine applies to insurance claims, supply chain, disaster relief—any scenario requiring multi-source trustless verification."
+> "SportWarren is the Chainlink CRE-powered phygital sports platform. We're building the infrastructure layer for amateur sports—starting with match verification, then expanding to player identity, league governance, and multi-sport support."
 
 **Action:**
 - Scroll down to show the navigation tabs
@@ -38,7 +38,7 @@
 **Visual:** Track Match tab with match capture form
 
 **Voiceover:**
-> "Here's our demo use case. After a match, the captain submits the result—Northside United defeated Chelsea Legends 3-1 at Stamford Bridge. GPS coordinates are automatically captured. This is where the CRE pattern shines."
+> "Phase 1 is what you see here. After a match, the captain submits the result—Northside United defeated Chelsea Legends 3-1 at Stamford Bridge. GPS coordinates are automatically captured. Chainlink CRE verifies the weather and location, generating a trust score that prevents disputes."
 
 **Action:**
 - Let the logs animate naturally (don't rush)
@@ -114,13 +114,13 @@
 **Visual:** Back to Match Center homepage, then GitHub repo
 
 **Voiceover:**
-> "While we're using football as our demo, this CRE pattern—multi-oracle consensus with weighted scoring—applies to any real-world event requiring trustless verification. Insurance claims. Pharmaceutical supply chains. Disaster relief allocation. The architecture is the product. Built for the Chainlink CRE Hackathon 2026."
+> "We're owning the amateur sports vertical with CRE at the core. A hundred billion dollar market with no official records, rampant fraud, and zero player ownership. Phase 2 adds player identity, Phase 3 adds league automation, Phase 4 expands to multi-sport. SportWarren becomes the infrastructure layer for amateur sports globally. Built for the Chainlink CRE Hackathon 2026."
 
 **Action:**
 - Navigate to GitHub repo page
 - End screen with:
   - SportWarren logo
-  - "Generalizable CRE Pattern for Phygital Verification"
+  - "Chainlink CRE-Powered Sports Platform"
   - GitHub URL: `github.com/udirobert/sportwarren`
   - Devpost submission link
 
@@ -182,21 +182,23 @@ If you need a shorter demo for social media:
 
 ## 🎯 Key Messages to Emphasize
 
-1. **"Generalizable CRE Pattern"** - Sports is the demo, architecture is the product
-2. **"Multi-Oracle Consensus"** - Weighted scoring (40% + 60% = confidence)
-3. **"Sovereign fallbacks"** - Open-Meteo + OSM (no API keys required)
-4. **"Workflow ID traceability"** - Auditable, verifiable on-chain
-5. **"Reusable Architecture"** - Applies to insurance, supply chain, disaster relief
+1. **"CRE-Powered Sports Platform"** - We're building sports infrastructure
+2. **"Phased Roadmap"** - Phase 1: Match verification, Phase 2-4: Expansion
+3. **"$100B Market"** - Amateur sports has no official records
+4. **"Multi-Oracle Consensus"** - Weighted scoring (40% + 60% = confidence)
+5. **"Owning the Vertical"** - Sports-first, not generic tool
 
 ---
 
 ## 🔗 Links for Description
 
 ```
-🏆 SportWarren - Generalizable CRE Pattern for Phygital Verification
+🏆 SportWarren - Chainlink CRE-Powered Sports Platform
 🔗 Chainlink CRE Hackathon 2026 Submission
 
-**Key Message:** Sports is our demo. The reusable CRE architecture is the product.
+**Key Message:** We're building the infrastructure layer for amateur sports.
+Match verification is Phase 1. Player identity, league governance, and
+multi-sport expansion follow.
 
 GitHub: https://github.com/udirobert/sportwarren
 Devpost: [Your Devpost submission link]
@@ -209,11 +211,11 @@ Tech Stack:
 - Algorand (On-Chain Settlement)
 - Next.js + tRPC + PostgreSQL
 
-**Reusable Pattern Applies To:**
-- Insurance claims (weather + property data)
-- Pharma supply chain (temperature + GPS)
-- Disaster relief (satellite + ground sensors)
-- Event verification (identity + attendance)
+**Roadmap:**
+- Phase 1: Match verification (weather + location)
+- Phase 2: Player identity (WorldID + fitness trackers)
+- Phase 3: League governance (Chainlink Automation)
+- Phase 4: Multi-sport expansion (rugby, cricket, basketball)
 ```
 
 ---
