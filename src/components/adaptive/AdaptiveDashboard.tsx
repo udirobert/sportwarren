@@ -436,7 +436,7 @@ export const AdaptiveDashboard: React.FC = () => {
   };
 
   return (
-    <div className={`max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 ${getLayoutClass()}`}>
+    <div className={`max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 pb-24 md:pb-6 ${getLayoutClass()}`}>
       <AnimatePresence>
         {isGuest && (
           <motion.div

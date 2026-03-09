@@ -35,7 +35,7 @@ export default function StatsPage() {
 
   if (!address) {
     return (
-      <main className="max-w-2xl mx-auto px-4 py-12 text-center">
+      <main className="max-w-2xl mx-auto px-4 py-12 pb-24 md:pb-6 text-center">
         <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
         <h1 className="text-2xl font-black text-gray-900 mb-2">Your Stats</h1>
         <p className="text-gray-500 mb-6">Connect your wallet to see your verified on-chain stats.</p>
@@ -51,7 +51,7 @@ export default function StatsPage() {
 
   if (loading) {
     return (
-      <main className="max-w-4xl mx-auto px-4 py-12">
+      <main className="max-w-4xl mx-auto px-4 py-12 pb-24 md:pb-6">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-100 rounded-xl w-48" />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -66,7 +66,7 @@ export default function StatsPage() {
 
   if (!attributes) {
     return (
-      <main className="max-w-2xl mx-auto px-4 py-12 text-center">
+      <main className="max-w-2xl mx-auto px-4 py-12 pb-24 md:pb-6 text-center">
         <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
         <h1 className="text-2xl font-black text-gray-900 mb-2">No stats yet</h1>
         <p className="text-gray-500 mb-6">Submit your first match result to start building your verified record.</p>
