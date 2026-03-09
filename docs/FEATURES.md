@@ -73,8 +73,16 @@
 - **Match Engine Sync:** Newly signed players are immediately injected into the match simulation.
 - **Squad Creation Gate:** New connected users without a squad are routed through a 3-step creation wizard (name → archetype → confirm) before accessing the dashboard.
 - **Mobile Responsive:** Staff sidebar scrolls horizontally on small screens; Contract modal anchors to bottom sheet on mobile with touch-friendly controls.
+- **Cross-Staff Context Sharing:** `AgentContext` (React Context + useReducer) — when Scout confirms a trial, Agent proactively surfaces contract terms; Physio injury flags Coach's training plan; Comms deal triggers Agent budget update.
+- **On-Chain Approval Gates:** Scout trial queues a Yellow payment action; Comms deal queues a Lens post — both surface a ⛓️ approval banner with ✅ Sign & Execute / ❌ Cancel before anything executes.
+- **Notification/Event Feed:** `EventFeed` widget renders persistent backroom alerts outside the Staff Room — per-category filters (Agent/Scout/Coach/Physio/Comms), unread badge, mark-all-read.
+- **LLM Free-text Chat:** Venice AI (`llama-3.3-70b`) as default provider with OpenAI fallback; squad context (balance, members, formation) injected into system prompt; all five staff members have distinct personas.
+- **Decision Memory:** `memory` tRPC router logs every ✅/❌ inline action to `AiMemory`; recent decisions injected into LLM system prompt so agents reference past manager choices.
+- **Proactive Alerts:** `useAgentAlerts` hook fires rule-based alerts (contract expiry, low budget, squad depth, injury risk, sponsorship window) into staff chat histories on data load.
+- **Performance:** 12 heavy dashboard components code-split via `next/dynamic` (ssr:false) for faster initial load.
+- **Test Coverage:** Vitest suite — 20 tests covering `AgentContext` reducer (all actions, isolation, provider guard) and `useAgentAlerts` rule engine (all thresholds, empty states, memoisation).
 
-**Status:** ✅ Complete (Frontend + Backend + Database + Agentic Dialog Flow + Live Data + Mobile)
+**Status:** ✅ Complete (Frontend + Backend + Database + Agentic Dialog Flow + Live Data + Mobile + Cross-staff Context + On-chain Gates + Tests)
 
 ---
 
