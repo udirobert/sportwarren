@@ -1,8 +1,24 @@
 # SportWarren
 
-**Championship Manager Meets Web3** | Football platform with on-chain match verification
+**Generalizable CRE Pattern for Phygital Verification** | Sports is Our Demo
 
 A next-generation football management platform built with Next.js and PostgreSQL, featuring real match verification, player progression, and squad management.
+
+---
+
+## 🎯 The Real Product: Reusable CRE Architecture
+
+**SportWarren demonstrates a generalizable Chainlink CRE pattern for multi-source real-world verification.** While we use amateur football as our demo use case, the weighted consensus engine applies to insurance, supply chain, disaster relief, and event verification:
+
+| Use Case | Oracle A | Oracle B | Consensus Logic |
+|----------|----------|----------|-----------------|
+| **Sports (Our Demo)** | Weather | Location (stadium) | Verify match occurred |
+| **Insurance Claims** | Weather data | Property records | Auto-payout on damage |
+| **Pharma Supply Chain** | Temperature | GPS location | Invalidate if temp exceeded |
+| **Event Verification** | Identity (WorldID) | Attendance | Verify unique human |
+| **Disaster Relief** | Satellite | Ground sensors | Allocate aid by confidence |
+
+**The architecture is the product. Sports is just our demo.**
 
 ---
 
