@@ -1,7 +1,7 @@
 # SportWarren — Production Readiness Assessment
 
 **Date:** 9 March 2026  
-**Build Status:** ✅ Passing | **Push:** `4d8c73a` on `main`
+**Build Status:** ✅ Passing on `main`
 
 ---
 
