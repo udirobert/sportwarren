@@ -17,6 +17,12 @@ const Errors = {
   INVALID_SCORE: { code: 'BAD_REQUEST' as const, message: 'Invalid score provided' },
 };
 
+const yellowMatchSettlementSchema = z.object({
+  sessionId: z.string().min(1, 'Yellow session ID is required'),
+  version: z.number().int().nonnegative('Yellow version must be non-negative'),
+  settlementId: z.string().min(1).optional(),
+});
+
 function getMatchFeeDistribution(
   match: { homeScore: number | null; awayScore: number | null },
   status: 'verified' | 'disputed',
@@ -110,6 +116,7 @@ export const matchRouter = createTRPCRouter({
       matchDate: z.date().default(() => new Date()),
       latitude: z.number().optional(),
       longitude: z.number().optional(),
+      yellowSettlement: yellowMatchSettlementSchema.optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -200,12 +207,14 @@ export const matchRouter = createTRPCRouter({
             const awayHasFunds = (awayTreasury?.balance ?? 0) >= matchFeeAmount;
 
             if (homeHasFunds && awayHasFunds) {
-              const feeSession = await yellowService.createMatchFeeSession({
-                matchId: match.id,
-                homeSquadId: input.homeSquadId,
-                awaySquadId: input.awaySquadId,
-                feeAmount: matchFeeAmount,
-              });
+              const feeSession = input.yellowSettlement
+                ? yellowService.recordClientSettlement(input.yellowSettlement)
+                : await yellowService.createMatchFeeSession({
+                    matchId: match.id,
+                    homeSquadId: input.homeSquadId,
+                    awaySquadId: input.awaySquadId,
+                    feeAmount: matchFeeAmount,
+                  });
 
               if (feeSession.sessionId) {
                 await ctx.prisma.match.update({
