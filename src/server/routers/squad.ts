@@ -784,10 +784,11 @@ export const squadRouter = createTRPCRouter({
       amount: z.number().positive('Amount must be positive'),
       loanDuration: z.number().min(1).max(24).optional(),
       expiresAt: z.date().optional(),
+      yellowSettlement: yellowTreasurySettlementSchema.optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
-        const { toSquadId } = input;
+        const { toSquadId, yellowSettlement } = input;
 
         // Get user's squad
         const fromMembership = await ctx.prisma.squadMember.findFirst({
@@ -855,12 +856,14 @@ export const squadRouter = createTRPCRouter({
           },
         });
 
-        const escrow = await yellowService.createTransferEscrow({
-          offerId: offer.id,
-          buyerAddress: ctx.walletAddress!,
-          sellerAddress: await getSquadLeaderWallet(ctx.prisma, toSquadId),
-          amount: input.amount,
-        });
+        const escrow = yellowSettlement
+          ? yellowService.recordClientSettlement(yellowSettlement)
+          : await yellowService.createTransferEscrow({
+              offerId: offer.id,
+              buyerAddress: ctx.walletAddress!,
+              sellerAddress: await getSquadLeaderWallet(ctx.prisma, toSquadId),
+              amount: input.amount,
+            });
 
         if (escrow.sessionId) {
           offer = await ctx.prisma.transferOffer.update({
@@ -1005,10 +1008,11 @@ export const squadRouter = createTRPCRouter({
   cancelTransferOffer: protectedProcedure
     .input(z.object({
       offerId: z.string().min(1, 'Offer ID is required'),
+      yellowSettlement: yellowTreasurySettlementSchema.optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
-        const { offerId } = input;
+        const { offerId, yellowSettlement } = input;
         await expireTransferOffers(ctx.prisma);
 
         // Get offer
@@ -1047,14 +1051,16 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
-        const settlement = offer.yellowSessionId
-          ? await yellowService.settleTransferEscrow({
-              sessionId: offer.yellowSessionId,
-              offerId,
-              amount: offer.amount,
-              recipient: 'buyer',
-            })
-          : null;
+        const settlement = yellowSettlement
+          ? yellowService.recordClientSettlement(yellowSettlement)
+          : offer.yellowSessionId
+            ? await yellowService.settleTransferEscrow({
+                sessionId: offer.yellowSessionId,
+                offerId,
+                amount: offer.amount,
+                recipient: 'buyer',
+              })
+            : null;
 
         await ctx.prisma.transferOffer.update({
           where: { id: offerId },
