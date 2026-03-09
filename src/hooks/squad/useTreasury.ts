@@ -3,7 +3,7 @@
 import { useCallback } from 'react';
 import { trpc } from '@/lib/trpc-client';
 import { useYellowSession } from '@/hooks/useYellowSession';
-import type { Treasury, TreasuryTransaction } from '@/types';
+import type { Treasury } from '@/types';
 
 interface UseTreasuryReturn {
   treasury: Treasury | null;
@@ -61,19 +61,20 @@ export function useTreasury(squadId?: string): UseTreasuryReturn {
   }, [squadId, withdrawMutation]);
 
   const refreshTreasury = useCallback(async () => {
-    /* Can add manual refetch if needed */
-  }, []);
+    if (squadId) {
+      await utils.squad.getTreasury.invalidate({ squadId });
+    }
+  }, [squadId, utils]);
 
   const treasury: Treasury | null = rawData
     ? {
         balance: rawData.balance || 0,
-      currency: 'ALGO',
-      currency: rawData.paymentRail?.assetSymbol || yellowSession.assetSymbol || 'ALGO',
-      allowances: {
-        weeklyWages: rawData.budgets?.wages || 0,
-        transferBudget: rawData.budgets?.transfers || 0,
-        facilityUpgrades: rawData.budgets?.facilities || 0,
-      },
+        currency: rawData.paymentRail?.assetSymbol || yellowSession.assetSymbol || 'ALGO',
+        allowances: {
+          weeklyWages: rawData.budgets?.wages || 0,
+          transferBudget: rawData.budgets?.transfers || 0,
+          facilityUpgrades: rawData.budgets?.facilities || 0,
+        },
         transactions: (rawData.transactions || []).map((tx: any) => ({
           id: tx.id,
           type: tx.type as 'income' | 'expense',

@@ -59,9 +59,10 @@ class YellowService {
   }
 
   async ensureTreasurySession(existingSessionId: string | null | undefined, squadId: string) {
+    const status = this.getRailStatus();
     return {
-      sessionId: existingSessionId ?? createSessionId(`treasury_${squadId}`),
-      ...this.getRailStatus(),
+      ...status,
+      sessionId: status.enabled ? existingSessionId ?? createSessionId(`treasury_${squadId}`) : existingSessionId ?? null,
     };
   }
 
@@ -77,7 +78,7 @@ class YellowService {
       ...session,
       counterparty: params.walletAddress,
       amount: params.amount,
-      settlementId: createReference(`treasury_deposit_${params.squadId}`),
+      settlementId: session.enabled ? createReference(`treasury_deposit_${params.squadId}`) : null,
     };
   }
 
@@ -93,7 +94,7 @@ class YellowService {
       ...session,
       counterparty: params.walletAddress,
       amount: params.amount,
-      settlementId: createReference(`treasury_withdraw_${params.squadId}`),
+      settlementId: session.enabled ? createReference(`treasury_withdraw_${params.squadId}`) : null,
     };
   }
 
@@ -103,13 +104,14 @@ class YellowService {
     sellerAddress?: string | null;
     amount: number;
   }) {
+    const status = this.getRailStatus();
     return {
-      ...this.getRailStatus(),
-      sessionId: createSessionId(`transfer_${params.offerId}`),
+      ...status,
+      sessionId: status.enabled ? createSessionId(`transfer_${params.offerId}`) : null,
       amount: params.amount,
       buyerAddress: params.buyerAddress,
       sellerAddress: params.sellerAddress ?? null,
-      settlementId: createReference(`transfer_lock_${params.offerId}`),
+      settlementId: status.enabled ? createReference(`transfer_lock_${params.offerId}`) : null,
     };
   }
 
@@ -119,12 +121,13 @@ class YellowService {
     amount: number;
     recipient: TransferSettlementTarget;
   }) {
+    const status = this.getRailStatus();
     return {
-      ...this.getRailStatus(),
+      ...status,
       sessionId: params.sessionId,
       amount: params.amount,
       recipient: params.recipient,
-      settlementId: createReference(`transfer_settle_${params.offerId}`),
+      settlementId: status.enabled ? createReference(`transfer_settle_${params.offerId}`) : null,
     };
   }
 
@@ -134,13 +137,14 @@ class YellowService {
     awaySquadId: string;
     feeAmount: number;
   }) {
+    const status = this.getRailStatus();
     return {
-      ...this.getRailStatus(),
-      sessionId: createSessionId(`match_${params.matchId}`),
+      ...status,
+      sessionId: status.enabled ? createSessionId(`match_${params.matchId}`) : null,
       feeAmount: params.feeAmount,
       homeSquadId: params.homeSquadId,
       awaySquadId: params.awaySquadId,
-      settlementId: createReference(`match_lock_${params.matchId}`),
+      settlementId: status.enabled ? createReference(`match_lock_${params.matchId}`) : null,
     };
   }
 
@@ -152,8 +156,9 @@ class YellowService {
     awayAmount: number;
     platformAmount: number;
   }) {
+    const status = this.getRailStatus();
     return {
-      ...this.getRailStatus(),
+      ...status,
       sessionId: params.sessionId,
       result: params.result,
       payouts: {
@@ -161,7 +166,7 @@ class YellowService {
         away: params.awayAmount,
         platform: params.platformAmount,
       },
-      settlementId: createReference(`match_settle_${params.matchId}`),
+      settlementId: status.enabled ? createReference(`match_settle_${params.matchId}`) : null,
     };
   }
 }

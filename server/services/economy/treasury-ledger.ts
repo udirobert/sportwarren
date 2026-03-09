@@ -63,7 +63,7 @@ export async function postTreasuryLedgerEntry({
     throw new TreasuryBalanceError();
   }
 
-  const [updatedTreasury, transaction] = await prisma.$transaction([
+  const [updatedTreasury, , transaction] = await prisma.$transaction([
     prisma.squadTreasury.update({
       where: { id: treasury.id },
       data: { balance: { increment: amountDelta } },
