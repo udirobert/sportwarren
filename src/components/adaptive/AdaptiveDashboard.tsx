@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
@@ -201,7 +202,17 @@ export const AdaptiveDashboard: React.FC = () => {
       category: 'matches',
       component: (
         <Card>
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Recent Matches</h2>
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <h2 className="text-lg font-bold text-gray-900">Match Center</h2>
+            <div className="flex items-center gap-2">
+              <Link href="/match?mode=verify">
+                <Button size="sm" variant="outline">Review</Button>
+              </Link>
+              <Link href="/match?mode=capture">
+                <Button size="sm">Submit</Button>
+              </Link>
+            </div>
+          </div>
           {loading ? (
             <div className="text-center py-8 text-gray-500">Loading matches...</div>
           ) : stats?.recentMatches && stats.recentMatches.length > 0 ? (
@@ -223,6 +234,9 @@ export const AdaptiveDashboard: React.FC = () => {
             <div className="text-center py-8 text-gray-500">
               <Trophy className="w-12 h-12 mx-auto mb-2 text-gray-300" />
               <p>No matches yet. Start your season!</p>
+              <Link href="/match?mode=capture">
+                <Button className="mt-4">Open Match Center</Button>
+              </Link>
             </div>
           )}
         </Card>
