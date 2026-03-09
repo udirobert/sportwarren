@@ -25,6 +25,12 @@ const instructionsSchema = z.object({
   defensiveLine: z.enum(['deep', 'normal', 'high']).optional(),
 });
 
+const yellowTreasurySettlementSchema = z.object({
+  sessionId: z.string().min(1, 'Yellow session ID is required'),
+  version: z.number().int().nonnegative('Yellow version must be non-negative'),
+  settlementId: z.string().min(1).optional(),
+});
+
 async function getSquadLeaderWallet(prisma: any, squadId: string) {
   const leader = await prisma.squadMember.findFirst({
     where: {
@@ -576,10 +582,11 @@ export const squadRouter = createTRPCRouter({
       squadId: z.string().min(1, 'Squad ID is required'),
       amount: z.number().positive('Amount must be positive'),
       description: z.string().optional(),
+      yellowSettlement: yellowTreasurySettlementSchema.optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
-        const { squadId, amount, description } = input;
+        const { squadId, amount, description, yellowSettlement } = input;
 
         // Check membership
         const member = await ctx.prisma.squadMember.findUnique({
@@ -599,12 +606,14 @@ export const squadRouter = createTRPCRouter({
         }
 
         const treasury = await ensureSquadTreasury(ctx.prisma, squadId);
-        const settlement = await yellowService.depositToTreasury({
-          existingSessionId: treasury.yellowSessionId,
-          squadId,
-          walletAddress: ctx.walletAddress!,
-          amount,
-        });
+        const settlement = yellowSettlement
+          ? yellowService.recordClientSettlement(yellowSettlement)
+          : await yellowService.depositToTreasury({
+              existingSessionId: treasury.yellowSessionId,
+              squadId,
+              walletAddress: ctx.walletAddress!,
+              amount,
+            });
 
         if (settlement.sessionId && settlement.sessionId !== treasury.yellowSessionId) {
           await ctx.prisma.squadTreasury.update({
@@ -645,10 +654,11 @@ export const squadRouter = createTRPCRouter({
       amount: z.number().positive('Amount must be positive'),
       reason: z.string().min(1, 'Reason is required'),
       category: z.enum(['wages', 'transfers', 'facilities', 'other']),
+      yellowSettlement: yellowTreasurySettlementSchema.optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
-        const { squadId, amount, reason, category } = input;
+        const { squadId, amount, reason, category, yellowSettlement } = input;
 
         // Check if user is captain or vice_captain
         const member = await ctx.prisma.squadMember.findUnique({
@@ -686,12 +696,14 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
-        const settlement = await yellowService.withdrawFromTreasury({
-          existingSessionId: treasury.yellowSessionId,
-          squadId,
-          walletAddress: ctx.walletAddress!,
-          amount,
-        });
+        const settlement = yellowSettlement
+          ? yellowService.recordClientSettlement(yellowSettlement)
+          : await yellowService.withdrawFromTreasury({
+              existingSessionId: treasury.yellowSessionId,
+              squadId,
+              walletAddress: ctx.walletAddress!,
+              amount,
+            });
 
         if (settlement.sessionId && settlement.sessionId !== treasury.yellowSessionId) {
           await ctx.prisma.squadTreasury.update({
