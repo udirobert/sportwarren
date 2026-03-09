@@ -1,7 +1,5 @@
-"use client";
-
-import { MatchVerification } from "@/components/match/MatchVerification";
+import { redirect } from "next/navigation";
 
 export default function VerificationPage() {
-  return <MatchVerification />;
+  redirect("/match?mode=verify");
 }

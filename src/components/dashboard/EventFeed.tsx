@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAgentAlerts } from '@/hooks/squad/useAgentAlerts';
 import { useSquadDetails } from '@/hooks/squad/useSquad';
@@ -61,13 +62,26 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
         { squadId: squadId || '' },
         { enabled: !!squadId }
     );
+    const { data: matchData, isLoading: matchesLoading } = trpc.match.list.useQuery(
+        { squadId, limit: 5 },
+        { enabled: !!squadId, staleTime: 10 * 1000 }
+    );
+    const { data: incomingOffers, isLoading: offersLoading } = trpc.squad.getTransferOffers.useQuery(
+        { squadId: squadId || '', type: 'incoming' },
+        { enabled: !!squadId, staleTime: 30 * 1000 }
+    );
 
-    const dataReady = !membersLoading && !treasuryLoading && !tacticsLoading && !!squadId;
+    const dataReady = !membersLoading && !treasuryLoading && !tacticsLoading && !matchesLoading && !offersLoading && !!squadId;
 
     const alertMembers = members.map(m => ({
         id: m.id, name: m.name, role: m.role, stats: m.stats,
     }));
     const alertTreasury = treasury ? { balance: treasury.balance, transactions: treasury.transactions } : null;
+    const treasuryAny = treasury as Record<string, unknown> | null | undefined;
+    const treasuryBudgets = treasuryAny?.budgets && typeof treasuryAny.budgets === 'object'
+        ? treasuryAny.budgets as Record<string, unknown>
+        : null;
+    const wageBudget = typeof treasuryBudgets?.wages === 'number' ? treasuryBudgets.wages : 0;
     const tacticsAny = tactics as Record<string, unknown> | null | undefined;
     const alertTactics = tacticsAny
         ? { formation: typeof tacticsAny.formation === 'string' ? tacticsAny.formation : undefined }
@@ -100,6 +114,15 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
 
     const markAllRead = () => setEvents(prev => prev.map(e => ({ ...e, read: true })));
     const markRead = (id: string) => setEvents(prev => prev.map(e => e.id === id ? { ...e, read: true } : e));
+
+    const pendingMatches = (matchData?.matches || []).filter((match: any) => match.status === 'pending');
+    const primaryPendingMatch = pendingMatches[0];
+    const incomingOfferCount = incomingOffers?.length || 0;
+    const treasuryNeedsAttention = Boolean(
+        treasury &&
+        wageBudget > 0 &&
+        treasury.balance < wageBudget
+    );
 
     const filtered = filter === 'all' ? events : events.filter(e => e.category === filter);
     const unreadCount = events.filter(e => !e.read).length;
@@ -153,6 +176,35 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                     </button>
                 ))}
             </div>
+
+            {(primaryPendingMatch || incomingOfferCount > 0 || treasuryNeedsAttention) && (
+                <div className="flex flex-wrap gap-2 px-5 py-3 border-b border-white/5 bg-white/[0.03]">
+                    {primaryPendingMatch && (
+                        <Link
+                            href={`/match?mode=detail&matchId=${primaryPendingMatch.id}`}
+                            className="rounded-full border border-yellow-400/30 bg-yellow-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-yellow-200 transition-colors hover:bg-yellow-500/20"
+                        >
+                            Review pending match
+                        </Link>
+                    )}
+                    {incomingOfferCount > 0 && (
+                        <Link
+                            href="/squad?tab=transfers"
+                            className="rounded-full border border-blue-400/30 bg-blue-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-blue-200 transition-colors hover:bg-blue-500/20"
+                        >
+                            {incomingOfferCount} transfer {incomingOfferCount === 1 ? 'offer' : 'offers'}
+                        </Link>
+                    )}
+                    {treasuryNeedsAttention && (
+                        <Link
+                            href="/squad?tab=treasury"
+                            className="rounded-full border border-rose-400/30 bg-rose-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-rose-200 transition-colors hover:bg-rose-500/20"
+                        >
+                            Treasury needs attention
+                        </Link>
+                    )}
+                </div>
+            )}
 
             {/* Events */}
             <div className="divide-y divide-white/5 max-h-80 overflow-y-auto scrollbar-none">
