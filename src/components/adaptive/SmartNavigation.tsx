@@ -49,9 +49,7 @@ export const SmartNavigation: React.FC = () => {
       icon: Users, 
       label: 'Squad', 
       priority: 70,
-      unlockLevel: 'intermediate' as const,
-      showCondition: () => preferences.primaryRole === 'organizer' || 
-        preferences.preferredFeatures.social !== 'minimal',
+      unlockLevel: 'basic' as const,
     },
     { 
       path: '/community', 

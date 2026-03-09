@@ -460,10 +460,15 @@ export const AdaptiveDashboard: React.FC = () => {
       <div id="dashboard-header" className="border-b border-gray-200 pb-4 mb-2 flex items-end justify-between">
         <div>
           <h1 className="text-3xl font-black text-gray-900 tracking-tight">
-            Marcus <span className="text-gray-400 font-medium">/ Manager</span>
+            {memberships?.[0]?.squad?.name ?? (isGuest ? 'Demo Squad' : 'My Squad')}
+            {address && (
+              <span className="text-gray-400 font-medium text-lg ml-2">
+                / {address.slice(0, 6)}…{address.slice(-4)}
+              </span>
+            )}
           </h1>
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-            Season 2026/27 • Match Day -1
+            {memberships?.[0]?.squad?.name ? `${memberships[0].squad.name} • Manager` : (isGuest ? 'Guest Mode • Demo Experience' : 'Connect wallet to get started')}
           </p>
         </div>
         <div className="flex items-center space-x-3">

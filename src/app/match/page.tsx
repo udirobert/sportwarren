@@ -419,14 +419,19 @@ export default function MatchPage() {
             <p className="mb-4 text-gray-600">
               Your attributes have been updated from the submitted or verified match.
             </p>
-            <Button
-              onClick={() => {
-                setShowXPSummary(false);
-                setViewMode("verify");
-              }}
-            >
-              Continue
-            </Button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link href="/reputation">
+                <Button variant="outline">View Reputation →</Button>
+              </Link>
+              <Button
+                onClick={() => {
+                  setShowXPSummary(false);
+                  setViewMode("verify");
+                }}
+              >
+                Back to Matches
+              </Button>
+            </div>
           </Card>
         </div>
       )}
