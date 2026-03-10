@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, publicProcedure, protectedProcedure, adminProcedure } from '../trpc';
+import { calculateSharpnessDecay, calculateActivityGain } from '../../lib/player/fitness-engine';
 
 const AttributeType = z.enum([
   'pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical',
@@ -60,7 +61,16 @@ export const playerRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       try {
-        return ensurePlayerProfile(ctx.prisma, input.userId);
+        const profile = await ensurePlayerProfile(ctx.prisma, input.userId);
+        const newSharpness = calculateSharpnessDecay(profile.sharpness, profile.updatedAt);
+        if (newSharpness !== profile.sharpness) {
+          await ctx.prisma.playerProfile.update({
+            where: { id: profile.id },
+            data: { sharpness: newSharpness }
+          });
+          profile.sharpness = newSharpness;
+        }
+        return profile;
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
@@ -74,7 +84,16 @@ export const playerRouter = createTRPCRouter({
   getCurrentProfile: protectedProcedure
     .query(async ({ ctx }) => {
       try {
-        return ensurePlayerProfile(ctx.prisma, ctx.userId!);
+        const profile = await ensurePlayerProfile(ctx.prisma, ctx.userId!);
+        const newSharpness = calculateSharpnessDecay(profile.sharpness, profile.updatedAt);
+        if (newSharpness !== profile.sharpness) {
+          await ctx.prisma.playerProfile.update({
+            where: { id: profile.id },
+            data: { sharpness: newSharpness }
+          });
+          profile.sharpness = newSharpness;
+        }
+        return profile;
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
@@ -649,10 +668,10 @@ export const playerRouter = createTRPCRouter({
           throw new TRPCError({ code: 'NOT_FOUND', message: 'Player profile not found' });
         }
 
-        // Calculate gains
+        // Calculate gains using FitnessEngine
+        const sharpnessGain = calculateActivityGain(type, duration, intensity);
         const intensityMult = intensity === 'high' ? 1.5 : intensity === 'medium' ? 1.0 : 0.5;
         const xpGained = Math.floor(duration * 2 * intensityMult);
-        const sharpnessGain = Math.floor(duration / 5 * intensityMult);
 
         const activity = await ctx.prisma.physicalActivity.create({
           data: {

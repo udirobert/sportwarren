@@ -224,6 +224,36 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         return () => window.removeEventListener('sw-tour-step', handleTourStep);
     }, []);
 
+    // Keyboard navigation for match engine controls
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+            
+            switch (e.key) {
+                case ' ':
+                    e.preventDefault();
+                    setIsPlaying(prev => !prev);
+                    break;
+                case 'ArrowLeft':
+                    setTempo(prev => Math.max(0.5, prev - 0.5));
+                    break;
+                case 'ArrowRight':
+                    setTempo(prev => Math.min(4, prev + 0.5));
+                    break;
+                case 'r':
+                case 'R':
+                    reset();
+                    break;
+                case 'i':
+                case 'I':
+                    setShowIntent(prev => !prev);
+                    break;
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
     // Initialize players with real data or high-fidelity fallback
     useEffect(() => {
         // Auto-start for guests to show life immediately - only run ONCE on mount
@@ -595,7 +625,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                     <button
                         key={m.id}
                         onClick={() => setActiveMatch(m.id)}
-                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${activeMatch === m.id ? 'bg-blue-600 text-white font-bold' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${activeMatch === m.id ? 'bg-blue-600 text-white font-bold' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'}`}
                     >
                         <span className={m.status === 'live' ? 'w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse' : 'w-1.5 h-1.5 bg-gray-500 rounded-full'} />
                         <span>{m.home} {m.homeScore} - {m.awayScore} {m.away}</span>
@@ -627,7 +657,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                         </div>
                         <button
                             onClick={() => setShowIntent((prev) => !prev)}
-                            className={`hidden md:flex items-center px-2 py-1.5 text-xs font-bold rounded-lg border ${showIntent ? 'border-blue-500 text-blue-200' : 'border-white/10 text-gray-400'} bg-gray-900/70`}
+                            className={`hidden md:flex items-center px-2 py-1.5 text-xs font-bold rounded-lg border ${showIntent ? 'border-blue-500 text-blue-200' : 'border-white/20 text-gray-200'} bg-gray-900/80`}
                         >
                             Intent {showIntent ? 'ON' : 'OFF'}
                         </button>
@@ -641,9 +671,18 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                         >
                             <Activity className="w-4 h-4 md:w-3 md:h-3" />
                         </button>
-                        <button onClick={reset} className="p-3 md:p-1.5 bg-gray-800 hover:bg-gray-700 rounded-xl md:rounded-lg text-white">
+                        <button onClick={reset} className="p-3 md:p-1.5 bg-gray-800 hover:bg-gray-700 rounded-xl md:rounded-lg text-white" title="Reset (R)">
                             <RotateCcw className="w-4 h-4 md:w-3 md:h-3" />
                         </button>
+                    </div>
+                    <div className="text-[10px] text-gray-500 mt-1 hidden md:block">
+                        <span className="text-gray-600">Space: Play/Pause</span>
+                        <span className="mx-2">|</span>
+                        <span className="text-gray-600">←→: Tempo</span>
+                        <span className="mx-2">|</span>
+                        <span className="text-gray-600">R: Reset</span>
+                        <span className="mx-2">|</span>
+                        <span className="text-gray-600">I: Intent</span>
                     </div>
                 </div>
 
@@ -821,7 +860,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                                             c.type === 'incident' ? 'text-red-300' : 'text-gray-200'
                                         }`}
                                 >
-                                    <span className="text-gray-400 flex-shrink-0">[{c.time}]</span>
+                                    <span className="text-gray-300 flex-shrink-0">[{c.time}]</span>
                                     <span className="leading-tight">{c.text}</span>
                                 </motion.div>
                             ))}

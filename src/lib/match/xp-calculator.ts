@@ -4,35 +4,11 @@
  */
 
 import type { MatchResult, SkillRating, AttributeType } from '@/types';
-
-// Base XP for different match outcomes
-export const BASE_XP = {
-  win: 100,
-  draw: 50,
-  loss: 25,
-  goal: 50,
-  assist: 40,
-  cleanSheet: 75,
-  appearance: 20,
-};
-
-// Multipliers based on match significance
-export const MATCH_MULTIPLIERS = {
-  league: 1.0,
-  cup: 1.5,
-  playoff: 2.0,
-  derby: 1.75,
-  friendly: 0.5,
-};
-
-// Position-based attribute weights
-export const POSITION_ATTRIBUTE_WEIGHTS: Record<string, AttributeType[]> = {
-  GK: ['gk_diving', 'gk_handling', 'gk_reflexes', 'gk_positioning', 'physical'],
-  DF: ['defending', 'physical', 'passing', 'pace'],
-  MF: ['passing', 'dribbling', 'physical', 'defending', 'pace'],
-  ST: ['shooting', 'pace', 'physical', 'dribbling'],
-  WG: ['dribbling', 'pace', 'shooting', 'passing'],
-};
+import { 
+  BASE_XP, 
+  MATCH_MULTIPLIERS, 
+  POSITION_ATTRIBUTE_WEIGHTS 
+} from './constants';
 
 interface XPGainBreakdown {
   total: number;

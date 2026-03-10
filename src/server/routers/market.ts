@@ -2,8 +2,57 @@ import { z } from 'zod';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 import { MOCK_AVAILABLE_PLAYERS } from '../../lib/mocks/players';
+import { calculatePlayerValue } from '../../lib/player/valuation-engine';
+import { PlayerAttributes } from '@/types';
 
 export const marketRouter = createTRPCRouter({
+    // Get a data-driven valuation for any player
+    getPlayerValuation: publicProcedure
+        .input(z.object({ userId: z.string() }))
+        .query(async ({ ctx, input }) => {
+            const profile = await ctx.prisma.playerProfile.findUnique({
+                where: { userId: input.userId },
+                include: { 
+                    attributes: true,
+                    user: { select: { name: true, position: true, walletAddress: true } }
+                }
+            });
+
+            if (!profile) {
+                throw new TRPCError({ code: 'NOT_FOUND', message: 'Player profile not found' });
+            }
+
+            // Map DB profile to PlayerAttributes type
+            const playerAttrs: PlayerAttributes = {
+                address: profile.user.walletAddress,
+                playerName: profile.user.name || 'Unknown',
+                position: (profile.user.position as any) || 'MF',
+                skills: profile.attributes.map(a => ({
+                    skill: a.attribute as any,
+                    rating: a.rating,
+                    history: a.history,
+                } as any)),
+                form: {
+                    current: 0,
+                    history: [], // Would fetch from formHistory in a full impl
+                    trend: 'stable'
+                },
+                xp: {
+                    level: profile.level,
+                    totalXP: profile.totalXP,
+                    seasonXP: profile.seasonXP,
+                    nextLevelXP: 0
+                }
+            } as any;
+
+            // Check for "Interest" (how many active transfer offers for this player)
+            const interestCount = await ctx.prisma.transferOffer.count({
+                where: { playerId: input.userId, status: 'pending' }
+            });
+
+            return calculatePlayerValue(playerAttrs, interestCount);
+        }),
+
     listProspects: publicProcedure
         .query(() => {
             // Return prospects that are eligible for drafting
