@@ -239,6 +239,7 @@ export const squadRouter = createTRPCRouter({
                     avatar: true,
                     walletAddress: true,
                     chain: true,
+                    position: true,
                     playerProfile: {
                       select: {
                         level: true,
@@ -460,14 +461,26 @@ export const squadRouter = createTRPCRouter({
               freeKicks: 'cross',
               penalties: '',
             },
+            lineup: [],
           };
         }
 
         return {
           formation: tactics.formation,
           playStyle: tactics.playStyle,
-          instructions: tactics.instructions,
-          setPieces: tactics.setPieces,
+          instructions: tactics.instructions ?? {
+            width: 'normal',
+            tempo: 'normal',
+            passing: 'mixed',
+            pressing: 'medium',
+            defensiveLine: 'normal',
+          },
+          setPieces: tactics.setPieces ?? {
+            corners: 'near_post',
+            freeKicks: 'cross',
+            penalties: '',
+          },
+          lineup: (tactics as any).lineup ?? [],
         };
       } catch (error) {
         throw new TRPCError({
@@ -490,6 +503,7 @@ export const squadRouter = createTRPCRouter({
         freeKicks: z.string().optional(),
         penalties: z.string().optional(),
       }).optional(),
+      lineup: z.array(z.string()).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {

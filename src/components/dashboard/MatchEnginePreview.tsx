@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
-import { Play, Pause, RotateCcw, Activity, Shield, Trophy, Zap, MessageSquare } from 'lucide-react';
+import { Play, Pause, RotateCcw, Activity, Shield, Trophy, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSquadDetails } from '@/hooks/squad/useSquad';
@@ -41,6 +41,7 @@ interface PlayerPuck {
     stats: { pace: number; agility: number; strength: number; passing: number };
     reputationTier: ReputationTier;
     history: Array<{ x: number, y: number }>;
+    intent?: { x: number; y: number };
 }
 
 interface MatchCommentary {
@@ -177,6 +178,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
     const [activeMatch, setActiveMatch] = useState<string>('m1');
     const [daoAlert, setDaoAlert] = useState<string | null>(null);
     const [tempo, setTempo] = useState(1);
+    const [showIntent, setShowIntent] = useState(true);
     const [isFinalizing, setIsFinalizing] = useState(false);
     const [latestEvent, setLatestEvent] = useState<string>('');
     const [eventLog, setEventLog] = useState<MatchEvent[]>([]);
@@ -337,6 +339,8 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         setTimeout(() => setDaoAlert(null), 3000);
     }, [time]);
 
+    const tempoOptions = useMemo(() => [0.75, 1, 1.25, 1.5, 2], []);
+
     const movePlayers = useCallback(() => {
         let currentOwnerId = ball.ownerId;
         const friction = 0.98;
@@ -401,6 +405,8 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                 targetX = t.targetX;
                 targetY = t.targetY;
             }
+
+            const intent = { x: targetX, y: targetY };
 
             const dx = targetX - p.x;
             const dy = targetY - p.y;
@@ -517,7 +523,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                 ? [{ x: p.x, y: p.y }, ...p.history].slice(0, 5)
                 : [];
 
-            return { ...p, x: nextPx, y: nextPy, vx: nextPvx, vy: nextPvy, history: newHistory };
+            return { ...p, x: nextPx, y: nextPy, vx: nextPvx, vy: nextPvy, history: newHistory, intent };
         });
 
         // 4. Circle-circle collision resolution
@@ -539,7 +545,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         setTime(prev => prev + 1);
 
         if (time % 150 === 0 && Math.random() > 0.7) triggerDaoCommand();
-    }, [ball, players, time, tempo, triggerDaoCommand, addEvent]);
+    }, [ball, players, time, tempo, triggerDaoCommand, addEvent, lowPowerMode]);
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
@@ -548,6 +554,18 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         }
         return () => clearInterval(interval);
     }, [isPlaying, movePlayers]);
+
+    const hotPlayerIds = useMemo(() => {
+        const ids = new Set<string>();
+        if (!players.length) return ids;
+        if (ball.ownerId) ids.add(ball.ownerId);
+        const ranked = players
+            .map((p) => ({ id: p.id, dist: Math.hypot(p.x - ball.x, p.y - ball.y) }))
+            .sort((a, b) => a.dist - b.dist)
+            .slice(0, 2);
+        ranked.forEach((p) => ids.add(p.id));
+        return ids;
+    }, [players, ball]);
 
     const reset = () => {
         setIsPlaying(false);
@@ -585,8 +603,32 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                             <Zap className={`w-3 h-3 ${tempo > 1 ? 'text-yellow-400' : 'text-gray-500'}`} />
                             <span className="text-[10px] font-mono font-bold text-gray-300">TEMPO {tempo}x</span>
                         </div>
+                        <div className="hidden md:flex items-center space-x-1 bg-gray-800/70 border border-white/5 rounded-lg p-1">
+                            {tempoOptions.map((speed) => (
+                                <button
+                                    key={speed}
+                                    onClick={() => setTempo(speed)}
+                                    className={`px-2 py-1 text-[10px] font-bold rounded-md ${tempo === speed ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'}`}
+                                >
+                                    {speed}x
+                                </button>
+                            ))}
+                        </div>
+                        <button
+                            onClick={() => setShowIntent((prev) => !prev)}
+                            className={`hidden md:flex items-center px-2 py-1 text-[10px] font-bold rounded-lg border ${showIntent ? 'border-blue-500 text-blue-200' : 'border-white/10 text-gray-400'} bg-gray-900/70`}
+                        >
+                            Intent {showIntent ? 'ON' : 'OFF'}
+                        </button>
                         <button onClick={() => setIsPlaying(!isPlaying)} className="p-3 md:p-1.5 bg-blue-600 hover:bg-blue-700 rounded-xl md:rounded-lg text-white">
                             {isPlaying ? <Pause className="w-4 h-4 md:w-3 md:h-3" /> : <Play className="w-4 h-4 md:w-3 md:h-3" />}
+                        </button>
+                        <button
+                            onClick={() => !isPlaying && movePlayers()}
+                            className="p-3 md:p-1.5 bg-gray-800 hover:bg-gray-700 rounded-xl md:rounded-lg text-white"
+                            title="Step"
+                        >
+                            <Activity className="w-4 h-4 md:w-3 md:h-3" />
                         </button>
                         <button onClick={reset} className="p-3 md:p-1.5 bg-gray-800 hover:bg-gray-700 rounded-xl md:rounded-lg text-white">
                             <RotateCcw className="w-4 h-4 md:w-3 md:h-3" />
@@ -654,6 +696,39 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                         <div className="absolute top-1/2 right-0 w-24 h-48 border border-white -translate-y-1/2" />
                     </div>
 
+                    {/* Intent Vectors */}
+                    {showIntent && !lowPowerMode && (
+                        <svg className="absolute inset-0 z-5 pointer-events-none" viewBox="0 0 100 100" preserveAspectRatio="none">
+                            {players
+                                .filter((p) => hotPlayerIds.has(p.id) && p.intent)
+                                .map((p) => {
+                                    const dx = Math.abs((p.intent?.x || 0) - p.x);
+                                    const dy = Math.abs((p.intent?.y || 0) - p.y);
+                                    const distance = Math.hypot(dx, dy);
+                                    if (distance < 3) return null;
+                                    return (
+                                        <line
+                                            key={`intent-${p.id}`}
+                                            x1={p.x}
+                                            y1={p.y}
+                                            x2={p.intent?.x}
+                                            y2={p.intent?.y}
+                                            stroke={p.team === 'home' ? '#60a5fa' : '#f87171'}
+                                            strokeWidth="0.5"
+                                            strokeDasharray="2 2"
+                                            opacity="0.6"
+                                        />
+                                    );
+                                })}
+                        </svg>
+                    )}
+
+                    {/* Ball Focus Ring */}
+                    <div
+                        className="absolute w-8 h-8 rounded-full border border-white/20 -translate-x-1/2 -translate-y-1/2 z-10 pointer-events-none"
+                        style={{ left: `${ball.x}%`, top: `${ball.y}%` }}
+                    />
+
                     {/* Players & Trails */}
                     {players.map(p => (
                         <React.Fragment key={p.id}>
@@ -671,6 +746,12 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                                 className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
                             >
                                 <div className={`relative w-4 h-4 rounded-full border-2 ${p.team === 'home' ? 'bg-blue-500 border-blue-300' : 'bg-red-500 border-red-300'} shadow-lg group`}>
+                                    {hotPlayerIds.has(p.id) && (
+                                        <div className="absolute inset-0 rounded-full border border-white/40 animate-pulse" />
+                                    )}
+                                    {ball.ownerId === p.id && (
+                                        <div className="absolute -inset-1 rounded-full border border-yellow-300/70" />
+                                    )}
                                     {/* Reputation Glow */}
                                     {p.reputationTier === 'platinum' && (
                                         <div className="absolute inset-0 rounded-full bg-blue-400 blur-[8px] opacity-40 animate-pulse" />

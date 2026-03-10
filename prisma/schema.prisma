@@ -216,6 +216,9 @@ model SquadTactics {
   // Set pieces (JSON)
   setPieces Json? @map("set_pieces") // { corners, freeKicks, penalties }
 
+  // Starting lineup (array of player IDs aligned to formation slots)
+  lineup Json? @map("lineup")
+
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

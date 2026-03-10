@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { trpc } from '@/lib/trpc-client';
+import type { PlayerPosition } from '@/types';
 
 interface Squad {
   id: string;
@@ -19,6 +20,7 @@ interface SquadMember {
   avatar?: string;
   role: 'captain' | 'vice_captain' | 'player';
   joinedAt: Date;
+  position?: PlayerPosition;
   stats?: {
     matches: number;
     goals: number;
@@ -69,6 +71,15 @@ function transformSquad(squad: any): Squad {
     treasuryBalance: squad.treasuryBalance,
     memberCount: squad._count?.members || 0,
   };
+}
+
+function normalizePosition(position?: string): PlayerPosition | undefined {
+  if (!position) return undefined;
+  const value = position.toUpperCase();
+  if (value === 'GK' || value === 'DF' || value === 'MF' || value === 'ST' || value === 'WG') {
+    return value as PlayerPosition;
+  }
+  return undefined;
 }
 
 // List all squads
@@ -130,6 +141,7 @@ export function useSquadDetails(squadId?: string): UseSquadDetailsReturn {
     avatar: m.user.avatar || undefined,
     role: m.role as 'captain' | 'vice_captain' | 'player',
     joinedAt: new Date(m.joinedAt),
+    position: normalizePosition(m.user.position),
     stats: m.user.playerProfile ? {
       matches: m.user.playerProfile.totalMatches,
       goals: m.user.playerProfile.totalGoals,
