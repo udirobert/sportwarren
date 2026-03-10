@@ -45,6 +45,7 @@ interface PlayerPuck {
 }
 
 interface MatchCommentary {
+    id: string;
     time: string;
     text: string;
     type: 'action' | 'goal' | 'incident' | 'dao';
@@ -361,7 +362,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         const evt: MatchEvent = { tick: time, minute, type: evtType, text, team };
         setEventLog(prev => [evt, ...prev].slice(0, 50));
         const commentaryType: MatchCommentary['type'] = evtType === 'goal' ? 'goal' : evtType === 'dao' ? 'dao' : evtType === 'incident' ? 'incident' : 'action';
-        setCommentary(prev => [{ time: timeStr, text, type: commentaryType }, ...prev].slice(0, 5));
+        setCommentary(prev => [{ id: `${time}-${Math.random().toString(36).slice(2)}`, time: timeStr, text, type: commentaryType }, ...prev].slice(0, 5));
         setLatestEvent(text);
     }, [time]);
 
@@ -613,7 +614,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         setTime(0);
         setScore({ home: 0, away: 0 });
         setTempo(1);
-        setCommentary([{ time: '0:00', text: 'Match Day Live: Hackney Marshes pitch is ready.', type: 'incident' }]);
+        setCommentary([{ id: 'init-0', time: '0:00', text: 'Match Day Live: Hackney Marshes pitch is ready.', type: 'incident' }]);
         playersInitialised.current = false;
     };
 
@@ -850,9 +851,9 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                 <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                     <div className="col-span-2 p-3 bg-black/70 h-28 overflow-hidden rounded-xl border border-white/10 order-1">
                         <div className="space-y-1.5">
-                            {commentary.map((c, i) => (
+                            {commentary.map((c) => (
                                 <motion.div
-                                    key={i}
+                                    key={c.id}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     className={`text-xs font-mono flex space-x-2 ${c.type === 'goal' ? 'text-yellow-300 font-bold' :

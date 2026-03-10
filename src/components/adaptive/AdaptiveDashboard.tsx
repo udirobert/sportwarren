@@ -123,33 +123,37 @@ export const AdaptiveDashboard: React.FC = () => {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
           <StatCard
             title="Goals"
-            value={loading ? '...' : stats?.goals || 0}
+            value={stats?.goals || 0}
             icon={Target}
             color="green"
             cmTrend="up"
+            loading={loading}
             onClick={() => trackFeatureUsage('stats-goals')}
           />
           <StatCard
             title="Assists"
-            value={loading ? '...' : stats?.assists || 0}
+            value={stats?.assists || 0}
             icon={Users}
             color="blue"
             cmTrend="stable"
+            loading={loading}
             onClick={() => trackFeatureUsage('stats-assists')}
           />
           <StatCard
             title="Matches"
-            value={loading ? '...' : stats?.matches || 0}
+            value={stats?.matches || 0}
             icon={Trophy}
             color="orange"
+            loading={loading}
             onClick={() => trackFeatureUsage('stats-matches')}
           />
           <StatCard
             title="Rating"
-            value={loading ? '...' : stats?.rating || '0.0'}
+            value={stats?.rating || '0.0'}
             icon={Star}
             color="purple"
             cmTrend="down"
+            loading={loading}
             onClick={() => trackFeatureUsage('stats-rating')}
           />
         </div>
@@ -416,8 +420,22 @@ export const AdaptiveDashboard: React.FC = () => {
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {
+    const hiddenWidgets = preferences.dashboardCustomization?.hiddenWidgets || [];
+    const pinnedWidgets = preferences.dashboardCustomization?.pinnedWidgets || [];
+    const widgetOrder = preferences.dashboardCustomization?.widgetOrder || [];
+    
+    // For new users, show only essential widgets
+    const isNewUser = preferences.featureDiscoveryLevel < 10 && preferences.dashboardLayout === 'minimal';
+    const essentialWidgets = ['onboarding-checklist', 'quick-stats', 'recent-matches'];
+
     return allWidgets
       .filter(widget => {
+        // Hide widgets user has explicitly hidden
+        if (hiddenWidgets.includes(widget.id)) return false;
+        
+        // For new users, only show essential widgets
+        if (isNewUser && !essentialWidgets.includes(widget.id)) return false;
+
         const complexityMatch =
           widget.requiredLevel === 'basic' ||
           (widget.requiredLevel === 'intermediate' && preferences.uiComplexity !== 'simple') ||
@@ -436,10 +454,27 @@ export const AdaptiveDashboard: React.FC = () => {
           (widget.category === 'matches' || widget.category === 'stats' || categoryMatch);
       })
       .sort((a, b) => {
+        // Pinned widgets come first
+        const aPinned = pinnedWidgets.includes(a.id);
+        const bPinned = pinnedWidgets.includes(b.id);
+        if (aPinned && !bPinned) return -1;
+        if (!aPinned && bPinned) return 1;
+        
+        // Then respect custom order if set
+        if (widgetOrder.length > 0) {
+          const aIndex = widgetOrder.indexOf(a.id);
+          const bIndex = widgetOrder.indexOf(b.id);
+          if (aIndex !== -1 && bIndex !== -1) return aIndex - bIndex;
+          if (aIndex !== -1) return -1;
+          if (bIndex !== -1) return 1;
+        }
+        
+        // Then by recent usage
         const aRecentlyUsed = preferences.usagePatterns.lastActiveFeatures.includes(a.id);
         const bRecentlyUsed = preferences.usagePatterns.lastActiveFeatures.includes(b.id);
         if (aRecentlyUsed && !bRecentlyUsed) return -1;
         if (!aRecentlyUsed && bRecentlyUsed) return 1;
+        
         return b.priority - a.priority;
       });
   }, [allWidgets, preferences]);
