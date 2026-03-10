@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { SquadDAO } from "@/components/squad/SquadDAO";
 import { TacticsBoard } from "@/components/squad/TacticsBoard";
@@ -18,6 +18,7 @@ import { trpc } from "@/lib/trpc-client";
 import { useTreasury } from "@/hooks/squad/useTreasury";
 import { useTransfers } from "@/hooks/squad/useTransfers";
 import { PendingActionsPanel } from "@/components/operations/PendingActionsPanel";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance";
 
@@ -42,6 +43,10 @@ export default function SquadPage() {
   const activeOffers = transfersState.incomingOffers.length + transfersState.outgoingOffers.length;
 
   const [isNewSquad, setIsNewSquad] = useState(false);
+  const utils = trpc.useUtils();
+  const pullRef = usePullToRefresh({
+    onRefresh: () => utils.squad.getMySquads.invalidate(),
+  });
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -74,7 +79,7 @@ export default function SquadPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-4 md:py-6 pb-24 md:pb-6 space-y-4 md:space-y-6">
+    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="max-w-6xl mx-auto px-4 py-4 md:py-6 pb-24 md:pb-6 space-y-4 md:space-y-6">
       {/* Header — compact on mobile */}
       <div className="flex items-center gap-3 md:block md:text-center">
         <div className="w-10 h-10 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shrink-0 md:mx-auto md:mb-4">

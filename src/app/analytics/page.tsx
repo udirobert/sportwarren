@@ -86,8 +86,9 @@ function AnalyticsPageInner() {
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
-                <p className="text-sm">No form data yet.</p>
-                <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Log a Match</Button></Link>
+                <p className="text-sm font-medium text-gray-700">No form data yet.</p>
+                <p className="text-xs text-gray-500 mt-1">Play your first match to start tracking your form and rating trend.</p>
+                <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Log Your First Match</Button></Link>
               </div>
             )}
           </Card>
@@ -113,7 +114,9 @@ function AnalyticsPageInner() {
               </div>
             ) : (
               <div className="text-center py-8 text-gray-500">
-                <p className="text-sm">No attributes yet. Play matches to build your profile.</p>
+                <p className="text-sm font-medium text-gray-700">No attributes yet.</p>
+                <p className="text-xs text-gray-500 mt-1">Verified matches unlock skill ratings — goals, assists, and clean sheets each improve different attributes.</p>
+                <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Submit a Match</Button></Link>
               </div>
             )}
           </Card>
@@ -137,7 +140,11 @@ function AnalyticsPageInner() {
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500 text-center py-4">No data yet.</p>
+              <div className="text-center py-6">
+                <p className="text-sm font-medium text-gray-700">No active players yet.</p>
+                <p className="text-xs text-gray-500 mt-1">Submit a verified match result — your squad will appear here.</p>
+                <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Be the First</Button></Link>
+              </div>
             )}
           </Card>
         </div>

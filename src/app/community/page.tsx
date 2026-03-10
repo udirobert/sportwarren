@@ -71,8 +71,9 @@ function CommunityPageInner() {
           ) : (
             <div className="text-center py-8 text-gray-500">
               <Trophy className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">No players ranked yet.</p>
-              <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Submit a Match</Button></Link>
+              <p className="text-sm font-medium text-gray-700">No players ranked yet.</p>
+              <p className="text-xs text-gray-500 mt-1">Submit a verified match result — your name will appear here.</p>
+              <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Log Your First Match</Button></Link>
             </div>
           )}
         </Card>
@@ -111,7 +112,8 @@ function CommunityPageInner() {
           ) : (
             <div className="text-center py-8 text-gray-500">
               <Shield className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm">No squads found yet.</p>
+              <p className="text-sm font-medium text-gray-700">No squads yet — be the first.</p>
+              <p className="text-xs text-gray-500 mt-1">Create your squad and it will appear here for others to challenge.</p>
               <Link href="/squad"><Button size="sm" className="mt-3">Create a Squad</Button></Link>
             </div>
           )}
@@ -144,8 +146,9 @@ function CommunityPageInner() {
           </div>
         ) : (
           <div className="text-center py-8 text-gray-500">
-            <p className="text-sm">No matches played yet. Be the first!</p>
-            <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Submit a Match</Button></Link>
+            <p className="text-sm font-medium text-gray-700">No matches played yet — be the first.</p>
+            <p className="text-xs text-gray-500 mt-1">Submit a match result and your squad will appear on the community feed.</p>
+            <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Submit a Match Result</Button></Link>
           </div>
         )}
       </Card>
