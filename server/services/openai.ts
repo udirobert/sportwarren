@@ -1,22 +1,28 @@
 import OpenAI, { toFile } from 'openai';
 
 export class OpenAIService {
-  private client: OpenAI;
+  private client: OpenAI | null = null;
 
-  constructor() {
-    this.client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+  private getClient(): OpenAI {
+    if (!this.client) {
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY environment variable is not set');
+      }
+      this.client = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+    }
+    return this.client;
   }
 
   public get openai(): OpenAI {
-    return this.client;
+    return this.getClient();
   }
 
   // Voice transcription using Whisper
   async transcribeAudio(audioBuffer: Buffer, language?: string): Promise<string> {
     try {
-      const response = await this.client.audio.transcriptions.create({
+      const response = await this.getClient().audio.transcriptions.create({
         file: await toFile(audioBuffer, 'audio.wav'),
         model: 'whisper-1',
         language: language || 'en',
@@ -46,7 +52,7 @@ export class OpenAIService {
         Keep it under 200 words.
       `;
 
-      const response = await this.client.chat.completions.create({
+      const response = await this.getClient().chat.completions.create({
         model: 'gpt-4',
         messages: [
           {
@@ -96,7 +102,7 @@ export class OpenAIService {
         If you can't extract specific information, use null values.
       `;
 
-      const response = await this.client.chat.completions.create({
+      const response = await this.getClient().chat.completions.create({
         model: 'gpt-4',
         messages: [
           {
@@ -140,7 +146,7 @@ export class OpenAIService {
         Keep it under 50 words and make it feel like a badge of honor.
       `;
 
-      const response = await this.client.chat.completions.create({
+      const response = await this.getClient().chat.completions.create({
         model: 'gpt-4',
         messages: [
           {
@@ -179,7 +185,7 @@ export class OpenAIService {
         Format as JSON with actionable insights.
       `;
 
-      const response = await this.client.chat.completions.create({
+      const response = await this.getClient().chat.completions.create({
         model: 'gpt-4',
         messages: [
           {

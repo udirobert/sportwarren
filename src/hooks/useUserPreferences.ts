@@ -140,6 +140,8 @@ export function useUserPreferences() {
         dashboardCustomization: {
           ...preferences.dashboardCustomization,
           hiddenWidgets: [...current, widgetId],
+          pinnedWidgets: preferences.dashboardCustomization?.pinnedWidgets ?? [],
+          widgetOrder: preferences.dashboardCustomization?.widgetOrder ?? [],
         },
       });
     }
@@ -151,6 +153,8 @@ export function useUserPreferences() {
       dashboardCustomization: {
         ...preferences.dashboardCustomization,
         hiddenWidgets: current.filter(id => id !== widgetId),
+        pinnedWidgets: preferences.dashboardCustomization?.pinnedWidgets ?? [],
+        widgetOrder: preferences.dashboardCustomization?.widgetOrder ?? [],
       },
     });
   }, [preferences, savePreferences]);
@@ -162,6 +166,8 @@ export function useUserPreferences() {
         dashboardCustomization: {
           ...preferences.dashboardCustomization,
           pinnedWidgets: [widgetId, ...current.filter(id => id !== widgetId)],
+          hiddenWidgets: preferences.dashboardCustomization?.hiddenWidgets ?? [],
+          widgetOrder: preferences.dashboardCustomization?.widgetOrder ?? [],
         },
       });
     }
@@ -173,6 +179,8 @@ export function useUserPreferences() {
       dashboardCustomization: {
         ...preferences.dashboardCustomization,
         pinnedWidgets: current.filter(id => id !== widgetId),
+        hiddenWidgets: preferences.dashboardCustomization?.hiddenWidgets ?? [],
+        widgetOrder: preferences.dashboardCustomization?.widgetOrder ?? [],
       },
     });
   }, [preferences, savePreferences]);
@@ -182,6 +190,8 @@ export function useUserPreferences() {
       dashboardCustomization: {
         ...preferences.dashboardCustomization,
         widgetOrder: widgetIds,
+        hiddenWidgets: preferences.dashboardCustomization?.hiddenWidgets ?? [],
+        pinnedWidgets: preferences.dashboardCustomization?.pinnedWidgets ?? [],
       },
     });
   }, [preferences, savePreferences]);

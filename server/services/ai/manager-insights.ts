@@ -5,9 +5,8 @@
 
 import { openai } from '../openai';
 import { AGENT_PERSONAS } from './prompts';
-import { simulateMatch, calculateWinProbabilities } from '../../src/lib/match/simulation-engine';
-import { calculatePlayerValue } from '../../src/lib/player/valuation-engine';
-import { getFitnessStatus } from '../../src/lib/player/fitness-engine';
+import { simulateMatch, calculateWinProbabilities } from '@/lib/match/simulation-engine';
+import { calculatePlayerValue } from '@/lib/player/valuation-engine';
 import { Tactics, PlayerAttributes } from '@/types';
 
 export interface ManagerInsight {
@@ -39,7 +38,7 @@ export class ManagerInsightService {
     // 2. Identify Critical Issues
     const avgSharpness = homeSquad.players.reduce((sum, p: any) => sum + (p.sharpness || 50), 0) / homeSquad.players.length;
     const isUnderdog = probs.homeWin < 0.4;
-    
+
     let priority: ManagerInsight['priority'] = 'medium';
     if (avgSharpness < 60 || isUnderdog) priority = 'high';
 

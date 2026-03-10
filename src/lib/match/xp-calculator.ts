@@ -3,12 +3,15 @@
  * Determines XP gains from match performance
  */
 
-import type { MatchResult, SkillRating, AttributeType } from '@/types';
-import { 
-  BASE_XP, 
-  MATCH_MULTIPLIERS, 
-  POSITION_ATTRIBUTE_WEIGHTS 
+import type { MatchResult, SkillRating, AttributeType, PlayerPosition } from '@/types';
+import {
+  BASE_XP,
+  MATCH_MULTIPLIERS,
+  POSITION_ATTRIBUTE_WEIGHTS
 } from './constants';
+
+// Re-export BASE_XP for convenience
+export { BASE_XP, MATCH_MULTIPLIERS, POSITION_ATTRIBUTE_WEIGHTS };
 
 interface XPGainBreakdown {
   total: number;
@@ -34,41 +37,42 @@ export function calculateMatchXP(
   matchType: keyof typeof MATCH_MULTIPLIERS = 'league'
 ): XPGainBreakdown {
   const multiplier = MATCH_MULTIPLIERS[matchType];
-  
+
   // Base XP for appearance
   let baseXP = BASE_XP.appearance;
-  
+
   // Team result XP
   const isWin = match.homeScore > match.awayScore;
   const isDraw = match.homeScore === match.awayScore;
   const teamXP = isWin ? BASE_XP.win : isDraw ? BASE_XP.draw : BASE_XP.loss;
-  
+
   // Performance XP
   let performanceXP = 0;
   performanceXP += playerStats.goals * BASE_XP.goal;
   performanceXP += playerStats.assists * BASE_XP.assist;
   if (playerStats.isCleanSheet) performanceXP += BASE_XP.cleanSheet;
-  
+
   // Match rating bonus (rating 7+ gives bonus)
   if (playerStats.matchRating >= 7) {
     performanceXP += (playerStats.matchRating - 6) * 10;
   }
-  
+
   // Calculate attribute-specific XP
-  const relevantAttributes = POSITION_ATTRIBUTE_WEIGHTS[playerStats.position] || 
+  const playerPosition = playerStats.position as PlayerPosition || 'MF';
+  const relevantAttributes = POSITION_ATTRIBUTE_WEIGHTS[playerPosition] ||
     POSITION_ATTRIBUTE_WEIGHTS.MF;
-  
+
   const byAttribute: Record<string, number> = {};
   const attributeXP = Math.floor((baseXP + teamXP + performanceXP) / relevantAttributes.length);
-  
+
   for (const attr of relevantAttributes) {
     byAttribute[attr] = Math.floor(attributeXP * multiplier);
   }
-  
+
   const total = Math.floor(
     (baseXP + teamXP + performanceXP) * multiplier
   );
-  
+
   return {
     total,
     base: Math.floor(baseXP * multiplier),
@@ -101,21 +105,21 @@ export function calculateNewRating(
   let rating = currentRating;
   let xp = currentXP + xpGained;
   let levelsGained = 0;
-  
+
   const maxRating = 99;
-  
+
   while (xp >= xpForNextLevel(rating) && rating < maxRating) {
     xp -= xpForNextLevel(rating);
     rating++;
     levelsGained++;
   }
-  
+
   // Cap at max
   if (rating >= maxRating) {
     rating = maxRating;
     xp = 0;
   }
-  
+
   return { newRating: rating, newXP: xp, levelsGained };
 }
 
@@ -130,14 +134,14 @@ export function calculateForm(matchRatings: number[]): {
   if (matchRatings.length < 3) {
     return { current: 0, trend: 'stable' };
   }
-  
+
   const recent = matchRatings.slice(-5);
   const average = recent.reduce((a, b) => a + b, 0) / recent.length;
-  
+
   // Convert 1-10 rating to -5 to +5 form
   let form = Math.round((average - 5) * 1.25);
   form = Math.max(-5, Math.min(5, form));
-  
+
   // Determine trend
   let trend: 'up' | 'down' | 'stable' = 'stable';
   if (recent.length >= 2) {
@@ -146,7 +150,7 @@ export function calculateForm(matchRatings: number[]): {
     if (diff > 0.5) trend = 'up';
     else if (diff < -0.5) trend = 'down';
   }
-  
+
   return { current: form, trend };
 }
 
@@ -183,7 +187,7 @@ export function calculateDerbyBonus(
   isRivalryMatch: boolean
 ): number {
   if (!isRivalryMatch) return 0;
-  
+
   // Winner gets 50% bonus, loser gets 10% bonus (for participating)
   const multiplier = isWinner ? 0.5 : 0.1;
   return Math.floor(baseXP * multiplier);

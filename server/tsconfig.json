@@ -8,7 +8,8 @@
     "isolatedModules": true,
     "noEmit": false,
     "outDir": "../dist/server",
-    "rootDir": ".",
+    "rootDir": "..",
+    "baseUrl": "..",
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -16,8 +17,12 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "baseUrl": ".."
   },
-  "include": ["**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": ["./**/*"],
+  "exclude": ["node_modules", "dist", "*.config.js", "*.config.ts"]
 }
