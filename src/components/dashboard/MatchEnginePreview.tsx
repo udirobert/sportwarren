@@ -12,6 +12,25 @@ import { trpc } from '@/lib/trpc-client';
 
 type ReputationTier = 'bronze' | 'silver' | 'gold' | 'platinum';
 
+// ── Engine types ────────────────────────────────────────────────────────────
+interface EngineContext {
+    ball: { x: number; y: number; vx: number; vy: number; ownerId: string | null };
+    teammates: PlayerPuck[];
+    opponents: PlayerPuck[];
+    ownGoal: { x: number; y: number };
+    oppGoal: { x: number; y: number };
+    time: number;
+    tempo: number;
+}
+
+interface MatchEvent {
+    tick: number;
+    minute: number;
+    type: 'goal' | 'tackle' | 'pass' | 'shot' | 'dao' | 'incident';
+    text: string;
+    team?: 'home' | 'away';
+}
+
 interface PlayerPuck {
     id: string;
     name: string;
@@ -28,6 +47,87 @@ interface MatchCommentary {
     time: string;
     text: string;
     type: 'action' | 'goal' | 'incident' | 'dao';
+}
+
+// ── Role-dispatch tick functions ─────────────────────────────────────────────
+function tickGoalkeeper(p: PlayerPuck, ctx: EngineContext): { targetX: number; targetY: number } {
+    const goalX = p.team === 'home' ? 5 : 95;
+    return { targetX: goalX, targetY: 30 + (ctx.ball.y / 100) * 40 };
+}
+
+function tickDefender(p: PlayerPuck, ctx: EngineContext): { targetX: number; targetY: number } {
+    const ballInOwnHalf = (p.team === 'home' && ctx.ball.x < 50) || (p.team === 'away' && ctx.ball.x > 50);
+    const distToBall = Math.sqrt((p.x - ctx.ball.x) ** 2 + (p.y - ctx.ball.y) ** 2);
+    if (ballInOwnHalf && distToBall < 35) {
+        return {
+            targetX: ctx.ball.x + (p.team === 'home' ? -3 : 3),
+            targetY: ctx.ball.y,
+        };
+    }
+    return {
+        targetX: (p as any).homePos.x,
+        targetY: (p as any).homePos.y + (ctx.ball.y - 50) * 0.25,
+    };
+}
+
+function tickMidfielder(p: PlayerPuck, ctx: EngineContext): { targetX: number; targetY: number } {
+    const distToBall = Math.sqrt((p.x - ctx.ball.x) ** 2 + (p.y - ctx.ball.y) ** 2);
+    const allMids = [...ctx.teammates, p].filter(t => ['CM', 'DM', 'AM'].includes(t.role));
+    const isClosest = !allMids.some(other =>
+        other.id !== p.id &&
+        Math.sqrt((other.x - ctx.ball.x) ** 2 + (other.y - ctx.ball.y) ** 2) < distToBall
+    );
+    if (isClosest && distToBall < 40) {
+        return { targetX: ctx.ball.x, targetY: ctx.ball.y };
+    }
+    return {
+        targetX: (p as any).homePos.x + (ctx.ball.x - 50) * 0.3,
+        targetY: (p as any).homePos.y + Math.sin(ctx.time * 0.05 + (p as any).homePos.x) * 10,
+    };
+}
+
+function tickAttacker(p: PlayerPuck, ctx: EngineContext): { targetX: number; targetY: number } {
+    const ballInOwnHalf = (p.team === 'home' && ctx.ball.x < 50) || (p.team === 'away' && ctx.ball.x > 50);
+    if (ballInOwnHalf) {
+        return {
+            targetX: (p as any).homePos.x - (p.team === 'home' ? 10 : -10),
+            targetY: (p as any).homePos.y,
+        };
+    }
+    const runPhase = Math.sin(ctx.time * 0.04 + (p as any).homePos.y * 0.1);
+    return {
+        targetX: p.team === 'home' ? 70 + runPhase * 15 : 30 - runPhase * 15,
+        targetY: (p as any).homePos.y + runPhase * 20,
+    };
+}
+
+function tickPlayer(p: PlayerPuck, ctx: EngineContext): { targetX: number; targetY: number } {
+    switch (p.role) {
+        case 'GK': return tickGoalkeeper(p, ctx);
+        case 'CB': case 'LB': case 'RB': case 'DEF': return tickDefender(p, ctx);
+        case 'CM': case 'DM': case 'AM': case 'MID': return tickMidfielder(p, ctx);
+        case 'ST': case 'LW': case 'RW': case 'ATT': return tickAttacker(p, ctx);
+        default: return { targetX: (p as any).homePos.x, targetY: (p as any).homePos.y };
+    }
+}
+
+// Circle-circle collision push-apart (modifies array in place)
+function resolveCollisions(ps: any[]): void {
+    const MIN_DIST = 3.5;
+    for (let i = 0; i < ps.length; i++) {
+        for (let j = i + 1; j < ps.length; j++) {
+            const dx = ps[j].x - ps[i].x;
+            const dy = ps[j].y - ps[i].y;
+            const dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
+            if (dist < MIN_DIST) {
+                const overlap = (MIN_DIST - dist) * 0.5;
+                ps[i].x -= (dx / dist) * overlap;
+                ps[i].y -= (dy / dist) * overlap;
+                ps[j].x += (dx / dist) * overlap;
+                ps[j].y += (dy / dist) * overlap;
+            }
+        }
+    }
 }
 
 interface LiveMatch {
@@ -79,6 +179,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
     const [tempo, setTempo] = useState(1);
     const [isFinalizing, setIsFinalizing] = useState(false);
     const [latestEvent, setLatestEvent] = useState<string>('');
+    const [eventLog, setEventLog] = useState<MatchEvent[]>([]);
     const ownerCarryTicks = useRef(0);
 
     const { address, isGuest } = useWallet();
@@ -212,11 +313,20 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         }
     }, [members, membersLoading, env.rivals.away]);
 
-    const addCommentary = (text: string, type: MatchCommentary['type'] = 'action') => {
-        const timeStr = `${Math.floor(time / 20)}:00`;
-        setCommentary(prev => [{ time: timeStr, text, type }, ...prev].slice(0, 5));
+    const addEvent = useCallback((text: string, evtType: MatchEvent['type'], team?: 'home' | 'away') => {
+        const minute = Math.floor(time / 20);
+        const timeStr = `${minute}:00`;
+        const evt: MatchEvent = { tick: time, minute, type: evtType, text, team };
+        setEventLog(prev => [evt, ...prev].slice(0, 50));
+        const commentaryType: MatchCommentary['type'] = evtType === 'goal' ? 'goal' : evtType === 'dao' ? 'dao' : evtType === 'incident' ? 'incident' : 'action';
+        setCommentary(prev => [{ time: timeStr, text, type: commentaryType }, ...prev].slice(0, 5));
         setLatestEvent(text);
-    };
+    }, [time]);
+
+    // Keep addCommentary as a thin alias so existing call-sites still work
+    const addCommentary = useCallback((text: string, type: MatchCommentary['type'] = 'action') => {
+        addEvent(text, type === 'goal' ? 'goal' : type === 'dao' ? 'dao' : type === 'incident' ? 'incident' : 'shot');
+    }, [addEvent]);
 
     const triggerDaoCommand = useCallback(() => {
         const commands = ["ALL OUT ATTACK!", "TEMPO INCREASE!", "HIGH PRESS!", "DAE ACTION: RECOVER BALL!"];
@@ -230,182 +340,137 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
     const movePlayers = useCallback(() => {
         let currentOwnerId = ball.ownerId;
         const friction = 0.98;
-        const drag = 0.92; // Player air resistance
+        const drag = 0.92;
 
-        // 1. Update Ball Physics
+        // 1. Ball physics
         let nextBallX = ball.x + ball.vx;
         let nextBallY = ball.y + ball.vy;
         let nextBallVx = ball.vx * friction;
         let nextBallVy = ball.vy * friction;
         let shotFired = false;
 
-        // Ball boundary bounce (sidelines)
         if (nextBallX < 2) { nextBallVx = Math.abs(nextBallVx) * 0.5; nextBallX = 2; }
         if (nextBallX > 98) { nextBallVx = -Math.abs(nextBallVx) * 0.5; nextBallX = 98; }
         if (nextBallY < 2) { nextBallVy = Math.abs(nextBallVy) * 0.5; nextBallY = 2; }
         if (nextBallY > 98) { nextBallVy = -Math.abs(nextBallVy) * 0.5; nextBallY = 98; }
 
-        // Goal detection: ball crosses goal line within post range
+        // Goal detection
         const inGoalMouth = nextBallY > 38 && nextBallY < 62;
         if (!currentOwnerId && nextBallX <= 2 && inGoalMouth) {
-            const scoringTeam = 'away';
-            addCommentary(`⚽ GOAL! Away team scores!`, 'goal');
-            setScore(s => ({ ...s, [scoringTeam]: s[scoringTeam] + 1 }));
-            nextBallX = 50; nextBallY = 50;
-            nextBallVx = 0.8; nextBallVy = 0;
-            currentOwnerId = null;
-            ownerCarryTicks.current = 0;
+            addEvent('⚽ GOAL! Away team scores!', 'goal', 'away');
+            setScore(s => ({ ...s, away: s.away + 1 }));
+            nextBallX = 50; nextBallY = 50; nextBallVx = 0.8; nextBallVy = 0;
+            currentOwnerId = null; ownerCarryTicks.current = 0;
         } else if (!currentOwnerId && nextBallX >= 98 && inGoalMouth) {
-            const scoringTeam = 'home';
-            addCommentary(`⚽ GOAL! Home team scores!`, 'goal');
-            setScore(s => ({ ...s, [scoringTeam]: s[scoringTeam] + 1 }));
-            nextBallX = 50; nextBallY = 50;
-            nextBallVx = -0.8; nextBallVy = 0;
-            currentOwnerId = null;
-            ownerCarryTicks.current = 0;
+            addEvent('⚽ GOAL! Home team scores!', 'goal', 'home');
+            setScore(s => ({ ...s, home: s.home + 1 }));
+            nextBallX = 50; nextBallY = 50; nextBallVx = -0.8; nextBallVy = 0;
+            currentOwnerId = null; ownerCarryTicks.current = 0;
         }
 
-        // 2. Update Player Steering
-        const updatedPlayers = players.map(p => {
-            const isOwner = p.id === currentOwnerId;
-            let targetX = p.homePos.x;
-            let targetY = p.homePos.y;
+        // 2. Build EngineContext for role-dispatch
+        const homePlayers = players.filter(p => p.team === 'home');
+        const awayPlayers = players.filter(p => p.team === 'away');
 
-            // Role-aware AI
-            const isGK = p.role === 'GK';
-            const isDefender = ['CB', 'LB', 'RB'].includes(p.role);
-            const isMidfielder = ['CM', 'DM', 'AM'].includes(p.role);
-            const isAttacker = ['ST', 'LW', 'RW'].includes(p.role);
-            const distToBall = Math.sqrt((p.x - ball.x) ** 2 + (p.y - ball.y) ** 2);
-            const ballInOwnHalf = (p.team === 'home' && ball.x < 50) || (p.team === 'away' && ball.x > 50);
+        // 3. Update player steering via role-dispatch
+        const updatedPlayers: any[] = players.map(p => {
+            const isOwner = p.id === currentOwnerId;
+            const teammates = p.team === 'home' ? homePlayers : awayPlayers;
+            const opponents = p.team === 'home' ? awayPlayers : homePlayers;
+            const ctx: EngineContext = {
+                ball,
+                teammates: teammates.filter(t => t.id !== p.id),
+                opponents,
+                ownGoal: { x: p.team === 'home' ? 0 : 100, y: 50 },
+                oppGoal: { x: p.team === 'home' ? 100 : 0, y: 50 },
+                time,
+                tempo,
+            };
+
+            let targetX: number;
+            let targetY: number;
 
             if (isOwner) {
                 // Ball carrier: drive toward goal with jink
                 targetX = p.team === 'home' ? 92 : 8;
                 targetY = 50 + Math.sin(time * 0.08 + p.homePos.y) * 18;
-                const nearDefender = players.find(d => d.team !== p.team && Math.sqrt((d.x - p.x) ** 2 + (d.y - p.y) ** 2) < 12);
+                const nearDefender = opponents.find(d => Math.sqrt((d.x - p.x) ** 2 + (d.y - p.y) ** 2) < 12);
                 if (nearDefender) targetY = p.y > 50 ? p.y - 20 : p.y + 20;
-            } else if (isGK) {
-                // GK: stay on line, track ball height
-                targetX = p.team === 'home' ? 5 : 95;
-                targetY = 30 + (ball.y / 100) * 40;
-            } else if (isDefender) {
-                if (ballInOwnHalf && distToBall < 35) {
-                    // Press ball carrier
-                    targetX = ball.x + (p.team === 'home' ? -3 : 3);
-                    targetY = ball.y;
-                } else {
-                    // Hold shape with slight drift toward ball lane
-                    targetX = p.homePos.x;
-                    targetY = p.homePos.y + (ball.y - 50) * 0.25;
-                }
-            } else if (isMidfielder) {
-                const isClosestMid = !players.some(other =>
-                    other.team === p.team && other.id !== p.id && ['CM','DM','AM'].includes(other.role) &&
-                    Math.sqrt((other.x - ball.x) ** 2 + (other.y - ball.y) ** 2) < distToBall
-                );
-                if (isClosestMid && distToBall < 40) {
-                    targetX = ball.x;
-                    targetY = ball.y;
-                } else {
-                    // Support run: drift into space
-                    targetX = p.homePos.x + (ball.x - 50) * 0.3;
-                    targetY = p.homePos.y + Math.sin(time * 0.05 + p.homePos.x) * 10;
-                }
-            } else if (isAttacker) {
-                if (ballInOwnHalf) {
-                    // Track back slightly
-                    targetX = p.homePos.x - (p.team === 'home' ? 10 : -10);
-                    targetY = p.homePos.y;
-                } else {
-                    // Make runs: spread wide or attack box
-                    const runPhase = Math.sin(time * 0.04 + p.homePos.y * 0.1);
-                    targetX = p.team === 'home'
-                        ? 70 + runPhase * 15
-                        : 30 - runPhase * 15;
-                    targetY = p.homePos.y + runPhase * 20;
-                }
+            } else {
+                const t = tickPlayer(p, ctx);
+                targetX = t.targetX;
+                targetY = t.targetY;
             }
 
-            // Steering Logic
             const dx = targetX - p.x;
             const dy = targetY - p.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-
-            // Desired velocity - Scaled by real reputation
-            const reputationBonus = (p.stats.level / 20); // 0.1 to 1.0 boost
-            const maxSpeed = (p.stats.pace / 100) * (isOwner ? 0.35 : 0.6) * tempo * (1 + (reputationBonus * 0.2));
-            let dvx = dist > 0 ? (dx / dist) * maxSpeed : 0;
-            let dvy = dist > 0 ? (dy / dist) * maxSpeed : 0;
-
-            // Steering force (accel) - Agility link
+            const reputationBonus = p.stats.level / 20;
+            const maxSpeed = (p.stats.pace / 100) * (isOwner ? 0.35 : 0.6) * tempo * (1 + reputationBonus * 0.2);
+            const dvx = dist > 0 ? (dx / dist) * maxSpeed : 0;
+            const dvy = dist > 0 ? (dy / dist) * maxSpeed : 0;
             const agilityBase = p.stats.agility / 1000;
-            const ax = (dvx - p.vx) * agilityBase * (1 + (reputationBonus * 0.1));
-            const ay = (dvy - p.vy) * agilityBase * (1 + (reputationBonus * 0.1));
+            const ax = (dvx - p.vx) * agilityBase * (1 + reputationBonus * 0.1);
+            const ay = (dvy - p.vy) * agilityBase * (1 + reputationBonus * 0.1);
 
             const nextPx = p.x + p.vx;
             const nextPy = p.y + p.vy;
             const nextPvx = (p.vx + ax) * drag;
             const nextPvy = (p.vy + ay) * drag;
 
-            // Collision with ball (Possession Change)
-            if (!isOwner && dist < 1.5) {
+            // Ball possession (proximity)
+            const distToBall = Math.sqrt((p.x - ball.x) ** 2 + (p.y - ball.y) ** 2);
+            if (!isOwner && distToBall < 1.5) {
                 if (!currentOwnerId) {
                     currentOwnerId = p.id;
-                    addCommentary(`${p.name} recovers the ball.`, 'action');
+                    addEvent(`${p.name} recovers the ball.`, 'tackle', p.team);
                 } else {
                     const owner = players.find(pl => pl.id === currentOwnerId);
                     if (owner && owner.team !== p.team) {
                         const tackleProb = (p.stats.strength + p.stats.agility) / 200;
                         if (Math.random() < tackleProb * 0.4) {
                             currentOwnerId = p.id;
-                            addCommentary(`${p.name} wins a crucial tackle!`, 'action');
+                            addEvent(`${p.name} wins a crucial tackle!`, 'tackle', p.team);
                         }
                     }
                 }
             }
 
-            // Shooting: when attacker is in shooting range, kick ball toward goal
+            // Shooting
             if (isOwner && !shotFired) {
                 const inShootingRange = (p.team === 'home' && p.x > 75 && Math.abs(p.y - 50) < 25)
                     || (p.team === 'away' && p.x < 25 && Math.abs(p.y - 50) < 25);
-                const isForward = ['ST', 'LW', 'RW', 'CM'].includes(p.role);
+                const isForward = ['ST', 'LW', 'RW', 'CM', 'ATT'].includes(p.role);
                 if (inShootingRange && isForward && Math.random() < 0.04) {
-                    const goalX = p.team === 'home' ? 99 : 1;
-                    const goalY = 50 + (Math.random() - 0.5) * 20;
-                    const dx = goalX - p.x;
-                    const dy = goalY - p.y;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    const gx = p.team === 'home' ? 99 : 1;
+                    const gy = 50 + (Math.random() - 0.5) * 20;
+                    const sdx = gx - p.x; const sdy = gy - p.y;
+                    const sd = Math.sqrt(sdx * sdx + sdy * sdy);
                     const power = 3.5 + Math.random() * 1.5;
-                    nextBallVx = (dx / dist) * power;
-                    nextBallVy = (dy / dist) * power;
-                    currentOwnerId = null;
-                    shotFired = true;
-                    addCommentary(`${p.name} shoots!`, 'action');
+                    nextBallVx = (sdx / sd) * power;
+                    nextBallVy = (sdy / sd) * power;
+                    currentOwnerId = null; shotFired = true;
+                    addEvent(`${p.name} shoots!`, 'shot', p.team);
                 }
             }
 
-            // Passing: ball carrier passes to nearest open teammate after carrying
+            // Passing
             if (isOwner && !shotFired) {
                 ownerCarryTicks.current += 1;
                 const carryLimit = 18 + Math.floor(Math.random() * 12);
                 if (ownerCarryTicks.current > carryLimit) {
-                    const teammates = players.filter(t => t.team === p.team && t.id !== p.id && t.role !== 'GK');
-                    const forwardTeammates = teammates.filter(t =>
-                        p.team === 'home' ? t.x > p.x - 5 : t.x < p.x + 5
-                    );
-                    const targets = forwardTeammates.length > 0 ? forwardTeammates : teammates;
+                    const tms = players.filter(t => t.team === p.team && t.id !== p.id && t.role !== 'GK');
+                    const fwd = tms.filter(t => p.team === 'home' ? t.x > p.x - 5 : t.x < p.x + 5);
+                    const targets = fwd.length > 0 ? fwd : tms;
                     if (targets.length > 0) {
                         const target = targets[Math.floor(Math.random() * targets.length)];
-                        const dx = target.x - p.x;
-                        const dy = target.y - p.y;
-                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        const pdx = target.x - p.x; const pdy = target.y - p.y;
+                        const pd = Math.sqrt(pdx * pdx + pdy * pdy);
                         const passSpeed = 2.2 + (p.stats.passing || 70) / 50;
-                        nextBallVx = (dx / dist) * passSpeed;
-                        nextBallVy = (dy / dist) * passSpeed;
-                        currentOwnerId = null;
-                        ownerCarryTicks.current = 0;
-                        addCommentary(`${p.name} plays it to ${target.name}.`, 'action');
+                        nextBallVx = (pdx / pd) * passSpeed;
+                        nextBallVy = (pdy / pd) * passSpeed;
+                        currentOwnerId = null; ownerCarryTicks.current = 0;
+                        addEvent(`${p.name} plays it to ${target.name}.`, 'pass', p.team);
                     }
                 }
             }
@@ -417,12 +482,15 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             return { ...p, x: nextPx, y: nextPy, vx: nextPvx, vy: nextPvy, history: newHistory };
         });
 
-        // Sync ball to owner (only if no shot/pass was fired this tick)
+        // 4. Circle-circle collision resolution
+        resolveCollisions(updatedPlayers);
+
+        // 5. Sync ball to owner
         if (currentOwnerId && !shotFired) {
             const owner = updatedPlayers.find(p => p.id === currentOwnerId);
             if (owner) {
-                nextBallX = owner.x + (owner.vx * 1.5);
-                nextBallY = owner.y + (owner.vy * 1.5);
+                nextBallX = owner.x + owner.vx * 1.5;
+                nextBallY = owner.y + owner.vy * 1.5;
                 nextBallVx = owner.vx;
                 nextBallVy = owner.vy;
             }
@@ -433,7 +501,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         setTime(prev => prev + 1);
 
         if (time % 150 === 0 && Math.random() > 0.7) triggerDaoCommand();
-    }, [ball, players, time, tempo, triggerDaoCommand]);
+    }, [ball, players, time, tempo, triggerDaoCommand, addEvent]);
 
     useEffect(() => {
         let interval: NodeJS.Timeout;
