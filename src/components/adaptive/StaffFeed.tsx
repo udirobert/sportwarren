@@ -135,8 +135,8 @@ export const StaffFeed: React.FC<StaffFeedProps> = ({ userId }) => {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-[10px] font-black uppercase tracking-tight text-gray-400">{msg.sender}</span>
-                                            <span className="text-[9px] font-mono text-gray-400">Just Now</span>
+                                            <span className="text-xs font-black uppercase tracking-tight text-gray-400">{msg.sender}</span>
+                                            <span className="text-xs font-mono text-gray-400">Just Now</span>
                                         </div>
                                         <p className="text-xs text-gray-700 font-medium leading-relaxed mt-1">
                                             {msg.message}
@@ -157,7 +157,7 @@ export const StaffFeed: React.FC<StaffFeedProps> = ({ userId }) => {
 
             {/* Footer / Shortcut */}
             <div className="pt-2 flex justify-center">
-                <button className="text-[9px] font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 flex items-center space-x-1 transition-colors">
+                <button className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 flex items-center space-x-1 transition-colors">
                     <span>Go to Staff Room</span>
                     <ChevronRight className="w-3 h-3" />
                 </button>

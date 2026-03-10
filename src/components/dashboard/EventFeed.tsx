@@ -141,11 +141,11 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-600">
+                    <span className="text-xs font-black uppercase tracking-widest text-gray-600">
                         📋 Backroom Feed
                     </span>
                     {unreadCount > 0 && (
-                        <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-[9px] font-black">
+                        <span className="px-2 py-0.5 rounded-full bg-blue-500 text-white text-xs font-black">
                             {unreadCount}
                         </span>
                     )}
@@ -153,7 +153,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                 {unreadCount > 0 && (
                     <button
                         onClick={markAllRead}
-                        className="text-[9px] font-black uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-colors"
+                        className="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-colors"
                     >
                         Mark all read
                     </button>
@@ -166,7 +166,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                     <button
                         key={f.key}
                         onClick={() => setFilter(f.key)}
-                        className={`px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
+                        className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all ${
                             filter === f.key
                                 ? 'bg-gray-900 text-white'
                                 : 'bg-gray-100 text-gray-500 hover:text-gray-700'
@@ -182,7 +182,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                     {primaryPendingMatch && (
                         <Link
                             href={`/match?mode=detail&matchId=${primaryPendingMatch.id}`}
-                            className="rounded-full border border-yellow-300 bg-yellow-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-yellow-700 transition-colors hover:bg-yellow-100"
+                            className="rounded-full border border-yellow-300 bg-yellow-50 px-3 py-1.5 text-xs font-black uppercase tracking-widest text-yellow-700 transition-colors hover:bg-yellow-100"
                         >
                             Review pending match
                         </Link>
@@ -190,7 +190,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                     {incomingOfferCount > 0 && (
                         <Link
                             href="/squad?tab=transfers"
-                            className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-blue-700 transition-colors hover:bg-blue-100"
+                            className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-black uppercase tracking-widest text-blue-700 transition-colors hover:bg-blue-100"
                         >
                             {incomingOfferCount} transfer {incomingOfferCount === 1 ? 'offer' : 'offers'}
                         </Link>
@@ -198,7 +198,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                     {treasuryNeedsAttention && (
                         <Link
                             href="/squad?tab=treasury"
-                            className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-rose-700 transition-colors hover:bg-rose-100"
+                            className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-black uppercase tracking-widest text-rose-700 transition-colors hover:bg-rose-100"
                         >
                             Treasury needs attention
                         </Link>
@@ -210,7 +210,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
             <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto scrollbar-none">
                 <AnimatePresence initial={false}>
                     {filtered.length === 0 ? (
-                        <div className="px-5 py-8 text-center text-gray-400 text-[10px] font-black uppercase tracking-widest">
+                        <div className="px-5 py-8 text-center text-gray-400 text-xs font-black uppercase tracking-widest">
                             {dataReady ? 'No alerts — squad is in good shape.' : 'Loading squad data...'}
                         </div>
                     ) : (
@@ -230,10 +230,10 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-[9px] font-black uppercase tracking-widest text-gray-500">
+                                        <span className="text-xs font-black uppercase tracking-widest text-gray-500">
                                             {event.staffEmoji} {event.sender}
                                         </span>
-                                        <span className="text-[8px] text-gray-400">
+                                        <span className="text-xs text-gray-400">
                                             {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                         </span>
                                     </div>

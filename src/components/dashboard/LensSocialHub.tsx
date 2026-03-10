@@ -49,7 +49,7 @@ export const LensSocialHub: React.FC = () => {
                 {isConnected && (
                     <div className="px-2 py-1 bg-green-100 border border-green-200 rounded-lg flex items-center space-x-1">
                         <ShieldCheck className="w-3 h-3 text-green-600" />
-                        <span className="text-[8px] font-black text-green-700 uppercase tracking-tighter">Native Identity</span>
+                        <span className="text-xs font-black text-green-700 uppercase tracking-tighter">Native Identity</span>
                     </div>
                 )}
             </div>
@@ -74,7 +74,7 @@ export const LensSocialHub: React.FC = () => {
                                 {isSocialUser ? 'Upgrade to Lens' : 'Connect Lens'}
                             </span>
                         </Button>
-                        <p className="text-[9px] text-center text-gray-400 font-bold uppercase tracking-widest">
+                        <p className="text-xs text-center text-gray-400 font-bold uppercase tracking-widest">
                             Join the web3-native Phygital community
                         </p>
                     </div>
@@ -103,15 +103,15 @@ export const LensSocialHub: React.FC = () => {
                     <div className="grid grid-cols-3 gap-2">
                         <div className="p-2 bg-white rounded-lg border border-gray-100 text-center">
                             <div className="text-xs font-black text-gray-900">{profile?.stats.totalFollowers || 0}</div>
-                            <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Followers</div>
+                            <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Followers</div>
                         </div>
                         <div className="p-2 bg-white rounded-lg border border-gray-100 text-center">
                             <div className="text-xs font-black text-gray-900">{profile?.stats.totalPosts || 0}</div>
-                            <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Posts</div>
+                            <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Posts</div>
                         </div>
                         <div className="p-2 bg-white rounded-lg border border-gray-100 text-center">
                             <div className="text-xs font-black text-gray-900">4.8</div>
-                            <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Social XP</div>
+                            <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Social XP</div>
                         </div>
                     </div>
 
@@ -150,7 +150,7 @@ export const LensSocialHub: React.FC = () => {
                         </AnimatePresence>
                     </div>
 
-                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest text-center">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-widest text-center">
                         Active Chapter: {city} • {venue}
                     </p>
                 </div>

@@ -563,7 +563,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     <div className="p-6 border-b border-white/5">
                         <div className="flex items-center space-x-2 text-blue-400 mb-1">
                             <Coffee className="w-4 h-4" />
-                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">The Staff Room</span>
+                            <span className="text-xs font-black uppercase tracking-[0.2em]">The Staff Room</span>
                         </div>
                         <h2 className="text-xl font-black text-white italic uppercase tracking-tighter">Office</h2>
                     </div>
@@ -580,7 +580,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                 <div className="text-2xl">{member.avatar}</div>
                                 <div className="text-left flex-1 min-w-0">
                                     <div className="text-sm font-black uppercase truncate">{member.name}</div>
-                                    <div className={`text-[9px] uppercase font-bold ${selectedStaff?.id === member.id ? 'text-blue-100' : 'text-gray-300'}`}>
+                                    <div className={`text-xs uppercase font-bold ${selectedStaff?.id === member.id ? 'text-blue-100' : 'text-gray-300'}`}>
                                         {member.role}
                                     </div>
                                 </div>
@@ -588,7 +588,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                             </button>
                         ))}
                     </div>
-                    <div className="p-4 bg-black/20 text-[9px] text-gray-400 font-mono flex items-center justify-between">
+                    <div className="p-4 bg-black/20 text-xs text-gray-400 font-mono flex items-center justify-between">
                         <span>SECURITY LEVEL: 4 (MANAGER)</span>
                         <ShieldCheck className="w-3 h-3" />
                     </div>
@@ -602,12 +602,12 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                             <div className="text-3xl">{selectedStaff?.avatar}</div>
                             <div>
                                 <h3 className="text-lg font-black text-white uppercase italic">{selectedStaff?.name}</h3>
-                                <p className="text-[10px] text-blue-400 font-bold uppercase tracking-widest">{selectedStaff?.role}</p>
+                                <p className="text-xs text-blue-400 font-bold uppercase tracking-widest">{selectedStaff?.role}</p>
                             </div>
                         </div>
                         <div className="hidden lg:flex items-center space-x-4">
                             <div className="text-right">
-                                <div className="text-[9px] font-bold text-gray-300">NEGOTIATION POWER</div>
+                                <div className="text-xs font-bold text-gray-300">NEGOTIATION POWER</div>
                                 <div className="w-24 h-1 bg-gray-800 rounded-full mt-1 overflow-hidden">
                                     <div className="h-full bg-blue-500 w-3/4" />
                                 </div>

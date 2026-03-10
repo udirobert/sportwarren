@@ -152,11 +152,11 @@ export const DraftEngine: React.FC = () => {
 
                                     <div className="mt-8 grid grid-cols-2 gap-3 max-w-xs mx-auto">
                                         <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-                                            <div className="text-[9px] font-black text-gray-500 uppercase">Est. Market Value</div>
+                                            <div className="text-xs font-black text-gray-500 uppercase">Est. Market Value</div>
                                             <div className="text-lg font-bold">{(selectedProspect.marketValuation * 1.5).toLocaleString()}</div>
                                         </div>
                                         <div className="bg-white/5 p-3 rounded-xl border border-white/10">
-                                            <div className="text-[9px] font-black text-gray-500 uppercase">Draft Salary</div>
+                                            <div className="text-xs font-black text-gray-500 uppercase">Draft Salary</div>
                                             <div className="text-lg font-bold">250 / wk</div>
                                         </div>
                                     </div>

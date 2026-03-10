@@ -57,7 +57,7 @@ export const SquadGovernance: React.FC<{ squadId: string }> = ({ squadId }) => {
 
                             {/* Vote Progress */}
                             <div className="mt-3 space-y-1">
-                                <div className="flex justify-between text-[8px] font-black text-gray-400 uppercase tracking-tighter">
+                                <div className="flex justify-between text-xs font-black text-gray-400 uppercase tracking-tighter">
                                     <span>Progress to Quorum</span>
                                     <span>{yesVotes} / {proposal.quorum} Yes</span>
                                 </div>

@@ -161,7 +161,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                         <h4 className="font-bold text-gray-900 truncate">{player.name}</h4>
                         {getReputationBadge(player.reputationTier)}
                       </div>
-                      <div className="flex items-center space-x-2 text-[10px] mt-0.5">
+                      <div className="flex items-center space-x-2 text-xs mt-0.5">
                         <span className="px-1.5 py-0.5 bg-gray-100 rounded font-mono text-gray-600">{player.position}</span>
                         <span className="text-gray-400">AGE {player.age}</span>
                         {player.isDraftEligible && (
@@ -173,26 +173,26 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                       <div className={`text-xl font-black leading-none ${player.overall >= 80 ? 'text-blue-600' : 'text-gray-900'}`}>
                         {player.overall}
                       </div>
-                      <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest">OVR</div>
+                      <div className="text-xs font-black text-gray-400 uppercase tracking-widest">OVR</div>
                     </div>
                   </div>
                 </div>
 
                 <div className="mt-4 grid grid-cols-2 gap-2">
                   <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
-                    <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Market Valuation</div>
+                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Market Valuation</div>
                     <div className="text-sm font-bold text-gray-900 flex items-center space-x-1">
                       <span>{player.marketValuation.toLocaleString()}</span>
                       <TrendingUp className={`w-3 h-3 ${player.marketValuation > player.askingPrice ? 'text-green-500' : 'text-gray-400'}`} />
                     </div>
                   </div>
                   <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
-                    <div className="text-[8px] font-black text-gray-400 uppercase tracking-widest">Asking Price</div>
+                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Asking Price</div>
                     <div className="text-sm font-bold text-blue-600">{player.askingPrice.toLocaleString()} {currencyLabel}</div>
                   </div>
                 </div>
 
-                <div className="mt-3 flex items-center justify-between text-[10px]">
+                <div className="mt-3 flex items-center justify-between text-xs">
                   <div className="text-gray-500 italic">Reputation: {player.reputationScore} pts</div>
                   <div className="font-mono text-gray-400 uppercase">{player.currentClub}</div>
                 </div>
@@ -425,9 +425,9 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
 
 const getReputationBadge = (tier: string) => {
   switch (tier) {
-    case 'platinum': return <div className="px-1.5 py-0.5 bg-blue-600 text-[8px] font-black text-white rounded uppercase shadow-lg shadow-blue-500/20">Platinum</div>;
-    case 'gold': return <div className="px-1.5 py-0.5 bg-yellow-500 text-[8px] font-black text-white rounded uppercase">Gold</div>;
-    case 'silver': return <div className="px-1.5 py-0.5 bg-gray-400 text-[8px] font-black text-white rounded uppercase">Silver</div>;
-    default: return <div className="px-1.5 py-0.5 bg-orange-700 text-[8px] font-black text-white rounded uppercase">Bronze</div>;
+    case 'platinum': return <div className="px-1.5 py-0.5 bg-blue-600 text-xs font-black text-white rounded uppercase shadow-lg shadow-blue-500/20">Platinum</div>;
+    case 'gold': return <div className="px-1.5 py-0.5 bg-yellow-500 text-xs font-black text-white rounded uppercase">Gold</div>;
+    case 'silver': return <div className="px-1.5 py-0.5 bg-gray-400 text-xs font-black text-white rounded uppercase">Silver</div>;
+    default: return <div className="px-1.5 py-0.5 bg-orange-700 text-xs font-black text-white rounded uppercase">Bronze</div>;
   }
 };

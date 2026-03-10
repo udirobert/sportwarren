@@ -91,7 +91,7 @@ export const AdaptiveDashboard: React.FC = () => {
         <OnboardingChecklist
           onStepAction={(id) => {
             if (id === 'open_office') handleOpenOffice();
-            if (id === 'claim_identity') window.location.reload(); // Simple way to trigger modal if logic is tied to mount or just show modal
+            if (id === 'claim_identity') router.push('/');
           }}
         />
       ),
@@ -178,9 +178,8 @@ export const AdaptiveDashboard: React.FC = () => {
       priority: 92,
       requiredLevel: 'basic',
       category: 'social',
-      component: <SquadGovernance squadId="demo-squad-id" />,
-    },
-    {
+      component: <SquadGovernance squadId={primarySquadId || 'guest'} />,
+    },    {
       id: 'lens-social',
       priority: 94,
       requiredLevel: 'basic',
@@ -199,7 +198,7 @@ export const AdaptiveDashboard: React.FC = () => {
       priority: 80,
       requiredLevel: 'advanced',
       category: 'social',
-      component: <TerritoryControl squadId="demo-squad-id" />,
+      component: <TerritoryControl squadId={primarySquadId || 'guest'} />,
     },
     {
       id: 'training',
@@ -305,15 +304,27 @@ export const AdaptiveDashboard: React.FC = () => {
           <Card>
             <h2 className="text-lg font-bold text-gray-900 mb-4">Squad Activity</h2>
             <div className="space-y-3">
-              <div className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
-                <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
-                <div>
-                  <p className="text-gray-900 text-sm">
-                    <span className="font-semibold">Jamie Thompson</span> scored a hat-trick! 🔥
-                  </p>
-                  <p className="text-xs text-gray-600">2 hours ago</p>
+              {stats && stats.recentMatches && stats.recentMatches.length > 0 ? (
+                stats.recentMatches.slice(0, 3).map((match, i) => (
+                  <div key={i} className="flex items-start space-x-3 p-3 bg-green-50 rounded-lg">
+                    <div className="w-2 h-2 bg-green-500 rounded-full mt-2"></div>
+                    <div>
+                      <p className="text-gray-900 text-sm">
+                        vs <span className="font-semibold">{match.opponent}</span> — {match.result}
+                      </p>
+                      <p className="text-xs text-gray-600">{match.date}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                  <div className="w-2 h-2 bg-gray-400 rounded-full mt-2"></div>
+                  <div>
+                    <p className="text-gray-900 text-sm">No matches played yet</p>
+                    <p className="text-xs text-gray-600">Start your first match to see activity</p>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </Card>
         </ProgressiveDisclosure>
@@ -365,7 +376,7 @@ export const AdaptiveDashboard: React.FC = () => {
       priority: 89,
       requiredLevel: 'basic',
       category: 'stats',
-      component: <SquadDynamics squadId="demo-squad-id" />,
+      component: <SquadDynamics squadId={primarySquadId || 'guest'} />,
     },
     {
       id: 'scouting-report',
@@ -382,15 +393,22 @@ export const AdaptiveDashboard: React.FC = () => {
       component: (
         <Card>
           <h2 className="text-lg font-bold text-gray-900 mb-4">Next Match</h2>
-          <div className="border border-gray-200 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-2">vs Grass Roots United</h3>
-            <div className="flex items-center space-x-4 text-sm text-gray-600">
-              <div className="flex items-center space-x-1">
-                <Calendar className="w-4 h-4" />
-                <span>Jan 20, 2:00 PM</span>
+          {stats && stats.recentMatches && stats.recentMatches.length > 0 ? (
+            <div className="border border-gray-200 rounded-lg p-4">
+              <h3 className="font-semibold text-gray-900 mb-2">vs {stats.recentMatches[0]?.opponent || 'TBD'}</h3>
+              <div className="flex items-center space-x-4 text-sm text-gray-600">
+                <div className="flex items-center space-x-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>{stats.recentMatches[0]?.date || 'TBD'}</span>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            <div className="border border-gray-200 rounded-lg p-4">
+              <p className="text-sm text-gray-500">No upcoming matches scheduled</p>
+              <p className="text-xs text-gray-400 mt-1">Create a squad to start playing</p>
+            </div>
+          )}
         </Card>
       ),
     },
@@ -447,9 +465,9 @@ export const AdaptiveDashboard: React.FC = () => {
             <div className="bg-blue-600 text-white p-2 rounded-lg flex items-center justify-between shadow-lg shadow-blue-500/20">
               <div className="flex items-center space-x-3 px-2">
                 <Sparkles className="w-4 h-4" />
-                <span className="text-[10px] font-black uppercase tracking-widest leading-none">Guest Mode Active • Hackney Marshes Demo Experience</span>
+                <span className="text-xs font-black uppercase tracking-widest leading-none">Guest Mode Active • Hackney Marshes Demo Experience</span>
               </div>
-              <Button id="connect-wallet-btn" size="sm" variant="outline" className="h-6 text-[8px] border-white/20 hover:bg-white/10 text-white" onClick={() => window.location.reload()}>
+              <Button id="connect-wallet-btn" size="sm" variant="outline" className="h-7 text-xs border-white/20 hover:bg-white/10 text-white" onClick={() => router.push('/')}>
                 Connect Wallet
               </Button>
             </div>
@@ -468,14 +486,14 @@ export const AdaptiveDashboard: React.FC = () => {
               {memberships?.[0]?.squad?.name ?? (isGuest ? 'Demo Squad' : 'My Squad')}
             </h1>
             {address && (
-              <p className="text-[10px] text-gray-400 font-medium">
+              <p className="text-xs text-gray-400 font-medium">
                 {address.slice(0, 6)}…{address.slice(-4)}
               </p>
             )}
           </div>
           <button
             onClick={handleOpenOffice}
-            className="ml-3 shrink-0 flex items-center gap-1.5 bg-gray-900 dark:bg-gray-700 text-white text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-lg"
+            className="ml-3 shrink-0 flex items-center gap-1.5 bg-gray-900 dark:bg-gray-700 text-white text-xs font-black uppercase tracking-widest px-3 py-2 rounded-lg"
           >
             <Briefcase className="w-3 h-3 text-blue-400" />
             Office
@@ -492,7 +510,7 @@ export const AdaptiveDashboard: React.FC = () => {
                 </span>
               )}
             </h1>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
               {memberships?.[0]?.squad?.name ? `${memberships[0].squad.name} • Manager` : (isGuest ? 'Guest Mode • Demo Experience' : 'Connect wallet to get started')}
             </p>
           </div>
@@ -500,19 +518,19 @@ export const AdaptiveDashboard: React.FC = () => {
             <Button
               onClick={handleOpenOffice}
               size="sm"
-              className="bg-gray-900 hover:bg-black text-white border-white/5 font-black uppercase tracking-widest text-[10px] flex items-center space-x-2 px-4 shadow-xl"
+              className="bg-gray-900 hover:bg-black text-white border-white/5 font-black uppercase tracking-widest text-xs flex items-center space-x-2 px-4 shadow-xl"
             >
               <Briefcase className="w-3 h-3 text-blue-400" />
               <span>Enter Office</span>
             </Button>
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <div className="text-[8px] font-black text-gray-400 uppercase">Club Status</div>
+                <div className="text-xs font-black text-gray-400 uppercase">Club Status</div>
                 <div className="text-xs font-bold text-green-600">Stable</div>
               </div>
               <div className="w-px h-8 bg-gray-200 dark:bg-gray-700" />
               <div className="text-right">
-                <div className="text-[8px] font-black text-gray-400 uppercase">Rank</div>
+                <div className="text-xs font-black text-gray-400 uppercase">Rank</div>
                 <div className="text-xs font-bold text-gray-900 dark:text-white">#42 Local</div>
               </div>
             </div>
