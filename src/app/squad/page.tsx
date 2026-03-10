@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { SquadDAO } from "@/components/squad/SquadDAO";
 import { TacticsBoard } from "@/components/squad/TacticsBoard";
@@ -19,6 +19,8 @@ import { useTreasury } from "@/hooks/squad/useTreasury";
 import { useTransfers } from "@/hooks/squad/useTransfers";
 import { PendingActionsPanel } from "@/components/operations/PendingActionsPanel";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { useSquadDetails } from "@/hooks/squad/useSquad";
+import type { Player, PlayerPosition, Tactics, Formation, PlayStyle, TeamInstructions } from "@/types";
 
 type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance";
 
@@ -31,6 +33,7 @@ export default function SquadPage() {
   const activeMembership = memberships?.[0];
   const activeSquad = activeMembership?.squad;
   const activeSquadId = activeSquad?.id;
+  const { members } = useSquadDetails(activeSquadId);
 
   const { checklistItems } = useOnboarding();
   const squadChecklistDone = checklistItems.find(i => i.id === 'open_office')?.completed ?? false;
@@ -47,6 +50,37 @@ export default function SquadPage() {
   const pullRef = usePullToRefresh({
     onRefresh: () => utils.squad.getMySquads.invalidate(),
   });
+
+  const { data: tacticsData } = trpc.squad.getTactics.useQuery(
+    { squadId: activeSquadId || '' },
+    { enabled: !!activeSquadId, staleTime: 30 * 1000 }
+  );
+  const saveTacticsMutation = trpc.squad.saveTactics.useMutation({
+    onSuccess: () => {
+      utils.squad.getTactics.invalidate();
+    },
+  });
+
+  const squadPlayers: Player[] = useMemo(() => {
+    if (!members.length) return MOCK_SQUAD_PLAYERS;
+    const defaults: PlayerPosition[] = ['GK', 'DF', 'DF', 'MF', 'MF', 'WG', 'ST', 'ST'];
+    return members.map((member, idx) => ({
+      id: member.id,
+      address: activeSquad?.id || member.id,
+      name: member.name,
+      position: member.position ?? defaults[idx % defaults.length],
+      status: 'available',
+    }));
+  }, [members, activeSquad]);
+
+  const initialTactics: Tactics | undefined = tacticsData
+    ? {
+        formation: tacticsData.formation as Formation,
+        style: tacticsData.playStyle as PlayStyle,
+        instructions: tacticsData.instructions as TeamInstructions,
+        setPieces: tacticsData.setPieces as Tactics['setPieces'],
+      }
+    : undefined;
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -256,8 +290,20 @@ export default function SquadPage() {
 
       {activeTab === 'tactics' && (
         <TacticsBoard
-          players={MOCK_SQUAD_PLAYERS}
-          onSave={(tactics) => console.log('Saving tactics:', tactics)}
+          players={squadPlayers}
+          initialTactics={initialTactics}
+          initialLineup={tacticsData?.lineup || undefined}
+          onSave={(tactics, lineup) => {
+            if (!activeSquadId) return;
+            saveTacticsMutation.mutate({
+              squadId: activeSquadId,
+              formation: tactics.formation,
+              playStyle: tactics.style,
+              instructions: tactics.instructions,
+              setPieces: tactics.setPieces,
+              lineup,
+            });
+          }}
         />
       )}
 
