@@ -22,6 +22,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
   });
   const { loginAsGuest } = useWallet();
   const [scrollY, setScrollY] = useState(0);
+  const parallaxRef = useRef<HTMLDivElement>(null);
   const problemRef = useRef<HTMLDivElement>(null);
   const solutionRef = useRef<HTMLDivElement>(null);
   const howItWorksRef = useRef<HTMLDivElement>(null);
@@ -34,19 +35,27 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
         setStats({ totalPlayers: 0, totalMatches: 0, totalAgents: 0 });
       });
 
-    // Throttled scroll handler for performance
-    let ticking = false;
+    // Use requestAnimationFrame + refs to avoid React re-renders on scroll
+    let lastScrollY = 0;
+    let rafId: number;
+    
     const handleScroll = () => {
-      if (!ticking) {
-        window.requestAnimationFrame(() => {
-          setScrollY(window.scrollY);
-          ticking = false;
-        });
-        ticking = true;
-      }
+      lastScrollY = window.scrollY;
+      rafId = requestAnimationFrame(() => {
+        setScrollY(lastScrollY);
+        
+        // Directly update parallax elements via refs (bypasses React render)
+        if (parallaxRef.current) {
+          parallaxRef.current.style.transform = `translateY(${lastScrollY * 0.5}px)`;
+        }
+      });
     };
+    
     window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (rafId) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   const parallaxOffset = scrollY * 0.5;
@@ -59,11 +68,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-green-900 to-gray-900">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
           <div
-            className="absolute top-0 -left-4 w-96 h-96 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
+            ref={parallaxRef}
+            className="absolute top-0 -left-4 w-96 h-96 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 will-change-transform"
             style={{ transform: `translateY(${parallaxOffset}px)` }}
           ></div>
           <div
-            className="absolute top-0 -right-4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20"
+            className="absolute top-0 -right-4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 will-change-transform"
             style={{ transform: `translateY(${parallaxOffset * 0.8}px)` }}
           ></div>
         </div>
