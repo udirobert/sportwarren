@@ -3,7 +3,7 @@
  * Generates proactive tactical and market alerts for Squad DAOs
  */
 
-import { openai } from '../openai';
+import { openaiService } from '../openai';
 import { AGENT_PERSONAS } from './prompts';
 import { simulateMatch, calculateWinProbabilities } from '@/lib/match/simulation-engine';
 import { calculatePlayerValue } from '@/lib/player/valuation-engine';
@@ -51,7 +51,7 @@ export class ManagerInsightService {
       
       As Coach Kite, provide a single, firm tactical alert. Focus on the most critical weakness.`;
 
-      const response = await openai.chat.completions.create({
+      const response = await openaiService.openai.chat.completions.create({
         model: 'gpt-4-turbo-preview',
         messages: [
           { role: 'system', content: AGENT_PERSONAS.COACH_KITE.systemPrompt },
@@ -94,7 +94,7 @@ export class ManagerInsightService {
       
       As Scout Finn, provide a direct market insight. Should we sell, hold, or is this an undervalued asset?`;
 
-      const response = await openai.chat.completions.create({
+      const response = await openaiService.openai.chat.completions.create({
         model: 'gpt-4-turbo-preview',
         messages: [
           { role: 'system', content: AGENT_PERSONAS.SCOUT_FINN.systemPrompt },

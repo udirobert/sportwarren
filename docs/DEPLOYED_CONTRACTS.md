@@ -60,7 +60,57 @@
 | **AchievementNFT** | `0xF8ae857B73DF377A4D9387600bA15c0f1e0e15C4` | [Snowtrace](https://testnet.snowtrace.io/address/0xF8ae857B73DF377A4D9387600bA15c0f1e0e15C4) |
 | **AgentEscrow** | `0xc675D1Dd85419C7Af28755830e06b0F54DB196c7` | [Snowtrace](https://testnet.snowtrace.io/address/0xc675D1Dd85419C7Af28755830e06b0F54DB196c7) |
 
+### Contract Details
+
+#### SquadToken (ERC20 Votes)
+- **Purpose:** Governance token for squad DAO voting
+- **Standard:** ERC20Votes (upgradeable via UUPS)
+- **Features:** Token-based voting, delegation
+
+#### SquadTimelock
+- **Purpose:** Timelock controller for governance actions
+- **Delay:** 48 hours (172,800 seconds)
+- **Role:** Ensures governance decisions have a waiting period
+
+#### SquadGovernor
+- **Purpose:** Main governance logic for DAO decisions
+- **Integration:** Works with SquadToken and SquadTimelock
+- **Features:** Proposal creation, voting, execution
+
+#### AchievementNFT (ERC721)
+- **Purpose:** NFTs for match achievements and milestones
+- **Standard:** ERC721 (upgradeable via UUPS)
+- **Use Cases:** MVP awards, milestone badges, phygital collectibles
+
+#### AgentEscrow
+- **Purpose:** Escrow contract for AI agent payments
+- **Integration:** Kite AI agent marketplace
+- **Features:** Secure payment holding, conditional release
+
+### All Explorer Links
+
+**Deployer Transactions:**
+- https://testnet.snowtrace.io/address/0x29FA4181620358dA180CAD770dB1696fbA78F1Cd
+
+**Individual Contracts:**
+- SquadToken: https://testnet.snowtrace.io/address/0x9ecDe1788E1cE1B40024F0fD9eA87f49a94781dB
+- SquadTimelock: https://testnet.snowtrace.io/address/0xb3cF66142882b3eAf197167cA7191654d4Ea5A78
+- SquadGovernor: https://testnet.snowtrace.io/address/0x2e98aF1871bF208Ad361202884AB88F904eFf826
+- AchievementNFT: https://testnet.snowtrace.io/address/0xF8ae857B73DF377A4D9387600bA15c0f1e0e15C4
+- AgentEscrow: https://testnet.snowtrace.io/address/0xc675D1Dd85419C7Af28755830e06b0F54DB196c7
+
 ### Governance Status ✅ INITIALIZED
+
+**Initialized:** March 9, 2026
+
+**Governance Flow:**
+1. Token holders vote on proposals via SquadGovernor
+2. Passed proposals → queued in SquadTimelock
+3. 48-hour waiting period
+4. Anyone can execute after delay
+5. Governor can cancel if needed
+
+**Initialize Script:** `scripts/initialize-governance.ts`
 
 **Status:** Decentralized (deployer admin revoked)
 
@@ -133,6 +183,24 @@ This will:
 1. Query Algorand testnet for contracts deployed by your address
 2. Query Avalanche Fuji for contract deployments
 3. Generate explorer links for all found contracts
+
+---
+
+## Deployment Scripts
+
+### Algorand
+
+```bash
+# Deploy to testnet
+npx tsx scripts/deploy-contracts.ts
+```
+
+### Avalanche
+
+```bash
+cd contracts/avalanche
+npx hardhat run scripts/deploy.ts --network fuji
+```
 
 ---
 
