@@ -2,12 +2,22 @@ import OpenAI from 'openai';
 import { writeFile } from 'fs/promises';
 
 export class ComputerVisionService {
-  private openai: OpenAI;
+  private openai: OpenAI | null = null;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    // OpenAI client is lazily initialized when needed
+  }
+
+  private getClient(): OpenAI {
+    if (!this.openai) {
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY environment variable is not set');
+      }
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+    }
+    return this.openai;
   }
 
   async analyzeMatchPhoto(imageData: any, _matchId?: string): Promise<any> {
@@ -20,7 +30,7 @@ export class ComputerVisionService {
       // Convert to base64 for OpenAI Vision API
       const base64Image = imageBuffer.toString('base64');
 
-      const response = await this.openai.chat.completions.create({
+      const response = await this.getClient().chat.completions.create({
         model: 'gpt-4-vision-preview',
         messages: [
           {
@@ -154,7 +164,7 @@ export class ComputerVisionService {
     try {
       const base64Image = imageBuffer.toString('base64');
 
-      const response = await this.openai.chat.completions.create({
+      const response = await this.getClient().chat.completions.create({
         model: 'gpt-4-vision-preview',
         messages: [
           {
