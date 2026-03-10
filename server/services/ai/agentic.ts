@@ -1,4 +1,4 @@
-import { openai } from '../openai';
+import { openaiService } from '../openai';
 import { AGENT_PERSONAS, getMatchNarrativePrompt } from './prompts';
 
 export class AgenticService {
@@ -36,7 +36,7 @@ export class AgenticService {
 
             // 2. Fallback to OpenAI
             if (!report && process.env.OPENAI_API_KEY) {
-                const response = await openai.chat.completions.create({
+                const response = await openaiService.openai.chat.completions.create({
                     model: 'gpt-4-turbo-preview',
                     messages,
                     max_tokens: 200,

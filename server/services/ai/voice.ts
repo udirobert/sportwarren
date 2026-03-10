@@ -3,12 +3,22 @@ import { createReadStream } from 'fs';
 import { writeFile } from 'fs/promises';
 
 export class VoiceProcessingService {
-  private openai: OpenAI;
+  private openai: OpenAI | null = null;
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    // OpenAI client is lazily initialized when needed
+  }
+
+  private getClient(): OpenAI {
+    if (!this.openai) {
+      if (!process.env.OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY environment variable is not set');
+      }
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+      });
+    }
+    return this.openai;
   }
 
   async transcribeAudio(audioBuffer: Buffer, language: string = 'en'): Promise<string> {
@@ -19,7 +29,7 @@ export class VoiceProcessingService {
       await writeFile(tempPath, buffer);
 
       // Transcribe using Whisper
-      const response = await this.openai.audio.transcriptions.create({
+      const response = await this.getClient().audio.transcriptions.create({
         file: createReadStream(tempPath),
         model: 'whisper-1',
         language,
@@ -79,7 +89,7 @@ export class VoiceProcessingService {
         Be conservative with confidence scores - only use high confidence for clear, unambiguous information.
       `;
 
-      const response = await this.openai.chat.completions.create({
+      const response = await this.getClient().chat.completions.create({
         model: 'gpt-4',
         messages: [
           {
@@ -159,7 +169,7 @@ export class VoiceProcessingService {
         Keep it under 200 words and make it feel like a local sports journalist wrote it.
       `;
 
-      const response = await this.openai.chat.completions.create({
+      const response = await this.getClient().chat.completions.create({
         model: 'gpt-4',
         messages: [
           {

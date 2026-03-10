@@ -56,8 +56,8 @@ async function ensurePlayerProfile(prisma: any, userId: string) {
 export const playerRouter = createTRPCRouter({
   // Get player profile with stats
   getProfile: publicProcedure
-    .input(z.object({ 
-      userId: z.string().min(1, 'User ID is required') 
+    .input(z.object({
+      userId: z.string().min(1, 'User ID is required')
     }))
     .query(async ({ ctx, input }) => {
       try {
@@ -106,9 +106,9 @@ export const playerRouter = createTRPCRouter({
 
   // Get player form history
   getForm: publicProcedure
-    .input(z.object({ 
-      userId: z.string().min(1, 'User ID is required'), 
-      limit: z.number().min(1).max(50).default(5) 
+    .input(z.object({
+      userId: z.string().min(1, 'User ID is required'),
+      limit: z.number().min(1).max(50).default(5)
     }))
     .query(async ({ ctx, input }) => {
       try {
@@ -117,7 +117,7 @@ export const playerRouter = createTRPCRouter({
           orderBy: { createdAt: 'desc' },
           take: input.limit,
         });
-        
+
         return form;
       } catch (error) {
         throw new TRPCError({
@@ -144,48 +144,48 @@ export const playerRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const { matchId, gains } = input;
-        
+
         // Verify match exists and is verified
         const match = await ctx.prisma.match.findUnique({
           where: { id: matchId },
         });
-        
+
         if (!match) {
           throw new TRPCError({
             code: 'NOT_FOUND',
             message: 'Match not found',
           });
         }
-        
+
         if (match.status !== 'verified' && match.status !== 'finalized') {
           throw new TRPCError({
             code: 'BAD_REQUEST',
             message: 'Match must be verified before applying XP',
           });
         }
-        
+
         const results = [];
-        
+
         for (const gain of gains) {
           const profile = await ctx.prisma.playerProfile.findUnique({
             where: { userId: gain.userId },
             include: { attributes: true },
           });
-          
+
           if (!profile) {
             results.push({ userId: gain.userId, error: 'Profile not found' });
             continue;
           }
-          
+
           // Apply attribute XP
           for (const [attrName, xpAmount] of Object.entries(gain.attributeBreakdown)) {
             const attr = profile.attributes.find(a => a.attribute === attrName);
             if (!attr) continue;
-            
+
             let newXp = attr.xp + xpAmount;
             let newRating = attr.rating;
             let newXpToNext = attr.xpToNext;
-            
+
             // Level up logic
             while (newXp >= newXpToNext && newRating < attr.maxRating) {
               newXp -= newXpToNext;
@@ -208,7 +208,7 @@ export const playerRouter = createTRPCRouter({
             } catch (e) {
               console.warn('On-chain sync failed:', e);
             }
-            
+
             await ctx.prisma.playerAttribute.update({
               where: { id: attr.id },
               data: {
@@ -219,7 +219,7 @@ export const playerRouter = createTRPCRouter({
               },
             });
           }
-          
+
           // Create XP gain record
           await ctx.prisma.xPGain.create({
             data: {
@@ -233,7 +233,7 @@ export const playerRouter = createTRPCRouter({
               attributeBreakdown: gain.attributeBreakdown,
             },
           });
-          
+
           // Update profile totals
           await ctx.prisma.playerProfile.update({
             where: { id: profile.id },
@@ -242,10 +242,10 @@ export const playerRouter = createTRPCRouter({
               seasonXP: { increment: gain.baseXP + gain.bonusXP },
             },
           });
-          
+
           results.push({ userId: gain.userId, success: true });
         }
-        
+
         return { success: true, count: gains.length, results };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
@@ -371,22 +371,22 @@ export const playerRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const { type, attribute, limit } = input;
-        
+
         if (type === 'attribute' && attribute) {
           // Leaderboard by specific attribute
           const attributes = await ctx.prisma.playerAttribute.findMany({
             where: { attribute },
             orderBy: { rating: 'desc' },
             take: limit,
-            include: { 
-              profile: { 
-                include: { 
-                  user: { select: { id: true, name: true, avatar: true } } 
-                } 
-              } 
+            include: {
+              profile: {
+                include: {
+                  user: { select: { id: true, name: true, avatar: true } }
+                }
+              }
             },
           });
-          
+
           return attributes.map(a => ({
             userId: a.profile.userId,
             name: a.profile.user.name,
@@ -396,16 +396,16 @@ export const playerRouter = createTRPCRouter({
             attribute: a.attribute,
           }));
         }
-        
+
         // Overall leaderboard
         const profiles = await ctx.prisma.playerProfile.findMany({
-          include: { 
+          include: {
             attributes: true,
             user: { select: { id: true, name: true, avatar: true } },
           },
           take: limit * 2,
         });
-        
+
         let ranked;
         switch (type) {
           case 'goals':
@@ -428,7 +428,7 @@ export const playerRouter = createTRPCRouter({
               }))
               .sort((a, b) => b.averageRating - a.averageRating);
         }
-        
+
         return ranked.slice(0, limit).map(p => ({
           userId: p.userId,
           name: p.user.name,
@@ -457,11 +457,11 @@ export const playerRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const { userId } = input;
-        
+
         // Fetch player profile and recent form
         const profile = await ctx.prisma.playerProfile.findUnique({
           where: { userId },
-          include: { 
+          include: {
             attributes: true,
             formHistory: {
               orderBy: { createdAt: 'desc' },
@@ -489,7 +489,7 @@ export const playerRouter = createTRPCRouter({
         if (profile.formHistory.length >= 3) {
           const recentRatings = profile.formHistory.map(f => f.rating);
           const avgRating = recentRatings.reduce((a, b) => a + b, 0) / recentRatings.length;
-          
+
           if (avgRating > 8.0) {
             insight = "You're in elite form! Your recent performances have been outstanding. Consider testing yourself against higher-rated rivals.";
             type = 'performance';
@@ -537,7 +537,7 @@ export const playerRouter = createTRPCRouter({
     .mutation(async ({ ctx, input }) => {
       try {
         const { userId, message, context } = input;
-        
+
         // record interaction
         try {
           const { kiteAIService } = await import('../../../server/services/ai/kite');
@@ -552,18 +552,18 @@ export const playerRouter = createTRPCRouter({
           include: { attributes: true }
         });
 
-        const statsContext = profile ? 
-          `Player Stats: ${profile.attributes.map(a => `${a.attribute}: ${a.rating}`).join(', ')}` : 
+        const statsContext = profile ?
+          `Player Stats: ${profile.attributes.map(a => `${a.attribute}: ${a.rating}`).join(', ')}` :
           'No profile data available.';
 
         // Call OpenAI service
         try {
-          const { openai } = await import('../../../server/services/openai');
-          const response = await openai.chat.completions.create({
+          const { openaiService } = await import('../../../server/services/openai');
+          const response = await openaiService.openai.chat.completions.create({
             model: "gpt-4-turbo-preview",
             messages: [
-              { 
-                role: "system", 
+              {
+                role: "system",
                 content: `You are Coach Kite, a supportive but firm Sunday league football coach. 
                 Your goal is to help players improve their real-world game.
                 Use football terminology. Be concise and encouraging.
@@ -619,11 +619,11 @@ export const playerRouter = createTRPCRouter({
         const now = new Date();
         const currentDay = now.getDay();
         const prefDay = profile.matchDayPreference;
-        
+
         // Find the most recent "PrefDay" (e.g. if today is Wed(3) and pref is Tue(2), diff is 1)
         let daysSinceStart = currentDay - prefDay;
         if (daysSinceStart < 0) daysSinceStart += 7;
-        
+
         const weekStart = new Date(now);
         weekStart.setDate(now.getDate() - daysSinceStart);
         weekStart.setHours(0, 0, 0, 0);
@@ -699,7 +699,7 @@ export const playerRouter = createTRPCRouter({
         try {
           const { kiteAIService } = await import('../../../server/services/ai/kite');
           await kiteAIService.recordInteraction('fitness_agent', 'activity_synced', { userId, type, duration });
-        } catch (e) {}
+        } catch (e) { }
 
         return activity;
       } catch (error) {
