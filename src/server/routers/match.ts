@@ -4,7 +4,7 @@ import algosdk from 'algosdk';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { chainlinkService } from '../../../server/services/blockchain/chainlink';
 import { yellowService, type MatchSettlementResult } from '../../../server/services/blockchain/yellow';
-import { postTreasuryLedgerEntry } from '../../../server/services/economy/treasury-ledger';
+import { postTreasuryLedgerEntry, distributeMatchRewards } from '../../../server/services/economy/treasury-ledger';
 import { getMatchFeeDistribution } from '../../lib/yellow/match-fees';
 import { simulateMatch, calculateWinProbabilities } from '../../lib/match/simulation-engine';
 import { Tactics, PlayerAttributes } from '@/types';
@@ -367,8 +367,35 @@ export const matchRouter = createTRPCRouter({
               } else if (railStatus.mode !== 'nitrolite') {
                 await settleMatchFee(ctx.prisma, updatedMatch, newStatus);
               }
+
+              // AUTOMATED DAO REWARDS: Trigger prize and bonus payouts for both squads
+              if (newStatus === 'verified') {
+                const homeFinalScore = homeScore ?? updatedMatch.homeScore ?? 0;
+                const awayFinalScore = awayScore ?? updatedMatch.awayScore ?? 0;
+                const isDraw = homeFinalScore === awayFinalScore;
+
+                // Process Home Squad
+                await distributeMatchRewards({
+                  prisma: ctx.prisma,
+                  squadId: updatedMatch.homeSquadId,
+                  matchId: updatedMatch.id,
+                  isWinner: homeFinalScore > awayFinalScore,
+                  isDraw,
+                  playerStats: [], // Would fetch from playerStats table in full impl
+                });
+
+                // Process Away Squad
+                await distributeMatchRewards({
+                  prisma: ctx.prisma,
+                  squadId: updatedMatch.awaySquadId,
+                  matchId: updatedMatch.id,
+                  isWinner: awayFinalScore > homeFinalScore,
+                  isDraw,
+                  playerStats: [],
+                });
+              }
             } catch (yellowError) {
-              console.error('Failed to settle Yellow match fee:', yellowError);
+              console.error('Failed to settle Yellow match fee or distribute rewards:', yellowError);
             }
           }
         }

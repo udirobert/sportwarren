@@ -537,4 +537,11 @@ export interface UserPreferences {
   unlockedFeatures: string[];
   dismissedTutorials: string[];
   featureDiscoveryLevel: number; // 0-100
+
+  // Dashboard personalization
+  dashboardCustomization?: {
+    hiddenWidgets: string[];
+    pinnedWidgets: string[];
+    widgetOrder: string[];
+  };
 }

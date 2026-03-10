@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { yellowService } from '../../../server/services/blockchain/yellow';
+import { managerInsightService } from '../../../server/services/ai/manager-insights';
 import {
   ensureSquadTreasury,
   postTreasuryLedgerEntry,
@@ -1336,8 +1337,8 @@ export const squadRouter = createTRPCRouter({
               pitchId: pitch.id,
               status: 'verified',
               OR: [
-                { homeSquadId: squadId, homeScore: { gt: ctx.prisma.match.fields.awayScore } },
-                { awaySquadId: squadId, awayScore: { gt: ctx.prisma.match.fields.homeScore } },
+                { homeSquadId: squadId, homeScore: { gt: (ctx.prisma.match as any).fields.awayScore } },
+                { awaySquadId: squadId, awayScore: { gt: (ctx.prisma.match as any).fields.homeScore } },
               ]
             }
           });
@@ -1362,6 +1363,88 @@ export const squadRouter = createTRPCRouter({
           message: 'Failed to fetch territory data',
           cause: error,
         });
+      }
+    }),
+
+  // Get proactive AI-driven alerts for squad management
+  getManagerAlerts: protectedProcedure
+    .input(z.object({ squadId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const { squadId } = input;
+
+        // 1. Fetch Squad Data (Full)
+        const squad = await ctx.prisma.squad.findUnique({
+          where: { id: squadId },
+          include: {
+            tactics: true,
+            members: {
+              include: {
+                user: {
+                  include: {
+                    playerProfile: { include: { attributes: true } }
+                  }
+                }
+              }
+            }
+          }
+        });
+
+        if (!squad) throw new TRPCError({ code: 'NOT_FOUND', message: 'Squad not found' });
+
+        const alerts: any[] = [];
+
+        // 2. TACTICAL ALERT: Check next upcoming match
+        const nextMatch = await ctx.prisma.match.findFirst({
+          where: {
+            OR: [{ homeSquadId: squadId }, { awaySquadId: squadId }],
+            status: 'pending' // Pending IRL match
+          },
+          include: {
+            homeSquad: { include: { tactics: true, members: { include: { user: { include: { playerProfile: { include: { attributes: true } } } } } } } },
+            awaySquad: { include: { tactics: true, members: { include: { user: { include: { playerProfile: { include: { attributes: true } } } } } } } },
+          },
+          orderBy: { matchDate: 'asc' }
+        });
+
+        if (nextMatch) {
+          const isHome = nextMatch.homeSquadId === squadId;
+          const homeData = nextMatch.homeSquad;
+          const awayData = nextMatch.awaySquad;
+
+          const preview = await managerInsightService.generateTacticalPreview(homeData, awayData);
+          if (preview) alerts.push(preview);
+        }
+
+        // 3. MARKET ALERT: Check for high-interest or undervalued players
+        // (Just check top 3 players for demo efficiency)
+        const topPlayers = squad.members
+          .filter(m => m.user.playerProfile)
+          .slice(0, 3);
+
+        for (const member of topPlayers) {
+          const marketInsight = await managerInsightService.generateMarketInsight(member.user.playerProfile);
+          if (marketInsight) alerts.push(marketInsight);
+        }
+
+        // 4. FITNESS ALERT: Check for squad-wide exhaustion
+        const lowFitnessPlayers = squad.members.filter(m => (m.user.playerProfile?.sharpness || 50) < 40);
+        if (lowFitnessPlayers.length >= 2) {
+          alerts.push({
+            id: `fitness_${Date.now()}`,
+            type: 'fitness',
+            title: 'Critical Squad Fatigue',
+            message: `${lowFitnessPlayers.length} key players are currently 'Tired' or 'Exhausted'. Suggest a recovery session before the next match.`,
+            agentName: 'Coach Kite',
+            priority: 'high',
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        return alerts;
+      } catch (error) {
+        console.error('[SQUAD-ALERTS] Failed to generate manager alerts:', error);
+        return [];
       }
     }),
 });
