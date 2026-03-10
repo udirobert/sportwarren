@@ -39,7 +39,7 @@ export const SquadDynamics: React.FC<SquadDynamicsProps> = ({ squadId }) => {
                 <div className="text-center">
                     <div className="flex items-center justify-center space-x-1 mb-1">
                         <Zap className="w-3 h-3 text-orange-500" />
-                        <span className="text-[9px] font-bold text-gray-500 uppercase">Sharpness</span>
+                        <span className="text-xs font-bold text-gray-500 uppercase">Sharpness</span>
                     </div>
                     <div className="text-xl font-black text-gray-900">{stats.avgSharpness}%</div>
                     <div className="w-full bg-gray-100 h-1 rounded-full mt-1">
@@ -49,7 +49,7 @@ export const SquadDynamics: React.FC<SquadDynamicsProps> = ({ squadId }) => {
                 <div className="text-center">
                     <div className="flex items-center justify-center space-x-1 mb-1">
                         <Heart className="w-3 h-3 text-red-500" />
-                        <span className="text-[9px] font-bold text-gray-500 uppercase">Morale</span>
+                        <span className="text-xs font-bold text-gray-500 uppercase">Morale</span>
                     </div>
                     <div className="text-xl font-black text-gray-900">{stats.avgMorale}%</div>
                     <div className="w-full bg-gray-100 h-1 rounded-full mt-1">
@@ -59,22 +59,18 @@ export const SquadDynamics: React.FC<SquadDynamicsProps> = ({ squadId }) => {
                 <div className="text-center">
                     <div className="flex items-center justify-center space-x-1 mb-1">
                         <TrendingUp className="w-3 h-3 text-blue-500" />
-                        <span className="text-[9px] font-bold text-gray-500 uppercase">Trend</span>
-                    </div>
-                    <div className="flex items-center justify-center space-x-1">
-                        <span className="text-xl font-black text-gray-900">Strong</span>
-                        {stats.trend === 'up' ? <TrendingUp className="w-3 h-3 text-green-500" /> : <TrendingDown className="w-3 h-3 text-red-500" />}
+                        <span className="text-xs font-bold text-gray-500 uppercase">Trend</span>
                     </div>
                 </div>
             </div>
 
             <div className="space-y-2 border-t border-gray-100 pt-3">
-                <span className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Team Report</span>
+                <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Team Report</span>
                 {stats.keyPlayers.map((p, i) => (
                     <div key={i} className="flex items-center justify-between text-xs">
                         <span className="text-gray-700 font-medium">{p.name}</span>
                         <div className="flex items-center space-x-3">
-                            <span className={`text-[10px] uppercase font-bold ${p.status === 'Fatigued' ? 'text-red-500' : 'text-green-600'}`}>
+                            <span className={`text-xs uppercase font-bold ${p.status === 'Fatigued' ? 'text-red-500' : 'text-green-600'}`}>
                                 {p.status}
                             </span>
                             <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">

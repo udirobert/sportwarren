@@ -42,7 +42,7 @@ export const TerritoryControl: React.FC<{ squadId: string }> = ({ squadId }) => 
                                 className={`h-full ${pitch.isControlling ? 'bg-green-500' : 'bg-blue-500'}`}
                             />
                         </div>
-                        <div className="flex justify-between text-[8px] font-bold text-gray-400 uppercase tracking-tighter">
+                        <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-tighter">
                             <span>{pitch.squadWins} Wins</span>
                             <span>{pitch.dominance}% Dominance</span>
                         </div>

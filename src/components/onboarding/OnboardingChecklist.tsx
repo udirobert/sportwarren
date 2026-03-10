@@ -69,7 +69,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                             </div>
                             <div className="text-right">
                                 <div className="text-2xl font-black text-white">{completedCount}/{totalCount}</div>
-                                <div className="text-[9px] text-gray-500 uppercase font-bold">Complete</div>
+                                <div className="text-xs text-gray-500 uppercase font-bold">Complete</div>
                             </div>
                         </div>
 
@@ -100,9 +100,9 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                                             <div className={`text-sm font-black uppercase tracking-tight leading-tight ${item.completed ? 'text-green-300 line-through decoration-green-500/50' : 'text-white'}`}>
                                                 {item.label}
                                             </div>
-                                            <div className="text-[10px] text-gray-500 mt-0.5">{item.description}</div>
+                                            <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
                                             {!item.completed && (
-                                                <div className="mt-2 text-[9px] font-black uppercase tracking-[0.18em] text-emerald-300">
+                                                <div className="mt-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
                                                     {item.actionLabel}
                                                 </div>
                                             )}
@@ -147,14 +147,14 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={resetOnboarding}
-                                    className="text-[9px] text-gray-700 hover:text-gray-400 flex items-center space-x-1 transition-colors uppercase font-bold"
+                                    className="text-xs text-gray-700 hover:text-gray-400 flex items-center space-x-1 transition-colors uppercase font-bold"
                                 >
                                     <RotateCcw className="w-2.5 h-2.5" />
                                     <span>Restart Tour</span>
                                 </button>
                                 <button
                                     onClick={() => setExpanded(false)}
-                                    className="md:hidden text-[9px] text-gray-700 hover:text-gray-400 uppercase font-bold transition-colors"
+                                    className="md:hidden text-xs text-gray-700 hover:text-gray-400 uppercase font-bold transition-colors"
                                 >
                                     Collapse
                                 </button>

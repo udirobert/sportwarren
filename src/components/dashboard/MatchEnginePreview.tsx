@@ -226,12 +226,12 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
 
     // Initialize players with real data or high-fidelity fallback
     useEffect(() => {
-        // Auto-start for guests to show life immediately
-        if (isGuest && !isPlaying && time === 0) {
+        // Auto-start for guests to show life immediately - only run ONCE on mount
+      if (isGuest && !isPlaying && time === 0 && players.length === 0) {
             const timer = setTimeout(() => setIsPlaying(true), 2500);
             return () => clearTimeout(timer);
         }
-    }, [isGuest, isPlaying, time]);
+    }, [isGuest]); // Remove isPlaying and time from deps - this should only run on mount
 
     // Fetch real team members
     const { members, loading: membersLoading } = useSquadDetails(squadId);
@@ -268,8 +268,16 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         });
     }, [squadId, isGuest, score, env, isFinalizing, submitMatchMutation]);
 
-    // Initialize players with Physics-enabled agents
+    // Initialize players with Physics-enabled agents (runs once after members load)
+    const playersInitialised = useRef(false);
     useEffect(() => {
+        // Guard: only initialise once to prevent the match from "restarting"
+        // every time a dependency reference changes.
+        if (playersInitialised.current) return;
+        if (membersLoading) return;
+
+        // Moved to end of effect
+
         const createPlayer = (id: string, name: string, x: number, y: number, team: 'home' | 'away', role: string, stats: any): any => ({
             id, name, x, y, vx: 0, vy: 0, team, role, stats,
             homePos: { x, y },
@@ -286,7 +294,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         const home433 = homeFormation;
         const away433 = awayFormation;
 
-        if (!membersLoading && members && members.length > 0) {
+        if (members && members.length > 0) {
             const homePlayers = home433.map(([x, y, role], i) => {
                 const m = members[i];
                 const level = m?.stats?.level || 8;
@@ -302,7 +310,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                     { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20), passing: 65 + Math.floor(Math.random() * 20) })
             );
             setPlayers([...homePlayers, ...awayPlayers]);
-        } else if (!membersLoading) {
+        } else {
             const homePlayers = home433.map(([x, y, role], i) =>
                 createPlayer(`h${i}`, homeNames[i], x, y, 'home', role,
                     { level: 10 + Math.floor(Math.random() * 12), pace: 68 + Math.floor(Math.random() * 24), agility: 65 + Math.floor(Math.random() * 22), strength: 60 + Math.floor(Math.random() * 25), passing: 68 + Math.floor(Math.random() * 22) })
@@ -313,7 +321,9 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             );
             setPlayers([...homePlayers, ...awayPlayers2]);
         }
-    }, [members, membersLoading, env.rivals.away]);
+        // Mark as initialized ONLY after players have been created
+        playersInitialised.current = true;
+    }, [members, membersLoading, playersPerSide, hasKeeper]);
 
     const addEvent = useCallback((text: string, evtType: MatchEvent['type'], team?: 'home' | 'away') => {
         const minute = Math.floor(time / 20);
@@ -574,6 +584,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         setScore({ home: 0, away: 0 });
         setTempo(1);
         setCommentary([{ time: '0:00', text: 'Match Day Live: Hackney Marshes pitch is ready.', type: 'incident' }]);
+        playersInitialised.current = false;
     };
 
     return (
@@ -584,7 +595,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                     <button
                         key={m.id}
                         onClick={() => setActiveMatch(m.id)}
-                        className={`flex items-center space-x-2 px-3 py-1 rounded-full text-[10px] whitespace-nowrap transition-all ${activeMatch === m.id ? 'bg-blue-600 text-white font-bold' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
+                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${activeMatch === m.id ? 'bg-blue-600 text-white font-bold' : 'bg-gray-800 text-gray-400 hover:bg-gray-700'}`}
                     >
                         <span className={m.status === 'live' ? 'w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse' : 'w-1.5 h-1.5 bg-gray-500 rounded-full'} />
                         <span>{m.home} {m.homeScore} - {m.awayScore} {m.away}</span>
@@ -601,14 +612,14 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                     <div className="flex items-center space-x-3">
                         <div className="bg-gray-800 rounded px-2 py-1 flex items-center space-x-2">
                             <Zap className={`w-3 h-3 ${tempo > 1 ? 'text-yellow-400' : 'text-gray-500'}`} />
-                            <span className="text-[10px] font-mono font-bold text-gray-300">TEMPO {tempo}x</span>
+                            <span className="text-xs font-mono font-bold text-gray-300">TEMPO {tempo}x</span>
                         </div>
                         <div className="hidden md:flex items-center space-x-1 bg-gray-800/70 border border-white/5 rounded-lg p-1">
                             {tempoOptions.map((speed) => (
                                 <button
                                     key={speed}
                                     onClick={() => setTempo(speed)}
-                                    className={`px-2 py-1 text-[10px] font-bold rounded-md ${tempo === speed ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'}`}
+                                    className={`px-2 py-1.5 text-xs font-bold rounded-md ${tempo === speed ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'}`}
                                 >
                                     {speed}x
                                 </button>
@@ -616,7 +627,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                         </div>
                         <button
                             onClick={() => setShowIntent((prev) => !prev)}
-                            className={`hidden md:flex items-center px-2 py-1 text-[10px] font-bold rounded-lg border ${showIntent ? 'border-blue-500 text-blue-200' : 'border-white/10 text-gray-400'} bg-gray-900/70`}
+                            className={`hidden md:flex items-center px-2 py-1.5 text-xs font-bold rounded-lg border ${showIntent ? 'border-blue-500 text-blue-200' : 'border-white/10 text-gray-400'} bg-gray-900/70`}
                         >
                             Intent {showIntent ? 'ON' : 'OFF'}
                         </button>
@@ -648,7 +659,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                                 <Activity className="w-3 h-3 text-green-500" />
                                 <div className="absolute inset-0 bg-green-500 blur-sm opacity-50 animate-pulse" />
                             </div>
-                            <div className="text-[9px] font-black text-white uppercase tracking-tighter">
+                            <div className="text-xs font-black text-white uppercase tracking-tight">
                                 Proximity: <span className="text-green-400">{env.proximity}</span>
                             </div>
                         </div>
@@ -665,7 +676,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                                 <div className="bg-blue-600/90 backdrop-blur-md px-6 py-3 rounded-xl border border-blue-400 shadow-2xl flex items-center space-x-3">
                                     <Shield className="w-6 h-6 text-white animate-bounce" />
                                     <div>
-                                        <div className="text-[10px] font-black text-blue-200 uppercase tracking-widest">Incoming DAO Command</div>
+                                        <div className="text-xs font-black text-blue-200 uppercase tracking-widest">Incoming DAO Command</div>
                                         <div className="text-xl font-black text-white italic">{daoAlert}</div>
                                     </div>
                                 </div>
@@ -757,8 +768,8 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                                         <div className="absolute inset-0 rounded-full bg-blue-400 blur-[8px] opacity-40 animate-pulse" />
                                     )}
                                     <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                                        <span className="text-[8px] font-black text-white/80 bg-black/40 px-1 rounded whitespace-nowrap">{p.name}</span>
-                                        {p.reputationTier === 'platinum' && <Trophy className="w-2 h-2 text-yellow-400" />}
+                                        <span className="text-xs font-black text-white bg-black/70 px-1.5 py-0.5 rounded whitespace-nowrap shadow-lg">{p.name}</span>
+                                        {p.reputationTier === 'platinum' && <Trophy className="w-2 h-2 text-yellow-400 drop-shadow-md" />}
                                     </div>
                                 </div>
                             </motion.div>
@@ -776,7 +787,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                 </div>
 
                 {/* Live commentary ticker — always visible below pitch */}
-                <div className="mt-2 bg-black/60 border border-white/5 rounded-lg px-3 py-1.5 overflow-hidden h-7 flex items-center">
+                <div className="mt-2 bg-black/80 border border-white/10 rounded-lg px-3 py-1.5 overflow-hidden h-7 flex items-center">
                     <AnimatePresence mode="wait">
                         <motion.span
                             key={latestEvent}
@@ -785,10 +796,10 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                             exit={{ opacity: 0, y: -8 }}
                             transition={{ duration: 0.3 }}
                             className={`text-[11px] font-mono truncate ${
-                                latestEvent.includes('GOAL') ? 'text-yellow-400 font-bold' :
-                                latestEvent.includes('DAO') ? 'text-blue-400 font-bold' :
-                                latestEvent.includes('tackle') || latestEvent.includes('shoots') ? 'text-orange-300' :
-                                'text-gray-300'
+                                latestEvent.includes('GOAL') ? 'text-yellow-300 font-bold' :
+                                latestEvent.includes('DAO') ? 'text-blue-300 font-bold' :
+                                latestEvent.includes('tackle') || latestEvent.includes('shoots') ? 'text-orange-200' :
+                                'text-white'
                             }`}
                         >
                             {latestEvent || 'Match Day Live — kick off!'}
@@ -798,19 +809,19 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
 
                 {/* Commentary Log & Reality Feed - Responsive Grid */}
                 <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                    <div className="col-span-2 p-3 bg-black/40 h-28 overflow-hidden rounded-xl border border-white/5 order-1">
+                    <div className="col-span-2 p-3 bg-black/70 h-28 overflow-hidden rounded-xl border border-white/10 order-1">
                         <div className="space-y-1.5">
                             {commentary.map((c, i) => (
                                 <motion.div
                                     key={i}
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    className={`text-[10px] font-mono flex space-x-2 ${c.type === 'goal' ? 'text-yellow-400 font-bold' :
-                                        c.type === 'dao' ? 'text-blue-400 font-bold' :
-                                            c.type === 'incident' ? 'text-red-400' : 'text-gray-400'
+                                    className={`text-xs font-mono flex space-x-2 ${c.type === 'goal' ? 'text-yellow-300 font-bold' :
+                                        c.type === 'dao' ? 'text-blue-300 font-bold' :
+                                            c.type === 'incident' ? 'text-red-300' : 'text-gray-200'
                                         }`}
                                 >
-                                    <span className="text-gray-600 flex-shrink-0">[{c.time}]</span>
+                                    <span className="text-gray-400 flex-shrink-0">[{c.time}]</span>
                                     <span className="leading-tight">{c.text}</span>
                                 </motion.div>
                             ))}
@@ -818,51 +829,51 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                     </div>
 
                     {/* Reality Feed - Pure Phygital USP */}
-                    <div className="bg-green-900/40 p-3 rounded-xl border border-green-500/30 flex flex-col justify-between order-2 md:order-2">
+                    <div className="bg-green-900/80 p-3 rounded-xl border border-green-400/60 flex flex-col justify-between order-2 md:order-2">
                         <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center space-x-1.5">
-                                <Activity className="w-3.5 h-3.5 text-green-400" />
-                                <span className="text-xs font-black text-green-300 uppercase tracking-widest">Reality Feed</span>
+                                <Activity className="w-3.5 h-3.5 text-green-200" />
+                                <span className="text-xs font-black text-white uppercase tracking-widest">Reality Feed</span>
                             </div>
-                            <span className="text-[10px] text-green-400 font-mono font-semibold">CRE Verified</span>
+                            <span className="text-xs text-green-100 font-mono font-semibold">CRE Verified</span>
                         </div>
                         <div className="space-y-1.5">
                             <div className="flex justify-between text-xs">
-                                <span className="text-gray-400">Venue</span>
+                                <span className="text-green-100 font-medium">Venue</span>
                                 <span className="text-white font-bold">{env.venue}</span>
                             </div>
                             <div className="flex justify-between text-xs">
-                                <span className="text-gray-400">Conditions</span>
+                                <span className="text-green-100 font-medium">Conditions</span>
                                 <span className="text-white font-bold">{env.temp} • {env.weather}</span>
                             </div>
                         </div>
-                        <div className="mt-2 pt-2 border-t border-green-500/20">
-                            <div className="text-[10px] font-black text-green-300 uppercase leading-none mb-1">Impact</div>
-                            <div className="text-xs text-gray-200 italic leading-tight">Pitch friction decreased. Agility penalty active.</div>
+                        <div className="mt-2 pt-2 border-t border-green-400/50">
+                            <div className="text-xs font-black text-green-100 uppercase leading-none mb-1">Impact</div>
+                            <div className="text-xs text-white italic leading-tight">Pitch friction decreased. Agility penalty active.</div>
                         </div>
                     </div>
 
                     {/* Phygital Mission Banner */}
-                    <div className="bg-yellow-900/40 p-3 rounded-xl border border-yellow-500/30 flex flex-col justify-between order-3 md:order-3">
+                    <div className="bg-yellow-900/80 p-3 rounded-xl border border-yellow-400/60 flex flex-col justify-between order-3 md:order-3">
                         <div className="flex items-center space-x-1.5 mb-1">
-                            <Zap className="w-3.5 h-3.5 text-yellow-400" />
-                            <span className="text-xs font-black text-yellow-300 uppercase tracking-widest italic">Local Mission</span>
+                            <Zap className="w-3.5 h-3.5 text-yellow-200" />
+                            <span className="text-xs font-black text-white uppercase tracking-widest italic">Local Mission</span>
                         </div>
                         <div>
                             <div className="text-xs font-black text-white leading-tight mb-1">{env.localMission.title}</div>
-                            <div className="text-[10px] text-yellow-200 leading-tight">Visit <span className="text-yellow-300 font-bold">{env.localMission.landmark}</span> to activate your bounty.</div>
+                            <div className="text-xs text-yellow-50 leading-tight">Visit <span className="text-white font-bold">{env.localMission.landmark}</span> to activate your bounty.</div>
                         </div>
-                        <div className="mt-2 bg-yellow-500/20 rounded-lg py-1 px-2 border border-yellow-500/30">
-                            <div className="text-[10px] font-bold text-yellow-300 text-center uppercase tracking-tighter">{env.localMission.bonus}</div>
+                        <div className="mt-2 bg-yellow-400/40 rounded-lg py-1 px-2 border border-yellow-400/60">
+                            <div className="text-xs font-bold text-white text-center uppercase tracking-tight">{env.localMission.bonus}</div>
                         </div>
                     </div>
 
-                    <div className="bg-blue-900/40 p-3 rounded-xl border border-blue-500/30 flex flex-col justify-center order-4 md:order-4">
+                    <div className="bg-blue-900/80 p-3 rounded-xl border border-blue-400/60 flex flex-col justify-center order-4 md:order-4">
                         <div className="flex items-center space-x-2 mb-1.5">
-                            <Shield className="w-3.5 h-3.5 text-blue-300" />
-                            <span className="text-xs font-black text-blue-200 uppercase tracking-widest">Active DAO Policy</span>
+                            <Shield className="w-3.5 h-3.5 text-blue-200" />
+                            <span className="text-xs font-black text-white uppercase tracking-widest">Active DAO Policy</span>
                         </div>
-                        <p className="text-xs text-blue-100 italic leading-tight">
+                        <p className="text-xs text-blue-50 italic leading-tight">
                             &ldquo;High-intensity pressing authorized. XP rewards increased for ball recovery.&rdquo;
                         </p>
                     </div>
