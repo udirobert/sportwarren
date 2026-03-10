@@ -3,8 +3,8 @@
  * Math, ratings, XP, and form calculations
  */
 
-import type { SkillRating, AttributeType } from '@/types';
-import { BASE_XP, POSITION_ATTRIBUTE_WEIGHTS } from './constants';
+import type { SkillRating, AttributeType, PlayerPosition } from '@/types';
+import { BASE_XP, POSITION_ATTRIBUTE_WEIGHTS } from '../match/constants';
 
 // ============================================================================
 // RATING CALCULATIONS
@@ -26,13 +26,17 @@ export function calculatePositionRating(
   skills: SkillRating[],
   position: string
 ): number {
-  const weights = POSITION_ATTRIBUTE_WEIGHTS[position] || POSITION_ATTRIBUTE_WEIGHTS.MF;
+  const positionKey = position as PlayerPosition;
+  const weights = POSITION_ATTRIBUTE_WEIGHTS[positionKey] || POSITION_ATTRIBUTE_WEIGHTS.MF;
 
   let totalWeight = 0;
   let weightedSum = 0;
 
   skills.forEach((skill) => {
-    const weight = weights[skill.skill] || 1;
+    // weights is an array of relevant AttributeTypes for this position
+    // If the skill is in the relevant list, give it weight 1.5, otherwise 1.0
+    const isRelevant = weights.includes(skill.skill);
+    const weight = isRelevant ? 1.5 : 1;
     weightedSum += skill.rating * weight;
     totalWeight += weight;
   });
@@ -114,7 +118,7 @@ export function calculateMatchXP(
 
   // Clean sheet
   if (stats.cleanSheet) {
-    breakdown.push({ source: 'Clean Sheet', xp: BASE_XP.clean_sheet });
+    breakdown.push({ source: 'Clean Sheet', xp: BASE_XP.cleanSheet });
   }
 
   // Win bonus

@@ -17,6 +17,8 @@ export const BASE_XP = {
   assist: 40,
   cleanSheet: 75,
   appearance: 20,
+  hat_trick: 100,
+  man_of_match: 80,
 };
 
 export const MATCH_MULTIPLIERS = {
@@ -47,10 +49,10 @@ export const FITNESS_CONSTANTS = {
   DEFAULT_SHARPNESS: 50,
   MAX_SHARPNESS: 100,
   MIN_SHARPNESS: 0,
-  
+
   // Daily decay if no activity
   DAILY_SHARPNESS_DECAY: 2,
-  
+
   // Activity gains (approximate)
   ACTIVITY_GAINS: {
     run: 5,
@@ -59,7 +61,7 @@ export const FITNESS_CONSTANTS = {
     field_training: 10,
     match: 15,
   },
-  
+
   // Performance Thresholds
   THRESHOLDS: {
     ELITE: 90,    // +10% to all attributes
@@ -75,7 +77,7 @@ export const FITNESS_CONSTANTS = {
 
 export const MARKET_CONSTANTS = {
   BASE_VALUE: 100, // Base value in USDC/Stablecoins
-  
+
   // Multipliers based on Average Rating
   RATING_MULTIPLIERS: {
     ELITE: 5.0,     // 85+ rating
@@ -83,7 +85,7 @@ export const MARKET_CONSTANTS = {
     REGULAR: 1.0,   // 60-74 rating
     PROSPECT: 0.5,  // <60 rating
   },
-  
+
   // Form multipliers (-5 to +5)
   FORM_MODIFIERS: {
     '↑↑': 1.5,
@@ -94,14 +96,14 @@ export const MARKET_CONSTANTS = {
     '↓': 0.75,
     '↓↓': 0.5,
   },
-  
+
   // Potential multiplier (Level-based)
   POTENTIAL_MODIFIER: (level: number) => {
     if (level < 10) return 1.5; // High potential (young/new)
     if (level < 30) return 1.2;
     return 1.0; // Established
   },
-  
+
   // Scarcity/Demand (Number of squads interested)
   DEMAND_MODIFIER: (interestCount: number) => 1 + (interestCount * 0.1),
 };
