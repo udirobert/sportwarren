@@ -163,7 +163,7 @@ export default function MatchPage() {
 
   if (!activeSquadId || !activeSquad) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-6">
+      <div className="mx-auto max-w-4xl px-4 py-6 text-gray-900 dark:text-gray-100">
         <Card className="py-12 text-center">
           <Trophy className="mx-auto mb-4 h-12 w-12 text-gray-300" />
           <h1 className="mb-2 text-2xl font-bold text-gray-900">Match Center</h1>
@@ -183,7 +183,7 @@ export default function MatchPage() {
       <div className="rounded-3xl border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_45%),linear-gradient(135deg,#f5fffb,#ecfdf5)] p-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <div className="mb-3 inline-flex items-center rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+            <div className="mb-3 inline-flex items-center rounded-full bg-white/80 dark:bg-gray-800/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
               Match Operations
             </div>
             <h1 className="text-3xl font-bold text-gray-900">Match Center</h1>
@@ -232,7 +232,7 @@ export default function MatchPage() {
         </Card>
       </div>
 
-      <div className="sticky top-0 z-10 -mx-4 px-4 py-2 bg-white/95 backdrop-blur-sm border-b border-gray-100 md:static md:mx-0 md:px-0 md:py-0 md:bg-transparent md:backdrop-blur-none md:border-0">
+      <div className="sticky top-0 z-10 -mx-4 px-4 py-2 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-700 md:static md:mx-0 md:px-0 md:py-0 md:bg-transparent md:backdrop-blur-none md:border-0">
         <div className="flex flex-wrap gap-2 rounded-2xl bg-gray-100 p-1">
         {[
           { key: "verify", label: `Verify (${pendingMatches.length})`, icon: Shield },
@@ -243,7 +243,7 @@ export default function MatchPage() {
             key={key}
             onClick={() => setViewMode(key as ViewMode)}
             className={`flex flex-1 items-center justify-center space-x-2 rounded-xl px-4 py-3 min-h-[44px] transition-all ${
-              viewMode === key ? "bg-white text-emerald-700 shadow-sm" : "text-gray-600 hover:text-gray-900"
+              viewMode === key ? "bg-white dark:bg-gray-700 text-emerald-700 dark:text-emerald-400 shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
             }`}
           >
             <Icon className="h-4 w-4" />

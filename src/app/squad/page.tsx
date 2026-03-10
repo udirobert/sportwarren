@@ -79,7 +79,7 @@ export default function SquadPage() {
   };
 
   return (
-    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="max-w-6xl mx-auto px-4 py-4 md:py-6 pb-24 md:pb-6 space-y-4 md:space-y-6">
+    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="max-w-6xl mx-auto px-4 py-4 md:py-6 pb-24 md:pb-6 space-y-4 md:space-y-6 text-gray-900 dark:text-gray-100">
       {/* Header — compact on mobile */}
       <div className="flex items-center gap-3 md:block md:text-center">
         <div className="w-10 h-10 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shrink-0 md:mx-auto md:mb-4">
@@ -145,8 +145,8 @@ export default function SquadPage() {
             onClick={() => setActiveTab(key as SquadTab)}
             className={`flex items-center justify-center gap-1.5 py-2.5 px-3 md:px-4 rounded-md transition-all whitespace-nowrap min-w-max touch-manipulation ${
               activeTab === key
-                ? 'bg-white text-blue-600 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
+                ? 'bg-white dark:bg-gray-700 text-blue-600 dark:text-blue-400 shadow-sm'
+                : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
             }`}
           >
             <Icon className="w-4 h-4 shrink-0" />
