@@ -102,19 +102,25 @@ export const ContextualHelp: React.FC<ContextualHelpProps> = ({
 
       {/* Active tip display */}
       {activeTip && (
-        <div className={`absolute z-20 ${getPositionClasses(activeTip.position)}`}>
+        <div 
+          className={`absolute z-20 ${getPositionClasses(activeTip.position)}`}
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+        >
           <div className="bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-xs">
             <div className="flex items-start justify-between mb-2">
               <div className="flex items-center space-x-2">
-                <Lightbulb className="w-4 h-4 text-yellow-500" />
+                <Lightbulb className="w-4 h-4 text-yellow-500" aria-hidden="true" />
                 <h4 className="font-medium text-gray-900 text-sm">{activeTip.title}</h4>
               </div>
               {activeTip.dismissible !== false && (
                 <button
                   onClick={handleDismiss}
-                  className="text-gray-400 hover:text-gray-600"
+                  className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 rounded"
+                  aria-label="Dismiss tip"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4" aria-hidden="true" />
                 </button>
               )}
             </div>
@@ -125,23 +131,23 @@ export const ContextualHelp: React.FC<ContextualHelpProps> = ({
               <div className="flex items-center justify-between">
                 <button
                   onClick={handleDismiss}
-                  className="text-xs text-gray-500 hover:text-gray-700"
+                  className="text-xs text-gray-500 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-1"
                 >
                   Don't show again
                 </button>
                 <button
                   onClick={() => setActiveTip(null)}
-                  className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-700"
+                  className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-1"
                 >
                   <span>Got it</span>
-                  <ArrowRight className="w-3 h-3" />
+                  <ArrowRight className="w-3 h-3" aria-hidden="true" />
                 </button>
               </div>
             )}
           </div>
           
           {/* Arrow */}
-          <div className={`absolute ${getArrowClasses(activeTip.position)}`}>
+          <div className={`absolute ${getArrowClasses(activeTip.position)}`} aria-hidden="true">
             <div className="w-2 h-2 bg-white border border-gray-200 transform rotate-45"></div>
           </div>
         </div>

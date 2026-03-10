@@ -6,6 +6,8 @@ import { chainlinkService } from '../../../server/services/blockchain/chainlink'
 import { yellowService, type MatchSettlementResult } from '../../../server/services/blockchain/yellow';
 import { postTreasuryLedgerEntry } from '../../../server/services/economy/treasury-ledger';
 import { getMatchFeeDistribution } from '../../lib/yellow/match-fees';
+import { simulateMatch, calculateWinProbabilities } from '../../lib/match/simulation-engine';
+import { Tactics, PlayerAttributes } from '@/types';
 
 const MatchStatus = z.enum(['pending', 'verified', 'disputed', 'finalized']);
 
@@ -699,6 +701,96 @@ export const matchRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to generate Captain\'s Log',
+          cause: error,
+        });
+      }
+    }),
+
+  // Preview a match between two squads (Simulation)
+  preview: publicProcedure
+    .input(z.object({
+      homeSquadId: z.string().min(1, 'Home squad is required'),
+      awaySquadId: z.string().min(1, 'Away squad is required'),
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const getSquadData = async (squadId: string) => {
+          const squad = await ctx.prisma.squad.findUnique({
+            where: { id: squadId },
+            include: {
+              tactics: true,
+              members: {
+                include: {
+                  user: {
+                    include: {
+                      playerProfile: {
+                        include: { attributes: true }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          });
+
+          if (!squad) throw new TRPCError(Errors.SQUAD_NOT_FOUND);
+
+          // Map to simulation engine types
+          const tactics: Tactics = {
+            formation: (squad.tactics?.formation as any) || '4-4-2',
+            style: (squad.tactics?.playStyle as any) || 'balanced',
+            instructions: (squad.tactics?.instructions as any) || {
+              width: 'normal',
+              tempo: 'normal',
+              passing: 'mixed',
+              pressing: 'medium',
+              defensiveLine: 'normal'
+            },
+            setPieces: (squad.tactics?.setPieces as any) || {
+              corners: 'near_post',
+              freeKicks: 'shoot',
+              penalties: ''
+            }
+          };
+
+          const players: PlayerAttributes[] = squad.members
+            .filter(m => m.user.playerProfile)
+            .map(m => {
+              const profile = m.user.playerProfile!;
+              return {
+                address: m.user.walletAddress,
+                playerName: m.user.name || 'Unknown',
+                position: (m.user.position as any) || 'MF',
+                skills: profile.attributes.map(a => ({
+                  skill: a.attribute as any,
+                  rating: a.rating,
+                  history: a.history,
+                  // other fields omitted for simplicity in simulation
+                } as any)),
+                // other fields omitted
+              } as any;
+            });
+
+          return { players, tactics };
+        };
+
+        const [homeData, awayData] = await Promise.all([
+          getSquadData(input.homeSquadId),
+          getSquadData(input.awaySquadId)
+        ]);
+
+        const simulation = simulateMatch(homeData, awayData);
+        const probabilities = calculateWinProbabilities(homeData, awayData);
+
+        return {
+          ...simulation,
+          probability: probabilities,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Match simulation failed',
           cause: error,
         });
       }

@@ -199,3 +199,80 @@
     border-color: rgba(59, 130, 246, 0.4);
   }
 }
+
+/* ============================================
+   Accessibility Enhancements
+   ============================================ */
+
+/* Reduced motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Skip link for keyboard navigation */
+.skip-link {
+  @apply sr-only;
+}
+
+.skip-link:focus {
+  @apply not-sr-only absolute top-4 left-4 z-[9999] px-4 py-2 bg-green-600 text-white rounded-lg shadow-lg;
+  outline: none;
+}
+
+/* Enhanced focus states with dark mode support */
+.focus-ring-enhanced {
+  @apply focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2;
+}
+
+.dark .focus-ring-enhanced {
+  @apply focus:ring-offset-gray-900;
+}
+
+/* ============================================
+   Skeleton Loading Utilities
+   ============================================ */
+
+.skeleton {
+  @apply animate-pulse bg-gray-200 dark:bg-gray-700 rounded;
+}
+
+.skeleton-text {
+  @apply skeleton h-4 w-full;
+}
+
+.skeleton-text-sm {
+  @apply skeleton h-3 w-3/4;
+}
+
+.skeleton-card {
+  @apply skeleton h-32 w-full;
+}
+
+.skeleton-avatar {
+  @apply skeleton h-10 w-10 rounded-full;
+}
+
+.skeleton-avatar-sm {
+  @apply skeleton h-8 w-8 rounded-full;
+}
+
+.skeleton-stat {
+  @apply skeleton h-6 w-12 inline-block;
+}
+
+/* Hide scrollbar utility for carousels */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

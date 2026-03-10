@@ -27,6 +27,12 @@ const DEFAULT_PREFERENCES: UserPreferences = {
   unlockedFeatures: ['dashboard', 'match-tracker', 'basic-stats'],
   dismissedTutorials: [],
   featureDiscoveryLevel: 0,
+  // Dashboard personalization
+  dashboardCustomization: {
+    hiddenWidgets: [],
+    pinnedWidgets: [],
+    widgetOrder: [],
+  },
 };
 
 export function useUserPreferences() {
@@ -126,6 +132,70 @@ export function useUserPreferences() {
     }
   }, [preferences, savePreferences]);
 
+  // Dashboard customization
+  const hideWidget = useCallback((widgetId: string) => {
+    const current = preferences.dashboardCustomization?.hiddenWidgets || [];
+    if (!current.includes(widgetId)) {
+      savePreferences({
+        dashboardCustomization: {
+          ...preferences.dashboardCustomization,
+          hiddenWidgets: [...current, widgetId],
+        },
+      });
+    }
+  }, [preferences, savePreferences]);
+
+  const showWidget = useCallback((widgetId: string) => {
+    const current = preferences.dashboardCustomization?.hiddenWidgets || [];
+    savePreferences({
+      dashboardCustomization: {
+        ...preferences.dashboardCustomization,
+        hiddenWidgets: current.filter(id => id !== widgetId),
+      },
+    });
+  }, [preferences, savePreferences]);
+
+  const pinWidget = useCallback((widgetId: string) => {
+    const current = preferences.dashboardCustomization?.pinnedWidgets || [];
+    if (!current.includes(widgetId)) {
+      savePreferences({
+        dashboardCustomization: {
+          ...preferences.dashboardCustomization,
+          pinnedWidgets: [widgetId, ...current.filter(id => id !== widgetId)],
+        },
+      });
+    }
+  }, [preferences, savePreferences]);
+
+  const unpinWidget = useCallback((widgetId: string) => {
+    const current = preferences.dashboardCustomization?.pinnedWidgets || [];
+    savePreferences({
+      dashboardCustomization: {
+        ...preferences.dashboardCustomization,
+        pinnedWidgets: current.filter(id => id !== widgetId),
+      },
+    });
+  }, [preferences, savePreferences]);
+
+  const reorderWidgets = useCallback((widgetIds: string[]) => {
+    savePreferences({
+      dashboardCustomization: {
+        ...preferences.dashboardCustomization,
+        widgetOrder: widgetIds,
+      },
+    });
+  }, [preferences, savePreferences]);
+
+  const resetDashboard = useCallback(() => {
+    savePreferences({
+      dashboardCustomization: {
+        hiddenWidgets: [],
+        pinnedWidgets: [],
+        widgetOrder: [],
+      },
+    });
+  }, [savePreferences]);
+
   return {
     preferences,
     isLoading,
@@ -134,5 +204,12 @@ export function useUserPreferences() {
     unlockFeature,
     dismissTutorial,
     adaptUIComplexity,
+    // Dashboard customization
+    hideWidget,
+    showWidget,
+    pinWidget,
+    unpinWidget,
+    reorderWidgets,
+    resetDashboard,
   };
 }

@@ -301,8 +301,8 @@ export const SmartNavigation: React.FC = () => {
         </>
       )}
 
-      {/* Spacers for fixed bars */}
-      <div className="h-14 md:h-16" />
+      {/* Spacers for fixed bars - skip link target */}
+      <div id="main-content" className="h-14 md:h-16" />
     </>
   );
 };

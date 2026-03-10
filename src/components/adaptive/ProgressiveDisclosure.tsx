@@ -90,7 +90,10 @@ export const ProgressiveDisclosure: React.FC<ProgressiveDisclosureProps> = ({
       {title && (
         <button
           onClick={() => setIsExpanded(!isExpanded)}
-          className="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          aria-expanded={isExpanded}
+          aria-controls={`disclosure-${feature}`}
+          id={`disclosure-trigger-${feature}`}
+          className="w-full flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
         >
           <div className="flex items-center space-x-2">
             <span className="font-medium text-gray-900">{title}</span>
@@ -109,7 +112,12 @@ export const ProgressiveDisclosure: React.FC<ProgressiveDisclosureProps> = ({
       )}
       
       {(isExpanded || !title) && (
-        <div className={title ? 'mt-2' : ''}>
+        <div 
+          id={`disclosure-${feature}`}
+          role="region"
+          aria-labelledby={title ? `disclosure-trigger-${feature}` : undefined}
+          className={title ? 'mt-2' : ''}
+        >
           {children}
         </div>
       )}
