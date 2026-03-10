@@ -12,6 +12,7 @@ interface StatCardProps {
   color?: 'green' | 'blue' | 'orange' | 'purple';
   onClick?: () => void;
   cmTrend?: 'up' | 'down' | 'stable';
+  loading?: boolean;
 }
 
 export const StatCard: React.FC<StatCardProps> = ({
@@ -21,7 +22,8 @@ export const StatCard: React.FC<StatCardProps> = ({
   trend,
   color = 'green',
   onClick,
-  cmTrend
+  cmTrend,
+  loading = false,
 }) => {
   const colorClasses = {
     green: 'bg-green-600 text-white',
@@ -37,24 +39,32 @@ export const StatCard: React.FC<StatCardProps> = ({
         hover:shadow-md active:shadow-lg transition-all duration-200 
         p-4 md:p-6 touch-manipulation
         ${onClick ? 'cursor-pointer select-none' : ''}
+        ${loading ? 'opacity-80' : ''}
       `}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
+      aria-busy={loading}
     >
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-600 mb-1 truncate">{title}</p>
           <div className="flex items-center space-x-2">
-            <p className="text-xl md:text-2xl font-bold text-gray-900 mb-2 break-words">{value}</p>
-            {cmTrend === 'up' && (
-              <Triangle className="w-2 h-2 fill-green-500 text-green-500 mb-2" />
-            )}
-            {cmTrend === 'down' && (
-              <Triangle className="w-2 h-2 fill-red-500 text-red-500 rotate-180 mb-2" />
+            {loading ? (
+              <span className="skeleton-stat" />
+            ) : (
+              <>
+                <p className="text-xl md:text-2xl font-bold text-gray-900 mb-2 break-words">{value}</p>
+                {cmTrend === 'up' && (
+                  <Triangle className="w-2 h-2 fill-green-500 text-green-500 mb-2" />
+                )}
+                {cmTrend === 'down' && (
+                  <Triangle className="w-2 h-2 fill-red-500 text-red-500 rotate-180 mb-2" />
+                )}
+              </>
             )}
           </div>
-          {trend && (
+          {trend && !loading && (
             <div className={`flex items-center text-xs md:text-sm ${trend.positive ? 'text-green-600' : 'text-red-600'
               }`}>
               <span className="font-medium">
@@ -62,6 +72,9 @@ export const StatCard: React.FC<StatCardProps> = ({
               </span>
               <span className="ml-1 text-gray-500 hidden sm:inline">vs last month</span>
             </div>
+          )}
+          {loading && trend && (
+            <span className="skeleton-text-sm inline-block" />
           )}
         </div>
         <div className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center flex-shrink-0 ml-3 ${colorClasses[color]}`}>

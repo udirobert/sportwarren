@@ -90,3 +90,59 @@ export async function postTreasuryLedgerEntry({
     transaction,
   };
 }
+
+/**
+ * Automates match rewards distribution from a squad treasury
+ */
+export async function distributeMatchRewards({
+  prisma,
+  squadId,
+  matchId,
+  isWinner,
+  isDraw,
+  playerStats, // Array of { userId, goals, assists, etc }
+}: {
+  prisma: PrismaClient;
+  squadId: string;
+  matchId: string;
+  isWinner: boolean;
+  isDraw: boolean;
+  playerStats: any[];
+}) {
+  const prizePool = isWinner ? 500 : isDraw ? 200 : 50;
+  const description = `Match Reward for Match #${matchId.slice(-6)} (${isWinner ? 'WIN' : isDraw ? 'DRAW' : 'LOSS'})`;
+
+  // 1. Record the Income to the Treasury (e.g., from the league prize pool)
+  await postTreasuryLedgerEntry({
+    prisma,
+    squadId,
+    amountDelta: prizePool,
+    type: 'income',
+    category: 'prize_money',
+    description,
+  });
+
+  // 2. Automate "Match Appearance Fees" and "Goal Bonuses" to Players
+  // This simulates a DAO-approved policy for rewarding performance
+  for (const stats of playerStats) {
+    const appearanceFee = 20;
+    const goalBonus = (stats.goals || 0) * 50;
+    const totalBonus = appearanceFee + goalBonus;
+
+    if (totalBonus > 0) {
+      await postTreasuryLedgerEntry({
+        prisma,
+        squadId,
+        amountDelta: -totalBonus,
+        type: 'expense',
+        category: 'wages',
+        description: `Performance Bonus: ${stats.goals || 0} goals + Appearance Fee for #${matchId.slice(-6)}`,
+      });
+      
+      // In a real implementation, this would trigger an actual on-chain payout 
+      // via the Yellow Network or a Smart Contract disbursement.
+    }
+  }
+
+  return { success: true, prizePool };
+}

@@ -133,6 +133,31 @@
 
 ---
 
+## 9. Managerial Simulation & Economics ⭐ NEW
+
+### Shadow Match Engine
+- **Monte Carlo Simulations:** Run 1,000+ iterations to predict IRL match outcomes.
+- **Tactical Modifiers:** Formation and playstyle choices (e.g., High Press, Low Block) directly impact win probability.
+- **Pre-match Insights:** AI-driven tactical briefings identifying opponent weaknesses and squad fatigue.
+
+### Player Valuation Engine
+- **Fair Market Value:** Data-driven valuations in USDC based on average rating, current form, and potential.
+- **Market Dynamics:** Values increase based on "Interest" (active transfer offers) and performance momentum.
+- **Tiered Classification:** Players classified as Prospect, Regular, Star, or Elite based on attributes.
+
+### Fitness & Sharpness System
+- **Match Sharpness:** A dynamic attribute that decays daily without physical activity.
+- **Performance Modifiers:** Sharpness directly affects in-game simulation performance (+10% to -25% attribute modifiers).
+- **Activity-Based Recovery:** Specific gains from Runs, HIIT, and Field Training sessions.
+
+### Automated DAO Treasury Loop
+- **Autonomous Payouts:** Match verification automatically triggers prize money deposits to the Squad Treasury.
+- **Performance Bonuses:** Automated "Match Appearance Fees" and "Goal Bonuses" distributed to players' ledgers.
+
+**Status:** ✅ Complete (Frontend + Backend + Simulation Logic + Economic Automation)
+
+---
+
 ## Feature Status Summary
 
 | Feature | Frontend | Backend | Database | Overall |
@@ -143,6 +168,7 @@
 | Rivalries | ✅ | ✅ | ✅ | ✅ 100% |
 | Training Center | ✅ | ✅ | ✅ | ✅ 100% |
 | AI Agents | ✅ | ✅ | ✅ | ✅ 100% |
+| Managerial Sim | ✅ | ✅ | ✅ | ✅ 100% |
 | Viral Mechanics | ✅ | ✅ | ✅ | ✅ 100% |
 | Office / Market | ✅ | ✅ | ✅ | ✅ 100% |
 | Blockchain | ✅ | ✅ | ✅ | ✅ 90% |

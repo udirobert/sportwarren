@@ -62,7 +62,8 @@ Treasury reward distributed
 │  │              │  │              │  │                  │          │
 │  │ • Photo/voice│  │ • DAO votes  │  │ • Tactics        │          │
 │  │ • Consensus  │  │ • Transfers  │  │ • Scout reports  │          │
-│  │ • Verification│ │ • Treasury   │  │ • Form tracking  │          │
+│  │ • Verification│ │ • Treasury   │  │ • Shadow Engine  │          │
+│  │              │  │              │  │ • Valuations     │          │
 │  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘          │
 │         │                  │                   │                    │
 │         └──────────────────┼───────────────────┘                    │
@@ -75,8 +76,8 @@ Treasury reward distributed
 │              ┌───────────┴───────────┐                              │
 │              ▼                       ▼                              │
 │  ┌─────────────────────┐  ┌─────────────────────┐                  │
-│  │   Prisma ORM        │  │   Wallet Auth       │                  │
-│  │   (PostgreSQL)      │  │   (algosdk)         │                  │
+│  │   Prisma ORM        │  │   Logic Engines     │                  │
+│  │   (PostgreSQL)      │  │   (Simulation/Val)  │                  │
 │  └──────────┬──────────┘  └─────────────────────┘                  │
 │             │                                                       │
 │  ┌──────────┴──────────┐                                           │
@@ -255,6 +256,7 @@ match.submit({ homeSquadId, awaySquadId, homeScore, awayScore, matchDate, latitu
 match.verify({ matchId, verified, homeScore?, awayScore? })
 match.list({ status?, squadId?, limit?, offset? })
 match.getById({ id }) // Returns rich creResult metadata
+match.preview({ homeSquadId, awaySquadId }) // Shadow Engine Simulation
 ```
 
 ### Player Router
@@ -279,6 +281,7 @@ squad.join({ squadId })
 squad.leave({ squadId })
 squad.getMySquads()
 squad.getNearbySquads({ latitude, longitude, radiusKm? })
+squad.getManagerAlerts({ squadId }) // Proactive AI Insights
 
 // Matchmaking & Governance
 squad.createChallenge({ toSquadId, proposedDate, pitchId?, message? })
@@ -297,7 +300,8 @@ squad.getTreasury({ squadId })
 squad.depositToTreasury({ squadId, amount, description? })
 squad.withdrawFromTreasury({ squadId, amount, reason, category })
 
-// Transfers
+// Market & Transfers
+market.getPlayerValuation({ userId }) // Valuation Engine
 squad.getTransferOffers({ squadId, type: 'incoming' | 'outgoing' })
 squad.createTransferOffer({ toSquadId, playerId, offerType, amount, loanDuration? })
 squad.respondToTransferOffer({ offerId, accept })

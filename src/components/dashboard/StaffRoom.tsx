@@ -23,6 +23,7 @@ import { useAgentAlerts } from '@/hooks/squad/useAgentAlerts';
 import { useAgentContext } from '@/context/AgentContext';
 import { useYellowSession } from '@/hooks/useYellowSession';
 import { ContractNegotiationModal } from './ContractNegotiationModal';
+import { StaffAdvisor } from './StaffAdvisor';
 
 // Derive reputation tier from reputation score
 function reputationTierLabel(score: number): string {
@@ -788,27 +789,21 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     </div>
                 </div>
 
-                {/* Right Sidebar: Contextual Info */}
-                <div className="hidden lg:block w-72 bg-black/40 border-l border-white/5 p-6">
-                    <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em] mb-4">Dossier</h4>
-                    <p className="text-xs text-gray-200 leading-relaxed italic mb-6">
-                        "{selectedStaff?.biography}"
-                    </p>
-
-                    <div className="space-y-4 pt-4 border-t border-white/5">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black text-gray-300 uppercase">Current Strategy</span>
-                            <span className="text-[10px] font-bold text-blue-400">EXPANSION</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-black text-gray-300 uppercase">Season Progress</span>
-                            <span className="text-[10px] font-bold text-white font-mono">24 / 48 Matches</span>
+                {/* Right Sidebar: Proactive AI Alerts */}
+                <div className="hidden lg:block w-80 bg-black/40 border-l border-white/5 p-6 overflow-y-auto">
+                    <div className="flex items-center justify-between mb-6">
+                        <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Staff Intel</h4>
+                        <div className="flex items-center space-x-1">
+                            <div className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />
+                            <span className="text-[8px] font-bold text-green-500 uppercase">Live Analysis</span>
                         </div>
                     </div>
+                    
+                    <StaffAdvisor squadId={squadId || ''} />
 
-                    <div className="mt-8 bg-blue-600/10 p-4 rounded-xl border border-blue-500/20">
+                    <div className="mt-8 bg-blue-600/10 p-4 rounded-2xl border border-blue-500/20">
                         <TrendingUp className="w-5 h-5 text-blue-500 mb-2" />
-                        <h5 className="text-[10px] font-black text-white uppercase mb-1">Market Insight</h5>
+                        <h5 className="text-[10px] font-black text-white uppercase mb-1">Economic Outlook</h5>
                         <p className="text-[9px] text-blue-100 leading-tight">
                             Lens reputation scores are inflating. Now is the time to secure long-term contracts for "Gold" tier prospects before valuations skyrocket.
                         </p>
