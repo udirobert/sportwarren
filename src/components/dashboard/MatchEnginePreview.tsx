@@ -436,27 +436,65 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                 }
             }
 
-            // Shooting
+            // Scored decision table: pass / shoot / dribble / hold
             if (isOwner && !shotFired) {
                 const inShootingRange = (p.team === 'home' && p.x > 75 && Math.abs(p.y - 50) < 25)
                     || (p.team === 'away' && p.x < 25 && Math.abs(p.y - 50) < 25);
-                const isForward = ['ST', 'LW', 'RW', 'CM', 'ATT'].includes(p.role);
-                if (inShootingRange && isForward && Math.random() < 0.04) {
-                    const gx = p.team === 'home' ? 99 : 1;
-                    const gy = 50 + (Math.random() - 0.5) * 20;
-                    const sdx = gx - p.x; const sdy = gy - p.y;
-                    const sd = Math.sqrt(sdx * sdx + sdy * sdy);
-                    const power = 3.5 + Math.random() * 1.5;
-                    nextBallVx = (sdx / sd) * power;
-                    nextBallVy = (sdy / sd) * power;
-                    currentOwnerId = null; shotFired = true;
-                    addEvent(`${p.name} shoots!`, 'shot', p.team);
+                const distToGoal = p.team === 'home' ? 100 - p.x : p.x;
+                const nearOpponent = opponents.find(d => Math.sqrt((d.x - p.x) ** 2 + (d.y - p.y) ** 2) < 10);
+
+                // Offside check: attacker is beyond last defender when ball is played
+                const isAttackerRole = ['ST', 'LW', 'RW', 'ATT'].includes(p.role);
+                const lastDefenderX = opponents
+                    .filter(d => ['CB', 'LB', 'RB', 'DEF'].includes(d.role))
+                    .reduce((acc, d) => {
+                        const defX = p.team === 'home' ? d.x : 100 - d.x;
+                        return Math.max(acc, defX);
+                    }, 0);
+                const attackerAdvX = p.team === 'home' ? p.x : 100 - p.x;
+                const isOffside = isAttackerRole && attackerAdvX > lastDefenderX + 2 && attackerAdvX > 50;
+
+                // Weighted decision scores based on player stats
+                const shootScore = inShootingRange && !isOffside
+                    ? ((p.stats as any).shooting || 70) / 100 * (1 - distToGoal / 50) * (nearOpponent ? 0.6 : 1.0)
+                    : 0;
+                const passScore = nearOpponent
+                    ? (p.stats.passing / 100) * 0.8
+                    : (p.stats.passing / 100) * 0.3;
+                const dribbleScore = nearOpponent
+                    ? (p.stats.agility / 100) * 0.5
+                    : 0.1;
+                const holdScore = 0.15;
+
+                const total = shootScore + passScore + dribbleScore + holdScore;
+                const roll = Math.random() * total;
+
+                if (roll < shootScore && Math.random() < 0.06) {
+                    if (isOffside) {
+                        addEvent(`🚩 Offside! ${p.name} caught in advanced position.`, 'incident', p.team);
+                    } else {
+                        const gx = p.team === 'home' ? 99 : 1;
+                        const gy = 50 + (Math.random() - 0.5) * 20;
+                        const sdx = gx - p.x; const sdy = gy - p.y;
+                        const sd = Math.sqrt(sdx * sdx + sdy * sdy);
+                        const power = 3.5 + Math.random() * 1.5;
+                        nextBallVx = (sdx / sd) * power;
+                        nextBallVy = (sdy / sd) * power;
+                        currentOwnerId = null; shotFired = true;
+                        addEvent(`${p.name} shoots!`, 'shot', p.team);
+                    }
+                } else if (roll < shootScore + passScore) {
+                    // Trigger pass early (handled below in passing block)
+                    ownerCarryTicks.current = 999;
+                } else if (roll < shootScore + passScore + dribbleScore) {
+                    addEvent(`${p.name} takes on the defender!`, 'pass', p.team);
                 }
+                // else: hold — do nothing
             }
 
             // Passing
             if (isOwner && !shotFired) {
-                ownerCarryTicks.current += 1;
+                if (ownerCarryTicks.current < 999) ownerCarryTicks.current += 1;
                 const carryLimit = 18 + Math.floor(Math.random() * 12);
                 if (ownerCarryTicks.current > carryLimit) {
                     const tms = players.filter(t => t.team === p.team && t.id !== p.id && t.role !== 'GK');

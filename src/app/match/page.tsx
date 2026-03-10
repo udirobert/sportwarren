@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { MatchCapture } from "@/components/match/MatchCapture";
 import { MatchConsensusPanel } from "@/components/match/MatchConsensus";
@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { MOCK_XP_SUMMARY } from "@/lib/mocks";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 
 type ViewMode = "capture" | "verify" | "detail" | "xp-summary" | "history";
 
@@ -32,6 +33,7 @@ export default function MatchPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("capture");
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [showXPSummary, setShowXPSummary] = useState(false);
+  const [xpSummaryData, setXpSummaryData] = useState<{ totalXP: number; attributeGains: { attribute: string; xp: number; oldRating: number; newRating: number }[] } | null>(null);
   const [selectedOpponentId, setSelectedOpponentId] = useState<string>("");
 
   const { data: memberships } = trpc.squad.getMySquads.useQuery(undefined, {
@@ -53,6 +55,12 @@ export default function MatchPage() {
     getMatchById,
     loading,
   } = useMatchVerification(activeSquadId);
+
+  const finalizeMatchXP = trpc.player.finalizeMatchXP.useMutation();
+  const utils = trpc.useUtils();
+  const pullRef = usePullToRefresh({
+    onRefresh: () => utils.squad.getMySquads.invalidate(),
+  });
 
   const { checklistItems } = useOnboarding();
   const matchChecklistDone = checklistItems.find(i => i.id === 'view_match_engine')?.completed ?? false;
@@ -89,6 +97,8 @@ export default function MatchPage() {
     const params = new URLSearchParams(window.location.search);
     setRequestedMode(params.get("mode"));
     setRequestedMatchId(params.get("matchId"));
+    const opponentId = params.get("opponentSquadId");
+    if (opponentId) setSelectedOpponentId(opponentId);
   }, []);
 
   useEffect(() => {
@@ -128,6 +138,22 @@ export default function MatchPage() {
   const handleVerify = async (matchId: string, verified: boolean) => {
     await verifyMatch(matchId, verified);
     if (verified) {
+      try {
+        const result = await finalizeMatchXP.mutateAsync({ matchId });
+        if (result?.results?.length) {
+          const totalXP = result.results.reduce((sum: number, r: any) => sum + (r.totalXP || 0), 0);
+          const attributeGains = result.results.flatMap((r: any) =>
+            Object.entries(r.attributeBreakdown || {}).map(([attribute, xpGained]) => ({
+              attribute,
+              xpGained: xpGained as number,
+              newRating: 0,
+            }))
+          );
+          setXpSummaryData({ totalXP, attributeGains: attributeGains.map((g: any) => ({ attribute: g.attribute, xp: g.xpGained, oldRating: 0, newRating: 0 })) });
+        }
+      } catch {
+        // finalizeMatchXP may fail if match not yet fully verified — fall back to mock
+      }
       setShowXPSummary(true);
       setViewMode("xp-summary");
     } else {
@@ -153,7 +179,7 @@ export default function MatchPage() {
   }
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 pb-24 md:pb-6">
+    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="mx-auto max-w-5xl space-y-6 px-4 py-6 pb-24 md:pb-6">
       <div className="rounded-3xl border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_45%),linear-gradient(135deg,#f5fffb,#ecfdf5)] p-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
@@ -434,8 +460,8 @@ export default function MatchPage() {
           </Button>
 
           <XPGainSummary
-            totalXP={MOCK_XP_SUMMARY.totalXP}
-            attributeGains={MOCK_XP_SUMMARY.attributeGains}
+            totalXP={xpSummaryData?.totalXP ?? MOCK_XP_SUMMARY.totalXP}
+            attributeGains={(xpSummaryData?.attributeGains ?? MOCK_XP_SUMMARY.attributeGains) as any}
           />
 
           <Card className="py-6 text-center">
