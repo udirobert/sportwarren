@@ -23,9 +23,9 @@ function AnalyticsPageInner() {
     : null;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 pb-24 md:pb-6 space-y-4">
+    <div className="max-w-6xl mx-auto px-4 py-6 pb-24 md:pb-6 space-y-4 text-gray-900 dark:text-gray-100">
       {/* Contextual nav */}
-      <Card className="border-gray-100 bg-gray-50 py-3">
+      <Card className="border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-sm text-gray-600">
             Performance analytics improve as you log more verified matches. Submit results to build your data set.

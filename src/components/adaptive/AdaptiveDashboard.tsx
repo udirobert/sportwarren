@@ -460,11 +460,11 @@ export const AdaptiveDashboard: React.FC = () => {
       <GuestTour />
       <AgenticConcierge />
 
-      <div id="dashboard-header" className="border-b border-gray-200 pb-3 mb-2">
+      <div id="dashboard-header" className="border-b border-gray-200 dark:border-gray-700 pb-3 mb-2">
         {/* Mobile header — compact single row */}
         <div className="flex items-center justify-between md:hidden">
           <div className="min-w-0">
-            <h1 className="text-lg font-black text-gray-900 tracking-tight truncate">
+            <h1 className="text-lg font-black text-gray-900 dark:text-white tracking-tight truncate">
               {memberships?.[0]?.squad?.name ?? (isGuest ? 'Demo Squad' : 'My Squad')}
             </h1>
             {address && (
@@ -475,7 +475,7 @@ export const AdaptiveDashboard: React.FC = () => {
           </div>
           <button
             onClick={handleOpenOffice}
-            className="ml-3 shrink-0 flex items-center gap-1.5 bg-gray-900 text-white text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-lg"
+            className="ml-3 shrink-0 flex items-center gap-1.5 bg-gray-900 dark:bg-gray-700 text-white text-[10px] font-black uppercase tracking-widest px-3 py-2 rounded-lg"
           >
             <Briefcase className="w-3 h-3 text-blue-400" />
             Office
@@ -484,7 +484,7 @@ export const AdaptiveDashboard: React.FC = () => {
         {/* Desktop header — full */}
         <div className="hidden md:flex items-end justify-between">
           <div>
-            <h1 className="text-3xl font-black text-gray-900 tracking-tight">
+            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
               {memberships?.[0]?.squad?.name ?? (isGuest ? 'Demo Squad' : 'My Squad')}
               {address && (
                 <span className="text-gray-400 font-medium text-lg ml-2">
@@ -510,10 +510,10 @@ export const AdaptiveDashboard: React.FC = () => {
                 <div className="text-[8px] font-black text-gray-400 uppercase">Club Status</div>
                 <div className="text-xs font-bold text-green-600">Stable</div>
               </div>
-              <div className="w-px h-8 bg-gray-200" />
+              <div className="w-px h-8 bg-gray-200 dark:bg-gray-700" />
               <div className="text-right">
                 <div className="text-[8px] font-black text-gray-400 uppercase">Rank</div>
-                <div className="text-xs font-bold text-gray-900">#42 Local</div>
+                <div className="text-xs font-bold text-gray-900 dark:text-white">#42 Local</div>
               </div>
             </div>
           </div>
@@ -546,7 +546,7 @@ export const AdaptiveDashboard: React.FC = () => {
           widgets.length === 0 ? null : (
             <div>
               <div className="flex items-center justify-between mb-2">
-                <h2 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">{title}</h2>
+                <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{title}</h2>
                 {href && (
                   <Link href={href} className="flex items-center gap-0.5 text-[10px] font-bold text-green-600 uppercase tracking-widest min-h-[44px] md:min-h-0">
                     See all <ChevronRight className="w-3 h-3" />

@@ -51,7 +51,7 @@ export default function StatsPage() {
 
   if (loading) {
     return (
-      <main className="max-w-4xl mx-auto px-4 py-12 pb-24 md:pb-6">
+      <main className="max-w-4xl mx-auto px-4 py-12 pb-24 md:pb-6 text-gray-900 dark:text-gray-100">
         <div className="animate-pulse space-y-4">
           <div className="h-8 bg-gray-100 rounded-xl w-48" />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -88,7 +88,7 @@ export default function StatsPage() {
   const physical = attributes.skills.find((s) => s.skill === "physical")?.rating ?? 0;
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-8 space-y-6">
+    <main className="max-w-4xl mx-auto px-4 py-8 space-y-6 text-gray-900 dark:text-gray-100">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -122,7 +122,7 @@ export default function StatsPage() {
       </div>
 
       {/* Skill ratings */}
-      <Card className="border-gray-200 bg-white">
+      <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <h2 className="text-base font-black uppercase tracking-wide text-gray-700 mb-4">Skill Ratings</h2>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {[
@@ -153,7 +153,7 @@ export default function StatsPage() {
       </Card>
 
       {/* XP progress */}
-      <Card className="border-gray-200 bg-white">
+      <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-base font-black uppercase tracking-wide text-gray-700">XP Progress</h2>
           <span className="text-xs text-gray-500">Level {attributes.xp.level} → {attributes.xp.level + 1}</span>
@@ -179,13 +179,13 @@ export default function StatsPage() {
         </Link>
         <Link
           href="/reputation"
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           <Trophy className="w-4 h-4" /> View Reputation
         </Link>
         <Link
           href="/squad"
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
         >
           <ArrowRight className="w-4 h-4" /> Go to Squad
         </Link>

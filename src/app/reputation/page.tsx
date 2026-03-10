@@ -19,9 +19,9 @@ function ReputationPageInner() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 pb-24 md:pb-6 space-y-4">
+    <div className="max-w-6xl mx-auto px-4 py-6 pb-24 md:pb-6 space-y-4 text-gray-900 dark:text-gray-100">
       {/* Contextual nav */}
-      <Card className="border-gray-100 bg-gray-50 py-3">
+      <Card className="border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <p className="text-sm text-gray-600">
             Reputation is earned through verified matches. Submit and verify results to grow your score.
@@ -70,7 +70,7 @@ function ReputationPageInner() {
               const won = myScore > oppScore;
               const drew = myScore === oppScore;
               return (
-                <div key={match.id} className="flex items-center gap-3 p-3 border border-gray-100 rounded-lg hover:bg-gray-50">
+                <div key={match.id} className="flex items-center gap-3 p-3 border border-gray-100 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${
                     match.status !== 'VERIFIED' ? 'bg-gray-300' : won ? 'bg-green-500' : drew ? 'bg-yellow-400' : 'bg-red-400'
                   }`}>

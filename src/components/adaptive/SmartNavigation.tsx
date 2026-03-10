@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Target, BarChart3, Users, MessageCircle, X, Plus, Activity, Settings, MoreHorizontal } from 'lucide-react';
+import { Home, Target, BarChart3, Users, MessageCircle, X, Plus, Activity, Settings, MoreHorizontal, Sun, Moon } from 'lucide-react';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { ContextualHelp } from './ContextualHelp';
 
@@ -105,6 +106,8 @@ export const SmartNavigation: React.FC = () => {
   const overflowItems = visibleNavItems.slice(BOTTOM_NAV_MAX - 1);
   const hasOverflow = overflowItems.length > 0;
 
+  const { theme, toggleTheme } = useTheme();
+
   const isActive = (path: string) => pathname === path;
   const activeLabel = visibleNavItems.find(i => isActive(i.path))?.label ?? 'SportWarren';
 
@@ -141,7 +144,7 @@ export const SmartNavigation: React.FC = () => {
   return (
     <>
       {/* Desktop Navigation */}
-      <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
+      <nav className="hidden md:flex fixed top-0 left-0 right-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-6 w-full">
           <div className="flex items-center justify-between h-16">
             <Link 
@@ -153,8 +156,8 @@ export const SmartNavigation: React.FC = () => {
                 <Target className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">SportWarren</h1>
-                <p className="text-xs text-gray-600">Track your legend</p>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">SportWarren</h1>
+                <p className="text-xs text-gray-600 dark:text-gray-400">Track your legend</p>
               </div>
             </Link>
 
@@ -168,7 +171,7 @@ export const SmartNavigation: React.FC = () => {
                     className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-200 ${
                       isActive(path)
                         ? 'bg-green-600 text-white shadow-lg shadow-green-600/25'
-                        : 'text-gray-700 hover:bg-gray-100'
+                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -183,6 +186,15 @@ export const SmartNavigation: React.FC = () => {
                     <span className="font-medium text-sm">Quick Log</span>
                   </button>
                 )}
+
+                {/* Theme toggle */}
+                <button
+                  onClick={toggleTheme}
+                  aria-label="Toggle dark mode"
+                  className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                </button>
               </div>
             </ContextualHelp>
           </div>
@@ -191,15 +203,15 @@ export const SmartNavigation: React.FC = () => {
 
       {/* ── Mobile Top Bar — logo + active page title ─────────────── */}
       <nav className={`md:hidden fixed top-0 left-0 right-0 z-50 transition-shadow duration-200 ${
-        isScrolled ? 'bg-white/95 backdrop-blur-lg shadow-md' : 'bg-white/90 backdrop-blur-md'
-      } border-b border-gray-200`}>
+        isScrolled ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg shadow-md' : 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-md'
+      } border-b border-gray-200 dark:border-gray-700`}>
         <div className="flex items-center h-14 px-4 gap-3">
           <Link href="/" className="touch-manipulation shrink-0" onClick={() => handleNavClick('/')}>
             <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center">
               <Target className="w-5 h-5 text-white" />
             </div>
           </Link>
-          <span className="flex-1 text-base font-semibold text-gray-900 truncate">{activeLabel}</span>
+          <span className="flex-1 text-base font-semibold text-gray-900 dark:text-white truncate">{activeLabel}</span>
           {preferences.primaryRole === 'organizer' ? (
             <Link
               href="/match?mode=capture"
@@ -210,14 +222,20 @@ export const SmartNavigation: React.FC = () => {
               Log
             </Link>
           ) : (
-            <div className="w-16 shrink-0" />
+            <button
+              onClick={toggleTheme}
+              aria-label="Toggle dark mode"
+              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-manipulation shrink-0"
+            >
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </button>
           )}
         </div>
       </nav>
 
       {/* ── Mobile Bottom Tab Bar ─────────────────────────────────── */}
       <div
-        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-lg border-t border-gray-200"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg border-t border-gray-200 dark:border-gray-700"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div className={`grid gap-0.5 px-1 pt-1 pb-1 ${
@@ -229,7 +247,7 @@ export const SmartNavigation: React.FC = () => {
               href={path}
               onClick={() => handleNavClick(path)}
               className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-colors touch-manipulation min-h-[3.25rem] ${
-                isActive(path) ? 'text-green-600 bg-green-50' : 'text-gray-500 active:bg-gray-100'
+                isActive(path) ? 'text-green-600 bg-green-50 dark:bg-green-900/30' : 'text-gray-500 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800'
               }`}
             >
               <Icon className={`w-5 h-5 mb-0.5 transition-transform ${isActive(path) ? 'scale-110' : ''}`} />
@@ -240,7 +258,7 @@ export const SmartNavigation: React.FC = () => {
             <button
               onClick={() => setIsMoreOpen(true)}
               className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-colors touch-manipulation min-h-[3.25rem] ${
-                overflowItems.some(i => isActive(i.path)) ? 'text-green-600 bg-green-50' : 'text-gray-500 active:bg-gray-100'
+                overflowItems.some(i => isActive(i.path)) ? 'text-green-600 bg-green-50 dark:bg-green-900/30' : 'text-gray-500 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800'
               }`}
             >
               <MoreHorizontal className="w-5 h-5 mb-0.5" />
@@ -255,12 +273,12 @@ export const SmartNavigation: React.FC = () => {
         <>
           <div className="md:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-50" onClick={() => setIsMoreOpen(false)} />
           <div
-            className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white rounded-t-2xl shadow-2xl"
+            className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl"
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           >
-            <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-gray-100">
-              <span className="text-sm font-semibold text-gray-700">More</span>
-              <button onClick={() => setIsMoreOpen(false)} className="p-1.5 rounded-lg text-gray-500 active:bg-gray-100 touch-manipulation">
+            <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-gray-100 dark:border-gray-700">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">More</span>
+              <button onClick={() => setIsMoreOpen(false)} className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800 touch-manipulation">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -271,7 +289,7 @@ export const SmartNavigation: React.FC = () => {
                   href={path}
                   onClick={() => handleNavClick(path)}
                   className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-xl touch-manipulation transition-colors ${
-                    isActive(path) ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-700 active:bg-gray-100'
+                    isActive(path) ? 'bg-green-50 dark:bg-green-900/30 text-green-600' : 'bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-700'
                   }`}
                 >
                   <Icon className="w-6 h-6" />
