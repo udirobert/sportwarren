@@ -250,7 +250,7 @@ npm install  # downloads the correct Chromium revision
 **Known warnings (non-fatal):**
 - `⚠️ Invalid Algorand mnemonic` — set a valid 25-word `DEPLOYER_MNEMONIC` in `.env`; on-chain deployments will be skipped otherwise
 - `[ioredis] ECONNREFUSED` — Redis is not running; start with `brew services start redis`
-- `XMTP V2 publishing no longer available` — `@xmtp/xmtp-js` needs upgrading to V3; XMTP messaging will fail until updated
+- `⚠️ XMTP_DB_ENCRYPTION_KEY not set` — set a 32-byte hex string in `.env`; without it a temporary key is used and XMTP data won't persist across restarts
 - `punycode module deprecated` — Node.js v22 warning from a transitive dependency; safe to ignore
 
 ---
