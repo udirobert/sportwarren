@@ -489,7 +489,7 @@ export const AdaptiveDashboard: React.FC = () => {
   };
 
   return (
-    <div className={`max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 pb-24 md:pb-6 ${getLayoutClass()}`}>
+    <div className={`max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 nav-spacer-bottom ${getLayoutClass()}`}>
       <AnimatePresence>
         {isGuest && (
           <motion.div
@@ -594,7 +594,7 @@ export const AdaptiveDashboard: React.FC = () => {
         const progressWidgets = visibleWidgets.filter(w => progressIds.includes(w.id));
         const otherWidgets = visibleWidgets.filter(w => ![...todayIds, ...squadIds, ...progressIds].includes(w.id));
 
-        // Mobile: horizontal scroll carousel; desktop: vertical stack
+        // Mobile: horizontal scroll carousel; desktop: two-column layout
         const Section = ({ title, widgets, href }: { title: string; widgets: typeof visibleWidgets; href?: string }) =>
           widgets.length === 0 ? null : (
             <div>
@@ -606,9 +606,9 @@ export const AdaptiveDashboard: React.FC = () => {
                   </Link>
                 )}
               </div>
-              {/* Mobile: horizontal snap scroll — capped at 3 cards */}
-              <div className="md:hidden -mx-3 px-3">
-                <div className="flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide" style={{ scrollbarWidth: 'none' }}>
+              {/* Mobile: horizontal snap scroll with fade indicator */}
+              <div className="md:hidden -mx-3 px-3 relative">
+                <div className={`flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide ${widgets.length > 1 ? 'carousel-fade-right' : ''}`} style={{ scrollbarWidth: 'none' }}>
                   {widgets.slice(0, 3).map(w => (
                     <div key={w.id} id={w.id} className="snap-start shrink-0 w-[85vw] max-w-sm">
                       {w.component}
@@ -624,8 +624,8 @@ export const AdaptiveDashboard: React.FC = () => {
                   )}
                 </div>
               </div>
-              {/* Desktop: vertical stack */}
-              <div className="hidden md:block space-y-4">
+              {/* Desktop: two-column grid for visual balance */}
+              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {widgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
               </div>
             </div>

@@ -322,7 +322,7 @@ export const matchRouter = createTRPCRouter({
               const { algodClient, deployerAccount } = await import('../../../server/services/blockchain/algorand');
               const appId = parseInt(process.env.ALGORAND_MATCH_VERIFICATION_APP_ID || '0');
 
-              if (appId > 0) {
+              if (appId > 0 && deployerAccount) {
                 const params = await algodClient.getTransactionParams().do();
                 const encoder = new TextEncoder();
 
@@ -651,7 +651,7 @@ export const matchRouter = createTRPCRouter({
           agentInsights: (match as any).agentInsights,
           paymentRail: {
             enabled: !!match.yellowFeeSessionId,
-            assetSymbol: yellowService.getAssetSymbol(),
+            assetSymbol: yellowService.getRailStatus().assetSymbol,
             sessionId: match.yellowFeeSessionId,
             feeAmount: yellowService.getMatchFeeAmount(),
           },

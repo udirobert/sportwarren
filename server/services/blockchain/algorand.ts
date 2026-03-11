@@ -291,6 +291,10 @@ export class AlgorandService {
       if (!appId) return null;
 
       const deployer = this.getDeployerAccount();
+      if (!deployer) {
+        console.error("Deployer account not configured");
+        return null;
+      }
       const params = await this.algodClient.getTransactionParams().do();
       const encoder = new TextEncoder();
 

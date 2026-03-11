@@ -4,6 +4,15 @@
 
 /* Mobile-first responsive design utilities */
 @layer base {
+  :root {
+    /* Navigation spacing - single source of truth */
+    --nav-height-mobile: 3.5rem;
+    --nav-height-desktop: 4rem;
+    --bottom-nav-height: 3.25rem;
+    --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-top: env(safe-area-inset-top, 0px);
+  }
+  
   html {
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
@@ -26,13 +35,34 @@
     user-select: none;
   }
   
+  /* Navigation spacing - uses CSS variables for consistency */
+  .nav-spacer-top {
+    height: var(--nav-height-mobile);
+  }
+  
+  @screen md {
+    .nav-spacer-top {
+      height: var(--nav-height-desktop);
+    }
+  }
+  
+  .nav-spacer-bottom {
+    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 0.5rem);
+  }
+  
+  @screen md {
+    .nav-spacer-bottom {
+      padding-bottom: 0;
+    }
+  }
+  
   /* Safe area support for mobile devices */
   .safe-area-pb {
-    padding-bottom: env(safe-area-inset-bottom);
+    padding-bottom: var(--safe-area-bottom);
   }
   
   .safe-area-pt {
-    padding-top: env(safe-area-inset-top);
+    padding-top: var(--safe-area-top);
   }
   
   /* Improved scrolling on mobile */
@@ -275,4 +305,54 @@
 
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
+}
+
+/* Carousel fade indicators - visual cue for more content */
+.carousel-fade-right {
+  position: relative;
+}
+
+.carousel-fade-right::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 2rem;
+  background: linear-gradient(to left, var(--tw-bg-opacity, 1) white, transparent);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.dark .carousel-fade-right::after {
+  background: linear-gradient(to left, rgb(3 7 18), transparent);
+}
+
+/* Interactive card states - consolidates hover/active patterns */
+.card-interactive {
+  @apply transition-all duration-200;
+}
+
+.card-interactive:hover {
+  @apply -translate-y-0.5 shadow-md;
+}
+
+.card-interactive:active {
+  @apply translate-y-0 shadow-sm;
+}
+
+@media (max-width: 768px) {
+  .card-interactive:hover {
+    @apply translate-y-0;
+  }
+  
+  .card-interactive:active {
+    @apply scale-[0.98];
+  }
+}
+
+/* Minimum readable text size for technical content */
+.text-readable-mono {
+  font-size: max(0.75rem, 12px);
+  line-height: 1.5;
 }

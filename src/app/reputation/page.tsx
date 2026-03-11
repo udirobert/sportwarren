@@ -4,7 +4,7 @@ import Link from "next/link";
 import { PlayerReputation } from "@/components/player/PlayerReputation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Target, History, CheckCircle, Clock } from "lucide-react";
+import { Target, History, CheckCircle, Clock, Trophy } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { useMySquads } from "@/hooks/squad/useSquad";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
