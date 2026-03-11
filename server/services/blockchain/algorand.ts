@@ -24,9 +24,21 @@ export class AlgorandService {
     const algodToken = process.env.ALGORAND_NODE_TOKEN || "";
 
     this.algodClient = new algosdk.Algodv2(algodToken, algodServer);
+
+    // Initialize with existing App IDs if present in .env
+    const daoAppId = parseInt(process.env.ALGORAND_SQUAD_DAO_APP_ID || '0');
+    if (daoAppId > 0) this.squadDAOAppId = daoAppId;
+
+    const matchAppId = parseInt(process.env.ALGORAND_MATCH_VERIFICATION_APP_ID || '0');
+    if (matchAppId > 0) this.matchVerificationAppId = matchAppId;
   }
 
   public async deploySquadDAO(): Promise<number | null> {
+    // If already initialized from .env, skip deployment
+    if (this.squadDAOAppId) {
+      console.log(`Using existing Squad DAO from .env with ID: ${this.squadDAOAppId}`);
+      return this.squadDAOAppId;
+    }
     try {
       const creatorMnemonic = process.env.ALGORAND_PRIVATE_KEY; // This should be a deployer account
       if (!creatorMnemonic) {
@@ -104,6 +116,11 @@ export class AlgorandService {
   }
 
   public async deployMatchVerification(): Promise<number | null> {
+    // If already initialized from .env, skip deployment
+    if (this.matchVerificationAppId) {
+      console.log(`Using existing Match Verification from .env with ID: ${this.matchVerificationAppId}`);
+      return this.matchVerificationAppId;
+    }
     try {
       const creatorMnemonic = process.env.ALGORAND_PRIVATE_KEY;
       if (!creatorMnemonic) {
