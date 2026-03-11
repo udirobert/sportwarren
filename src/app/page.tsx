@@ -21,18 +21,28 @@ const AdaptiveDashboard = dynamic(
 export default function Home() {
   const { connected } = useWallet();
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
 
-  if (!connected) {
-    return (
-      <>
-        <HeroSection onGetStarted={() => setShowWalletModal(true)} />
-        <WalletConnectModal 
-          isOpen={showWalletModal} 
-          onClose={() => setShowWalletModal(false)} 
-        />
-      </>
-    );
+  // If the user is connected AND they've clicked to enter the app, show the dashboard
+  if (connected && showDashboard) {
+    return <AdaptiveDashboard />;
   }
 
-  return <AdaptiveDashboard />;
+  return (
+    <>
+      <HeroSection 
+        onGetStarted={() => {
+          if (connected) {
+            setShowDashboard(true);
+          } else {
+            setShowWalletModal(true);
+          }
+        }} 
+      />
+      <WalletConnectModal 
+        isOpen={showWalletModal} 
+        onClose={() => setShowWalletModal(false)} 
+      />
+    </>
+  );
 }
