@@ -1,8 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ethers, type Hex } from 'ethers';
+import { ethers } from 'ethers';
 import { useWallet } from '@/contexts/WalletContext';
+
+// Type for hex strings
+type Hex = `0x${string}`;
 
 // Minimal ABIs for governance
 const GOVERNOR_ABI = [

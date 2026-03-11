@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Target, BarChart3, Users, MessageCircle, X, Plus, Activity, Settings, MoreHorizontal, Sun, Moon } from 'lucide-react';
@@ -9,6 +9,14 @@ import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { ContextualHelp } from './ContextualHelp';
 
 const BOTTOM_NAV_MAX = 5;
+
+// Keyboard navigation shortcuts (desktop only)
+const NAV_SHORTCUTS: Record<string, string> = {
+  'KeyD': '/',        // Dashboard
+  'KeyM': '/match',   // Matches
+  'KeyS': '/stats',   // Stats
+  'KeyQ': '/squad',   // Squad
+};
 
 export const SmartNavigation: React.FC = () => {
   const pathname = usePathname();
@@ -125,6 +133,30 @@ export const SmartNavigation: React.FC = () => {
     document.body.style.overflow = isMoreOpen ? 'hidden' : '';
     return () => { document.body.style.overflow = ''; };
   }, [isMoreOpen]);
+
+  // Keyboard navigation for desktop (Cmd/Ctrl + key)
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    // Only on desktop, with modifier key, and not in input fields
+    if (window.innerWidth < 768) return;
+    if (!(e.metaKey || e.ctrlKey)) return;
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+    const path = NAV_SHORTCUTS[e.code];
+    if (path) {
+      e.preventDefault();
+      // Find if this path is visible to the user
+      const targetItem = visibleNavItems.find(item => item.path === path);
+      if (targetItem) {
+        handleNavClick(path);
+        window.location.href = path;
+      }
+    }
+  }, [visibleNavItems]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   const handleNavClick = (path: string) => {
     trackFeatureUsage(path.slice(1) || 'dashboard');
@@ -301,8 +333,8 @@ export const SmartNavigation: React.FC = () => {
         </>
       )}
 
-      {/* Spacers for fixed bars - skip link target */}
-      <div id="main-content" className="h-14 md:h-16" />
+      {/* Spacer for fixed bars - skip link target */}
+      <div id="main-content" className="nav-spacer-top" />
     </>
   );
 };

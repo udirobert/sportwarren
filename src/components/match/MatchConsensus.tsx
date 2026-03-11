@@ -47,7 +47,7 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
         type: 'info' as const
       },
       match.paymentRail?.sessionId ? {
-        text: `YELLOW: Match fee session active: ${match.paymentRail.sessionId.slice(0, 12)}... [LOCKED: ${match.paymentRail.feeAmount * 2} ${match.paymentRail.assetSymbol}]`,
+        text: `YELLOW: Match fee session active: ${match.paymentRail.sessionId.slice(0, 12)}... [LOCKED: ${(match.paymentRail.feeAmount ?? 0) * 2} ${match.paymentRail.assetSymbol}]`,
         timestamp: timeStr,
         type: 'success' as const
       } : {
@@ -151,29 +151,46 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
     }
   };
 
+  const [isLogCollapsed, setIsLogCollapsed] = React.useState(true);
+
   return (
     <div className="space-y-3">
       {/* Technical Commentary - Championship Manager Style */}
-      <div className="bg-gray-900 rounded-xl p-4 border border-blue-500/30 font-mono text-[10px] overflow-hidden">
-        <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
+      <div className="bg-gray-900 dark:bg-gray-950 rounded-xl border border-blue-500/30 overflow-hidden">
+        {/* Header - always visible, clickable to expand */}
+        <button
+          onClick={() => setIsLogCollapsed(!isLogCollapsed)}
+          className="w-full flex items-center justify-between p-3 text-left"
+        >
           <div className="flex items-center space-x-2">
-            <Cpu className="w-3 h-3 text-blue-400 animate-pulse" />
-            <span className="text-blue-400 font-bold uppercase tracking-widest italic">Verification Engine v1.02</span>
+            <Cpu className="w-4 h-4 text-blue-400 animate-pulse" />
+            <span className="text-blue-400 font-bold uppercase tracking-widest text-xs">Verification Engine v1.02</span>
           </div>
-          {match.creResult?.workflowId && (
-            <a
-              href={`https://functions.chain.link/${match.creResult.workflowId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-[9px] text-blue-400 hover:text-blue-300 flex items-center space-x-1"
-            >
-              <ExternalLink className="w-2.5 h-2.5" />
-              <span>View Workflow</span>
-            </a>
-          )}
-        </div>
+          <div className="flex items-center gap-2">
+            {match.creResult?.workflowId && (
+              <a
+                href={`https://functions.chain.link/${match.creResult.workflowId}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center space-x-1"
+              >
+                <ExternalLink className="w-3 h-3" />
+                <span className="hidden sm:inline">View Workflow</span>
+              </a>
+            )}
+            {isLogCollapsed ? (
+              <ChevronDown className="w-4 h-4 text-gray-400" />
+            ) : (
+              <ChevronUp className="w-4 h-4 text-gray-400" />
+            )}
+          </div>
+        </button>
 
-        <div className="space-y-1.5 min-h-[120px]">
+        {/* Collapsible log content - collapsed by default on mobile */}
+        {!isLogCollapsed && (
+          <div className="px-3 pb-3 font-mono text-readable-mono">
+            <div className="border-t border-white/10 pt-2 space-y-1.5 min-h-[100px]">
           <AnimatePresence mode="popLayout">
             {visibleLogs.map((log, i) => (
               <motion.div
@@ -196,7 +213,9 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
               className="w-1.5 h-3 bg-blue-500 ml-1 inline-block"
             />
           )}
-        </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Raw Data Toggle */}
