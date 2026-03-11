@@ -1,12 +1,27 @@
 # UI/UX Implementation Plan
 
 > Generated: 2026-03-11  
+> **Last Updated:** 2026-03-11 (Junie tasks 1.1–1.4, 1.6, 1.7, 1.10 completed)  
 > Based on: UI/UX Audit Report + Comparative Review (ClassPass / Strava benchmarks)
 
 This plan is split into two sections:
 
 - **Section 1 — Junie** — frontend code changes that can be implemented directly in the codebase
 - **Section 2 — Adal** — product/design decisions, backend-dependent items, and work requiring external configuration or design assets
+
+---
+
+## ✅ Completed Junie Tasks (2026-03-11)
+
+| Task | Status |
+|------|--------|
+| 1.1 Fix blank desktop gap | ✅ Done — Adaptive grid columns |
+| 1.2 Add persistent Log a Match FAB | ✅ Done — Mobile FAB + desktop button |
+| 1.3 Add CommunicationHub component | ✅ Done — Widget registered in dashboard |
+| 1.4 Surface integrations in onboarding | ✅ Done — Connections step added |
+| 1.6 Reorder dashboard widget priorities | ✅ Done — Player-first hierarchy |
+| 1.7 Jargon audit — replace crypto terms | ✅ Done — Player-friendly language |
+| 1.10 Hero page badge + subheadline | ✅ Done — Guest-first CTA, trust signals |
 
 ---
 
@@ -395,19 +410,24 @@ Add a row of integration logos (Telegram, WhatsApp, XMTP, Lens) below the CTA as
 
 ## Priority Summary
 
-### Junie — Immediate (this sprint)
+### Junie — Completed ✅
+
+| # | Task | Status |
+|---|---|---|
+| 1.1 | Fix blank desktop gap | ✅ Complete |
+| 1.2 | Add persistent Log a Match FAB | ✅ Complete |
+| 1.6 | Reorder dashboard widget priorities | ✅ Complete |
+| 1.7 | Jargon audit — replace crypto terms | ✅ Complete |
+| 1.10 | Hero page badge + subheadline rewrite | ✅ Complete |
+| 1.3 | Create CommunicationHub component (UI only) | ✅ Complete |
+| 1.4 | Surface integrations in onboarding checklist | ✅ Complete |
+
+### Junie — Remaining
 
 | # | Task | Est. Effort |
 |---|---|---|
-| 1.1 | Fix blank desktop gap | 30 min |
-| 1.2 | Add persistent Log a Match FAB | 1 hour |
-| 1.6 | Reorder dashboard widget priorities | 30 min |
-| 1.7 | Jargon audit — replace crypto terms | 2 hours |
-| 1.10 | Hero page badge + subheadline rewrite | 30 min |
 | 1.5 | Redesign Match Center widget (visual cards) | 2 hours |
 | 1.8 | Add empty states with guidance | 1.5 hours |
-| 1.3 | Create CommunicationHub component (UI only) | 3 hours |
-| 1.4 | Surface integrations in onboarding checklist | 1 hour |
 | 1.9 | Desktop 2-col + sidebar layout | 3 hours |
 
 ### Adal — Product/Design Decisions Required First

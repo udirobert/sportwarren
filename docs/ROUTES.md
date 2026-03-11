@@ -41,8 +41,13 @@ This document is the living navigation map for the app. Every page, its purpose,
 - **Inbound links:** Primary nav ("Community" — conditional)
 
 ### `/settings` — Settings
-- **Purpose:** User preferences, wallet settings, notification config.
-- **Inbound links:** Primary nav ("Settings")
+- **Purpose:** User preferences, platform connections, notification config, and wallet management.
+- **Key components:** Tabbed interface with Profile, Connections, Notifications, and Wallet tabs
+  - **Profile:** Display name, position, avatar editing
+  - **Connections:** Link/unlink Telegram, WhatsApp, XMTP with real-time status badges
+  - **Notifications:** Granular preferences for match reminders, squad alerts, rivalry notifications
+  - **Wallet:** Connected address display, copy, disconnect options
+- **Inbound links:** Primary nav ("Settings"), dashboard user menu, SmartNavigation (Cmd+E shortcut)
 
 ---
 

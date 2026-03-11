@@ -2,7 +2,7 @@
 
 **The Parallel Season** — Your real Sunday league season and your SportWarren season run simultaneously. Real matches drive the game.
 
-**Last Updated:** March 2026
+**Last Updated:** March 11, 2026
 
 ---
 
@@ -158,6 +158,24 @@
 
 ---
 
+## 10. Communication Hub & Platform Connections ✅
+
+### Unified Messaging Integration
+- **Multi-Platform Support:** Connect Telegram, WhatsApp, and XMTP for squad communications.
+- **Connection Status:** Real-time badges showing which platforms are linked.
+- **One-Click Linking:** Streamlined OAuth flows for each platform.
+- **Share to Chat:** Share match results directly to connected squad chats.
+
+### Settings Page
+- **Tabbed Interface:** Organized into Profile, Connections, Notifications, and Wallet tabs.
+- **Profile Management:** Edit display name, position, and avatar.
+- **Notification Preferences:** Granular control over match reminders, squad alerts, and rivalry notifications.
+- **Wallet Management:** View connected wallet, copy address, or disconnect.
+
+**Status:** ✅ Complete (Frontend UI — Backend bridges exist, OAuth flows pending deployment)
+
+---
+
 ## Feature Status Summary
 
 | Feature | Frontend | Backend | Database | Overall |
@@ -172,6 +190,7 @@
 | Viral Mechanics | ✅ | ✅ | ✅ | ✅ 100% |
 | Office / Market | ✅ | ✅ | ✅ | ✅ 100% |
 | Blockchain | ✅ | ✅ | ✅ | ✅ 90% |
+| Platform Connections | ✅ | 🟡 | 🟡 | 🟡 60% |
 
 **Legend:** ✅ Complete | 🟡 Partial | 🔴 Not Started
 
