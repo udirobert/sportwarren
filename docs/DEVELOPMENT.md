@@ -3,7 +3,7 @@
 ## Quick Start
 
 ### Prerequisites
-- **Node.js 18+**, **PostgreSQL 14+**
+- **Node.js 18+**, **PostgreSQL 14+**, **Redis 6+**
 - **GitHub CLI** (for auth): `gh auth login`
 
 ### Installation
@@ -18,6 +18,9 @@ brew services start postgresql@14
 psql postgres -c "CREATE DATABASE sportwarren;"
 psql sportwarren < prisma/migrations/001_init.sql
 
+# Start Redis (required for caching)
+brew services start redis
+
 npm run dev
 ```
 
@@ -30,7 +33,7 @@ npm run dev
 ```env
 # Core
 NODE_ENV=development
-DATABASE_URL=postgresql://localhost:5432/sportwarren
+DATABASE_URL=postgresql://localhost:5432/sportwarren?sslmode=verify-full
 
 # Algorand
 ALGORAND_NETWORK=testnet
@@ -46,6 +49,8 @@ WEB3_PRIVATE_KEY=0x... (Required for live Chainlink oracles)
 # WalletConnect
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-project-id
 ```
+
+> **Note:** For local development without SSL, use `sslmode=disable` in `DATABASE_URL`. For production/Supabase, use `sslmode=verify-full`.
 
 ---
 
@@ -153,11 +158,14 @@ src/
 │   ├── db.ts           # Prisma client
 │   ├── trpc-client.ts  # tRPC client
 │   └── trpc-provider.tsx
-├── server/             # tRPC server
-│   ├── trpc.ts         # tRPC setup
-│   ├── root.ts         # Root router
-│   └── routers/        # API routers
 └── types/              # TypeScript types
+server/
+├── index.ts            # Express/GraphQL server entry point
+├── services/
+│   ├── database.ts     # PostgreSQL service
+│   ├── cache.ts        # Redis cache service
+│   └── communication/ # WhatsApp, Telegram, XMTP bridges
+└── graphql/            # GraphQL schema & resolvers
 ```
 
 ---
@@ -226,6 +234,24 @@ pg_isready
 ```bash
 npx prisma generate
 ```
+
+**Redis not running (cache errors):**
+```bash
+brew services start redis
+# Server continues without cache if Redis is unavailable
+```
+
+**WhatsApp client (Chromium not found):**
+```bash
+npm install  # downloads the correct Chromium revision
+# WhatsApp integration requires a local Chrome/Chromium install
+```
+
+**Known warnings (non-fatal):**
+- `⚠️ Invalid Algorand mnemonic` — set a valid 25-word `DEPLOYER_MNEMONIC` in `.env`; on-chain deployments will be skipped otherwise
+- `[ioredis] ECONNREFUSED` — Redis is not running; start with `brew services start redis`
+- `XMTP V2 publishing no longer available` — `@xmtp/xmtp-js` needs upgrading to V3; XMTP messaging will fail until updated
+- `punycode module deprecated` — Node.js v22 warning from a transitive dependency; safe to ignore
 
 ---
 
