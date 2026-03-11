@@ -648,7 +648,13 @@ export const matchRouter = createTRPCRouter({
         return {
           ...match,
           creResult,
-          agentInsights: (match as any).agentInsights
+          agentInsights: (match as any).agentInsights,
+          paymentRail: {
+            enabled: !!match.yellowFeeSessionId,
+            assetSymbol: yellowService.getAssetSymbol(),
+            sessionId: match.yellowFeeSessionId,
+            feeAmount: yellowService.getMatchFeeAmount(),
+          },
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
