@@ -691,10 +691,98 @@ export const AdaptiveDashboard: React.FC = () => {
 
         return (
           <div className="space-y-8">
-            <Section title="Today" widgets={todayWidgets} href="/match" />
-            <Section title="Squad" widgets={squadWidgets} href="/squad" />
-            <Section title="Progress" widgets={progressWidgets} href="/stats" />
-            {otherWidgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
+            {/* Desktop: 2-column layout with right sidebar */}
+            <div className="hidden lg:grid lg:grid-cols-3 gap-6">
+              {/* Main content — 2/3 width */}
+              <div className="lg:col-span-2 space-y-6">
+                <Section title="Today" widgets={todayWidgets} href="/match" />
+                <Section title="Squad" widgets={squadWidgets} href="/squad" />
+              </div>
+              {/* Right sidebar — 1/3 width */}
+              <div className="space-y-4">
+                {/* Log Match CTA */}
+                <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
+                  <div className="text-center py-4">
+                    <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-green-600/30">
+                      <Plus className="w-6 h-6 text-white" />
+                    </div>
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-1">Log a Match</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Submit your result in 30 seconds</p>
+                    <Link href="/match?mode=capture">
+                      <Button className="bg-green-600 hover:bg-green-700 text-white w-full">
+                        <Zap className="w-4 h-4 mr-2" />
+                        Start Now
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+                {/* Connection Status */}
+                <Card>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                    <MessageCircle className="w-4 h-4" />
+                    Connected Channels
+                  </h3>
+                  <div className="space-y-2">
+                    {['Telegram', 'WhatsApp', 'XMTP'].map((platform) => {
+                      const isConnected = preferences.connections?.[platform.toLowerCase() as keyof typeof preferences.connections]?.connected;
+                      return (
+                        <div key={platform} className="flex items-center justify-between py-1.5">
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{platform}</span>
+                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                            isConnected ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                          }`}>
+                            {isConnected ? 'Linked' : 'Not linked'}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <Link href="/settings?tab=connections">
+                    <Button size="sm" variant="outline" className="w-full mt-3">
+                      Manage Connections
+                    </Button>
+                  </Link>
+                </Card>
+                {/* Upcoming Fixtures */}
+                <Card>
+                  <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    Upcoming
+                  </h3>
+                  {stats?.recentMatches && stats.recentMatches.length > 0 ? (
+                    <div className="space-y-2">
+                      {stats.recentMatches.slice(0, 2).map((match, i) => (
+                        <div key={i} className="flex items-center gap-2 py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">vs {match.opponent}</p>
+                            <p className="text-xs text-gray-500">{match.date}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-3">No upcoming matches</p>
+                  )}
+                  <Link href="/match">
+                    <Button size="sm" variant="outline" className="w-full mt-3">
+                      View Schedule
+                    </Button>
+                  </Link>
+                </Card>
+              </div>
+            </div>
+            {/* Mobile/Tablet: stacked layout */}
+            <div className="lg:hidden space-y-8">
+              <Section title="Today" widgets={todayWidgets} href="/match" />
+              <Section title="Squad" widgets={squadWidgets} href="/squad" />
+              <Section title="Progress" widgets={progressWidgets} href="/stats" />
+              {otherWidgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
+            </div>
+            {/* Desktop: Progress section below main content */}
+            <div className="hidden lg:block">
+              <Section title="Progress" widgets={progressWidgets} href="/stats" />
+              {otherWidgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
+            </div>
           </div>
         );
       })()}
