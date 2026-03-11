@@ -16,7 +16,7 @@ interface PlayerStats {
 }
 
 // Algorand App ID for match verification (deployed on testnet)
-const ALGORAND_MATCH_VERIFICATION_APP_ID = process.env.NEXT_PUBLIC_ALGORAND_MATCH_VERIFICATION_APP_ID || '756630713';
+const ALGORAND_MATCH_VERIFICATION_APP_ID = process.env.NEXT_PUBLIC_ALGORAND_MATCH_VERIFICATION_APP_ID || '756828208';
 
 export const MatchVerification: React.FC = () => {
   const [matches, setMatches] = useState<MatchResult[]>([]);

@@ -4,6 +4,7 @@ import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { Check, X, AlertCircle, Shield, Users, Cpu, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { PaymentRailNotice } from '@/components/payments/PaymentRailNotice';
 import type { MatchResult, Verification, TrustTier } from '@/types';
 import {
   checkConsensus,
@@ -39,6 +40,20 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
         text: `[${creId}] Initializing Phygital Verification Node...`,
         timestamp: timeStr,
         type: 'info' as const
+      },
+      {
+        text: "YELLOW: Initializing match fee session...",
+        timestamp: timeStr,
+        type: 'info' as const
+      },
+      match.paymentRail?.sessionId ? {
+        text: `YELLOW: Match fee session active: ${match.paymentRail.sessionId.slice(0, 12)}... [LOCKED: ${match.paymentRail.feeAmount * 2} ${match.paymentRail.assetSymbol}]`,
+        timestamp: timeStr,
+        type: 'success' as const
+      } : {
+        text: "YELLOW: Falling back to manual settlement (EVM identity missing).",
+        timestamp: timeStr,
+        type: 'warning' as const
       },
       {
         text: "FETCH: Orchestrating global weather and location oracles...",
@@ -91,6 +106,16 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
             timestamp: timeStr,
             type: 'warning' as const
           },
+      match.status === 'verified' && match.paymentRail?.sessionId ? {
+        text: `YELLOW: Executing post-match fee settlement...`,
+        timestamp: timeStr,
+        type: 'info' as const
+      } : null,
+      match.status === 'verified' && match.paymentRail?.sessionId ? {
+        text: `YELLOW: Payout distributed: 1.95 ${match.paymentRail.assetSymbol} to winner, 0.05 ${match.paymentRail.assetSymbol} platform fee.`,
+        timestamp: timeStr,
+        type: 'success' as const
+      } : null,
       match.status === 'verified' 
         ? {
             text: "SUCCESS: Match record secured. XP distributed to all verified players.",
@@ -102,7 +127,7 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
             timestamp: timeStr,
             type: 'info' as const
           }
-    ];
+    ].filter(Boolean) as LogEntry[];
     return baseLogs;
   }, [match]);
 
@@ -348,6 +373,19 @@ export const MatchConsensusPanel: React.FC<MatchConsensusProps> = ({ match }) =>
 
         {/* Technical Commentary - Championship Manager Style */}
         <TechnicalCommentary match={match} />
+
+        {/* Yellow Rail Notice */}
+        {match.paymentRail && (
+          <PaymentRailNotice
+            title="Match Fee Settlement"
+            assetSymbol={match.paymentRail.assetSymbol}
+            enabled={match.paymentRail.enabled}
+            body={match.paymentRail.enabled 
+              ? `Fees are locked in a Yellow session (${match.paymentRail.sessionId?.slice(0, 8)}). Post-verification, winnings are distributed automatically.` 
+              : "This match is using manual settlement because one or more participants have not connected a Yellow-compatible EVM wallet."
+            }
+          />
+        )}
 
         {/* Team Submission Status */}
         <div className="grid grid-cols-2 gap-4">
