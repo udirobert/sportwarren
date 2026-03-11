@@ -238,12 +238,18 @@ export class AlgorandService {
     return this.algodClient;
   }
 
-  public getDeployerAccount(): algosdk.Account {
+  public getDeployerAccount(): algosdk.Account | null {
     const mnemonic = process.env.DEPLOYER_MNEMONIC || process.env.ALGORAND_PRIVATE_KEY;
     if (!mnemonic) {
-      throw new Error("DEPLOYER_MNEMONIC or ALGORAND_PRIVATE_KEY not set in .env");
+      console.warn("⚠️ DEPLOYER_MNEMONIC or ALGORAND_PRIVATE_KEY not set in .env. On-chain deployments will fail.");
+      return null;
     }
-    return algosdk.mnemonicToSecretKey(mnemonic);
+    try {
+      return algosdk.mnemonicToSecretKey(mnemonic);
+    } catch (e) {
+      console.warn("⚠️ Invalid Algorand mnemonic in .env. On-chain deployments will fail.");
+      return null;
+    }
   }
 
   /**

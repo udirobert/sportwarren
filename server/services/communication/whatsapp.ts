@@ -1,4 +1,6 @@
-import { Client, LocalAuth, Message } from 'whatsapp-web.js';
+import pkg from 'whatsapp-web.js';
+const { Client, LocalAuth } = pkg;
+import type { Message } from 'whatsapp-web.js';
 
 export class WhatsAppService {
   private client: Client;

@@ -24,6 +24,18 @@ export class DatabaseService {
   private async initializeTables(): Promise<void> {
     const client = await this.pool.connect();
     try {
+      // Fix legacy tables that have TEXT id columns instead of UUID
+      const legacyCheck = await client.query(`
+        SELECT table_name FROM information_schema.columns
+        WHERE column_name = 'id' AND data_type != 'uuid'
+          AND table_schema = 'public'
+      `);
+      if (legacyCheck.rows.length > 0) {
+        const tables = legacyCheck.rows.map((r: any) => r.table_name).join(', ');
+        console.log(`⚠️ Detected legacy tables with non-UUID id columns (${tables}). Dropping all public tables to recreate...`);
+        await client.query(`DROP SCHEMA public CASCADE; CREATE SCHEMA public;`);
+      }
+
       // Create tables if they don't exist
       await client.query(`
         CREATE TABLE IF NOT EXISTS users (
