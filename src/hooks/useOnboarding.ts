@@ -88,6 +88,7 @@ const DEFAULT_STATE: OnboardingState = {
         open_office: false,
         use_draft: false,
         verify_match: false,
+        connect_channels: false,
     },
 };
 
@@ -145,6 +146,15 @@ export function useOnboarding() {
     }, [persist]);
 
     const checklistItems: ChecklistItem[] = [
+        {
+            id: 'connect_channels',
+            label: 'Connect your squad chat',
+            description: 'Get match reminders and results on Telegram, WhatsApp, or XMTP',
+            completed: state.checklistItems.connect_channels ?? false,
+            emoji: '📲',
+            href: '/settings?tab=notifications',
+            actionLabel: 'Connect now →',
+        },
         {
             id: 'view_match_engine',
             label: 'Open the Match Center',

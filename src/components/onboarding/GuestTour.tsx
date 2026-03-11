@@ -34,7 +34,7 @@ const TOUR_STEPS: TourStep[] = [
         id: 'welcome',
         targetId: 'dashboard-header',
         title: "Welcome to the Marshes",
-        content: "You're currently in Guest Mode. This is a real-time 'Phygital' simulation of the Hackney Marshes Sunday League. Let's see how the squads are doing.",
+        content: "You're currently in Guest Mode. This is a live demo of the Hackney Marshes Sunday League. Let's see how the squads are doing.",
         emoji: '🏟️',
         icon: Sparkles,
         position: 'bottom',
@@ -49,10 +49,10 @@ const TOUR_STEPS: TourStep[] = [
         position: 'left',
     },
     {
-        id: 'phygital-consensus',
+        id: 'match-verification',
         targetId: 'recent-matches',
-        title: "Phygital Consensus",
-        content: "Matches played on real pitches are verified here via Chainlink CRE. We check GPS and weather data to ensure every goal is earned fairly.",
+        title: "Match Verification",
+        content: "Matches played on real pitches are verified here. We check GPS and weather data to ensure every goal is earned fairly.",
         emoji: '✅',
         icon: Shield,
         position: 'top',
@@ -70,7 +70,7 @@ const TOUR_STEPS: TourStep[] = [
         id: 'lens-social-step',
         targetId: 'lens-social',
         title: "The Social Graph",
-        content: "This is where your reputation goes global. By connecting your Lens Identity, you can share 'Phygital Proof' and compete in the World Grassroots Rankings.",
+        content: "This is where your reputation goes global. Connect your social profile to share match results and compete in the World Grassroots Rankings.",
         emoji: '🌿',
         icon: Share2,
         position: 'top',
@@ -107,7 +107,7 @@ export const GuestTour: React.FC = () => {
             return {
                 ...step,
                 title: `Welcome to ${venue.split(' ')[0]}`,
-                content: `You're currently in Guest Mode. This is a real-time 'Phygital' simulation at ${venue}. Let's see how the local squads are doing.`
+                content: `You're currently in Guest Mode. This is a live demo at ${venue}. Let's see how the local squads are doing.`
             };
         }
         return step;

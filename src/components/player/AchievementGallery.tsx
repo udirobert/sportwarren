@@ -33,7 +33,7 @@ export const AchievementGallery: React.FC = () => {
         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
           <Award className="w-8 h-8 text-gray-300" />
         </div>
-        <h4 className="text-lg font-semibold text-gray-900">No Phygital Trophies Yet</h4>
+        <h4 className="text-lg font-semibold text-gray-900">No Trophies Yet</h4>
         <p className="text-gray-500 text-sm mt-2 max-w-xs mx-auto">
           Win matches, complete challenges, and earn verified on-chain achievements on the Avalanche Fuji network.
         </p>

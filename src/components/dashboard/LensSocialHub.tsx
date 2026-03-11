@@ -49,7 +49,7 @@ export const LensSocialHub: React.FC = () => {
                 {isConnected && (
                     <div className="px-2 py-1 bg-green-100 border border-green-200 rounded-lg flex items-center space-x-1">
                         <ShieldCheck className="w-3 h-3 text-green-600" />
-                        <span className="text-xs font-black text-green-700 uppercase tracking-tighter">Native Identity</span>
+                        <span className="text-xs font-black text-green-700 uppercase tracking-tighter">Social Profile</span>
                     </div>
                 )}
             </div>
@@ -60,7 +60,7 @@ export const LensSocialHub: React.FC = () => {
                         <p className="text-xs text-gray-600 leading-relaxed font-semibold">
                             {isSocialUser
                                 ? "You're logged in with Socials. Upgrade to a Lens Identity to unlock cross-chain verified reputation and the Global Grassroots Feed."
-                                : "Connect your Lens V3 identity to bridge your real-world football achievements to the decentralized social graph."}
+                                : "Connect your social profile to share your football achievements and join the global grassroots network."}
                         </p>
                     </div>
 
@@ -75,7 +75,7 @@ export const LensSocialHub: React.FC = () => {
                             </span>
                         </Button>
                         <p className="text-xs text-center text-gray-400 font-bold uppercase tracking-widest">
-                            Join the web3-native Phygital community
+                            Join the global grassroots community
                         </p>
                     </div>
                 </div>
@@ -127,7 +127,7 @@ export const LensSocialHub: React.FC = () => {
                             ) : (
                                 <Zap className="w-4 h-4 text-yellow-400" />
                             )}
-                            <span>Post Phygital Proof</span>
+                            <span>Share Match Result</span>
                         </Button>
 
                         <AnimatePresence>

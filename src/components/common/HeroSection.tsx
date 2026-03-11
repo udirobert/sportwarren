@@ -81,8 +81,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
           {/* Badge */}
           <div className="inline-flex items-center space-x-2 bg-green-500/10 backdrop-blur-sm border border-green-500/20 text-green-400 px-6 py-3 rounded-full text-sm font-medium mb-8">
-            <Shield className="w-4 h-4" />
-            <span>Blockchain Verified • Chainlink Oracles • Kite AI Powered</span>
+            <Users className="w-4 h-4" />
+            <span>Used by 5-a-side players in 12 cities</span>
           </div>
 
           {/* Hero Headline */}
@@ -94,20 +94,33 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
           </h1>
 
           <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto">
-            Turn real matches into an epic game. Build your legend with AI agents, blockchain verification, and Championship Manager gameplay.
+            Log your Sunday game in 30 seconds. Share verified results with your squad. Build your player reputation — season by season.
           </p>
 
-          {/* CTA */}
+          {/* CTA - Guest-first approach */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            <button
-              onClick={onGetStarted}
-              className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
-            >
-              <Zap className="w-5 h-5 mr-2" />
-              {connected ? 'Go to Dashboard' : 'Start Your Season'}
-              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-            </button>
+            {/* Primary: Guest Mode (lowest friction) */}
+            {!connected ? (
+              <button
+                onClick={loginAsGuest}
+                className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
+              >
+                <Eye className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+                Explore as Guest
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </button>
+            ) : (
+              <button
+                onClick={onGetStarted}
+                className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
+              >
+                <Zap className="w-5 h-5 mr-2" />
+                Go to Dashboard
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </button>
+            )}
 
+            {/* Secondary: Learn more */}
             <button
               onClick={() => problemRef.current?.scrollIntoView({ behavior: 'smooth' })}
               className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl hover:bg-white/20 transition-all font-sans"
@@ -116,13 +129,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
               See How It Works
             </button>
 
+            {/* Upgrade path: Connect wallet for full features */}
             {!connected && (
               <button
-                onClick={loginAsGuest}
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-blue-400 bg-blue-600/10 backdrop-blur-sm border-2 border-blue-600/20 rounded-xl hover:bg-blue-600/20 transition-all group"
+                onClick={onGetStarted}
+                className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-green-400 hover:text-green-300 transition-colors group"
               >
-                <Eye className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-                Preview as Guest
+                <Shield className="w-4 h-4 mr-2" />
+                Connect wallet for on-chain rewards
+                <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
               </button>
             )}
           </div>

@@ -19,7 +19,7 @@ export const TerritoryControl: React.FC<{ squadId: string }> = ({ squadId }) => 
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-2">
                     <Trophy className="w-5 h-5 text-yellow-500" />
-                    <h2 className="text-lg font-bold text-gray-900">Territory Control</h2>
+                    <h2 className="text-lg font-bold text-gray-900">Local Rankings</h2>
                 </div>
                 <span className="text-[10px] font-bold text-green-600 uppercase tracking-widest">Level 4 District</span>
             </div>
