@@ -26,6 +26,12 @@ lerna-debug.log*
 .env.*
 !.env.example
 
+# XMTP local database files
+xmtp-*.db3
+xmtp-*.db3-shm
+xmtp-*.db3-wal
+.xmtp_db/
+
 # Deployment files
 deployment-*.json
 *.deployment
