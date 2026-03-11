@@ -7,7 +7,7 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Briefcase, ChevronRight } from 'lucide-react';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Briefcase, ChevronRight, Plus, MessageCircle, Bell, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
@@ -38,13 +38,14 @@ const AgenticConcierge = dynamic(() => import('@/components/adaptive/AgenticConc
 const LensSocialHub    = dynamic(() => import('@/components/dashboard/LensSocialHub').then(m => ({ default: m.LensSocialHub })), { ssr: false });
 const CaptainsLog      = dynamic(() => import('@/components/dashboard/CaptainsLog').then(m => ({ default: m.CaptainsLog })), { ssr: false });
 const EventFeed        = dynamic(() => import('@/components/dashboard/EventFeed').then(m => ({ default: m.EventFeed })), { ssr: false });
+const CommunicationHub = dynamic(() => import('@/components/dashboard/CommunicationHub').then(m => ({ default: m.CommunicationHub })), { ssr: false });
 
 interface DashboardWidget {
   id: string;
   component: React.ReactNode;
   priority: number;
   requiredLevel: 'basic' | 'intermediate' | 'advanced';
-  category: 'stats' | 'social' | 'matches' | 'achievements';
+  category: 'stats' | 'social' | 'matches' | 'achievements' | 'squad';
   unlockCondition?: () => boolean;
 }
 
@@ -98,7 +99,7 @@ export const AdaptiveDashboard: React.FC = () => {
     },
     {
       id: 'pending-actions',
-      priority: 160,
+      priority: 170,
       requiredLevel: 'basic',
       category: 'matches',
       component: (
@@ -107,7 +108,7 @@ export const AdaptiveDashboard: React.FC = () => {
     },
     {
       id: 'captains-log',
-      priority: 150,
+      priority: 155,
       requiredLevel: 'basic',
       category: 'stats',
       component: (
@@ -115,8 +116,17 @@ export const AdaptiveDashboard: React.FC = () => {
       ),
     },
     {
+      id: 'communication-hub',
+      priority: 150,
+      requiredLevel: 'basic',
+      category: 'squad',
+      component: (
+        <CommunicationHub connections={preferences.connections} />
+      ),
+    },
+    {
       id: 'quick-stats',
-      priority: 100,
+      priority: 200,
       requiredLevel: 'basic',
       category: 'stats',
       component: (
@@ -161,7 +171,7 @@ export const AdaptiveDashboard: React.FC = () => {
     },
     {
       id: 'event-feed',
-      priority: 96,
+      priority: 86,
       requiredLevel: 'basic',
       category: 'stats',
       component: (
@@ -170,7 +180,7 @@ export const AdaptiveDashboard: React.FC = () => {
     },
     {
       id: 'staff-feed',
-      priority: 95,
+      priority: 75,
       requiredLevel: 'basic',
       category: 'stats',
       component: (
@@ -179,13 +189,13 @@ export const AdaptiveDashboard: React.FC = () => {
     },
     {
       id: 'governance',
-      priority: 92,
+      priority: 82,
       requiredLevel: 'basic',
       category: 'social',
       component: <SquadGovernance squadId={primarySquadId || 'guest'} />,
     },    {
       id: 'lens-social',
-      priority: 94,
+      priority: 78,
       requiredLevel: 'basic',
       category: 'social',
       component: <LensSocialHub />,
@@ -213,7 +223,7 @@ export const AdaptiveDashboard: React.FC = () => {
     },
     {
       id: 'recent-matches',
-      priority: 90,
+      priority: 190,
       requiredLevel: 'basic',
       category: 'matches',
       component: (
@@ -233,25 +243,60 @@ export const AdaptiveDashboard: React.FC = () => {
             <div className="text-center py-8 text-gray-500">Loading matches...</div>
           ) : stats?.recentMatches && stats.recentMatches.length > 0 ? (
             <div className="space-y-3">
-              {stats.recentMatches.map((match, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-                  <div>
-                    <h3 className="font-medium text-gray-900">{match.opponent}</h3>
-                    <p className="text-sm text-gray-600">{match.date}</p>
+              {stats.recentMatches.map((match, index) => {
+                const isWin = match.result.startsWith('W');
+                const isDraw = match.result.startsWith('D');
+                const xp = isWin ? 150 : isDraw ? 75 : 30;
+                return (
+                  <div key={index} className={`flex items-center justify-between p-3 rounded-xl border transition-colors hover:shadow-sm ${
+                    isWin ? 'border-green-200 bg-green-50/50' :
+                    isDraw ? 'border-yellow-200 bg-yellow-50/50' :
+                    'border-red-200 bg-red-50/50'
+                  }`}>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-1.5 h-10 rounded-full ${
+                        isWin ? 'bg-green-500' : isDraw ? 'bg-yellow-400' : 'bg-red-400'
+                      }`} />
+                      <div>
+                        <h3 className="font-semibold text-gray-900 text-sm">vs {match.opponent}</h3>
+                        <p className="text-xs text-gray-500">{match.date}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-gray-400">+{xp} XP</span>
+                      <span className={`text-sm font-black px-2.5 py-1 rounded-lg ${
+                        isWin ? 'bg-green-100 text-green-700' :
+                        isDraw ? 'bg-yellow-100 text-yellow-700' :
+                        'bg-red-100 text-red-700'
+                      }`}>
+                        {match.result}
+                      </span>
+                      <Link
+                        href={`/settings?tab=connections`}
+                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                        title="Share result"
+                      >
+                        <Share2 className="w-3.5 h-3.5 text-gray-400 hover:text-green-600" />
+                      </Link>
+                    </div>
                   </div>
-                  <span className={`font-bold ${match.result.startsWith('W') ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                    {match.result}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Trophy className="w-12 h-12 mx-auto mb-2 text-gray-300" />
-              <p>No matches yet. Start your season!</p>
+            <div className="text-center py-10">
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Trophy className="w-8 h-8 text-green-600 dark:text-green-400" />
+              </div>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-1">No matches logged yet</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                Log your first match in 30 seconds — just enter the score and opponent.
+              </p>
               <Link href="/match?mode=capture">
-                <Button className="mt-4">Open Match Center</Button>
+                <Button className="bg-green-600 hover:bg-green-700 text-white">
+                  <Zap className="w-4 h-4 mr-2" />
+                  Log First Match
+                </Button>
               </Link>
             </div>
           )}
@@ -366,7 +411,7 @@ export const AdaptiveDashboard: React.FC = () => {
     },
     {
       id: 'match-engine',
-      priority: 98,
+      priority: 160,
       requiredLevel: 'basic',
       category: 'matches',
       component: (
@@ -531,7 +576,7 @@ export const AdaptiveDashboard: React.FC = () => {
             className="ml-3 shrink-0 flex items-center gap-1.5 bg-gray-900 dark:bg-gray-700 text-white text-xs font-black uppercase tracking-widest px-3 py-2 rounded-lg"
           >
             <Briefcase className="w-3 h-3 text-blue-400" />
-            Office
+            Hub
           </button>
         </div>
         {/* Desktop header — full */}
@@ -550,13 +595,22 @@ export const AdaptiveDashboard: React.FC = () => {
             </p>
           </div>
           <div className="flex items-center space-x-3">
+            <Link href="/match?mode=capture">
+              <Button
+                size="sm"
+                className="bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-widest text-xs flex items-center space-x-2 px-4 shadow-xl shadow-green-600/30"
+              >
+                <Plus className="w-3 h-3" />
+                <span>Log a Match</span>
+              </Button>
+            </Link>
             <Button
               onClick={handleOpenOffice}
               size="sm"
               className="bg-gray-900 hover:bg-black text-white border-white/5 font-black uppercase tracking-widest text-xs flex items-center space-x-2 px-4 shadow-xl"
             >
               <Briefcase className="w-3 h-3 text-blue-400" />
-              <span>Enter Office</span>
+              <span>Squad Hub</span>
             </Button>
             <div className="flex items-center space-x-4">
               <div className="text-right">
@@ -586,7 +640,7 @@ export const AdaptiveDashboard: React.FC = () => {
 
       {(() => {
         const todayIds = ['pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine'];
-        const squadIds = ['treasury', 'transfers', 'governance', 'squad-dynamics', 'captains-log'];
+        const squadIds = ['treasury', 'transfers', 'governance', 'squad-dynamics', 'captains-log', 'communication-hub'];
         const progressIds = ['quick-stats', 'training', 'achievements', 'scouting-report', 'lens-social', 'nearby-squads', 'territory', 'upcoming-fixtures'];
 
         const todayWidgets = visibleWidgets.filter(w => todayIds.includes(w.id));
@@ -624,8 +678,12 @@ export const AdaptiveDashboard: React.FC = () => {
                   )}
                 </div>
               </div>
-              {/* Desktop: two-column grid for visual balance */}
-              <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* Desktop: adaptive grid — avoids blank gaps with sparse content */}
+              <div className={`hidden md:grid gap-4 ${
+                widgets.length === 1 ? 'grid-cols-1' :
+                widgets.length === 2 ? 'grid-cols-2' :
+                'md:grid-cols-2 lg:grid-cols-3'
+              }`}>
                 {widgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
               </div>
             </div>
@@ -640,6 +698,43 @@ export const AdaptiveDashboard: React.FC = () => {
           </div>
         );
       })()}
+
+      {/* Floating Action Button — always-visible primary action on mobile */}
+      <Link
+        href="/match?mode=capture"
+        className="fixed bottom-6 right-6 z-50 md:hidden bg-green-600 hover:bg-green-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl shadow-green-600/40 transition-all active:scale-95"
+        aria-label="Log a match"
+      >
+        <Plus className="w-6 h-6" />
+      </Link>
+
+      {/* Desktop right sidebar quick-actions strip — always visible */}
+      <div className="hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 z-40 flex-col gap-2 pr-2">
+        <Link
+          href="/match?mode=capture"
+          className="group flex flex-col items-center gap-1 bg-green-600 hover:bg-green-700 text-white rounded-l-xl px-3 py-3 shadow-lg shadow-green-600/30 transition-all"
+          title="Log a Match"
+        >
+          <Plus className="w-5 h-5" />
+          <span className="text-[9px] font-black uppercase tracking-widest leading-none">Match</span>
+        </Link>
+        <Link
+          href="/settings?tab=notifications"
+          className="group flex flex-col items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white rounded-l-xl px-3 py-3 shadow-lg transition-all"
+          title="Connect Channels"
+        >
+          <MessageCircle className="w-5 h-5" />
+          <span className="text-[9px] font-black uppercase tracking-widest leading-none">Chat</span>
+        </Link>
+        <Link
+          href="/match?mode=verify"
+          className="group flex flex-col items-center gap-1 bg-gray-800 hover:bg-gray-700 text-white rounded-l-xl px-3 py-3 shadow-lg transition-all"
+          title="Verify Results"
+        >
+          <Bell className="w-5 h-5" />
+          <span className="text-[9px] font-black uppercase tracking-widest leading-none">Verify</span>
+        </Link>
+      </div>
 
       {preferences.featureDiscoveryLevel < 50 && preferences.uiComplexity !== 'simple' && (
         <Card className="mt-8 border-blue-200 bg-blue-50">

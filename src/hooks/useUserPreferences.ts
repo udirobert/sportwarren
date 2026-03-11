@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { UserPreferences } from '@/types';
+import { UserPreferences, PlatformType } from '@/types';
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'system',
@@ -65,6 +65,8 @@ export function useUserPreferences() {
     setPreferences(updated);
     if (typeof window !== 'undefined') {
       localStorage.setItem('sw_preferences', JSON.stringify(updated));
+      // Dispatch custom event for same-tab listeners (e.g., navigation badge)
+      window.dispatchEvent(new CustomEvent('preferences-updated'));
     }
   }, [preferences]);
 
@@ -206,6 +208,26 @@ export function useUserPreferences() {
     });
   }, [savePreferences]);
 
+  // Platform connection management
+  const updateConnection = useCallback((platform: PlatformType, username?: string) => {
+    savePreferences({
+      connections: {
+        ...preferences.connections,
+        [platform]: {
+          connected: true,
+          connectedAt: new Date().toISOString(),
+          username,
+        },
+      },
+    });
+  }, [preferences, savePreferences]);
+
+  const disconnectPlatform = useCallback((platform: PlatformType) => {
+    const updated = { ...preferences.connections };
+    delete updated[platform];
+    savePreferences({ connections: updated });
+  }, [preferences, savePreferences]);
+
   return {
     preferences,
     isLoading,
@@ -221,5 +243,8 @@ export function useUserPreferences() {
     unpinWidget,
     reorderWidgets,
     resetDashboard,
+    // Platform connections
+    updateConnection,
+    disconnectPlatform,
   };
 }

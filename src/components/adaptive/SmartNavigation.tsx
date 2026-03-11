@@ -14,8 +14,9 @@ const BOTTOM_NAV_MAX = 5;
 const NAV_SHORTCUTS: Record<string, string> = {
   'KeyD': '/',        // Dashboard
   'KeyM': '/match',   // Matches
-  'KeyS': '/stats',   // Stats
+  'KeyS': '/stats',   // Stats (Shift+S for Settings)
   'KeyQ': '/squad',   // Squad
+  'KeyE': '/settings', // Settings (E for "Edit profile")
 };
 
 export const SmartNavigation: React.FC = () => {
@@ -23,6 +24,38 @@ export const SmartNavigation: React.FC = () => {
   const { preferences, trackFeatureUsage } = useUserPreferences();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [hasUnconnectedPlatforms, setHasUnconnectedPlatforms] = useState(false);
+
+  // Check for unconnected platforms to show badge on Settings
+  useEffect(() => {
+    const checkConnections = () => {
+      try {
+        const stored = localStorage.getItem('sw_preferences');
+        if (stored) {
+          const prefs = JSON.parse(stored);
+          const connections = prefs.connections || {};
+          const platforms = ['telegram', 'xmtp', 'whatsapp'];
+          const unconnected = platforms.filter(p => !connections[p]?.connected);
+          setHasUnconnectedPlatforms(unconnected.length > 0);
+        } else {
+          // No preferences stored yet = all platforms unconnected
+          setHasUnconnectedPlatforms(true);
+        }
+      } catch {
+        setHasUnconnectedPlatforms(true);
+      }
+    };
+    checkConnections();
+    // Re-check on storage changes (e.g., from settings page)
+    window.addEventListener('storage', checkConnections);
+    // Also listen for custom event from settings page updates
+    const handlePrefsUpdate = () => checkConnections();
+    window.addEventListener('preferences-updated', handlePrefsUpdate);
+    return () => {
+      window.removeEventListener('storage', checkConnections);
+      window.removeEventListener('preferences-updated', handlePrefsUpdate);
+    };
+  }, []);
 
   // Define all navigation items with their unlock conditions
   const allNavItems = [
@@ -78,8 +111,9 @@ export const SmartNavigation: React.FC = () => {
       path: '/settings', 
       icon: Settings, 
       label: 'Settings', 
-      priority: 10,
+      priority: 65,
       unlockLevel: 'basic' as const,
+      badge: 'connections' as const, // Shows indicator when platforms not connected
     },
   ];
 
@@ -195,7 +229,7 @@ export const SmartNavigation: React.FC = () => {
 
             <ContextualHelp feature="navigation" tips={helpTips}>
               <div className="flex items-center space-x-1">
-                {visibleNavItems.slice(1).map(({ path, icon: Icon, label }) => (
+                {visibleNavItems.slice(1).map(({ path, icon: Icon, label, badge }) => (
                   <Link
                     key={path}
                     href={path}
@@ -206,7 +240,12 @@ export const SmartNavigation: React.FC = () => {
                         : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
                     }`}
                   >
-                    <Icon className="w-4 h-4" />
+                    <div className="relative">
+                      <Icon className="w-4 h-4" />
+                      {badge === 'connections' && hasUnconnectedPlatforms && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                      )}
+                    </div>
                     <span className="font-medium text-sm">{label}</span>
                   </Link>
                 ))}
@@ -273,7 +312,7 @@ export const SmartNavigation: React.FC = () => {
         <div className={`grid gap-0.5 px-1 pt-1 pb-1 ${
           (primaryItems.length + (hasOverflow ? 1 : 0)) <= 4 ? 'grid-cols-4' : 'grid-cols-5'
         }`}>
-          {primaryItems.map(({ path, icon: Icon, label }) => (
+          {primaryItems.map(({ path, icon: Icon, label, badge }) => (
             <Link
               key={path}
               href={path}
@@ -282,7 +321,12 @@ export const SmartNavigation: React.FC = () => {
                 isActive(path) ? 'text-green-600 bg-green-50 dark:bg-green-900/30' : 'text-gray-500 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800'
               }`}
             >
-              <Icon className={`w-5 h-5 mb-0.5 transition-transform ${isActive(path) ? 'scale-110' : ''}`} />
+              <div className="relative">
+                <Icon className={`w-5 h-5 mb-0.5 transition-transform ${isActive(path) ? 'scale-110' : ''}`} />
+                {badge === 'connections' && hasUnconnectedPlatforms && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
+                )}
+              </div>
               <span className="text-[10px] font-medium leading-tight">{label}</span>
             </Link>
           ))}

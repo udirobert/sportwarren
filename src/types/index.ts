@@ -544,4 +544,38 @@ export interface UserPreferences {
     pinnedWidgets: string[];
     widgetOrder: string[];
   };
+
+  // Platform connections (Telegram, WhatsApp, XMTP)
+  connections?: PlatformConnections;
+}
+
+// Platform connection types
+export interface PlatformConnections {
+  telegram?: PlatformConnection;
+  whatsapp?: PlatformConnection;
+  xmtp?: PlatformConnection;
+}
+
+export interface PlatformConnection {
+  connected: boolean;
+  connectedAt?: string;
+  username?: string;
+  chatId?: string;
+  groupAddress?: string; // XMTP-specific
+}
+
+export type PlatformType = 'telegram' | 'whatsapp' | 'xmtp';
+
+export interface NotificationPreferences {
+  matchReminders: boolean;
+  verificationRequests: boolean;
+  squadUpdates: boolean;
+  achievements: boolean;
+  weeklyDigest: boolean;
+  channels: {
+    inApp: boolean;
+    telegram: boolean;
+    whatsapp: boolean;
+    xmtp: boolean;
+  };
 }

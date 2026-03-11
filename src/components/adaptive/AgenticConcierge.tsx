@@ -175,7 +175,7 @@ export const AgenticConcierge: React.FC = () => {
                                     <Bot className="w-6 h-6 text-white" />
                                 </div>
                                 <div>
-                                    <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none mb-1">Agentic Concierge</div>
+                                    <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none mb-1">Your Assistant</div>
                                     <h3 className="text-sm font-black text-white uppercase italic tracking-tight">Marcus</h3>
                                 </div>
                             </div>

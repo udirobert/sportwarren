@@ -106,7 +106,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                 >
                   <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center font-bold text-white text-xs text-center p-1">AVAX</div>
                   <div className="text-left flex-1">
-                    <h3 className="font-bold text-gray-900 leading-tight">Squad Governance</h3>
+                    <h3 className="font-bold text-gray-900 leading-tight">Squad Voting</h3>
                     <p className="text-xs text-gray-500">Vote on decisions & manage treasury</p>
                   </div>
                   {selectedChain === 'avalanche' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-red-600" />}
