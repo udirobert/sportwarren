@@ -10,6 +10,14 @@ export class TelegramService {
     }
 
     this.bot = new TelegramBot(token, { polling: true });
+
+    // Suppress polling error spam (e.g. when another bot instance is running)
+    this.bot.on('polling_error', (error: Error) => {
+      if (!error.message.includes('409 Conflict')) {
+        console.error('Telegram polling error:', error.message);
+      }
+    });
+
     this.setupCommands();
     this.setupEventHandlers();
   }

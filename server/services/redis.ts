@@ -8,17 +8,30 @@ export class RedisService {
       host: process.env.REDIS_HOST || 'localhost',
       port: parseInt(process.env.REDIS_PORT || '6379'),
       password: process.env.REDIS_PASSWORD || undefined,
-      retryStrategy: (times) => Math.min(times * 50, 2000),
       maxRetriesPerRequest: 3,
+      retryStrategy: (times) => {
+        if (times > 3) {
+          // Stop retrying after 3 attempts
+          return null;
+        }
+        return Math.min(times * 200, 2000);
+      },
+      lazyConnect: true,
+    });
+
+    // Suppress unhandled error events to prevent log spam
+    this.client.on('error', () => {
+      // Errors are handled in individual method try/catch blocks
     });
   }
 
   async connect(): Promise<void> {
     try {
+      await this.client.connect();
       await this.client.ping();
       console.log('✅ Connected to Redis');
     } catch (error) {
-      console.warn('⚠️ Redis connection failed, continuing without cache:', error);
+      console.warn('⚠️ Redis connection failed, continuing without cache:', (error as Error).message);
     }
   }
 

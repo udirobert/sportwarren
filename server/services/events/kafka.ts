@@ -20,9 +20,10 @@ export class EventStreamService {
     this.kafka = new Kafka({
       clientId: 'sportwarren-app',
       brokers: [process.env.KAFKA_BROKER || 'localhost:9092'],
+      logLevel: 1, // ERROR only
       retry: {
         initialRetryTime: 100,
-        retries: 8,
+        retries: 3,
       },
     });
 
@@ -45,7 +46,6 @@ export class EventStreamService {
       await this.createConsumer('communications', this.handleCommunicationEvent.bind(this));
 
     } catch (error) {
-      console.error('❌ Failed to initialize Kafka:', error);
       throw error;
     }
   }

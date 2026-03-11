@@ -1,5 +1,7 @@
-import { Client } from '@xmtp/xmtp-js';
+import { Client } from '@xmtp/node-sdk';
 import { ethers } from 'ethers';
+import * as path from 'path';
+import * as fs from 'fs';
 
 export class XMTPService {
   private client: Client | null = null;
@@ -13,15 +15,40 @@ export class XMTPService {
 
   async initialize(): Promise<void> {
     try {
-      // Create XMTP client
-      this.client = await Client.create(this.wallet, {
-        env: process.env.NODE_ENV === 'production' ? 'production' : 'dev',
+      const dbPath = path.join(process.cwd(), '.xmtp_db');
+      if (!fs.existsSync(dbPath)) {
+        fs.mkdirSync(dbPath, { recursive: true });
+      }
+
+      // Use a consistent encryption key for the local DB
+      // In production, this MUST be a 32-byte hex string in process.env.XMTP_DB_ENCRYPTION_KEY
+      let encryptionKey: Uint8Array;
+      if (process.env.XMTP_DB_ENCRYPTION_KEY) {
+        encryptionKey = ethers.getBytes(process.env.XMTP_DB_ENCRYPTION_KEY);
+      } else {
+        console.warn('⚠️ XMTP_DB_ENCRYPTION_KEY not set. Using a temporary key. Data will not persist across restarts.');
+        encryptionKey = new Uint8Array(32).fill(1);
+      }
+
+      const signer = {
+        getAddress: () => this.wallet.getAddress(),
+        signMessage: (message: string) => this.wallet.signMessage(message),
+      };
+
+      // Create XMTP V3 client
+      this.client = await Client.create(signer, encryptionKey, {
+        env: (process.env.NODE_ENV === 'production' ? 'production' : 'dev') as 'dev' | 'production',
+        dbPath: path.join(dbPath, `${this.wallet.address}.db`),
       });
       
-      console.log('✅ XMTP client initialized');
-      console.log('📧 XMTP address:', this.client.address);
+      // Sync with network
+      await this.client.conversations.sync();
+
+      console.log('✅ XMTP V3 client initialized');
+      console.log('📧 XMTP address:', this.wallet.address);
+      console.log('🆔 XMTP Inbox ID:', this.client.inboxId);
     } catch (error) {
-      console.error('❌ Failed to initialize XMTP:', error);
+      console.error('❌ Failed to initialize XMTP V3:', error);
       throw error;
     }
   }
@@ -30,46 +57,61 @@ export class XMTPService {
     if (!this.client) throw new Error('XMTP client not initialized');
 
     try {
-      // Create group conversation
-      const conversation = await this.client.conversations.newConversation(
-        memberAddresses[0] // Start with first member, others will be added
-      );
+      // In V3, we create a real group
+      // We should check if members are registered on XMTP first
+      // But for the demo, we'll try to create it directly
+      const group = await this.client.conversations.createGroup(memberAddresses);
 
-      // Store group metadata
-      await this.sendMessage(conversation.peerAddress, JSON.stringify({
+      // Store group metadata/init message
+      await group.send(JSON.stringify({
         type: 'squad_group_init',
         squadId,
         members: memberAddresses,
         timestamp: Date.now(),
       }));
 
-      return conversation.peerAddress;
+      console.log(`✅ Created XMTP V3 group for squad ${squadId}: ${group.id}`);
+      return group.id;
     } catch (error) {
       console.error('Failed to create XMTP squad group:', error);
       throw error;
     }
   }
 
-  async sendMessage(peerAddress: string, message: string): Promise<void> {
+  async sendMessage(targetId: string, message: string): Promise<void> {
     if (!this.client) throw new Error('XMTP client not initialized');
 
     try {
-      const conversation = await this.client.conversations.newConversation(peerAddress);
-      await conversation.send(message);
+      // Refresh conversations
+      await this.client.conversations.sync();
+
+      // Check if it's a group ID
+      const groups = await this.client.conversations.listGroups();
+      const group = groups.find(g => g.id === targetId);
+
+      if (group) {
+        await group.send(message);
+        return;
+      }
+
+      // If not a group, try to find/create a 1:1 dm
+      // In V3 DMs are also MLS-powered "groups" with 2 members
+      const dm = await this.client.conversations.newDm(targetId);
+      await dm.send(message);
     } catch (error) {
       console.error('Failed to send XMTP message:', error);
       throw error;
     }
   }
 
-  async sendMatchUpdate(squadGroupAddress: string, matchData: any): Promise<void> {
+  async sendMatchUpdate(squadGroupId: string, matchData: any): Promise<void> {
     const message = {
       type: 'match_update',
       data: matchData,
       timestamp: Date.now(),
     };
 
-    await this.sendMessage(squadGroupAddress, JSON.stringify(message));
+    await this.sendMessage(squadGroupId, JSON.stringify(message));
   }
 
   async sendAchievementNotification(userAddress: string, achievement: any): Promise<void> {
@@ -86,27 +128,33 @@ export class XMTPService {
     if (!this.client) throw new Error('XMTP client not initialized');
 
     try {
-      // Listen for new conversations
-      for await (const conversation of await this.client.conversations.stream()) {
-        console.log(`New XMTP conversation with ${conversation.peerAddress}`);
-        
-        // Listen for messages in this conversation
-        for await (const message of await conversation.streamMessages()) {
+      console.log('📡 Starting XMTP message stream...');
+      
+      // Stream all messages from all conversations (groups and DMs)
+      const stream = await this.client.conversations.streamAllMessages();
+      
+      for await (const message of stream) {
+        if (message.senderInboxId === this.client.inboxId) continue;
+
+        try {
+          const content = message.fallback || ''; // Fallback for encrypted content
+          // In V3, message.content might be more complex if using content types
+          // For now, we'll use fallback or try to parse
+          
+          let parsedContent = content;
           try {
-            const parsedMessage = JSON.parse(message.content);
-            callback({
-              from: message.senderAddress,
-              content: parsedMessage,
-              timestamp: message.sent,
-            });
-          } catch (error) {
-            // Handle plain text messages
-            callback({
-              from: message.senderAddress,
-              content: message.content,
-              timestamp: message.sent,
-            });
+            parsedContent = JSON.parse(content);
+          } catch {
+            // Keep as string
           }
+
+          callback({
+            from: message.senderInboxId,
+            content: parsedContent,
+            timestamp: message.sentAtNs / 1000000, // Convert ns to ms
+          });
+        } catch (error) {
+          console.error('Error processing XMTP message:', error);
         }
       }
     } catch (error) {

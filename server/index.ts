@@ -28,6 +28,9 @@ import { EventStreamService } from './services/events/kafka.js';
 
 dotenv.config();
 
+// Suppress known non-critical warnings
+process.env.KAFKAJS_NO_PARTITIONER_WARNING = '1';
+
 const PORT = process.env.PORT || 4000;
 
 async function startServer() {
@@ -47,29 +50,31 @@ async function startServer() {
   const lensService = new LensService();
   const eventStreamService = new EventStreamService();
 
-  // Initialize advanced services
-  try {
-    await communicationBridge.initialize();
-    await eventStreamService.initialize();
+  // Initialize advanced services (each independently so one failure doesn't block others)
+  await communicationBridge.initialize();
 
-    // Deploy blockchain contracts
+  try {
+    await eventStreamService.initialize();
+  } catch (error) {
+    console.warn('⚠️ Kafka event streaming unavailable (non-fatal):', (error as Error).message);
+  }
+
+  try {
     const squadDAOAppId = await algorandService.deploySquadDAO();
     if (squadDAOAppId) {
       console.log(`Squad DAO deployed with ID: ${squadDAOAppId}`);
-    } else {
-      console.warn('Failed to deploy Squad DAO.');
     }
+  } catch (error) {
+    console.warn('⚠️ Squad DAO deployment skipped (non-fatal):', (error as Error).message);
+  }
 
+  try {
     const matchVerificationAppId = await algorandService.deployMatchVerification();
     if (matchVerificationAppId) {
       console.log(`Match Verification deployed with ID: ${matchVerificationAppId}`);
-    } else {
-      console.warn('Failed to deploy Match Verification.');
     }
-
-    console.log('Advanced services initialized');
   } catch (error) {
-    console.warn('Some advanced services failed to initialize:', error);
+    console.warn('⚠️ Match Verification deployment skipped (non-fatal):', (error as Error).message);
   }
 
   // Create Express app and HTTP server

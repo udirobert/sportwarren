@@ -114,7 +114,19 @@ junit.xml
 .junie
 .bolt
 
+# WhatsApp session data
+.wwebjs_auth/
+.wwebjs_cache/
+
+# Python virtual environments
+.venv/
+venv/
+
+# Puppeteer/Chromium
+.local-chromium/
+
 # Hardhat
 artifacts/
 cache/
 typechain-types/
+.output.txt

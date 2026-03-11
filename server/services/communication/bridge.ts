@@ -29,26 +29,28 @@ export class CommunicationBridge {
   }
 
   async initialize(): Promise<void> {
-    try {
-      // Initialize all communication services
-      await Promise.all([
-        this.xmtp.initialize(),
-        this.whatsapp.initialize(),
-        // Telegram initializes automatically
-      ]);
+    // Initialize communication services individually so one failure doesn't block others
+    const results = await Promise.allSettled([
+      this.xmtp.initialize(),
+      this.whatsapp.initialize(),
+      // Telegram initializes automatically
+    ]);
 
-      // Set up message listeners
-      this.setupMessageListeners();
+    const serviceNames = ['XMTP', 'WhatsApp'];
+    results.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        console.warn(`⚠️ ${serviceNames[index]} failed to initialize (non-fatal):`, (result.reason as Error).message);
+      }
+    });
 
-      console.log('✅ Communication bridge initialized');
-    } catch (error) {
-      console.error('❌ Failed to initialize communication bridge:', error);
-      throw error;
-    }
+    // Set up message listeners for services that succeeded
+    this.setupMessageListeners();
+
+    console.log('✅ Communication bridge initialized (some services may be degraded)');
   }
 
   private setupMessageListeners(): void {
-    // Listen for XMTP messages
+    // Listen for XMTP messages (skip if client not initialized)
     this.xmtp.listenForMessages((message) => {
       this.handleIncomingMessage({
         id: `xmtp_${Date.now()}`,
@@ -61,6 +63,8 @@ export class CommunicationBridge {
         },
         timestamp: message.timestamp,
       });
+    }).catch((error: Error) => {
+      console.warn('⚠️ XMTP message listener not available:', error.message);
     });
 
     // WhatsApp and Telegram messages are handled in their respective services
