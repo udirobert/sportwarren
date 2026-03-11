@@ -1,4 +1,4 @@
-import { Client } from '@xmtp/node-sdk';
+import { Client, IdentifierKind } from '@xmtp/node-sdk';
 import { ethers } from 'ethers';
 import * as path from 'path';
 import * as fs from 'fs';
@@ -30,9 +30,11 @@ export class XMTPService {
         encryptionKey = new Uint8Array(32).fill(1);
       }
 
+      const addr = this.wallet.address;
       const signer = {
-        getAddress: () => this.wallet.getAddress(),
-        signMessage: (message: string) => this.wallet.signMessage(message),
+        type: 'EOA' as const,
+        getIdentifier: () => ({ identifier: addr, identifierKind: IdentifierKind.Ethereum }),
+        signMessage: async (message: string) => ethers.getBytes(await this.wallet.signMessage(message)),
       };
 
       // Create XMTP V3 client
@@ -63,7 +65,7 @@ export class XMTPService {
       const group = await this.client.conversations.createGroup(memberAddresses);
 
       // Store group metadata/init message
-      await group.send(JSON.stringify({
+      await group.sendText(JSON.stringify({
         type: 'squad_group_init',
         squadId,
         members: memberAddresses,
@@ -90,14 +92,14 @@ export class XMTPService {
       const group = groups.find(g => g.id === targetId);
 
       if (group) {
-        await group.send(message);
+        await group.sendText(message);
         return;
       }
 
       // If not a group, try to find/create a 1:1 dm
       // In V3 DMs are also MLS-powered "groups" with 2 members
-      const dm = await this.client.conversations.newDm(targetId);
-      await dm.send(message);
+      const dm = await this.client.conversations.createDm(targetId);
+      await dm.sendText(message);
     } catch (error) {
       console.error('Failed to send XMTP message:', error);
       throw error;
