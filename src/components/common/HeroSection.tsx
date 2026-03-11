@@ -20,7 +20,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
     totalMatches: 0,
     totalAgents: 0,
   });
-  const { loginAsGuest } = useWallet();
+  const { loginAsGuest, connected } = useWallet();
   const [scrollY, setScrollY] = useState(0);
   const parallaxRef = useRef<HTMLDivElement>(null);
   const problemRef = useRef<HTMLDivElement>(null);
@@ -104,7 +104,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
               className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
             >
               <Zap className="w-5 h-5 mr-2" />
-              Start Your Season
+              {connected ? 'Go to Dashboard' : 'Start Your Season'}
               <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
             </button>
 
@@ -116,42 +116,49 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
               See How It Works
             </button>
 
-            <button
-              onClick={loginAsGuest}
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-blue-400 bg-blue-600/10 backdrop-blur-sm border-2 border-blue-600/20 rounded-xl hover:bg-blue-600/20 transition-all group"
-            >
-              <Eye className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-              Preview as Guest
-            </button>
+            {!connected && (
+              <button
+                onClick={loginAsGuest}
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-blue-400 bg-blue-600/10 backdrop-blur-sm border-2 border-blue-600/20 rounded-xl hover:bg-blue-600/20 transition-all group"
+              >
+                <Eye className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+                Preview as Guest
+              </button>
+            )}
           </div>
 
           {/* Stats */}
-          <div className="flex flex-wrap items-center justify-center gap-8">
-            <div className="flex items-center space-x-2 group">
-              <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Users className="w-5 h-5 text-green-400" />
-              </div>
-              <div className="text-left">
-                <div className="text-2xl font-bold text-white">{stats.totalPlayers.toLocaleString()}+</div>
-                <div className="text-xs text-gray-400">Players</div>
-              </div>
+          <div className="relative inline-block">
+            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-tighter">
+              Projected 1-Year Goal
             </div>
-            <div className="flex items-center space-x-2 group">
-              <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Trophy className="w-5 h-5 text-blue-400" />
+            <div className="flex flex-wrap items-center justify-center gap-8 p-6 border border-white/5 rounded-2xl bg-white/2">
+              <div className="flex items-center space-x-2 group">
+                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Users className="w-5 h-5 text-green-400" />
+                </div>
+                <div className="text-left">
+                  <div className="text-2xl font-bold text-white">50,000+</div>
+                  <div className="text-xs text-gray-400">Players</div>
+                </div>
               </div>
-              <div className="text-left">
-                <div className="text-2xl font-bold text-white">{stats.totalMatches.toLocaleString()}+</div>
-                <div className="text-xs text-gray-400">Matches</div>
+              <div className="flex items-center space-x-2 group">
+                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Trophy className="w-5 h-5 text-blue-400" />
+                </div>
+                <div className="text-left">
+                  <div className="text-2xl font-bold text-white">125,000+</div>
+                  <div className="text-xs text-gray-400">Matches</div>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center space-x-2 group">
-              <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                <Sparkles className="w-5 h-5 text-purple-400" />
-              </div>
-              <div className="text-left">
-                <div className="text-2xl font-bold text-white">{stats.totalAgents.toLocaleString()}+</div>
-                <div className="text-xs text-gray-400">AI Agents</div>
+              <div className="flex items-center space-x-2 group">
+                <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Sparkles className="w-5 h-5 text-purple-400" />
+                </div>
+                <div className="text-left">
+                  <div className="text-2xl font-bold text-white">5,000+</div>
+                  <div className="text-xs text-gray-400">AI Agents</div>
+                </div>
               </div>
             </div>
           </div>
