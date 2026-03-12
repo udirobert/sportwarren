@@ -259,11 +259,11 @@ export const AdaptiveDashboard: React.FC = () => {
                       }`} />
                       <div>
                         <h3 className="font-semibold text-gray-900 text-sm">vs {match.opponent}</h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">{match.date}</p>
+                        <p className="text-xs text-gray-700 dark:text-gray-300">{match.date}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-gray-400">+{xp} XP</span>
+                      <span className="text-xs font-bold text-gray-500 dark:text-gray-400">+{xp} XP</span>
                       <span className={`text-sm font-black px-2.5 py-1 rounded-lg ${
                         isWin ? 'bg-green-100 text-green-700' :
                         isDraw ? 'bg-yellow-100 text-yellow-700' :
@@ -289,7 +289,7 @@ export const AdaptiveDashboard: React.FC = () => {
                 <Trophy className="w-8 h-8 text-green-600 dark:text-green-400" />
               </div>
               <h3 className="font-bold text-gray-900 dark:text-white mb-1">No matches logged yet</h3>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
                 Log your first match in 30 seconds — just enter the score and opponent.
               </p>
               <Link href="/match?mode=capture">
@@ -627,6 +627,33 @@ export const AdaptiveDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Squad Pulse Ticker — Plugs the gap between header and content */}
+      <div className="flex items-center gap-6 py-2 px-1 overflow-x-auto scrollbar-hide text-[9px] font-black uppercase tracking-widest text-gray-500 border-b border-gray-100 dark:border-gray-800 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-sm shadow-green-500/50" />
+          <span className="text-gray-900 dark:text-gray-100">Live</span>
+          <span>12 Match Reports Pending</span>
+        </div>
+        <div className="w-px h-2.5 bg-gray-200 dark:bg-gray-700 shrink-0" />
+        <div className="flex items-center gap-1.5 shrink-0">
+          <TrendingUp className="w-3 h-3 text-blue-500" />
+          <span className="text-gray-900 dark:text-gray-100">Scouting</span>
+          <span>Efficiency +12.4%</span>
+        </div>
+        <div className="w-px h-2.5 bg-gray-200 dark:bg-gray-700 shrink-0" />
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Zap className="w-3 h-3 text-orange-500" />
+          <span className="text-gray-900 dark:text-gray-100">Boost</span>
+          <span>Training Intensity High</span>
+        </div>
+        <div className="w-px h-2.5 bg-gray-200 dark:bg-gray-700 shrink-0" />
+        <div className="flex items-center gap-1.5 shrink-0">
+          <Users className="w-3 h-3 text-purple-500" />
+          <span className="text-gray-900 dark:text-gray-100">Squad</span>
+          <span>8 Active Members</span>
+        </div>
+      </div>
+
       <AnimatePresence>
         {isStaffRoomOpen && (
           <AgentProvider>
@@ -690,7 +717,7 @@ export const AdaptiveDashboard: React.FC = () => {
           );
 
         return (
-          <div className="space-y-8">
+          <div className="space-y-4 md:space-y-6">
             {/* Desktop: 2-column layout with right sidebar */}
             <div className="hidden lg:grid lg:grid-cols-3 gap-6">
               {/* Main content — 2/3 width */}
@@ -707,7 +734,7 @@ export const AdaptiveDashboard: React.FC = () => {
                       <Plus className="w-6 h-6 text-white" />
                     </div>
                     <h3 className="font-bold text-gray-900 dark:text-white mb-1">Log a Match</h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Submit your result in 30 seconds</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">Submit your result in 30 seconds</p>
                     <Link href="/match?mode=capture">
                       <Button className="bg-green-600 hover:bg-green-700 text-white w-full">
                         <Zap className="w-4 h-4 mr-2" />
@@ -736,7 +763,7 @@ export const AdaptiveDashboard: React.FC = () => {
                           <div className="flex items-center justify-between py-1.5">
                             <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{platform}</span>
                             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                              isConnected ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
+                              isConnected ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
                             }`}>
                               {isConnected ? 'Linked' : 'Not linked'}
                             </span>
@@ -769,8 +796,8 @@ export const AdaptiveDashboard: React.FC = () => {
                       {stats.recentMatches.slice(0, 2).map((match, i) => (
                         <div key={i} className="flex items-center gap-2 py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0">
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">vs {match.opponent}</p>
-                            <p className="text-xs text-gray-600 dark:text-gray-400">{match.date}</p>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">vs {match.opponent}</p>
+                            <p className="text-xs text-gray-700 dark:text-gray-300">{match.date}</p>
                           </div>
                         </div>
                       ))}

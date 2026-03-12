@@ -100,7 +100,7 @@ export const CommunicationHub: React.FC<CommunicationHubProps> = ({
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-bold text-gray-900 dark:text-white">Connect Your Squad's Chat</h2>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-600 dark:text-gray-400">
             {allConnected
               ? 'All channels connected — your squad gets updates automatically'
               : 'Link messaging platforms to share match updates with your squad'}
@@ -137,7 +137,7 @@ export const CommunicationHub: React.FC<CommunicationHubProps> = ({
                   <p className={`font-semibold ${isConnected ? 'text-gray-900 dark:text-white' : 'text-gray-700 dark:text-gray-300'}`}>
                     {info.name}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-700 dark:text-gray-300">
                     {isConnected ? 'Connected' : 'Not connected'}
                   </p>
                 </div>
