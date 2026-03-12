@@ -34,24 +34,42 @@ const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
   },
 };
 
-const PLATFORM_INFO: Record<PlatformType, { name: string; icon: string; color: string; description: string }> = {
+const PLATFORM_INFO: Record<PlatformType, { name: string; icon: string; color: string; description: string; benefits: string[]; preview: string }> = {
   telegram: {
     name: 'Telegram',
     icon: '📱',
     color: 'bg-blue-500',
-    description: 'Get match updates and squad notifications in your Telegram group',
+    description: 'Get instant match updates in your squad group',
+    benefits: [
+      'Real-time match result notifications',
+      'Squad group announcements',
+      'No phone number required',
+    ],
+    preview: '🏆 Match Result: W 3-1 vs Sunday Legends\n+150 XP earned!',
   },
   whatsapp: {
     name: 'WhatsApp',
     icon: '💬',
     color: 'bg-green-500',
-    description: 'Share match results and achievements to your WhatsApp squad chat',
+    description: 'Share achievements to your existing squad chat',
+    benefits: [
+      'Share to your existing WhatsApp group',
+      'Rich media previews',
+      'Instant delivery to all members',
+    ],
+    preview: '🎉 We won 3-1!\n@username just earned +150 XP',
   },
   xmtp: {
     name: 'XMTP',
     icon: '🔐',
     color: 'bg-purple-500',
-    description: 'Secure web3 messaging for verified match communications',
+    description: 'Secure web3 messaging for verified communications',
+    benefits: [
+      'End-to-end encrypted messages',
+      'Wallet-based identity',
+      'Works without phone number',
+    ],
+    preview: '🔐 Verified: Match #12345 confirmed\nvs Red Lions FC',
   },
 };
 
@@ -63,6 +81,7 @@ export default function SettingsPage() {
   const { memberships } = useMySquads();
   const [notifications, setNotifications] = useState<NotificationPreferences>(DEFAULT_NOTIFICATIONS);
   const [copied, setCopied] = useState(false);
+  const [celebrating, setCelebrating] = useState<PlatformType | null>(null);
 
   const connections = preferences.connections ?? {};
 
@@ -113,6 +132,8 @@ export default function SettingsPage() {
   const handleConnect = (platform: PlatformType) => {
     updateConnection(platform);
     completeChecklistItem('connect_channels');
+    setCelebrating(platform);
+    setTimeout(() => setCelebrating(null), 3000);
   };
 
   const handleDisconnect = (platform: PlatformType) => {
@@ -280,38 +301,47 @@ export default function SettingsPage() {
               {(Object.keys(PLATFORM_INFO) as PlatformType[]).map(platform => {
                 const info = PLATFORM_INFO[platform];
                 const connection = connections[platform];
+                const isConnected = connection?.connected;
                 return (
-                  <div key={platform} className="flex items-center justify-between p-4 border border-gray-200 dark:border-gray-700 rounded-xl">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 ${info.color} rounded-lg flex items-center justify-center text-xl`}>
-                        {info.icon}
+                  <div key={platform} className={`p-4 border rounded-xl transition-all ${
+                    isConnected
+                      ? 'border-green-300 dark:border-green-700 bg-green-50/50 dark:bg-green-900/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-12 h-12 ${info.color} rounded-xl flex items-center justify-center text-2xl shadow-sm`}>
+                          {info.icon}
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-900 dark:text-white">{info.name}</p>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">{info.description}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-900 dark:text-white">{info.name}</p>
-                        <p className="text-xs text-gray-500">{info.description}</p>
-                      </div>
-                    </div>
-                    {connection?.connected ? (
-                      <div className="flex items-center gap-2">
-                        <span className="flex items-center gap-1 text-xs text-green-600 font-medium">
-                          <Check className="w-3 h-3" />
-                          Connected
-                        </span>
+                      {isConnected ? (
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => handleDisconnect(platform)}
-                          className="text-red-600"
+                          className="text-red-600 shrink-0"
                         >
                           <X className="w-3 h-3 mr-1" />
                           Unlink
                         </Button>
+                      ) : (
+                        <Button size="sm" onClick={() => handleConnect(platform)} className="shrink-0">
+                          <Link2 className="w-3 h-3 mr-1" />
+                          Connect
+                        </Button>
+                      )}
+                    </div>
+                    {isConnected && (
+                      <div className="mt-3 pt-3 border-t border-green-200/50 dark:border-green-800/50">
+                        <p className="text-xs font-medium text-green-700 dark:text-green-400 mb-2">You'll receive:</p>
+                        <code className="block text-xs bg-gray-900 text-gray-100 p-2 rounded-lg overflow-x-auto">
+                          {info.preview}
+                        </code>
                       </div>
-                    ) : (
-                      <Button size="sm" onClick={() => handleConnect(platform)}>
-                        <Link2 className="w-3 h-3 mr-1" />
-                        Connect
-                      </Button>
                     )}
                   </div>
                 );
@@ -400,6 +430,21 @@ export default function SettingsPage() {
 
       {/* Wallet Tab */}
       {activeTab === 'wallet' && <AlgorandWallet />}
+
+      {/* Celebration Toast */}
+      {celebrating && (
+        <div className="fixed bottom-6 right-6 z-50 animate-bounce">
+          <div className="bg-green-600 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3">
+            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
+              🎉
+            </div>
+            <div>
+              <p className="font-bold text-sm">{PLATFORM_INFO[celebrating].name} connected!</p>
+              <p className="text-xs text-green-100">You'll receive match updates here</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

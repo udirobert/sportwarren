@@ -12,6 +12,7 @@ interface PlatformInfo {
   icon: string;
   color: string;
   bgColor: string;
+  preview: string;
 }
 
 const PLATFORMS: Record<PlatformType, PlatformInfo> = {
@@ -20,18 +21,21 @@ const PLATFORMS: Record<PlatformType, PlatformInfo> = {
     icon: '📱',
     color: 'text-blue-600',
     bgColor: 'bg-blue-100',
+    preview: '🏆 W 3-1 vs Sunday Legends',
   },
   whatsapp: {
     name: 'WhatsApp',
     icon: '💬',
     color: 'text-green-600',
     bgColor: 'bg-green-100',
+    preview: '🎉 We won! +150 XP',
   },
   xmtp: {
     name: 'XMTP',
     icon: '🔐',
     color: 'text-purple-600',
     bgColor: 'bg-purple-100',
+    preview: '🔐 Match verified',
   },
 };
 
