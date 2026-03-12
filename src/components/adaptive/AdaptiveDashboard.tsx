@@ -725,14 +725,29 @@ export const AdaptiveDashboard: React.FC = () => {
                   <div className="space-y-2">
                     {['Telegram', 'WhatsApp', 'XMTP'].map((platform) => {
                       const isConnected = preferences.connections?.[platform.toLowerCase() as keyof typeof preferences.connections]?.connected;
+                      const platformKey = platform.toLowerCase() as 'telegram' | 'whatsapp' | 'xmtp';
+                      const previews: Record<string, string> = {
+                        telegram: '🏆 W 3-1 vs Sunday Legends',
+                        whatsapp: '🎉 +150 XP earned!',
+                        xmtp: '🔐 Match verified',
+                      };
                       return (
-                        <div key={platform} className="flex items-center justify-between py-1.5">
-                          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{platform}</span>
-                          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            isConnected ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
-                          }`}>
-                            {isConnected ? 'Linked' : 'Not linked'}
-                          </span>
+                        <div key={platform}>
+                          <div className="flex items-center justify-between py-1.5">
+                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{platform}</span>
+                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                              isConnected ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
+                            }`}>
+                              {isConnected ? 'Linked' : 'Not linked'}
+                            </span>
+                          </div>
+                          {isConnected && (
+                            <div className="mb-2">
+                              <code className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-1 rounded block truncate">
+                                {previews[platformKey]}
+                              </code>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
