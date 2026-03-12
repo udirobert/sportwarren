@@ -1,167 +1,135 @@
-import { Client, IdentifierKind } from '@xmtp/node-sdk';
+import { Agent, type Signer } from '@xmtp/agent-sdk';
 import { ethers } from 'ethers';
-import * as path from 'path';
-import * as fs from 'fs';
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 
-export class XMTPService {
-  private client: Client | null = null;
+const IDENTIFIER_KIND_ETHEREUM = 0;
+
+export interface IncomingXmtpMessage {
+  from: string;
+  content: string | Record<string, unknown>;
+  timestamp: number;
+  conversationId: string;
+}
+
+export type XmtpPayload =
+  | { type: 'match_update'; squadId: string; data: Record<string, unknown>; timestamp: number }
+  | { type: 'achievement'; squadId: string; data: Record<string, unknown>; timestamp: number }
+  | { type: 'reminder'; squadId: string; data: Record<string, unknown>; timestamp: number }
+  | { type: 'general'; squadId?: string; data: string; timestamp: number };
+
+export class XMTPBotService {
+  private agent: Agent | null = null;
   private wallet: ethers.Wallet;
 
   constructor() {
-    // Initialize with environment wallet or create new one
-    const privateKey = process.env.XMTP_PRIVATE_KEY || ethers.Wallet.createRandom().privateKey;
-    this.wallet = new ethers.Wallet(privateKey);
+    const privateKey = process.env.XMTP_PRIVATE_KEY;
+    if (!privateKey) {
+      console.warn('⚠️ XMTP_PRIVATE_KEY not set. Using a randomly generated wallet.');
+    }
+    this.wallet = new ethers.Wallet(privateKey || ethers.Wallet.createRandom().privateKey);
   }
 
   async initialize(): Promise<void> {
     try {
-      const dbPath = path.join(process.cwd(), '.xmtp_db');
-      if (!fs.existsSync(dbPath)) {
-        fs.mkdirSync(dbPath, { recursive: true });
+      const dbDir = join(process.cwd(), '.xmtp_db');
+      if (!existsSync(dbDir)) {
+        mkdirSync(dbDir, { recursive: true });
       }
 
-      // Use a consistent encryption key for the local DB
-      // In production, this MUST be a 32-byte hex string in process.env.XMTP_DB_ENCRYPTION_KEY
-      let encryptionKey: Uint8Array;
-      if (process.env.XMTP_DB_ENCRYPTION_KEY) {
-        encryptionKey = ethers.getBytes(process.env.XMTP_DB_ENCRYPTION_KEY);
-      } else {
-        console.warn('⚠️ XMTP_DB_ENCRYPTION_KEY not set. Using a temporary key. Data will not persist across restarts.');
-        encryptionKey = new Uint8Array(32).fill(1);
+      if (!process.env.XMTP_DB_ENCRYPTION_KEY) {
+        console.warn('⚠️ XMTP_DB_ENCRYPTION_KEY not set. Using random key — data will not persist across restarts.');
       }
 
-      const addr = this.wallet.address;
-      const signer = {
+      const signer: Signer = {
         type: 'EOA' as const,
-        getIdentifier: () => ({ identifier: addr, identifierKind: IdentifierKind.Ethereum }),
+        getIdentifier: () => ({
+          identifier: this.wallet.address,
+          identifierKind: IDENTIFIER_KIND_ETHEREUM,
+        }),
         signMessage: async (message: string) => ethers.getBytes(await this.wallet.signMessage(message)),
       };
 
-      // Create XMTP V3 client
-      this.client = await Client.create(signer, encryptionKey, {
-        env: (process.env.NODE_ENV === 'production' ? 'production' : 'dev') as 'dev' | 'production',
-        dbPath: path.join(dbPath, `${this.wallet.address}.db`),
+      this.agent = await Agent.create(signer, {
+        env: (process.env.XMTP_ENV || (process.env.NODE_ENV === 'production' ? 'production' : 'dev')) as 'dev' | 'production',
+        dbPath: join(dbDir, 'sportwarren-bot.db3'),
+        dbEncryptionKey: process.env.XMTP_DB_ENCRYPTION_KEY as `0x${string}` | undefined,
+        appVersion: 'sportwarren-agent/1.0.0',
       });
-      
-      // Sync with network
-      await this.client.conversations.sync();
 
-      console.log('✅ XMTP V3 client initialized');
+      await this.agent.client.conversations.sync();
+
+      console.log('✅ XMTP Agent initialized');
       console.log('📧 XMTP address:', this.wallet.address);
-      console.log('🆔 XMTP Inbox ID:', this.client.inboxId);
+      console.log('🆔 XMTP Inbox ID:', this.agent.client.inboxId);
     } catch (error) {
-      console.error('❌ Failed to initialize XMTP V3:', error);
+      console.error('❌ Failed to initialize XMTP Agent:', error);
       throw error;
     }
   }
 
-  async createSquadGroup(squadId: string, memberAddresses: string[]): Promise<string> {
-    if (!this.client) throw new Error('XMTP client not initialized');
+  async start(onMessage: (msg: IncomingXmtpMessage) => Promise<void>): Promise<void> {
+    if (!this.agent) throw new Error('XMTP agent not initialized');
 
-    try {
-      // In V3, we create a real group
-      // We should check if members are registered on XMTP first
-      // But for the demo, we'll try to create it directly
-      const group = await this.client.conversations.createGroup(memberAddresses);
+    this.agent.on('text', async (ctx) => {
+      const message = ctx.message;
+      if (message.senderInboxId === this.agent!.client.inboxId) return;
 
-      // Store group metadata/init message
-      await group.sendText(JSON.stringify({
-        type: 'squad_group_init',
-        squadId,
-        members: memberAddresses,
-        timestamp: Date.now(),
-      }));
-
-      console.log(`✅ Created XMTP V3 group for squad ${squadId}: ${group.id}`);
-      return group.id;
-    } catch (error) {
-      console.error('Failed to create XMTP squad group:', error);
-      throw error;
-    }
-  }
-
-  async sendMessage(targetId: string, message: string): Promise<void> {
-    if (!this.client) throw new Error('XMTP client not initialized');
-
-    try {
-      // Refresh conversations
-      await this.client.conversations.sync();
-
-      // Check if it's a group ID
-      const groups = await this.client.conversations.listGroups();
-      const group = groups.find(g => g.id === targetId);
-
-      if (group) {
-        await group.sendText(message);
-        return;
+      let content: string | Record<string, unknown> = message.content as string;
+      try {
+        content = JSON.parse(content as string);
+      } catch {
+        // keep as string
       }
 
-      // If not a group, try to find/create a 1:1 dm
-      // In V3 DMs are also MLS-powered "groups" with 2 members
-      const dm = await this.client.conversations.createDm(targetId);
-      await dm.sendText(message);
-    } catch (error) {
-      console.error('Failed to send XMTP message:', error);
-      throw error;
-    }
+      await onMessage({
+        from: message.senderInboxId,
+        content,
+        timestamp: Number(message.sentAtNs) / 1_000_000,
+        conversationId: ctx.conversation.id,
+      });
+    });
+
+    await this.agent.start();
   }
 
-  async sendMatchUpdate(squadGroupId: string, matchData: any): Promise<void> {
-    const message = {
-      type: 'match_update',
-      data: matchData,
+  async createSquadGroup(squadId: string, memberInboxIds: string[]): Promise<string> {
+    if (!this.agent) throw new Error('XMTP agent not initialized');
+
+    const group = await this.agent.client.conversations.createGroup(memberInboxIds);
+
+    await group.sendText(JSON.stringify({
+      type: 'squad_group_init',
+      squadId,
+      members: memberInboxIds,
       timestamp: Date.now(),
-    };
+    }));
 
-    await this.sendMessage(squadGroupId, JSON.stringify(message));
+    console.log(`✅ Created XMTP group for squad ${squadId}: ${group.id}`);
+    return group.id;
   }
 
-  async sendAchievementNotification(userAddress: string, achievement: any): Promise<void> {
-    const message = {
-      type: 'achievement_unlocked',
-      data: achievement,
-      timestamp: Date.now(),
-    };
+  async sendGroupMessage(groupId: string, payload: XmtpPayload): Promise<void> {
+    if (!this.agent) throw new Error('XMTP agent not initialized');
 
-    await this.sendMessage(userAddress, JSON.stringify(message));
+    await this.agent.client.conversations.sync();
+    const groups = await this.agent.client.conversations.listGroups();
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) throw new Error(`Group ${groupId} not found`);
+
+    await group.sendText(JSON.stringify(payload));
   }
 
-  async listenForMessages(callback: (message: any) => void): Promise<void> {
-    if (!this.client) throw new Error('XMTP client not initialized');
+  async sendDirectMessage(inboxId: string, payload: XmtpPayload): Promise<void> {
+    if (!this.agent) throw new Error('XMTP agent not initialized');
 
-    try {
-      console.log('📡 Starting XMTP message stream...');
-      
-      // Stream all messages from all conversations (groups and DMs)
-      const stream = await this.client.conversations.streamAllMessages();
-      
-      for await (const message of stream) {
-        if (message.senderInboxId === this.client.inboxId) continue;
+    await this.agent.client.conversations.sync();
+    const dm = await this.agent.client.conversations.createDm(inboxId);
+    await dm.sendText(JSON.stringify(payload));
+  }
 
-        try {
-          const content = message.fallback || ''; // Fallback for encrypted content
-          // In V3, message.content might be more complex if using content types
-          // For now, we'll use fallback or try to parse
-          
-          let parsedContent = content;
-          try {
-            parsedContent = JSON.parse(content);
-          } catch {
-            // Keep as string
-          }
-
-          callback({
-            from: message.senderInboxId,
-            content: parsedContent,
-            timestamp: message.sentAtNs / 1000000, // Convert ns to ms
-          });
-        } catch (error) {
-          console.error('Error processing XMTP message:', error);
-        }
-      }
-    } catch (error) {
-      console.error('Error listening for XMTP messages:', error);
-    }
+  getInboxId(): string | null {
+    return this.agent?.client.inboxId ?? null;
   }
 
   getWalletAddress(): string {

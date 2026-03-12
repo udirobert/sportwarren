@@ -1,6 +1,12 @@
-import { XMTPService } from './xmtp.js';
+import { XMTPBotService, type IncomingXmtpMessage, type XmtpPayload } from './xmtp.js';
 import { WhatsAppService } from './whatsapp.js';
 import { TelegramService } from './telegram.js';
+
+export interface CommunicationTargets {
+  xmtp?: { kind: 'group'; groupId: string } | { kind: 'dm'; inboxId: string };
+  whatsapp?: { chatId: string };
+  telegram?: { chatId: string };
+}
 
 export interface CrossPlatformMessage {
   id: string;
@@ -13,27 +19,44 @@ export interface CrossPlatformMessage {
     name?: string;
   };
   timestamp: number;
-  metadata?: Record<string, any>;
+}
+
+export interface MatchUpdateData {
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number;
+  awayScore: number;
+  event?: string;
+  minute?: number;
+}
+
+export interface AchievementData {
+  playerName: string;
+  title: string;
+}
+
+export interface MatchReminderData {
+  opponent: string;
+  date: string;
+  time?: string;
+  venue?: string;
 }
 
 export class CommunicationBridge {
-  private xmtp: XMTPService;
+  private xmtp: XMTPBotService;
   private whatsapp: WhatsAppService;
   private telegram: TelegramService;
-  private messageQueue: CrossPlatformMessage[] = [];
 
   constructor() {
-    this.xmtp = new XMTPService();
+    this.xmtp = new XMTPBotService();
     this.whatsapp = new WhatsAppService();
     this.telegram = new TelegramService();
   }
 
   async initialize(): Promise<void> {
-    // Initialize communication services individually so one failure doesn't block others
     const results = await Promise.allSettled([
       this.xmtp.initialize(),
       this.whatsapp.initialize(),
-      // Telegram initializes automatically
     ]);
 
     const serviceNames = ['XMTP', 'WhatsApp'];
@@ -43,182 +66,67 @@ export class CommunicationBridge {
       }
     });
 
-    // Set up message listeners for services that succeeded
-    this.setupMessageListeners();
+    this.xmtp.start(async (message: IncomingXmtpMessage) => {
+      console.log('📩 Incoming XMTP message:', message.from, message.content);
+    }).catch((err: Error) => {
+      console.warn('⚠️ XMTP message stream not available:', err.message);
+    });
 
     console.log('✅ Communication bridge initialized (some services may be degraded)');
   }
 
-  private setupMessageListeners(): void {
-    // Listen for XMTP messages (skip if client not initialized)
-    this.xmtp.listenForMessages((message) => {
-      this.handleIncomingMessage({
-        id: `xmtp_${Date.now()}`,
-        squadId: 'unknown', // Extract from message metadata
-        content: message.content,
-        type: 'general',
-        sender: {
-          platform: 'xmtp',
-          address: message.from,
-        },
-        timestamp: message.timestamp,
-      });
-    }).catch((error: Error) => {
-      console.warn('⚠️ XMTP message listener not available:', error.message);
-    });
-
-    // WhatsApp and Telegram messages are handled in their respective services
-    // but can be bridged through this service
+  async broadcastMatchUpdate(squadId: string, matchData: MatchUpdateData, targets: CommunicationTargets): Promise<void> {
+    const content = `Match Update: ${matchData.homeTeam} ${matchData.homeScore} - ${matchData.awayScore} ${matchData.awayTeam}`;
+    const payload: XmtpPayload = { type: 'match_update', squadId, data: matchData as unknown as Record<string, unknown>, timestamp: Date.now() };
+    await this.deliverToTargets(targets, payload, this.formatMessageForWhatsApp(matchData), content);
   }
 
-  private async handleIncomingMessage(message: CrossPlatformMessage): Promise<void> {
-    // Process and potentially bridge the message to other platforms
-    this.messageQueue.push(message);
+  async broadcastAchievement(squadId: string, achievement: AchievementData, targets: CommunicationTargets): Promise<void> {
+    const content = `🏆 ${achievement.playerName} unlocked: ${achievement.title}!`;
+    const payload: XmtpPayload = { type: 'achievement', squadId, data: achievement as unknown as Record<string, unknown>, timestamp: Date.now() };
+    await this.deliverToTargets(targets, payload, { homeTeam: '', awayTeam: '', homeScore: 0, awayScore: 0, event: content, minute: 0 }, content);
+  }
 
-    // Determine if message should be bridged
-    if (this.shouldBridgeMessage(message)) {
-      await this.bridgeMessage(message);
+  async sendMatchReminder(squadId: string, matchDetails: MatchReminderData, targets: CommunicationTargets): Promise<void> {
+    const content = `📅 Match Reminder: ${matchDetails.opponent} on ${matchDetails.date}`;
+    const payload: XmtpPayload = { type: 'reminder', squadId, data: matchDetails as unknown as Record<string, unknown>, timestamp: Date.now() };
+    await this.deliverToTargets(targets, payload, { homeTeam: '', awayTeam: '', homeScore: 0, awayScore: 0, event: content, minute: 0 }, content);
+  }
+
+  private async deliverToTargets(targets: CommunicationTargets, xmtpPayload: XmtpPayload, whatsappData: any, telegramText: string): Promise<void> {
+    const promises: Promise<void>[] = [];
+
+    if (targets.xmtp) {
+      if (targets.xmtp.kind === 'group') {
+        promises.push(this.xmtp.sendGroupMessage(targets.xmtp.groupId, xmtpPayload));
+      } else {
+        promises.push(this.xmtp.sendDirectMessage(targets.xmtp.inboxId, xmtpPayload));
+      }
     }
 
-    // Process message for application logic
-    await this.processMessage(message);
-  }
-
-  private shouldBridgeMessage(message: CrossPlatformMessage): boolean {
-    // Define rules for when to bridge messages between platforms
-    return message.type === 'match_update' || message.type === 'achievement';
-  }
-
-  private async bridgeMessage(message: CrossPlatformMessage): Promise<void> {
-    const bridgePromises = [];
-
-    // Get squad communication preferences
-    const squadPrefs = await this.getSquadCommunicationPreferences(message.squadId);
-
-    // Bridge to XMTP if enabled
-    if (squadPrefs.xmtp && message.sender.platform !== 'xmtp') {
-      bridgePromises.push(
-        this.xmtp.sendMessage(squadPrefs.xmtp.groupAddress, this.formatMessageForXMTP(message))
-      );
+    if (targets.whatsapp) {
+      promises.push(this.whatsapp.sendMatchUpdate(targets.whatsapp.chatId, whatsappData));
     }
 
-    // Bridge to WhatsApp if enabled
-    if (squadPrefs.whatsapp && message.sender.platform !== 'whatsapp') {
-      bridgePromises.push(
-        this.whatsapp.sendMatchUpdate(squadPrefs.whatsapp.chatId, this.formatMessageForWhatsApp(message))
-      );
+    if (targets.telegram) {
+      promises.push(this.telegram.sendMatchNotification(targets.telegram.chatId, this.formatMessageForTelegram(telegramText)));
     }
 
-    // Bridge to Telegram if enabled
-    if (squadPrefs.telegram && message.sender.platform !== 'telegram') {
-      bridgePromises.push(
-        this.telegram.sendMatchNotification(squadPrefs.telegram.chatId, this.formatMessageForTelegram(message))
-      );
-    }
-
-    await Promise.allSettled(bridgePromises);
+    await Promise.allSettled(promises);
   }
 
-  private formatMessageForXMTP(message: CrossPlatformMessage): string {
-    return JSON.stringify({
-      type: 'bridged_message',
-      originalPlatform: message.sender.platform,
-      content: message.content,
-      timestamp: message.timestamp,
-    });
-  }
-
-  private formatMessageForWhatsApp(message: CrossPlatformMessage): any {
+  private formatMessageForWhatsApp(matchData: MatchUpdateData): any {
     return {
-      homeTeam: 'Squad',
-      awayTeam: 'Opponent',
-      homeScore: 0,
-      awayScore: 0,
-      event: message.content,
-      minute: 0,
+      homeTeam: matchData.homeTeam,
+      awayTeam: matchData.awayTeam,
+      homeScore: matchData.homeScore,
+      awayScore: matchData.awayScore,
+      event: matchData.event ?? '',
+      minute: matchData.minute ?? 0,
     };
   }
 
-  private formatMessageForTelegram(message: CrossPlatformMessage): string {
-    return `🔄 **Bridged from ${message.sender.platform.toUpperCase()}**\n\n${message.content}`;
-  }
-
-  private async processMessage(message: CrossPlatformMessage): Promise<void> {
-    // Send to main application for processing
-    // This would integrate with your GraphQL/Socket system
-    console.log('Processing cross-platform message:', message);
-  }
-
-  private async getSquadCommunicationPreferences(_squadId: string): Promise<any> {
-    // Mock data - in real app, fetch from database
-    return {
-      xmtp: {
-        enabled: true,
-        groupAddress: '0x1234...5678',
-      },
-      whatsapp: {
-        enabled: true,
-        chatId: 'whatsapp_group_id',
-      },
-      telegram: {
-        enabled: true,
-        chatId: 'telegram_chat_id',
-      },
-    };
-  }
-
-  // Public methods for sending messages across platforms
-  async broadcastMatchUpdate(squadId: string, matchData: any): Promise<void> {
-    const message: CrossPlatformMessage = {
-      id: `broadcast_${Date.now()}`,
-      squadId,
-      content: `Match Update: ${matchData.homeTeam} ${matchData.homeScore} - ${matchData.awayScore} ${matchData.awayTeam}`,
-      type: 'match_update',
-      sender: {
-        platform: 'app',
-        address: 'system',
-        name: 'SportWarren',
-      },
-      timestamp: Date.now(),
-      metadata: matchData,
-    };
-
-    await this.bridgeMessage(message);
-  }
-
-  async broadcastAchievement(squadId: string, achievement: any): Promise<void> {
-    const message: CrossPlatformMessage = {
-      id: `achievement_${Date.now()}`,
-      squadId,
-      content: `🏆 ${achievement.playerName} unlocked: ${achievement.title}!`,
-      type: 'achievement',
-      sender: {
-        platform: 'app',
-        address: 'system',
-        name: 'SportWarren',
-      },
-      timestamp: Date.now(),
-      metadata: achievement,
-    };
-
-    await this.bridgeMessage(message);
-  }
-
-  async sendMatchReminder(squadId: string, matchDetails: any): Promise<void> {
-    const message: CrossPlatformMessage = {
-      id: `reminder_${Date.now()}`,
-      squadId,
-      content: `📅 Match Reminder: ${matchDetails.opponent} on ${matchDetails.date}`,
-      type: 'reminder',
-      sender: {
-        platform: 'app',
-        address: 'system',
-        name: 'SportWarren',
-      },
-      timestamp: Date.now(),
-      metadata: matchDetails,
-    };
-
-    await this.bridgeMessage(message);
+  private formatMessageForTelegram(content: string): string {
+    return `🔄 **SportWarren**\n\n${content}`;
   }
 }
