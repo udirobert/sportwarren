@@ -240,7 +240,7 @@ export const AdaptiveDashboard: React.FC = () => {
             </div>
           </div>
           {loading ? (
-            <div className="text-center py-8 text-gray-500">Loading matches...</div>
+            <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading matches...</div>
           ) : stats?.recentMatches && stats.recentMatches.length > 0 ? (
             <div className="space-y-3">
               {stats.recentMatches.map((match, index) => {
@@ -259,7 +259,7 @@ export const AdaptiveDashboard: React.FC = () => {
                       }`} />
                       <div>
                         <h3 className="font-semibold text-gray-900 text-sm">vs {match.opponent}</h3>
-                        <p className="text-xs text-gray-500">{match.date}</p>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">{match.date}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
@@ -453,9 +453,9 @@ export const AdaptiveDashboard: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="border border-gray-200 rounded-lg p-4">
-              <p className="text-sm text-gray-500">No upcoming matches scheduled</p>
-              <p className="text-xs text-gray-400 mt-1">Create a squad to start playing</p>
+            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <p className="text-sm text-gray-600 dark:text-gray-400">No upcoming matches scheduled</p>
+              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Create a squad to start playing</p>
             </div>
           )}
         </Card>
@@ -639,9 +639,9 @@ export const AdaptiveDashboard: React.FC = () => {
       </AnimatePresence>
 
       {(() => {
-        const todayIds = ['pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine'];
+        const todayIds = ['pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine', 'quick-stats', 'achievements'];
         const squadIds = ['treasury', 'transfers', 'governance', 'squad-dynamics', 'captains-log', 'communication-hub'];
-        const progressIds = ['quick-stats', 'training', 'achievements', 'scouting-report', 'lens-social', 'nearby-squads', 'territory', 'upcoming-fixtures'];
+        const progressIds = ['training', 'scouting-report', 'lens-social', 'nearby-squads', 'territory', 'upcoming-fixtures'];
 
         const todayWidgets = visibleWidgets.filter(w => todayIds.includes(w.id));
         const squadWidgets = visibleWidgets.filter(w => squadIds.includes(w.id));
@@ -727,9 +727,9 @@ export const AdaptiveDashboard: React.FC = () => {
                       const isConnected = preferences.connections?.[platform.toLowerCase() as keyof typeof preferences.connections]?.connected;
                       return (
                         <div key={platform} className="flex items-center justify-between py-1.5">
-                          <span className="text-sm text-gray-700 dark:text-gray-300">{platform}</span>
+                          <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{platform}</span>
                           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                            isConnected ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400'
+                            isConnected ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-200 text-gray-600 dark:bg-gray-600 dark:text-gray-300'
                           }`}>
                             {isConnected ? 'Linked' : 'Not linked'}
                           </span>
@@ -754,14 +754,14 @@ export const AdaptiveDashboard: React.FC = () => {
                       {stats.recentMatches.slice(0, 2).map((match, i) => (
                         <div key={i} className="flex items-center gap-2 py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0">
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 dark:text-white truncate">vs {match.opponent}</p>
-                            <p className="text-xs text-gray-500">{match.date}</p>
+                            <p className="text-sm font-medium text-gray-800 dark:text-gray-200 truncate">vs {match.opponent}</p>
+                            <p className="text-xs text-gray-600 dark:text-gray-400">{match.date}</p>
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-3">No upcoming matches</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-3">No upcoming matches</p>
                   )}
                   <Link href="/match">
                     <Button size="sm" variant="outline" className="w-full mt-3">
