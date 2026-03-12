@@ -1,117 +1,95 @@
 import { Client, IdentifierKind } from '@xmtp/browser-sdk';
 import { ethers } from 'ethers';
 
+type SignerInput = {
+  getAddress: () => Promise<string>;
+  signMessage: (msg: string) => Promise<string>;
+};
+
 export class XMTPClient {
   private client: Client | null = null;
   private address: string | null = null;
+  private env = (process.env.NEXT_PUBLIC_XMTP_ENV || 'dev') as 'dev' | 'production';
 
-  async initialize(privateKey?: string): Promise<void> {
-    try {
-      let signer;
+  private async createClient(
+    address: string,
+    signFn: (message: string) => Promise<Uint8Array>,
+  ): Promise<void> {
+    this.address = address;
 
-      // Use provided private key or connect to user's wallet
-      if (privateKey) {
-        const wallet = new ethers.Wallet(privateKey);
-        this.address = wallet.address;
-        signer = {
-          type: 'EOA' as const,
-          getIdentifier: () => ({ identifier: wallet.address, identifierKind: IdentifierKind.Ethereum }),
-          signMessage: async (message: string) => ethers.getBytes(await wallet.signMessage(message)),
-        };
-      } else {
-        // Connect to user's wallet (MetaMask, etc.)
-        if (typeof window !== 'undefined' && (window as any).ethereum) {
-          const provider = new ethers.BrowserProvider((window as any).ethereum);
-          const ethersSigner = await provider.getSigner();
-          this.address = await ethersSigner.getAddress();
-          const addr = this.address;
-          signer = {
-            type: 'EOA' as const,
-            getIdentifier: () => ({ identifier: addr, identifierKind: IdentifierKind.Ethereum }),
-            signMessage: async (message: string) => ethers.getBytes(await ethersSigner.signMessage(message)),
-          };
-        } else {
-          throw new Error('No wallet found');
-        }
-      }
-
-      // Create XMTP V3 browser client
-      // Note: dbEncryptionKey is not used in browser-sdk (uses OPFS)
-      this.client = await Client.create(signer, {
-        env: (process.env.NEXT_PUBLIC_XMTP_ENV || 'dev') as 'dev' | 'production',
-      });
-
-      // Sync conversations
-      await this.client.conversations.sync();
-
-      console.log('✅ XMTP V3 browser client initialized');
-      console.log('🆔 XMTP Inbox ID:', this.client.inboxId);
-    } catch (error) {
-      console.error('❌ Failed to initialize XMTP V3:', error);
-      throw error;
-    }
-  }
-
-  async sendMessage(targetId: string, message: string): Promise<void> {
-    if (!this.client) throw new Error('XMTP client not initialized');
-
-    try {
-      await this.client.conversations.sync();
-      
-      // Check if it's a group ID
-      const groups = await this.client.conversations.listGroups();
-      const group = groups.find(g => g.id === targetId);
-
-      if (group) {
-        await group.sendText(message);
-        return;
-      }
-
-      // Fallback to DM
-      const dm = await this.client.conversations.createDm(targetId);
-      await dm.sendText(message);
-    } catch (error) {
-      console.error('Failed to send XMTP message:', error);
-      throw error;
-    }
-  }
-
-  async sendMatchUpdate(groupId: string, matchData: any): Promise<void> {
-    const message = {
-      type: 'match_update',
-      data: matchData,
-      timestamp: Date.now(),
+    const signer = {
+      type: 'EOA' as const,
+      getIdentifier: () => ({
+        identifier: address,
+        identifierKind: IdentifierKind.Ethereum,
+      }),
+      signMessage: signFn,
     };
 
-    await this.sendMessage(groupId, JSON.stringify(message));
+    this.client = await Client.create(signer, { env: this.env });
+    await this.client.conversations.sync();
   }
 
-  async listenForMessages(callback: (message: any) => void): Promise<void> {
+  async initializeWithSigner(signerInput: SignerInput): Promise<void> {
+    const address = await signerInput.getAddress();
+    await this.createClient(address, async (message: string) =>
+      ethers.getBytes(await signerInput.signMessage(message)),
+    );
+  }
+
+  async initializeWithKey(privateKey: string): Promise<void> {
+    const wallet = new ethers.Wallet(privateKey);
+    await this.createClient(wallet.address, async (message: string) =>
+      ethers.getBytes(await wallet.signMessage(message)),
+    );
+  }
+
+  async sendGroupMessage(groupId: string, message: string): Promise<void> {
     if (!this.client) throw new Error('XMTP client not initialized');
 
-    try {
-      const stream = await this.client.conversations.streamAllMessages();
-      
-      for await (const message of stream) {
-        if (message.senderInboxId === this.client.inboxId) continue;
+    await this.client.conversations.sync();
+    const groups = await this.client.conversations.listGroups();
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) throw new Error(`Group ${groupId} not found`);
+    await group.sendText(message);
+  }
 
-        const content = message.fallback || '';
-        let parsedContent = content;
-        try {
-          parsedContent = JSON.parse(content);
-        } catch {
-          // Keep as string
-        }
+  async sendDirectMessage(inboxId: string, message: string): Promise<void> {
+    if (!this.client) throw new Error('XMTP client not initialized');
 
-        callback({
-          from: message.senderInboxId,
-          content: parsedContent,
-          timestamp: Number(message.sentAtNs / 1000000n), // BigInt handling
-        });
+    await this.client.conversations.sync();
+    const dm = await this.client.conversations.createDm(inboxId);
+    await dm.sendText(message);
+  }
+
+  async listenForMessages(
+    callback: (message: { from: string; content: unknown; timestamp: number }) => void,
+  ): Promise<void> {
+    if (!this.client) throw new Error('XMTP client not initialized');
+
+    const stream = await this.client.conversations.streamAllMessages();
+
+    for await (const message of stream) {
+      if (message.senderInboxId === this.client.inboxId) continue;
+
+      const content = message.fallback || '';
+      let parsedContent: unknown = content;
+      try {
+        parsedContent = JSON.parse(content);
+      } catch {
+        // Keep as string
       }
-    } catch (error) {
-      console.error('Error listening for XMTP messages:', error);
+
+      callback({
+        from: message.senderInboxId,
+        content: parsedContent,
+        timestamp: Number(message.sentAtNs / 1_000_000n),
+      });
     }
+  }
+
+  getInboxId(): string | null {
+    return this.client?.inboxId ?? null;
   }
 
   getAddress(): string | null {
