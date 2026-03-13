@@ -1,8 +1,9 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { WalletState, UserPreferences } from '@/types';
-import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { UserPreferences } from '@/types';
+import { usePrivy } from '@privy-io/react-auth';
+import { AUTH_STORAGE_KEYS, SIGNATURE_EXPIRY_MS } from '@/lib/auth/constants';
 
 // Storage keys - centralized for consistency
 const STORAGE_KEYS = {
@@ -13,6 +14,165 @@ const STORAGE_KEYS = {
   USER_PREFERENCES: 'sw_user_preferences',
 } as const;
 
+const toBase64 = (bytes: Uint8Array): string => {
+  let binary = '';
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+};
+
+const normalizeAlgorandSignature = (signed: unknown): string => {
+  if (!signed) return '';
+  if (typeof signed === 'string') return signed;
+  if (signed instanceof Uint8Array) return toBase64(signed);
+  if (Array.isArray(signed)) {
+    if (!signed.length) return '';
+    if (typeof signed[0] === 'number') {
+      return toBase64(Uint8Array.from(signed));
+    }
+    return normalizeAlgorandSignature(signed[0]);
+  }
+  if (typeof signed === 'object') {
+    const sig = (signed as { signature?: unknown; sig?: unknown; signed?: unknown }).signature
+      ?? (signed as { sig?: unknown }).sig
+      ?? (signed as { signed?: unknown }).signed;
+    if (sig) return normalizeAlgorandSignature(sig);
+  }
+  return '';
+};
+
+const signWithAlgorandProvider = async (
+  provider: any,
+  walletAddress: string,
+  messageBytes: Uint8Array,
+  message: string
+): Promise<string> => {
+  if (!provider?.signData) return '';
+  const payload = [{ data: toBase64(messageBytes), message }];
+  try {
+    const signed = await provider.signData(payload, walletAddress);
+    return normalizeAlgorandSignature(signed);
+  } catch (error) {
+    try {
+      const fallbackPayload = [{ data: messageBytes, message }];
+      const signed = await provider.signData(fallbackPayload, walletAddress);
+      return normalizeAlgorandSignature(signed);
+    } catch (fallbackError) {
+      console.warn('Algorand signData failed:', fallbackError);
+      return '';
+    }
+  }
+};
+
+const signWithAlgoSigner = async (
+  algoSigner: any,
+  walletAddress: string,
+  messageBytes: Uint8Array
+): Promise<string> => {
+  if (!algoSigner?.signBytes) return '';
+  const encoded = algoSigner?.encoding?.msgpackToBase64
+    ? algoSigner.encoding.msgpackToBase64(messageBytes)
+    : toBase64(messageBytes);
+  const signed = await algoSigner.signBytes({ data: encoded, from: walletAddress });
+  return normalizeAlgorandSignature(signed);
+};
+
+const signWithMnemonic = async (mnemonic: string, messageBytes: Uint8Array): Promise<string> => {
+  const algosdk = (await import('algosdk')).default;
+  const account = algosdk.mnemonicToSecretKey(mnemonic);
+  const signatureBytes = algosdk.signBytes(messageBytes, account.sk);
+  return toBase64(signatureBytes);
+};
+
+const signWithEvmProvider = async (walletAddress: string, message: string): Promise<string> => {
+  if (typeof window === 'undefined' || !(window as any).ethereum) {
+    throw new Error('No EVM wallet found. Please install MetaMask.');
+  }
+  const provider = (window as any).ethereum;
+  const signature: string = await provider.request({
+    method: 'personal_sign',
+    params: [message, walletAddress],
+  });
+  return signature;
+};
+
+type AuthState = 'none' | 'missing' | 'expired' | 'valid' | 'guest';
+
+interface AuthStatus {
+  state: AuthState;
+  signedAt?: number;
+  expiresAt?: number;
+  isRefreshing: boolean;
+}
+
+const isWalletChain = (value: string | null): value is 'algorand' | 'avalanche' | 'lens' =>
+  value === 'algorand' || value === 'avalanche' || value === 'lens';
+
+const getStoredAuth = (): { signature?: string; message?: string; timestamp?: number; address?: string; chain?: string } => {
+  if (typeof window === 'undefined') return {};
+  const signature = localStorage.getItem(AUTH_STORAGE_KEYS.SIGNATURE) || undefined;
+  const message = localStorage.getItem(AUTH_STORAGE_KEYS.MESSAGE) || undefined;
+  const timestampRaw = localStorage.getItem(AUTH_STORAGE_KEYS.TIMESTAMP);
+  const timestamp = timestampRaw ? Number(timestampRaw) : undefined;
+  const address = localStorage.getItem(AUTH_STORAGE_KEYS.ADDRESS) || undefined;
+  const chain = localStorage.getItem(AUTH_STORAGE_KEYS.CHAIN) || undefined;
+  if (!signature || !message || !timestamp || Number.isNaN(timestamp)) {
+    return {};
+  }
+  return { signature, message, timestamp, address, chain };
+};
+
+const persistAuth = (signature: string, message: string, timestamp: number, address: string, chain: string) => {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(AUTH_STORAGE_KEYS.SIGNATURE, signature);
+  localStorage.setItem(AUTH_STORAGE_KEYS.MESSAGE, message);
+  localStorage.setItem(AUTH_STORAGE_KEYS.TIMESTAMP, String(timestamp));
+  localStorage.setItem(AUTH_STORAGE_KEYS.ADDRESS, address);
+  localStorage.setItem(AUTH_STORAGE_KEYS.CHAIN, chain);
+};
+
+const clearAuth = () => {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(AUTH_STORAGE_KEYS.SIGNATURE);
+  localStorage.removeItem(AUTH_STORAGE_KEYS.MESSAGE);
+  localStorage.removeItem(AUTH_STORAGE_KEYS.TIMESTAMP);
+  localStorage.removeItem(AUTH_STORAGE_KEYS.ADDRESS);
+  localStorage.removeItem(AUTH_STORAGE_KEYS.CHAIN);
+};
+
+const computeAuthStatus = (
+  connected: boolean,
+  isGuest: boolean,
+  chain: string | null,
+  address: string | null
+): AuthStatus => {
+  if (isGuest) {
+    return { state: 'guest', isRefreshing: false };
+  }
+  if (!connected || !isWalletChain(chain) || !address) {
+    return { state: 'none', isRefreshing: false };
+  }
+  const stored = getStoredAuth();
+  if (!stored.signature || !stored.message || !stored.timestamp) {
+    return { state: 'missing', isRefreshing: false };
+  }
+  if (!stored.address || !stored.chain) {
+    return { state: 'missing', isRefreshing: false };
+  }
+  if (stored.address.toLowerCase() !== address.toLowerCase() || stored.chain !== chain) {
+    return { state: 'missing', isRefreshing: false };
+  }
+  const expiresAt = stored.timestamp + SIGNATURE_EXPIRY_MS;
+  const isExpired = Date.now() > expiresAt;
+  return {
+    state: isExpired ? 'expired' : 'valid',
+    signedAt: stored.timestamp,
+    expiresAt,
+    isRefreshing: false,
+  };
+};
+
 interface WalletContextType {
   address: string | null;
   connected: boolean;
@@ -22,7 +182,10 @@ interface WalletContextType {
   balance: number;
   connect: (method: 'algorand' | 'avalanche' | 'lens' | 'google' | 'discord') => Promise<void>;
   loginAsGuest: () => void;
+  refreshAuthSignature: () => Promise<boolean>;
   disconnect: () => void;
+  authStatus: AuthStatus;
+  isVerified: boolean;
   preferences: UserPreferences | null;
   setPreferredChain: (chain: 'algorand' | 'avalanche' | 'lens' | 'social') => void;
 }
@@ -48,9 +211,19 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [isGuest, setIsGuest] = useState<boolean>(false);
   const [loginMethod, setLoginMethod] = useState<'wallet' | 'social' | 'guest' | null>(null);
+  const [authStatus, setAuthStatus] = useState<AuthStatus>(() => ({
+    state: 'none',
+    isRefreshing: false,
+  }));
 
   const { login, logout: privyLogout, authenticated, user, ready } = usePrivy();
-  const { wallets } = useWallets();
+
+  const updateAuthStatus = useCallback((refreshingOverride?: boolean) => {
+    setAuthStatus(prev => {
+      const next = computeAuthStatus(!!address, isGuest, chain, address);
+      return { ...next, isRefreshing: refreshingOverride ?? prev.isRefreshing };
+    });
+  }, [address, isGuest, chain]);
 
   const loadPreferences = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -129,6 +302,23 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     }
   }, [loadPreferences, ready, authenticated, user]);
 
+  useEffect(() => {
+    updateAuthStatus(false);
+  }, [address, chain, isGuest, updateAuthStatus]);
+
+  useEffect(() => {
+    if (authStatus.state !== 'valid' || !authStatus.expiresAt) return;
+    const remainingMs = authStatus.expiresAt - Date.now();
+    if (remainingMs <= 0) {
+      updateAuthStatus(false);
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      updateAuthStatus(false);
+    }, remainingMs + 25);
+    return () => window.clearTimeout(timeout);
+  }, [authStatus.expiresAt, authStatus.state, updateAuthStatus]);
+
   const fetchAlgorandBalance = async (addr: string) => {
     try {
       const response = await fetch(`/api/algorand/account-info?address=${addr}`);
@@ -165,17 +355,67 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     }
   };
 
+  const refreshAuthSignature = useCallback(async (): Promise<boolean> => {
+    if (isGuest || !address || !isWalletChain(chain)) {
+      updateAuthStatus(false);
+      return false;
+    }
+
+    setAuthStatus(prev => ({ ...prev, isRefreshing: true }));
+
+    try {
+      const challengeRes = await fetch('/api/auth/challenge');
+      const { message, timestamp } = await challengeRes.json();
+
+      let signature = '';
+      if (chain === 'algorand') {
+        const messageBytes = new TextEncoder().encode(message);
+        const peraWallet = (window as any).peraWallet;
+        const deflyWallet = (window as any).deflyWallet;
+        const algoSigner = (window as any).AlgoSigner;
+        signature =
+          (await signWithAlgorandProvider(peraWallet, address, messageBytes, message)) ||
+          (await signWithAlgorandProvider(deflyWallet, address, messageBytes, message)) ||
+          (await signWithAlgoSigner(algoSigner, address, messageBytes));
+      } else {
+        signature = await signWithEvmProvider(address, message);
+      }
+
+      if (!signature) {
+        throw new Error('Failed to sign authentication message.');
+      }
+
+      persistAuth(signature, message, timestamp, address, chain);
+      updateAuthStatus(false);
+      return true;
+    } catch (error) {
+      console.error('Failed to refresh wallet authentication:', error);
+      updateAuthStatus(false);
+      return false;
+    } finally {
+      setAuthStatus(prev => ({ ...prev, isRefreshing: false }));
+    }
+  }, [address, chain, isGuest, updateAuthStatus]);
+
   const connect = async (method: 'algorand' | 'avalanche' | 'lens' | 'google' | 'discord') => {
     try {
       if (method === 'google' || method === 'discord') {
         // ── Social Onboarding Flow (Progressive Identity) via Privy ──
+        clearAuth();
+        setIsGuest(false);
+        localStorage.removeItem('sw_is_guest');
         login();
         return;
       }
 
+      clearAuth();
+      setIsGuest(false);
+      localStorage.removeItem('sw_is_guest');
+
       if (method === 'algorand') {
         // ── Step 1: Get address from browser wallet ──
         let walletAddress = '';
+        let walletProvider: 'pera' | 'defly' | 'algosigner' | 'mnemonic' | null = null;
         const peraWallet = (window as any).peraWallet;
         const deflyWallet = (window as any).deflyWallet;
         const algoSigner = (window as any).AlgoSigner;
@@ -183,13 +423,16 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         if (peraWallet?.connect) {
           const accounts = await peraWallet.connect();
           walletAddress = accounts?.[0] || '';
+          walletProvider = 'pera';
         } else if (deflyWallet?.connect) {
           const accounts = await deflyWallet.connect();
           walletAddress = accounts?.[0] || '';
+          walletProvider = 'defly';
         } else if (algoSigner) {
           await algoSigner.connect({ ledger: 'TestNet' });
           const accounts = await algoSigner.accounts({ ledger: 'TestNet' });
           walletAddress = accounts?.[0]?.address || '';
+          walletProvider = 'algosigner';
         } else {
           // Dev fallback — mnemonic from env
           const testMnemonic = process.env.NEXT_PUBLIC_ALGORAND_TEST_MNEMONIC;
@@ -197,6 +440,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
             const algosdk = (await import('algosdk')).default;
             const account = algosdk.mnemonicToSecretKey(testMnemonic);
             walletAddress = account.addr.toString();
+            walletProvider = 'mnemonic';
           }
         }
 
@@ -207,24 +451,40 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         const { message, timestamp } = await challengeRes.json();
 
         // ── Step 3: Sign client-side ──
+        const messageBytes = new TextEncoder().encode(message);
         let signature = '';
-        if (algoSigner) {
-          const encoded = (window as any).AlgoSigner.encoding.msgpackToBase64(new TextEncoder().encode(message));
-          signature = await algoSigner.signBytes({ data: encoded, from: walletAddress });
+
+        if (walletProvider === 'pera') {
+          signature = await signWithAlgorandProvider(peraWallet, walletAddress, messageBytes, message);
+        } else if (walletProvider === 'defly') {
+          signature = await signWithAlgorandProvider(deflyWallet, walletAddress, messageBytes, message);
+        } else if (walletProvider === 'algosigner') {
+          signature = await signWithAlgoSigner(algoSigner, walletAddress, messageBytes);
+        } else if (walletProvider === 'mnemonic') {
+          const testMnemonic = process.env.NEXT_PUBLIC_ALGORAND_TEST_MNEMONIC;
+          if (testMnemonic) {
+            signature = await signWithMnemonic(testMnemonic, messageBytes);
+          }
         }
-        // Note: Pera/Defly signing would go here with their SDK — skipped for brevity
-        // In production: await peraWallet.signData([{ data: msgBytes, message }], walletAddress)
+
+        if (!signature) {
+          signature =
+            (await signWithAlgorandProvider(peraWallet, walletAddress, messageBytes, message)) ||
+            (await signWithAlgorandProvider(deflyWallet, walletAddress, messageBytes, message)) ||
+            (await signWithAlgoSigner(algoSigner, walletAddress, messageBytes));
+
+          if (!signature) {
+            throw new Error('Failed to sign authentication message with Algorand wallet.');
+          }
+        }
 
         // ── Step 4: Persist auth state ──
         setAddress(walletAddress);
         setChain('algorand');
         localStorage.setItem(STORAGE_KEYS.ALGORAND_ADDRESS, walletAddress);
         localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'algorand');
-        if (signature) {
-          localStorage.setItem('sw_auth_signature', signature);
-          localStorage.setItem('sw_auth_message', message);
-          localStorage.setItem('sw_auth_timestamp', String(timestamp));
-        }
+        persistAuth(signature, message, timestamp, walletAddress, 'algorand');
+        setLoginMethod('wallet');
         fetchAlgorandBalance(walletAddress);
 
       } else if (method === 'avalanche') {
@@ -240,18 +500,14 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         // ── Fetch challenge & sign ──
         const challengeRes = await fetch('/api/auth/challenge');
         const { message, timestamp } = await challengeRes.json();
-        const signature: string = await provider.request({
-          method: 'personal_sign',
-          params: [message, walletAddress],
-        });
+        const signature = await signWithEvmProvider(walletAddress, message);
 
         setAddress(walletAddress);
         setChain('avalanche');
         localStorage.setItem(STORAGE_KEYS.AVALANCHE_ADDRESS, walletAddress);
         localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'avalanche');
-        localStorage.setItem('sw_auth_signature', signature);
-        localStorage.setItem('sw_auth_message', message);
-        localStorage.setItem('sw_auth_timestamp', String(timestamp));
+        persistAuth(signature, message, timestamp, walletAddress, 'avalanche');
+        setLoginMethod('wallet');
         fetchAvalancheBalance(walletAddress);
 
       } else if (method === 'lens') {
@@ -290,18 +546,14 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
         const challengeRes = await fetch('/api/auth/challenge');
         const { message, timestamp } = await challengeRes.json();
-        const signature: string = await provider.request({
-          method: 'personal_sign',
-          params: [message, walletAddress],
-        });
+        const signature = await signWithEvmProvider(walletAddress, message);
 
         setAddress(walletAddress);
         setChain('lens');
         localStorage.setItem(STORAGE_KEYS.LENS_ADDRESS, walletAddress);
         localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'lens');
-        localStorage.setItem('sw_auth_signature', signature);
-        localStorage.setItem('sw_auth_message', message);
-        localStorage.setItem('sw_auth_timestamp', String(timestamp));
+        persistAuth(signature, message, timestamp, walletAddress, 'lens');
+        setLoginMethod('wallet');
         fetchLensBalance(walletAddress);
       }
     } catch (error) {
@@ -311,10 +563,12 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   };
 
   const loginAsGuest = () => {
+    clearAuth();
     setIsGuest(true);
     setAddress('0xGUEST_ADDRESS_HACKNEY_MARSHES');
     setChain('lens');
     setBalance(1000);
+    setLoginMethod('guest');
     localStorage.setItem('sw_is_guest', 'true');
   };
 
@@ -334,9 +588,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     localStorage.removeItem('sw_login_method');
     localStorage.removeItem('sw_is_guest');
     // Clear auth tokens — prevent signature reuse after logout
-    localStorage.removeItem('sw_auth_signature');
-    localStorage.removeItem('sw_auth_message');
-    localStorage.removeItem('sw_auth_timestamp');
+    clearAuth();
   };
 
   const setPreferredChain = (newChain: 'algorand' | 'avalanche' | 'lens' | 'social') => {
@@ -382,7 +634,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         balance,
         connect,
         loginAsGuest,
+        refreshAuthSignature,
         disconnect,
+        authStatus,
+        isVerified: authStatus.state === 'valid',
         preferences,
         setPreferredChain,
       }}

@@ -111,8 +111,8 @@ npm run dev
 - Disputed matches escalated for arbitration
 
 ### Wallet Authentication
-- Algorand wallet integration (Pera, Defly)
-- Signature-based authentication
+- Algorand (Pera, Defly, AlgoSigner) + EVM (MetaMask) signature auth
+- Time-bound signatures with re-verification prompts
 - Automatic user/profile creation
 - Development mode for easy testing
 
@@ -179,6 +179,13 @@ See `prisma/schema.prisma` and `prisma/migrations/001_init.sql` for full schema.
 ## 🔐 Authentication
 
 ### Wallet-Based Auth Flow
+1. User connects an Algorand or EVM wallet
+2. Client requests a challenge from `/api/auth/challenge`
+3. User signs the message (Algorand base64, EVM hex)
+4. Client sends auth headers on each tRPC request
+5. Server verifies signature (algosdk for Algorand, ethers for EVM)
+6. Signatures expire after ~5 minutes; UI prompts re-verification
+
 ### Multi-Chain Auth Flow (Privy)
 1. User logs in via Social (Google/Apple) or Wallet
 2. Privy provisions/connects Algorand and EVM (Avalanche/Kite) addresses

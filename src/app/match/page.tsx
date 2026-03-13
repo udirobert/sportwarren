@@ -10,6 +10,8 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { trpc } from "@/lib/trpc-client";
 import { useMatchVerification } from "@/hooks/match/useMatchVerification";
+import { useWallet } from "@/contexts/WalletContext";
+import { VerificationBanner } from "@/components/common/VerificationBanner";
 import {
   Trophy,
   Shield,
@@ -35,8 +37,10 @@ export default function MatchPage() {
   const [showXPSummary, setShowXPSummary] = useState(false);
   const [xpSummaryData, setXpSummaryData] = useState<{ totalXP: number; attributeGains: { attribute: string; xp: number; oldRating: number; newRating: number }[] } | null>(null);
   const [selectedOpponentId, setSelectedOpponentId] = useState<string>("");
+  const { isVerified } = useWallet();
 
   const { data: memberships } = trpc.squad.getMySquads.useQuery(undefined, {
+    enabled: isVerified,
     retry: false,
   });
   const activeMembership = memberships?.[0];
@@ -170,9 +174,14 @@ export default function MatchPage() {
           <p className="mx-auto mb-6 max-w-md text-gray-600">
             Join or create a squad before submitting or verifying matches.
           </p>
-          <Link href="/squad">
-            <Button>Open Squad Management</Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/squad">
+              <Button>Create or Join Squad</Button>
+            </Link>
+            <Link href="/">
+              <Button variant="outline">Back to Dashboard</Button>
+            </Link>
+          </div>
         </Card>
       </div>
     );
@@ -180,6 +189,7 @@ export default function MatchPage() {
 
   return (
     <div ref={pullRef as React.RefObject<HTMLDivElement>} className="mx-auto max-w-5xl space-y-6 px-4 py-6 pb-24 md:pb-6">
+      <VerificationBanner />
       <div className="rounded-3xl border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_45%),linear-gradient(135deg,#f5fffb,#ecfdf5)] p-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>

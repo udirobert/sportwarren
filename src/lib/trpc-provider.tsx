@@ -5,6 +5,7 @@ import { httpBatchLink } from '@trpc/client';
 import { useState, useMemo } from 'react';
 import { trpc } from './trpc-client';
 import { useWallet } from '@/contexts/WalletContext';
+import { AUTH_STORAGE_KEYS } from '@/lib/auth/constants';
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
   const { address, chain } = useWallet();
@@ -41,9 +42,9 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
 
             // Auth tokens written by WalletContext.connect() after local signing
             if (typeof window !== 'undefined') {
-              const sig = localStorage.getItem('sw_auth_signature');
-              const msg = localStorage.getItem('sw_auth_message');
-              const ts = localStorage.getItem('sw_auth_timestamp');
+              const sig = localStorage.getItem(AUTH_STORAGE_KEYS.SIGNATURE);
+              const msg = localStorage.getItem(AUTH_STORAGE_KEYS.MESSAGE);
+              const ts = localStorage.getItem(AUTH_STORAGE_KEYS.TIMESTAMP);
               if (sig) headers['x-wallet-signature'] = sig;
               if (msg) headers['x-auth-message'] = msg;
               if (ts) headers['x-auth-timestamp'] = ts;
@@ -65,5 +66,4 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
     </trpc.Provider>
   );
 }
-
 

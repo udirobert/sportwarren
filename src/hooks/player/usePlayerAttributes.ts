@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { trpc } from '@/lib/trpc-client';
+import { useWallet } from '@/contexts/WalletContext';
 import type { PlayerAttributes, AttributeType } from '@/types';
 
 interface UsePlayerAttributesReturn {
@@ -101,13 +102,14 @@ export function usePlayerAttributes(userId?: string): UsePlayerAttributesReturn 
 }
 
 export function useCurrentPlayerAttributes(enabled: boolean = true): UsePlayerAttributesReturn {
+  const { isVerified } = useWallet();
   const {
     data: profile,
     isLoading,
     error,
     refetch
   } = trpc.player.getCurrentProfile.useQuery(undefined, {
-    enabled,
+    enabled: enabled && isVerified,
     retry: false,
     staleTime: 30 * 1000,
   });
