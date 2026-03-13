@@ -1,6 +1,6 @@
 # SportWarren — Route & Navigation Audit
 
-_Last updated: 2026-03-09_
+_Last updated: 2026-03-13_
 
 This document is the living navigation map for the app. Every page, its purpose, and its inbound links are listed here. Update this file whenever a route is added, removed, or redirected.
 
@@ -8,10 +8,15 @@ This document is the living navigation map for the app. Every page, its purpose,
 
 ## Active Routes
 
-### `/` — Dashboard
-- **Purpose:** Entry point after wallet connect. Shows today's priorities, pending actions, treasury alerts, and squad overview via `AdaptiveDashboard`.
+### `/` — Landing
+- **Purpose:** Public marketing landing with guest-first entry and wallet connect CTA.
+- **Key components:** `HeroSection`
+- **Inbound links:** Brand logo, "Back to Landing" in dashboard
+
+### `/dashboard` — Dashboard
+- **Purpose:** Post-login home showing today's priorities, pending actions, treasury alerts, and squad overview via `AdaptiveDashboard`.
 - **Key components:** `AdaptiveDashboard`, `PendingActionsPanel`
-- **Inbound links:** Logo/home nav link, all "go to dashboard" CTAs
+- **Inbound links:** Primary nav, all "go to dashboard" CTAs, onboarding checklist
 
 ### `/match` — Matches Hub
 - **Purpose:** First-class destination for submitting match results, viewing pending verifications, match history, and fee rail status.
@@ -68,7 +73,7 @@ Primary nav items (SmartNavigation):
 
 | Label | Path | Unlock Level | Condition |
 |---|---|---|---|
-| Dashboard | `/` | basic | always |
+| Dashboard | `/dashboard` | basic | always |
 | Matches | `/match` | basic | always |
 | Stats | `/stats` | basic | always |
 | Analytics | `/analytics` | intermediate | not simple UI |
@@ -84,7 +89,7 @@ Primary nav items (SmartNavigation):
 
 `PendingActionsPanel` surfaces the operational queue (pending verifications, treasury alerts, transfer offers) in two places:
 
-1. **Dashboard** (`/`) — via `AdaptiveDashboard` → full variant
+1. **Dashboard** (`/dashboard`) — via `AdaptiveDashboard` → full variant
 2. **Squad** (`/squad`) — overview tab → compact variant
 
 ---
@@ -92,7 +97,9 @@ Primary nav items (SmartNavigation):
 ## Recommended Journey Flow
 
 ```
-Connect Wallet
+Connect Wallet / Guest Entry
+    ↓
+Landing (`/`) → Dashboard (`/dashboard`)
     ↓
 Dashboard — see today's priorities & pending actions
     ↓

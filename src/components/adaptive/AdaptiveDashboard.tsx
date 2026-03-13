@@ -7,13 +7,14 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Briefcase, ChevronRight, Plus, MessageCircle, Bell, Share2 } from 'lucide-react';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Briefcase, Plus, MessageCircle, Bell, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
 import { useToast } from '@/contexts/ToastContext';
 import { VerificationBanner } from '@/components/common/VerificationBanner';
+import { EmptyState } from '@/components/common/EmptyState';
 import { useMySquads } from '@/hooks/squad/useSquad';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
@@ -114,22 +115,27 @@ export const AdaptiveDashboard: React.FC = () => {
   }, [completeChecklistItem]);
 
   // Define all possible widgets
-  const allWidgets: DashboardWidget[] = useMemo(() => [
-    {
-      id: 'onboarding-checklist',
-      priority: 999,
-      requiredLevel: 'basic',
-      category: 'stats',
-      component: (
-        <OnboardingChecklist
-          onStepAction={(id) => {
-            if (id === 'open_office') handleOpenOffice();
-            if (id === 'claim_identity') router.push('/');
-          }}
-        />
-      ),
-    },
-    {
+  const allWidgets: DashboardWidget[] = useMemo(() => {
+    const widgets: DashboardWidget[] = [];
+
+    if (!allChecklistDone) {
+      widgets.push({
+        id: 'onboarding-checklist',
+        priority: 999,
+        requiredLevel: 'basic',
+        category: 'stats',
+        component: (
+          <OnboardingChecklist
+            onStepAction={(id) => {
+              if (id === 'open_office') handleOpenOffice();
+            }}
+          />
+        ),
+      });
+    }
+
+    widgets.push(
+      {
       id: 'pending-actions',
       priority: 170,
       requiredLevel: 'basic',
@@ -137,8 +143,8 @@ export const AdaptiveDashboard: React.FC = () => {
       component: (
         <PendingActionsPanel squadId={primarySquadId} />
       ),
-    },
-    {
+      },
+      {
       id: 'captains-log',
       priority: 155,
       requiredLevel: 'basic',
@@ -146,8 +152,8 @@ export const AdaptiveDashboard: React.FC = () => {
       component: (
         <CaptainsLog squadId={primarySquadId} />
       ),
-    },
-    {
+      },
+      {
       id: 'communication-hub',
       priority: 150,
       requiredLevel: 'basic',
@@ -155,8 +161,8 @@ export const AdaptiveDashboard: React.FC = () => {
       component: (
         <CommunicationHub connections={preferences.connections} />
       ),
-    },
-    {
+      },
+      {
       id: 'quick-stats',
       priority: 200,
       requiredLevel: 'basic',
@@ -170,7 +176,10 @@ export const AdaptiveDashboard: React.FC = () => {
             color="green"
             cmTrend="up"
             loading={loading}
-            onClick={() => trackFeatureUsage('stats-goals')}
+            onClick={() => {
+              trackFeatureUsage('stats-goals');
+              router.push('/stats');
+            }}
           />
           <StatCard
             title="Assists"
@@ -179,7 +188,10 @@ export const AdaptiveDashboard: React.FC = () => {
             color="blue"
             cmTrend="stable"
             loading={loading}
-            onClick={() => trackFeatureUsage('stats-assists')}
+            onClick={() => {
+              trackFeatureUsage('stats-assists');
+              router.push('/stats');
+            }}
           />
           <StatCard
             title="Matches"
@@ -187,7 +199,10 @@ export const AdaptiveDashboard: React.FC = () => {
             icon={Trophy}
             color="orange"
             loading={loading}
-            onClick={() => trackFeatureUsage('stats-matches')}
+            onClick={() => {
+              trackFeatureUsage('stats-matches');
+              router.push('/match?mode=history');
+            }}
           />
           <StatCard
             title="Rating"
@@ -196,12 +211,15 @@ export const AdaptiveDashboard: React.FC = () => {
             color="purple"
             cmTrend="down"
             loading={loading}
-            onClick={() => trackFeatureUsage('stats-rating')}
+            onClick={() => {
+              trackFeatureUsage('stats-rating');
+              router.push('/reputation');
+            }}
           />
         </div>
       ),
-    },
-    {
+      },
+      {
       id: 'event-feed',
       priority: 86,
       requiredLevel: 'basic',
@@ -209,8 +227,8 @@ export const AdaptiveDashboard: React.FC = () => {
       component: (
         <EventFeed squadId={primarySquadId} />
       ),
-    },
-    {
+      },
+      {
       id: 'staff-feed',
       priority: 75,
       requiredLevel: 'basic',
@@ -218,42 +236,43 @@ export const AdaptiveDashboard: React.FC = () => {
       component: (
         <StaffFeed userId={userAddress || 'demo-user'} />
       ),
-    },
-    {
+      },
+      {
       id: 'governance',
       priority: 82,
       requiredLevel: 'basic',
       category: 'social',
       component: <SquadGovernance squadId={primarySquadId || 'guest'} />,
-    },    {
+      },
+      {
       id: 'lens-social',
       priority: 78,
       requiredLevel: 'basic',
       category: 'social',
       component: <LensSocialHub />,
-    },
-    {
+      },
+      {
       id: 'nearby-squads',
       priority: 85,
       requiredLevel: 'intermediate',
       category: 'social',
       component: <NearbyRivals />,
-    },
-    {
+      },
+      {
       id: 'territory',
       priority: 80,
       requiredLevel: 'advanced',
       category: 'social',
       component: <TerritoryControl squadId={primarySquadId || 'guest'} />,
-    },
-    {
+      },
+      {
       id: 'training',
       priority: 88,
       requiredLevel: 'basic',
       category: 'stats',
       component: <TrainingCenter userId={userAddress || 'demo-user'} />,
-    },
-    {
+      },
+      {
       id: 'recent-matches',
       priority: 190,
       requiredLevel: 'basic',
@@ -316,26 +335,18 @@ export const AdaptiveDashboard: React.FC = () => {
               })}
             </div>
           ) : (
-            <div className="text-center py-10">
-              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Trophy className="w-8 h-8 text-green-600 dark:text-green-400" />
-              </div>
-              <h3 className="font-bold text-gray-900 dark:text-white mb-1">No matches logged yet</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-                Log your first match in 30 seconds — just enter the score and opponent.
-              </p>
-              <Link href="/match?mode=capture">
-                <Button className="bg-green-600 hover:bg-green-700 text-white">
-                  <Zap className="w-4 h-4 mr-2" />
-                  Log First Match
-                </Button>
-              </Link>
-            </div>
+            <EmptyState
+              icon={Trophy}
+              title="No matches logged yet"
+              description="Log your first match in 30 seconds — just enter the score and opponent."
+              actionLabel="Log First Match"
+              actionHref="/match?mode=capture"
+            />
           )}
         </Card>
       ),
-    },
-    {
+      },
+      {
       id: 'advanced-analytics',
       priority: 70,
       requiredLevel: 'advanced',
@@ -368,8 +379,8 @@ export const AdaptiveDashboard: React.FC = () => {
           </Card>
         </ProgressiveDisclosure>
       ),
-    },
-    {
+      },
+      {
       id: 'social-feed',
       priority: 60,
       requiredLevel: 'intermediate',
@@ -398,20 +409,18 @@ export const AdaptiveDashboard: React.FC = () => {
                   </div>
                 ))
               ) : (
-                <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full mt-2"></div>
-                  <div>
-                    <p className="text-gray-900 text-sm">No matches played yet</p>
-                    <p className="text-xs text-gray-600">Start your first match to see activity</p>
-                  </div>
-                </div>
+                <EmptyState
+                  icon={Users}
+                  title="No squad activity"
+                  description="Start your first match to see activity from your squad."
+                />
               )}
             </div>
           </Card>
         </ProgressiveDisclosure>
       ),
-    },
-    {
+      },
+      {
       id: 'achievements',
       priority: 50,
       requiredLevel: 'intermediate',
@@ -440,8 +449,8 @@ export const AdaptiveDashboard: React.FC = () => {
           </Card>
         </ProgressiveDisclosure>
       ),
-    },
-    {
+      },
+      {
       id: 'match-engine',
       priority: 160,
       requiredLevel: 'basic',
@@ -451,22 +460,22 @@ export const AdaptiveDashboard: React.FC = () => {
           <MatchEnginePreview squadId={primarySquadId} />
         </div>
       ),
-    },
-    {
+      },
+      {
       id: 'squad-dynamics',
       priority: 89,
       requiredLevel: 'basic',
       category: 'stats',
       component: <SquadDynamics squadId={primarySquadId || 'guest'} />,
-    },
-    {
+      },
+      {
       id: 'scouting-report',
       priority: 87,
       requiredLevel: 'basic',
       category: 'social',
       component: <ScoutingReport />,
-    },
-    {
+      },
+      {
       id: 'upcoming-fixtures',
       priority: 80,
       requiredLevel: 'basic',
@@ -485,15 +494,19 @@ export const AdaptiveDashboard: React.FC = () => {
               </div>
             </div>
           ) : (
-            <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">No upcoming matches scheduled</p>
-              <p className="text-xs text-gray-500 dark:text-gray-500 mt-1">Create a squad to start playing</p>
-            </div>
+            <EmptyState
+              icon={Calendar}
+              title="No upcoming matches"
+              description="Schedule your next match or create a squad to start playing."
+            />
           )}
         </Card>
       ),
-    },
-  ], [preferences, trackFeatureUsage, stats, loading, userAddress, primarySquadId, completeChecklistItem, handleOpenOffice, allChecklistDone]);
+      },
+    );
+
+    return widgets;
+  }, [preferences, trackFeatureUsage, stats, loading, userAddress, primarySquadId, completeChecklistItem, handleOpenOffice, allChecklistDone]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {
@@ -559,8 +572,8 @@ export const AdaptiveDashboard: React.FC = () => {
   const getLayoutClass = () => {
     switch (preferences.dashboardLayout) {
       case 'minimal': return 'space-y-4';
-      case 'balanced': return 'space-y-6';
-      case 'comprehensive': return 'space-y-8';
+      case 'balanced': return 'space-y-5';
+      case 'comprehensive': return 'space-y-6';
       default: return 'space-y-4';
     }
   };
@@ -579,7 +592,7 @@ export const AdaptiveDashboard: React.FC = () => {
                 <Sparkles className="w-4 h-4" />
                 <span className="text-xs font-black uppercase tracking-widest leading-none">Guest Mode Active • Hackney Marshes Demo Experience</span>
               </div>
-              <Button id="connect-wallet-btn" size="sm" variant="outline" className="h-7 text-xs border-white/20 hover:bg-white/10 text-white" onClick={() => router.push('/')}>
+              <Button id="connect-wallet-btn" size="sm" variant="outline" className="h-7 text-xs border-white/20 hover:bg-white/10 text-white" onClick={() => router.push('/?connect=1')}>
                 Connect Wallet
               </Button>
             </div>
@@ -591,6 +604,13 @@ export const AdaptiveDashboard: React.FC = () => {
 
       <GuestTour />
       <AgenticConcierge />
+
+      <div className="flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-widest">
+        <Link href="/" className="inline-flex items-center gap-2 text-[11px] font-black tracking-widest text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
+          <span className="text-base leading-none">←</span>
+          Back to Landing
+        </Link>
+      </div>
 
       <div id="dashboard-header" className="border-b border-gray-200 dark:border-gray-700 pb-3 mb-2">
         {/* Mobile header — compact single row */}
@@ -740,7 +760,7 @@ export const AdaptiveDashboard: React.FC = () => {
       </AnimatePresence>
 
       {(() => {
-        const todayIds = ['pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine', 'quick-stats', 'achievements'];
+        const todayIds = ['onboarding-checklist', 'pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine', 'quick-stats', 'achievements'];
         const squadIds = ['treasury', 'transfers', 'governance', 'squad-dynamics', 'captains-log', 'communication-hub'];
         const progressIds = ['training', 'scouting-report', 'lens-social', 'nearby-squads', 'territory', 'upcoming-fixtures'];
 
@@ -749,143 +769,103 @@ export const AdaptiveDashboard: React.FC = () => {
         const progressWidgets = visibleWidgets.filter(w => progressIds.includes(w.id));
         const otherWidgets = visibleWidgets.filter(w => ![...todayIds, ...squadIds, ...progressIds].includes(w.id));
 
-        // Mobile: horizontal scroll carousel; desktop: 2-column grid showing all content
-        const Section = ({ title, widgets }: { title: string; widgets: typeof visibleWidgets }) =>
-          widgets.length === 0 ? null : (
+        const sectionLayouts: Record<string, Record<string, string>> = {
+          Today: {
+            'pending-actions': 'md:col-span-12 lg:col-span-5 xl:col-span-4',
+            'recent-matches': 'md:col-span-12 lg:col-span-7 xl:col-span-8',
+            'event-feed': 'md:col-span-12 lg:col-span-6',
+            'staff-feed': 'md:col-span-12 lg:col-span-6',
+            'achievements': 'md:col-span-12 lg:col-span-6',
+          },
+          Squad: {
+            'captains-log': 'md:col-span-12 lg:col-span-7',
+            'communication-hub': 'md:col-span-12 lg:col-span-5',
+            'squad-dynamics': 'md:col-span-12 lg:col-span-6',
+            'governance': 'md:col-span-12 lg:col-span-6',
+          },
+          Progress: {
+            'training': 'md:col-span-12 lg:col-span-6',
+            'scouting-report': 'md:col-span-12 lg:col-span-6',
+            'upcoming-fixtures': 'md:col-span-12 lg:col-span-6',
+            'lens-social': 'md:col-span-12 lg:col-span-6',
+            'nearby-squads': 'md:col-span-12 lg:col-span-6',
+            'territory': 'md:col-span-12',
+          },
+        };
+
+        const featuredBySection: Record<string, string[]> = {
+          Today: ['onboarding-checklist', 'quick-stats', 'match-engine'],
+          Squad: [],
+          Progress: [],
+        };
+
+        const getSpan = (title: string, id: string) =>
+          sectionLayouts[title]?.[id] ?? 'md:col-span-12 lg:col-span-6';
+
+        const Section = ({ title, widgets }: { title: string; widgets: typeof visibleWidgets }) => {
+          if (widgets.length === 0) return null;
+          const featuredIds = new Set(featuredBySection[title] ?? []);
+          const featured = widgets.filter(w => featuredIds.has(w.id));
+          const rest = widgets.filter(w => !featuredIds.has(w.id));
+
+          return (
             <div>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-3">
                 <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{title}</h2>
               </div>
-              {/* Mobile: horizontal snap scroll */}
-              <div className="md:hidden -mx-3 px-3 relative">
-                <div className={`flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide ${widgets.length > 1 ? 'carousel-fade-right' : ''}`} style={{ scrollbarWidth: 'none' }}>
-                  {widgets.slice(0, 5).map(w => (
-                    <div key={w.id} id={w.id} className="snap-start shrink-0 w-[85vw] max-w-sm">
+
+              {/* Mobile: feature stack + horizontal snap scroll */}
+              {featured.length > 0 && (
+                <div className="md:hidden space-y-3 mb-3">
+                  {featured.map(w => (
+                    <div key={w.id} id={w.id}>
                       {w.component}
                     </div>
                   ))}
                 </div>
-              </div>
-              {/* Desktop: show all content inline - no "See all" needed */}
-              <div className={`hidden md:grid gap-4 ${
-                widgets.length === 1 ? 'grid-cols-1' :
-                widgets.length === 2 ? 'grid-cols-2' :
-                'md:grid-cols-2 lg:grid-cols-3'
-              }`}>
-                {widgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
+              )}
+              {rest.length > 0 && (
+                <div className="md:hidden -mx-3 px-3 relative">
+                  <div
+                    className={`flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide ${rest.length > 1 ? 'carousel-fade-right' : ''}`}
+                    style={{ scrollbarWidth: 'none' }}
+                  >
+                    {rest.slice(0, 5).map(w => (
+                      <div key={w.id} id={w.id} className="snap-start shrink-0 w-[85vw] max-w-sm">
+                        {w.component}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Desktop: featured full-width + dense grid */}
+              <div className="hidden md:block space-y-4">
+                {featured.map(w => (
+                  <div key={w.id} id={w.id}>
+                    {w.component}
+                  </div>
+                ))}
+                {rest.length > 0 && (
+                  <div className="grid grid-cols-12 gap-4 grid-flow-row-dense">
+                    {rest.map(w => (
+                      <div key={w.id} id={w.id} className={`${getSpan(title, w.id)} min-w-0`}>
+                        {w.component}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           );
+        };
 
         return (
           <div className="space-y-4 md:space-y-6">
-            {/* Desktop: 2-column layout with right sidebar */}
-            <div className="hidden lg:grid lg:grid-cols-3 gap-6">
-              {/* Main content — 2/3 width */}
-              <div className="lg:col-span-2 space-y-6">
-                <Section title="Today" widgets={todayWidgets} />
-                <Section title="Squad" widgets={squadWidgets} />
-              </div>
-              {/* Right sidebar — 1/3 width */}
-              <div className="space-y-4">
-                {/* Log Match CTA */}
-                <Card className="border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20">
-                  <div className="text-center py-4">
-                    <div className="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-green-600/30">
-                      <Plus className="w-6 h-6 text-white" />
-                    </div>
-                    <h3 className="font-bold text-gray-900 dark:text-white mb-1">Log a Match</h3>
-                    <p className="text-xs text-gray-600 dark:text-gray-300 mb-3">Submit your result in 30 seconds</p>
-                    <Link href="/match?mode=capture">
-                      <Button className="bg-green-600 hover:bg-green-700 text-white w-full">
-                        <Zap className="w-4 h-4 mr-2" />
-                        Start Now
-                      </Button>
-                    </Link>
-                  </div>
-                </Card>
-                {/* Connection Status */}
-                <Card>
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                    <MessageCircle className="w-4 h-4" />
-                    Connected Channels
-                  </h3>
-                  <div className="space-y-2">
-                    {['Telegram', 'WhatsApp', 'XMTP'].map((platform) => {
-                      const isConnected = preferences.connections?.[platform.toLowerCase() as keyof typeof preferences.connections]?.connected;
-                      const platformKey = platform.toLowerCase() as 'telegram' | 'whatsapp' | 'xmtp';
-                      const previews: Record<string, string> = {
-                        telegram: '🏆 W 3-1 vs Sunday Legends',
-                        whatsapp: '🎉 +150 XP earned!',
-                        xmtp: '🔐 Match verified',
-                      };
-                      return (
-                        <div key={platform}>
-                          <div className="flex items-center justify-between py-1.5">
-                            <span className="text-sm font-medium text-gray-800 dark:text-gray-200">{platform}</span>
-                            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                              isConnected ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                            }`}>
-                              {isConnected ? 'Linked' : 'Not linked'}
-                            </span>
-                          </div>
-                          {isConnected && (
-                            <div className="mb-2">
-                              <code className="text-[10px] bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 px-2 py-1 rounded block truncate">
-                                {previews[platformKey]}
-                              </code>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <Link href="/settings?tab=connections">
-                    <Button size="sm" variant="outline" className="w-full mt-3">
-                      Manage Connections
-                    </Button>
-                  </Link>
-                </Card>
-                {/* Upcoming Fixtures */}
-                <Card>
-                  <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    Upcoming
-                  </h3>
-                  {stats?.recentMatches && stats.recentMatches.length > 0 ? (
-                    <div className="space-y-2">
-                      {stats.recentMatches.slice(0, 2).map((match, i) => (
-                        <div key={i} className="flex items-center gap-2 py-1.5 border-b border-gray-100 dark:border-gray-700 last:border-0">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">vs {match.opponent}</p>
-                            <p className="text-xs text-gray-700 dark:text-gray-300">{match.date}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-sm text-gray-600 dark:text-gray-400 text-center py-3">No upcoming matches</p>
-                  )}
-                  <Link href="/match">
-                    <Button size="sm" variant="outline" className="w-full mt-3">
-                      View Schedule
-                    </Button>
-                  </Link>
-                </Card>
-              </div>
-            </div>
-            {/* Mobile/Tablet: stacked layout */}
-            <div className="lg:hidden space-y-8">
-              <Section title="Today" widgets={todayWidgets} />
-              <Section title="Squad" widgets={squadWidgets} />
-              <Section title="Progress" widgets={progressWidgets} />
-              {otherWidgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
-            </div>
-            {/* Desktop: Progress section below main content */}
-            <div className="hidden lg:block">
-              <Section title="Progress" widgets={progressWidgets} />
-              {otherWidgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
-            </div>
+            <Section title="Today" widgets={todayWidgets} />
+            <Section title="Squad" widgets={squadWidgets} />
+            <Section title="Progress" widgets={progressWidgets} />
+            {otherWidgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
           </div>
         );
       })()}

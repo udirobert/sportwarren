@@ -165,7 +165,7 @@ export default function SquadPage() {
                 Use the <strong>Tactics</strong> tab to set your formation, <strong>Treasury</strong> to manage finances, and <strong>Transfers</strong> to respond to incoming offers. Head to the Dashboard to open the Staff Office.
               </p>
             </div>
-            <Link href="/" className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors">
+            <Link href="/dashboard" className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors">
               Go to Dashboard
             </Link>
           </div>

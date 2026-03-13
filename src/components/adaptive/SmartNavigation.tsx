@@ -12,7 +12,7 @@ const BOTTOM_NAV_MAX = 5;
 
 // Keyboard navigation shortcuts (desktop only)
 const NAV_SHORTCUTS: Record<string, string> = {
-  'KeyD': '/',        // Dashboard
+  'KeyD': '/dashboard',        // Dashboard
   'KeyM': '/match',   // Matches
   'KeyS': '/stats',   // Stats (Shift+S for Settings)
   'KeyQ': '/squad',   // Squad
@@ -60,7 +60,7 @@ export const SmartNavigation: React.FC = () => {
   // Define all navigation items with their unlock conditions
   const allNavItems = [
     { 
-      path: '/', 
+      path: '/dashboard', 
       icon: Home, 
       label: 'Dashboard', 
       priority: 100,
@@ -214,9 +214,9 @@ export const SmartNavigation: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6 w-full">
           <div className="flex items-center justify-between h-16">
             <Link 
-              href="/" 
+              href="/dashboard" 
               className="flex items-center space-x-3 group"
-              onClick={() => handleNavClick('/')}
+              onClick={() => handleNavClick('/dashboard')}
             >
               <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-green-700 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-transform">
                 <Target className="w-6 h-6 text-white" />
@@ -277,7 +277,7 @@ export const SmartNavigation: React.FC = () => {
         isScrolled ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-lg shadow-md' : 'bg-white/90 dark:bg-gray-900/90 backdrop-blur-md'
       } border-b border-gray-200 dark:border-gray-700`}>
         <div className="flex items-center h-14 px-4 gap-3">
-          <Link href="/" className="touch-manipulation shrink-0" onClick={() => handleNavClick('/')}>
+          <Link href="/dashboard" className="touch-manipulation shrink-0" onClick={() => handleNavClick('/dashboard')}>
             <div className="w-8 h-8 bg-gradient-to-br from-green-600 to-green-700 rounded-lg flex items-center justify-center">
               <Target className="w-5 h-5 text-white" />
             </div>

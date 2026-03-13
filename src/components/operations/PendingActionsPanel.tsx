@@ -134,7 +134,7 @@ export function PendingActionsPanel({ squadId, variant = "full" }: PendingAction
           <p className="mt-1 text-sm text-gray-600">No pending reviews, transfer responses, or treasury interventions.</p>
         </div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-3">
           {actions.map((action) => {
             const Icon = action.icon;
             return (

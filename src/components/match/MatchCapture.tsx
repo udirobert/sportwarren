@@ -90,9 +90,21 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
   // Match hasn't started yet
   if (!matchState.isActive && matchState.events.length === 0) {
     return (
-      <Card className="py-8 px-4 space-y-6">
+      <Card className="py-8 px-4 space-y-6 bg-gradient-to-br from-white to-emerald-50/70 border-emerald-200">
+        <div className="rounded-2xl border border-emerald-200/70 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Home</div>
+            <div className="text-sm font-bold text-gray-900 truncate">{homeTeam}</div>
+          </div>
+          <div className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">VS</div>
+          <div className="min-w-0 text-right">
+            <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Away</div>
+            <div className="text-sm font-bold text-gray-900 truncate">{awayTeam}</div>
+          </div>
+        </div>
+
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-600/20">
             <Play className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-1">Set Up Match</h2>
@@ -147,7 +159,7 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
           </button>
         </div>
 
-        <div className="text-center text-xs text-gray-400">
+        <div className="text-center text-xs text-gray-500 font-semibold uppercase tracking-widest">
           {matchFormat} • {hasKeeper ? 'With goalkeeper' : 'No goalkeeper / rotating keeper'}
         </div>
 
