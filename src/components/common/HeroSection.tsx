@@ -6,6 +6,7 @@ import { useWallet } from '@/contexts/WalletContext';
 
 interface HeroSectionProps {
   onGetStarted?: () => void;
+  onGuestStart?: () => void;
 }
 
 interface PlatformStats {
@@ -14,7 +15,7 @@ interface PlatformStats {
   totalAgents: number;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestStart }) => {
   const [stats, setStats] = useState<PlatformStats>({
     totalPlayers: 0,
     totalMatches: 0,
@@ -99,16 +100,27 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
 
           {/* CTA - Guest-first approach */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
-            {/* Primary: Guest Mode (lowest friction) */}
             {!connected ? (
-              <button
-                onClick={loginAsGuest}
-                className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
-              >
-                <Eye className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-                Explore as Guest
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    loginAsGuest();
+                    onGuestStart?.();
+                  }}
+                  className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
+                >
+                  <Eye className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
+                  Explore as Guest
+                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                </button>
+                <button
+                  onClick={onGetStarted}
+                  className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl hover:bg-white/20 transition-all"
+                >
+                  <Shield className="w-5 h-5 mr-2" />
+                  Connect Wallet
+                </button>
+              </>
             ) : (
               <button
                 onClick={onGetStarted}
@@ -120,26 +132,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
               </button>
             )}
 
-            {/* Secondary: Learn more */}
             <button
               onClick={() => problemRef.current?.scrollIntoView({ behavior: 'smooth' })}
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl hover:bg-white/20 transition-all font-sans"
+              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl hover:bg-white/20 transition-all"
             >
               <Play className="w-5 h-5 mr-2" />
               See How It Works
             </button>
-
-            {/* Upgrade path: Connect wallet for full features */}
-            {!connected && (
-              <button
-                onClick={onGetStarted}
-                className="inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-green-400 hover:text-green-300 transition-colors group"
-              >
-                <Shield className="w-4 h-4 mr-2" />
-                Connect wallet for on-chain rewards
-                <ArrowRight className="w-4 h-4 ml-1 group-hover:translate-x-1 transition-transform" />
-              </button>
-            )}
           </div>
 
           {/* Stats */}

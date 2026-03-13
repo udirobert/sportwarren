@@ -42,6 +42,12 @@ export const StatCard: React.FC<StatCardProps> = ({
         ${loading ? 'opacity-80' : ''}
       `}
       onClick={onClick}
+      onKeyDown={onClick ? (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onClick();
+        }
+      } : undefined}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
       aria-busy={loading}
@@ -49,17 +55,17 @@ export const StatCard: React.FC<StatCardProps> = ({
       <div className="flex items-center justify-between">
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-gray-600 mb-1 truncate">{title}</p>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-baseline space-x-2">
             {loading ? (
               <span className="skeleton-stat" />
             ) : (
               <>
-                <p className="text-xl md:text-2xl font-bold text-gray-900 mb-2 break-words">{value}</p>
+                <p className="text-xl md:text-2xl font-bold text-gray-900 leading-none break-words">{value}</p>
                 {cmTrend === 'up' && (
-                  <Triangle className="w-2 h-2 fill-green-500 text-green-500 mb-2" />
+                  <Triangle className="w-2 h-2 fill-green-500 text-green-500" />
                 )}
                 {cmTrend === 'down' && (
-                  <Triangle className="w-2 h-2 fill-red-500 text-red-500 rotate-180 mb-2" />
+                  <Triangle className="w-2 h-2 fill-red-500 text-red-500 rotate-180" />
                 )}
               </>
             )}

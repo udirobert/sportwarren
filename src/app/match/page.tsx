@@ -21,6 +21,10 @@ import {
   AlertCircle,
   Clock3,
   CheckCircle2,
+  Camera,
+  MapPin,
+  Mic,
+  Users,
   Info,
 } from "lucide-react";
 import { MOCK_XP_SUMMARY } from "@/lib/mocks";
@@ -86,6 +90,7 @@ export default function MatchPage() {
     () => matches.filter((match) => match.paymentRail?.enabled).length,
     [matches],
   );
+  const hasOpponent = Boolean(selectedOpponentId);
 
   useEffect(() => {
     if (!selectedOpponentId && availableOpponents[0]?.id) {
@@ -168,7 +173,7 @@ export default function MatchPage() {
   if (!activeSquadId || !activeSquad) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-6 text-gray-900 dark:text-gray-100">
-        <Card className="py-12 text-center">
+        <Card className="py-12 text-center border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white">
           <Trophy className="mx-auto mb-4 h-12 w-12 text-gray-300" />
           <h1 className="mb-2 text-2xl font-bold text-gray-900">Match Center</h1>
           <p className="mx-auto mb-6 max-w-md text-gray-600">
@@ -178,7 +183,7 @@ export default function MatchPage() {
             <Link href="/squad">
               <Button>Create or Join Squad</Button>
             </Link>
-            <Link href="/">
+            <Link href="/dashboard">
               <Button variant="outline">Back to Dashboard</Button>
             </Link>
           </div>
@@ -188,7 +193,7 @@ export default function MatchPage() {
   }
 
   return (
-    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="mx-auto max-w-5xl space-y-6 px-4 py-6 pb-24 md:pb-6">
+    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="mx-auto max-w-6xl space-y-6 px-4 py-6 pb-24 md:pb-6">
       <VerificationBanner />
       <div className="rounded-3xl border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_45%),linear-gradient(135deg,#f5fffb,#ecfdf5)] p-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
@@ -282,44 +287,136 @@ export default function MatchPage() {
       )}
 
       {viewMode === "capture" && (
-        <div className="space-y-4">
-          <Card>
-            <div className="grid gap-4 md:grid-cols-[1.1fr,0.9fr] md:items-end">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">New Match Submission</h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  Use your active squad and pick the opponent before you start tracking the match.
-                </p>
+        <div className="grid gap-4 lg:grid-cols-[1.15fr,0.85fr]">
+          <div className="space-y-4">
+            <Card>
+              <div className="grid gap-4 md:grid-cols-[1.1fr,0.9fr] md:items-end">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                    Match Setup
+                  </div>
+                  <h2 className="mt-3 text-lg font-semibold text-gray-900">New Match Submission</h2>
+                  <p className="mt-1 text-sm text-gray-600">
+                    Use your active squad and pick the opponent before you start tracking the match.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Opponent Squad</label>
+                  <select
+                    value={selectedOpponentId}
+                    onChange={(event) => setSelectedOpponentId(event.target.value)}
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2"
+                  >
+                    {availableOpponents.map((squad) => (
+                      <option key={squad.id} value={squad.id}>
+                        {squad.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </Card>
+
+            {hasOpponent ? (
+              <MatchCapture
+                homeTeam={activeSquad.name}
+                awayTeam={availableOpponents.find((squad) => squad.id === selectedOpponentId)?.name || "Opponent"}
+                onSubmit={handleMatchSubmit}
+              />
+            ) : (
+              <Card className="py-10 text-center">
+                <AlertCircle className="mx-auto mb-3 h-10 w-10 text-amber-500" />
+                <p className="text-gray-600">Add another squad to unlock live match submission.</p>
+              </Card>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <Card>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-gray-900">Match Day Checklist</h3>
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Capture</span>
+              </div>
+              <div className="space-y-3">
+                {[
+                  {
+                    label: "Select opponent",
+                    status: hasOpponent ? "Opponent locked in" : "Choose a squad to start",
+                    icon: Users,
+                    done: hasOpponent,
+                  },
+                  {
+                    label: "Track scoreline",
+                    status: "Use the live tracker after kick-off",
+                    icon: Activity,
+                    done: false,
+                  },
+                  {
+                    label: "Submit for verification",
+                    status: "Send result to the opposing captain",
+                    icon: Shield,
+                    done: false,
+                  },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.label} className="flex items-start gap-3 rounded-xl border border-gray-200 bg-white/70 px-3 py-2">
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.done ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-gray-900">{item.label}</div>
+                        <div className="text-xs text-gray-500">{item.status}</div>
+                      </div>
+                      {item.done && <CheckCircle2 className="w-4 h-4 text-emerald-600" />}
+                    </div>
+                  );
+                })}
+              </div>
+            </Card>
+
+            <Card>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-bold text-gray-900">Evidence Pack</h3>
+                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Optional</span>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-700">Opponent Squad</label>
-                <select
-                  value={selectedOpponentId}
-                  onChange={(event) => setSelectedOpponentId(event.target.value)}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2"
-                >
-                  {availableOpponents.map((squad) => (
-                    <option key={squad.id} value={squad.id}>
-                      {squad.name}
-                    </option>
-                  ))}
-                </select>
+                {[
+                  { label: "GPS stamp", detail: "Auto-captured at kickoff", icon: MapPin },
+                  { label: "Voice note", detail: "Captain confirmation", icon: Mic },
+                  { label: "Photo proof", detail: "Scoreboard or team shot", icon: Camera },
+                ].map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <div key={item.label} className="flex items-center justify-between rounded-xl border border-gray-200 px-3 py-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900">{item.label}</div>
+                          <div className="text-xs text-gray-500">{item.detail}</div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Ready</span>
+                    </div>
+                  );
+                })}
               </div>
-            </div>
-          </Card>
-
-          {selectedOpponentId ? (
-            <MatchCapture
-              homeTeam={activeSquad.name}
-              awayTeam={availableOpponents.find((squad) => squad.id === selectedOpponentId)?.name || "Opponent"}
-              onSubmit={handleMatchSubmit}
-            />
-          ) : (
-            <Card className="py-10 text-center">
-              <AlertCircle className="mx-auto mb-3 h-10 w-10 text-amber-500" />
-              <p className="text-gray-600">Add another squad to unlock live match submission.</p>
             </Card>
-          )}
+
+            <Card className="border-emerald-200 bg-emerald-50/70">
+              <div className="flex items-start gap-3">
+                <Shield className="w-5 h-5 text-emerald-600 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-bold text-emerald-900">Verification Flow</h4>
+                  <p className="text-sm text-emerald-700 mt-1">
+                    Submit the result, the opposing captain confirms, and XP + reputation update automatically.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
         </div>
       )}
 

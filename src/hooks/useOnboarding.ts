@@ -170,7 +170,7 @@ export function useOnboarding() {
             description: 'Open the dashboard staff tools and talk to your Agent',
             completed: state.checklistItems.open_office ?? false,
             emoji: '🎩',
-            href: '/',
+            href: '/dashboard',
             actionLabel: 'Open dashboard',
         },
         {

@@ -50,7 +50,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                     </div>
                 </button>
 
-                <Card className={`bg-gradient-to-br from-gray-900 to-black border-gray-800 text-white overflow-hidden relative ${expanded ? 'block' : 'hidden md:block'}`}>`
+                <Card className={`bg-gradient-to-br from-gray-900 to-black border-gray-800 text-white overflow-hidden relative ${expanded ? 'block' : 'hidden md:block'}`}>
                     {/* Background decoration */}
                     <div className="absolute top-0 right-0 p-6 opacity-5 pointer-events-none">
                         <Trophy className="w-40 h-40" />
