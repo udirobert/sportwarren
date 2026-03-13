@@ -1,24 +1,25 @@
 import algosdk from 'algosdk';
 import { ethers } from 'ethers';
+import { SIGNATURE_EXPIRY_MS } from './constants';
+
+export type WalletChain = 'algorand' | 'avalanche' | 'lens';
 
 export interface WalletAuthPayload {
   address: string;
-  chain: 'algorand' | 'avalanche';
-  signature: string; // Base64 encoded signature
+  chain: WalletChain;
+  signature: string; // Base64 for Algorand, hex for EVM
   message: string;   // The message that was signed
   timestamp: number; // Unix timestamp when signed
 }
 
 export interface VerifiedWallet {
   address: string;
-  chain: string;
+  chain: WalletChain;
   verified: boolean;
 }
 
 const AUTH_MESSAGE_TEMPLATE = (timestamp: number) => 
   `Sign this message to authenticate with SportWarren. Timestamp: ${timestamp}`;
-
-const SIGNATURE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
  * Verify an Algorand wallet signature
@@ -65,7 +66,7 @@ export async function verifyAlgorandSignature(
 }
 
 /**
- * Verify an Avalanche wallet signature (EIP-191 compatible)
+ * Verify an EVM wallet signature (EIP-191 compatible)
  */
 export async function verifyAvalancheSignature(
   address: string,
@@ -110,7 +111,7 @@ export async function verifyWalletSignature(
 
   if (chain === 'algorand') {
     verified = await verifyAlgorandSignature(address, signature, message, timestamp);
-  } else if (chain === 'avalanche') {
+  } else if (chain === 'avalanche' || chain === 'lens') {
     verified = await verifyAvalancheSignature(address, signature, message, timestamp);
   } else {
     throw new Error(`Unsupported chain: ${chain}`);
@@ -122,6 +123,9 @@ export async function verifyWalletSignature(
     verified,
   };
 }
+
+export const isSupportedWalletChain = (chain?: string): chain is WalletChain =>
+  chain === 'algorand' || chain === 'avalanche' || chain === 'lens';
 
 /**
  * Generate authentication message for wallet signing

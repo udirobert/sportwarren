@@ -12,19 +12,31 @@ import {
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc-client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useWallet } from '@/contexts/WalletContext';
 
 interface StaffAdvisorProps {
   squadId: string;
 }
 
 export const StaffAdvisor: React.FC<StaffAdvisorProps> = ({ squadId }) => {
+  const { isVerified } = useWallet();
   const { data: alerts, isLoading } = trpc.squad.getManagerAlerts.useQuery(
     { squadId },
     { 
-      enabled: !!squadId,
+      enabled: !!squadId && isVerified,
       refetchInterval: 30000, // Refresh every 30s for "live" feel
     }
   );
+
+  if (!isVerified) {
+    return (
+      <div className="p-6 text-center border-2 border-dashed border-white/5 rounded-2xl">
+        <ShieldAlert className="w-8 h-8 text-gray-700 mx-auto mb-2" />
+        <p className="text-[10px] font-black uppercase text-gray-500 tracking-widest">Verification Required</p>
+        <p className="text-[9px] text-gray-600 mt-1 uppercase">Verify your wallet to view staff alerts</p>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

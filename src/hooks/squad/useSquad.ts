@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react';
 import { trpc } from '@/lib/trpc-client';
+import { useWallet } from '@/contexts/WalletContext';
 import type { PlayerPosition } from '@/types';
 
 interface Squad {
@@ -164,9 +165,11 @@ export function useSquadDetails(squadId?: string): UseSquadDetailsReturn {
 
 // Get current user's squads
 export function useMySquads(): UseMySquadsReturn {
+  const { isVerified } = useWallet();
   const { data, isLoading, error, refetch } = trpc.squad.getMySquads.useQuery(
     undefined,
     {
+      enabled: isVerified,
       staleTime: 30 * 1000,
     }
   );
@@ -179,7 +182,10 @@ export function useMySquads(): UseMySquadsReturn {
     })) || [],
     loading: isLoading,
     error: error?.message || null,
-    refresh: async () => { await refetch(); },
+    refresh: async () => {
+      if (!isVerified) return;
+      await refetch();
+    },
   };
 }
 

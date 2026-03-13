@@ -12,10 +12,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
+import { useToast } from '@/contexts/ToastContext';
+import { VerificationBanner } from '@/components/common/VerificationBanner';
 import { useMySquads } from '@/hooks/squad/useSquad';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
 import { GuestTour } from '@/components/onboarding/GuestTour';
+import { trpc } from '@/lib/trpc-client';
 
 import dynamic from 'next/dynamic';
 
@@ -51,10 +54,31 @@ interface DashboardWidget {
 
 export const AdaptiveDashboard: React.FC = () => {
   const { preferences, trackFeatureUsage } = useUserPreferences();
-  const { address, isGuest } = useWallet();
+  const { address, isGuest, authStatus, refreshAuthSignature } = useWallet();
+  const { addToast } = useToast();
   const [isStaffRoomOpen, setIsStaffRoomOpen] = React.useState(false);
   const [forcedSquadId, setForcedSquadId] = React.useState<string | null>(null);
   const userAddress = address || undefined;
+  const needsVerification = !isGuest && (authStatus.state === 'missing' || authStatus.state === 'expired');
+  const isVerified = !isGuest && authStatus.state === 'valid';
+  const showAuthStatus = !isGuest && (authStatus.state === 'valid' || authStatus.state === 'missing' || authStatus.state === 'expired');
+
+  const handleVerify = React.useCallback(async () => {
+    const ok = await refreshAuthSignature();
+    if (!ok) {
+      addToast({
+        tone: 'error',
+        title: 'Verification Failed',
+        message: 'We could not verify your wallet. Please try again and approve the signature request.',
+      });
+    } else {
+      addToast({
+        tone: 'success',
+        title: 'Wallet Verified',
+        message: 'Protected features are now unlocked.',
+      });
+    }
+  }, [addToast, refreshAuthSignature]);
 
   const { data: stats, loading } = useDashboardData(userAddress);
   const router = useRouter();
@@ -63,8 +87,16 @@ export const AdaptiveDashboard: React.FC = () => {
 
   const primarySquadId = forcedSquadId || memberships?.[0]?.squad.id;
 
+  // Ticker data queries
+  const { data: matchData } = trpc.match.list.useQuery(
+    { squadId: primarySquadId || '', limit: 20 },
+    { enabled: !!primarySquadId, staleTime: 30 * 1000 }
+  );
+  const pendingMatchesCount = matchData?.matches?.filter((m: { status: string }) => m.status === 'pending').length ?? 0;
+  const activeMembersCount = memberships?.length ?? 0;
+
   // Show squad creation flow for connected (non-guest) users with no squad
-  if (!isGuest && !squadLoading && memberships.length === 0 && !forcedSquadId) {
+  if (!isGuest && isVerified && !squadLoading && memberships.length === 0 && !forcedSquadId) {
     return (
       <CreateSquadFlow
         onCreated={async (id) => {
@@ -555,6 +587,8 @@ export const AdaptiveDashboard: React.FC = () => {
         )}
       </AnimatePresence>
 
+      <VerificationBanner className="mb-4" />
+
       <GuestTour />
       <AgenticConcierge />
 
@@ -569,6 +603,23 @@ export const AdaptiveDashboard: React.FC = () => {
               <p className="text-xs text-gray-400 font-medium">
                 {address.slice(0, 6)}…{address.slice(-4)}
               </p>
+            )}
+            {address && showAuthStatus && (
+              <div className="flex items-center gap-2 mt-1 text-[10px] font-black uppercase tracking-widest">
+                <span className={`w-2 h-2 rounded-full ${isVerified ? 'bg-green-500' : 'bg-amber-500'}`} />
+                <span className={isVerified ? 'text-green-600' : 'text-amber-600'}>
+                  {isVerified ? 'Verified' : 'Needs verification'}
+                </span>
+                {needsVerification && (
+                  <button
+                    onClick={handleVerify}
+                    disabled={authStatus.isRefreshing}
+                    className="text-[10px] font-black text-blue-600 hover:text-blue-700 disabled:opacity-60"
+                  >
+                    {authStatus.isRefreshing ? 'Verifying…' : 'Verify'}
+                  </button>
+                )}
+              </div>
             )}
           </div>
           <button
@@ -591,7 +642,11 @@ export const AdaptiveDashboard: React.FC = () => {
               )}
             </h1>
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
-              {memberships?.[0]?.squad?.name ? `${memberships[0].squad.name} • Manager` : (isGuest ? 'Guest Mode • Demo Experience' : 'Connect wallet to get started')}
+              {memberships?.[0]?.squad?.name
+                ? `${memberships[0].squad.name} • Manager`
+                : (isGuest
+                  ? 'Guest Mode • Demo Experience'
+                  : (needsVerification ? 'Verify wallet to unlock squad data' : 'Connect wallet to get started'))}
             </p>
           </div>
           <div className="flex items-center space-x-3">
@@ -613,6 +668,25 @@ export const AdaptiveDashboard: React.FC = () => {
               <span>Squad Hub</span>
             </Button>
             <div className="flex items-center space-x-4">
+              {address && showAuthStatus && (
+                <>
+                  <div className="text-right">
+                    <div className="text-xs font-black text-gray-400 uppercase">Auth</div>
+                    {isVerified ? (
+                      <div className="text-xs font-bold text-green-600">Verified</div>
+                    ) : (
+                      <button
+                        onClick={handleVerify}
+                        disabled={authStatus.isRefreshing}
+                        className="text-xs font-bold text-amber-600 hover:text-amber-700 disabled:opacity-60"
+                      >
+                        {authStatus.isRefreshing ? 'Verifying…' : 'Verify'}
+                      </button>
+                    )}
+                  </div>
+                  <div className="w-px h-8 bg-gray-200 dark:bg-gray-700" />
+                </>
+              )}
               <div className="text-right">
                 <div className="text-xs font-black text-gray-400 uppercase">Club Status</div>
                 <div className="text-xs font-bold text-green-600">Stable</div>
@@ -632,25 +706,25 @@ export const AdaptiveDashboard: React.FC = () => {
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-sm shadow-green-500/50" />
           <span className="text-gray-900 dark:text-gray-100">Live</span>
-          <span>12 Match Reports Pending</span>
+          <span>{pendingMatchesCount > 0 ? `${pendingMatchesCount} Match Reports Pending` : 'No Pending Matches'}</span>
         </div>
         <div className="w-px h-2.5 bg-gray-200 dark:bg-gray-700 shrink-0" />
         <div className="flex items-center gap-1.5 shrink-0">
           <TrendingUp className="w-3 h-3 text-blue-500" />
           <span className="text-gray-900 dark:text-gray-100">Scouting</span>
-          <span>Efficiency +12.4%</span>
+          <span>Efficiency Active</span>
         </div>
         <div className="w-px h-2.5 bg-gray-200 dark:bg-gray-700 shrink-0" />
         <div className="flex items-center gap-1.5 shrink-0">
           <Zap className="w-3 h-3 text-orange-500" />
           <span className="text-gray-900 dark:text-gray-100">Boost</span>
-          <span>Training Intensity High</span>
+          <span>Training Active</span>
         </div>
         <div className="w-px h-2.5 bg-gray-200 dark:bg-gray-700 shrink-0" />
         <div className="flex items-center gap-1.5 shrink-0">
           <Users className="w-3 h-3 text-purple-500" />
           <span className="text-gray-900 dark:text-gray-100">Squad</span>
-          <span>8 Active Members</span>
+          <span>{activeMembersCount} Active Members</span>
         </div>
       </div>
 
@@ -675,37 +749,24 @@ export const AdaptiveDashboard: React.FC = () => {
         const progressWidgets = visibleWidgets.filter(w => progressIds.includes(w.id));
         const otherWidgets = visibleWidgets.filter(w => ![...todayIds, ...squadIds, ...progressIds].includes(w.id));
 
-        // Mobile: horizontal scroll carousel; desktop: two-column layout
-        const Section = ({ title, widgets, href }: { title: string; widgets: typeof visibleWidgets; href?: string }) =>
+        // Mobile: horizontal scroll carousel; desktop: 2-column grid showing all content
+        const Section = ({ title, widgets }: { title: string; widgets: typeof visibleWidgets }) =>
           widgets.length === 0 ? null : (
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{title}</h2>
-                {href && (
-                  <Link href={href} className="flex items-center gap-0.5 text-[10px] font-bold text-green-600 uppercase tracking-widest min-h-[44px] md:min-h-0">
-                    See all <ChevronRight className="w-3 h-3" />
-                  </Link>
-                )}
               </div>
-              {/* Mobile: horizontal snap scroll with fade indicator */}
+              {/* Mobile: horizontal snap scroll */}
               <div className="md:hidden -mx-3 px-3 relative">
                 <div className={`flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide ${widgets.length > 1 ? 'carousel-fade-right' : ''}`} style={{ scrollbarWidth: 'none' }}>
-                  {widgets.slice(0, 3).map(w => (
+                  {widgets.slice(0, 5).map(w => (
                     <div key={w.id} id={w.id} className="snap-start shrink-0 w-[85vw] max-w-sm">
                       {w.component}
                     </div>
                   ))}
-                  {widgets.length > 3 && href && (
-                    <div className="snap-start shrink-0 w-[60vw] max-w-xs flex items-center justify-center">
-                      <Link href={href} className="flex flex-col items-center gap-2 text-green-600 font-bold text-sm min-h-[44px] justify-center">
-                        <ChevronRight className="w-6 h-6" />
-                        <span>See all</span>
-                      </Link>
-                    </div>
-                  )}
                 </div>
               </div>
-              {/* Desktop: adaptive grid — avoids blank gaps with sparse content */}
+              {/* Desktop: show all content inline - no "See all" needed */}
               <div className={`hidden md:grid gap-4 ${
                 widgets.length === 1 ? 'grid-cols-1' :
                 widgets.length === 2 ? 'grid-cols-2' :
@@ -722,8 +783,8 @@ export const AdaptiveDashboard: React.FC = () => {
             <div className="hidden lg:grid lg:grid-cols-3 gap-6">
               {/* Main content — 2/3 width */}
               <div className="lg:col-span-2 space-y-6">
-                <Section title="Today" widgets={todayWidgets} href="/match" />
-                <Section title="Squad" widgets={squadWidgets} href="/squad" />
+                <Section title="Today" widgets={todayWidgets} />
+                <Section title="Squad" widgets={squadWidgets} />
               </div>
               {/* Right sidebar — 1/3 width */}
               <div className="space-y-4">
@@ -815,14 +876,14 @@ export const AdaptiveDashboard: React.FC = () => {
             </div>
             {/* Mobile/Tablet: stacked layout */}
             <div className="lg:hidden space-y-8">
-              <Section title="Today" widgets={todayWidgets} href="/match" />
-              <Section title="Squad" widgets={squadWidgets} href="/squad" />
-              <Section title="Progress" widgets={progressWidgets} href="/stats" />
+              <Section title="Today" widgets={todayWidgets} />
+              <Section title="Squad" widgets={squadWidgets} />
+              <Section title="Progress" widgets={progressWidgets} />
               {otherWidgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
             </div>
             {/* Desktop: Progress section below main content */}
             <div className="hidden lg:block">
-              <Section title="Progress" widgets={progressWidgets} href="/stats" />
+              <Section title="Progress" widgets={progressWidgets} />
               {otherWidgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
             </div>
           </div>

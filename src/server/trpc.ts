@@ -1,10 +1,12 @@
 import { initTRPC, TRPCError } from '@trpc/server';
 import { cache } from 'react';
 import { prisma } from '@/lib/db';
-import { 
+import type { WalletChain } from '@/lib/auth/wallet';
+import {
   verifyWalletSignature, 
   extractWalletFromHeaders,
-  generateAuthMessage 
+  generateAuthMessage,
+  isSupportedWalletChain,
 } from '@/lib/auth/wallet';
 
 // Re-export for API routes
@@ -15,7 +17,7 @@ export interface TRPCContext {
   prisma: typeof prisma;
   userId?: string;
   walletAddress?: string;
-  chain?: string;
+  chain?: WalletChain;
 }
 
 // Context for tRPC with wallet signature verification
@@ -23,9 +25,10 @@ export const createTRPCContext = cache(async (opts?: {
   headers?: Headers;
 }): Promise<TRPCContext> => {
   const walletInfo = extractWalletFromHeaders(opts?.headers || new Headers());
+  const chain = walletInfo.chain?.toLowerCase();
   
   // If no wallet address, return unauthenticated context
-  if (!walletInfo.address || !walletInfo.chain) {
+  if (!walletInfo.address || !chain || !isSupportedWalletChain(chain)) {
     return { prisma };
   }
 
@@ -43,7 +46,7 @@ export const createTRPCContext = cache(async (opts?: {
     // Verify the signature
     const verification = await verifyWalletSignature({
       address: walletInfo.address,
-      chain: walletInfo.chain as 'algorand' | 'avalanche',
+      chain,
       signature: walletInfo.signature,
       message: walletInfo.message,
       timestamp: parseInt(walletInfo.timestamp, 10),
@@ -58,7 +61,7 @@ export const createTRPCContext = cache(async (opts?: {
   return { 
     prisma,
     walletAddress: walletInfo.address,
-    chain: walletInfo.chain,
+    chain,
   };
 });
 

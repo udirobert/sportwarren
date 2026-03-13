@@ -8,6 +8,7 @@ import { Target, History, CheckCircle, Clock, Trophy } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { useMySquads } from "@/hooks/squad/useSquad";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
+import { VerificationBanner } from "@/components/common/VerificationBanner";
 
 import { AchievementGallery } from "@/components/player/AchievementGallery";
 
@@ -22,6 +23,7 @@ function ReputationPageInner() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 pb-24 md:pb-6 space-y-4 text-gray-900 dark:text-gray-100">
+      <VerificationBanner />
       {/* Contextual nav */}
       <Card className="border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

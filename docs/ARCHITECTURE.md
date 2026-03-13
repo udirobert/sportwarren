@@ -331,7 +331,7 @@ GET /api/lens/balance // Lens Network balance
         ↓
 4. Client sends: address + chain + signature + message + timestamp
         ↓
-5. Server verifies signature with algosdk
+5. Server verifies signature with algosdk (Algorand) or ethers (EVM)
         ↓
 6. Server finds or creates user record
         ↓

@@ -20,13 +20,17 @@ import { useTransfers } from "@/hooks/squad/useTransfers";
 import { PendingActionsPanel } from "@/components/operations/PendingActionsPanel";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useSquadDetails } from "@/hooks/squad/useSquad";
+import { useWallet } from "@/contexts/WalletContext";
+import { VerificationBanner } from "@/components/common/VerificationBanner";
 import type { Player, PlayerPosition, Tactics, Formation, PlayStyle, TeamInstructions } from "@/types";
 
 type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance";
 
 export default function SquadPage() {
   const [activeTab, setActiveTab] = useState<SquadTab>("overview");
+  const { isVerified } = useWallet();
   const { data: memberships } = trpc.squad.getMySquads.useQuery(undefined, {
+    enabled: isVerified,
     retry: false,
   });
 
@@ -73,14 +77,16 @@ export default function SquadPage() {
     }));
   }, [members, activeSquad]);
 
-  const initialTactics: Tactics | undefined = tacticsData
-    ? {
-        formation: tacticsData.formation as Formation,
-        style: tacticsData.playStyle as PlayStyle,
-        instructions: tacticsData.instructions as TeamInstructions,
-        setPieces: tacticsData.setPieces as Tactics['setPieces'],
-      }
-    : undefined;
+  const initialTactics: Tactics | undefined = useMemo(() => {
+    if (!tacticsData) return undefined;
+    const data = tacticsData as unknown;
+    return {
+      formation: (data as { formation: unknown }).formation as Formation,
+      style: (data as { playStyle: unknown }).playStyle as PlayStyle,
+      instructions: (data as { instructions: unknown }).instructions as TeamInstructions,
+      setPieces: (data as { setPieces: unknown }).setPieces as Tactics['setPieces'],
+    };
+  }, [tacticsData]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -114,6 +120,7 @@ export default function SquadPage() {
 
   return (
     <div ref={pullRef as React.RefObject<HTMLDivElement>} className="max-w-6xl mx-auto px-4 py-4 md:py-6 pb-24 md:pb-6 space-y-4 md:space-y-6 text-gray-900 dark:text-gray-100">
+      <VerificationBanner />
       {/* Header — compact on mobile */}
       <div className="flex items-center gap-3 md:block md:text-center">
         <div className="w-10 h-10 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shrink-0 md:mx-auto md:mb-4">

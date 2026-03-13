@@ -5,18 +5,30 @@ import { Card } from '@/components/ui/Card';
 import { trpc } from '@/lib/trpc-client';
 import { TrendingUp, MessageSquare, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useWallet } from '@/contexts/WalletContext';
 
 interface CaptainsLogProps {
     squadId?: string;
 }
 
 export const CaptainsLog: React.FC<CaptainsLogProps> = ({ squadId }) => {
+    const { isVerified } = useWallet();
     const { data, isLoading, error } = trpc.match.getCaptainsLog.useQuery(
         { squadId: squadId! },
-        { enabled: !!squadId }
+        { enabled: !!squadId && isVerified }
     );
 
     if (!squadId) return null;
+    if (!isVerified) {
+        return (
+            <Card className="bg-gradient-to-br from-indigo-900 to-slate-900 border-none text-white shadow-xl overflow-hidden relative">
+                <div className="p-4 text-center">
+                    <p className="text-xs font-black uppercase tracking-widest text-indigo-200">Verification Required</p>
+                    <p className="text-sm text-indigo-100/80 mt-2">Verify your wallet to unlock the Captain&apos;s Log.</p>
+                </div>
+            </Card>
+        );
+    }
 
     return (
         <Card className="bg-gradient-to-br from-indigo-900 to-slate-900 border-none text-white shadow-xl overflow-hidden relative group">

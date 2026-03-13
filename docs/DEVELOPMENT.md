@@ -122,17 +122,19 @@ await mutation.mutateAsync({ homeSquadId, awaySquadId, homeScore, awayScore });
 1. User connects wallet (Pera, Defly, etc.)
 2. Client generates auth message with timestamp
 3. User signs message
-4. Server verifies signature using algosdk
+4. Server verifies signature using algosdk (Algorand) or ethers (EVM)
 5. Server creates/returns user record
 
 ### Auth Headers
 ```
 x-wallet-address: ALGO_ADDRESS
-x-chain: algorand|avalanche
-x-wallet-signature: BASE64_SIGNATURE
+x-chain: algorand|avalanche|lens
+x-wallet-signature: BASE64_SIGNATURE (Algorand) or 0x... hex (EVM)
 x-auth-message: MESSAGE
 x-auth-timestamp: TIMESTAMP
 ```
+
+Signatures expire after ~5 minutes; the UI prompts a re-verification when needed.
 
 ### Development Mode
 In development, signature verification is skipped for easier testing.
