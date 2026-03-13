@@ -96,19 +96,6 @@ export const AdaptiveDashboard: React.FC = () => {
   const pendingMatchesCount = matchData?.matches?.filter((m: { status: string }) => m.status === 'pending').length ?? 0;
   const activeMembersCount = memberships?.length ?? 0;
 
-  // Show squad creation flow for connected (non-guest) users with no squad
-  if (!isGuest && isVerified && !squadLoading && memberships.length === 0 && !forcedSquadId) {
-    return (
-      <CreateSquadFlow
-        onCreated={async (id) => {
-          setForcedSquadId(id);
-          await refreshSquads();
-          router.push('/squad?tab=overview&new=1');
-        }}
-      />
-    );
-  }
-
   const handleOpenOffice = React.useCallback(() => {
     setIsStaffRoomOpen(true);
     completeChecklistItem('open_office');
@@ -506,7 +493,7 @@ export const AdaptiveDashboard: React.FC = () => {
     );
 
     return widgets;
-  }, [preferences, trackFeatureUsage, stats, loading, userAddress, primarySquadId, completeChecklistItem, handleOpenOffice, allChecklistDone]);
+  }, [preferences, trackFeatureUsage, stats, loading, userAddress, primarySquadId, completeChecklistItem, handleOpenOffice, allChecklistDone, router]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {
@@ -568,6 +555,19 @@ export const AdaptiveDashboard: React.FC = () => {
         return b.priority - a.priority;
       });
   }, [allWidgets, preferences]);
+
+  // Show squad creation flow for connected (non-guest) users with no squad
+  if (!isGuest && isVerified && !squadLoading && memberships.length === 0 && !forcedSquadId) {
+    return (
+      <CreateSquadFlow
+        onCreated={async (id) => {
+          setForcedSquadId(id);
+          await refreshSquads();
+          router.push('/squad?tab=overview&new=1');
+        }}
+      />
+    );
+  }
 
   const getLayoutClass = () => {
     switch (preferences.dashboardLayout) {
