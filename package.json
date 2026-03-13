@@ -7,7 +7,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
+    "lint": "eslint .",
     "dev:server": "tsx watch server/index.ts",
     "dev:analytics": "python3 server/services/ai/player-analytics.py",
     "build:server": "tsc -p server/tsconfig.json",
