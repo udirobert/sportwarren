@@ -319,13 +319,29 @@
   top: 0;
   bottom: 0;
   width: 2rem;
-  background: linear-gradient(to left, var(--tw-bg-opacity, 1) white, transparent);
+  background: linear-gradient(to left, rgba(255, 255, 255, 0.9), transparent);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.carousel-fade-right::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2rem;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.9), transparent);
   pointer-events: none;
   z-index: 10;
 }
 
 .dark .carousel-fade-right::after {
-  background: linear-gradient(to left, rgb(3 7 18), transparent);
+  background: linear-gradient(to left, rgba(3, 7, 18, 0.9), transparent);
+}
+
+.dark .carousel-fade-right::before {
+  background: linear-gradient(to right, rgba(3, 7, 18, 0.9), transparent);
 }
 
 /* Interactive card states - consolidates hover/active patterns */
