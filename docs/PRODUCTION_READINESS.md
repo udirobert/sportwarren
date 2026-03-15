@@ -1,14 +1,14 @@
 # SportWarren — Production Readiness Assessment
 
-**Date:** 9 March 2026  
-**Build Status:** ✅ Passing on `main`
+**Date:** 15 March 2026  
+**Build Status:** ✅ `npm run build` passing (lint emits warnings)
 
 ---
 
 ## The Honest Verdict
 
-> **Ready for: Public Production Launch (pending hosting variables)**  
-> **Status: Operational Hardening Complete**
+> **Ready for: Closed Beta**  
+> **Status: UX/IA + Auth Hardening In Progress**
 
 We have a high-fidelity, functional application with a compelling user loop. The onboarding, core gameplay, and backend integrations are all live. What remains is operational hardening.
 
@@ -87,6 +87,22 @@ These **must** be resolved before you can open to the public without risk.
 - Transfer escrow uses shared squad-leader sessions for create/cancel/respond when both parties have discoverable EVM wallets.
 - Match fees lock on submit and settle after consensus with an idempotent `yellow_fee_settled_at` guard.
 - Remaining production work is operational, not architectural: confirm `NEXT_PUBLIC_YELLOW_PLATFORM_WALLET` is set in live envs and test with two real squad-leader wallets on the live rail.
+
+---
+
+## 🟡 Product & UX Hardening (Beta → Public)
+
+### 1. Journey Clarity + IA Boundaries
+Landing (`/`) must remain marketing-only; all operational flows live in `/dashboard` and feature hubs.
+
+### 2. Affordance Integrity
+Every icon/button that looks clickable must perform a real action or be visually de-emphasized.
+
+### 3. Layout Density + Visual System
+Dashboards and hubs must follow the shared grid/token system with consistent spacing, headers, and card rhythms.
+
+### 4. Role & Permission Clarity
+Member vs Captain actions need clear, consistent UI and server-side enforcement.
 
 ---
 

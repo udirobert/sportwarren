@@ -2,7 +2,7 @@
 
 **Phygital Football Platform | Real World + Championship Manager Layer**
 
-**Last Updated:** March 2026
+**Last Updated:** March 15, 2026
 
 ---
 
@@ -92,6 +92,62 @@ Treasury reward distributed
 │  └─────────────────────┘                                           │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## Domain Boundaries (Target)
+
+**UI Layer (`src/app`, `src/components`)**  
+- Stateless rendering and composition only.  
+- No direct data fetching except via hooks.  
+- No business rules beyond presentation.
+
+**Hooks Layer (`src/hooks`)**  
+- All data fetching, caching, and mutation orchestration.  
+- Shared query keys + invalidation rules live here.  
+- UI consumes hooks, not raw TRPC clients.
+
+**Domain Logic (`src/lib`)**  
+- Pure functions: calculations, simulation engines, formatting.  
+- No React or network calls.  
+- Single source of truth for shared logic.
+
+**Server (`server/`, `src/server/routers`)**  
+- Auth gating, validation, and persistence.  
+- Enforces permissions and verification server-side.  
+- No UI concerns; returns predictable DTOs.
+
+**Dependency Direction**  
+`UI → Hooks → Server/Domain` (never the reverse).
+
+---
+
+## Access Control & Verification Gates
+
+Protected data and actions must **always** be enforced server-side, not just gated in the UI.
+
+**Required Gates**
+- Wallet verification required for on-chain actions (match submit/verify, treasury, transfers).
+- Role checks (Member vs Captain) enforced in server routers.
+- Challenge/verify endpoints reject unsigned or expired signatures.
+
+**TTL + Replay Protection**
+- Auth signatures must expire and be re-verified at TTL.  
+- Server must reject stale signatures even if UI is cached.
+
+---
+
+## Data Fetching & Caching Strategy (Target)
+
+**Rules**
+- High-churn data: shorter `staleTime` + explicit invalidation on mutation.
+- Low-churn data: longer `staleTime` + cache-first reads.
+- Avoid duplicate queries across widgets by centralizing in hooks.
+
+**Examples**
+- Match queue: `staleTime` 15–30s, invalidate on submit/verify.
+- Squad profile: `staleTime` 60–120s, invalidate on transfers/treasury updates.
+- Wallet/auth status: stored client-side with server verification on demand.
 
 ---
 

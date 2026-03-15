@@ -1,6 +1,6 @@
 # SportWarren — Route & Navigation Audit
 
-_Last updated: 2026-03-13_
+_Last updated: 2026-03-15_
 
 This document is the living navigation map for the app. Every page, its purpose, and its inbound links are listed here. Update this file whenever a route is added, removed, or redirected.
 
@@ -82,6 +82,47 @@ Primary nav items (SmartNavigation):
 | Settings | `/settings` | basic | always |
 
 > **Note:** `/achievements`, `/verification`, `/rivalries`, and `/challenges` are intentionally absent from the nav — they redirect to their respective hubs.
+
+---
+
+## Journey Map (MVP)
+
+### Guest (Demo Experience)
+1. Landing (`/`) → Explore as Guest
+2. Dashboard (`/dashboard`) → Today/Squad/Progress overview
+3. Match Center (`/match`) → Demo capture + verification preview
+4. Settings (`/settings`) → Connect wallet CTA
+
+### Verified Member
+1. Landing (`/`) → Connect Wallet
+2. Dashboard (`/dashboard`) → live squad data + actions
+3. Match Center (`/match`) → submit/verify results
+4. Squad (`/squad`) → tactics, treasury, transfers
+5. Reputation/Stats (`/reputation`, `/stats`)
+
+### Captain / Organizer
+1. Dashboard (`/dashboard`) → pending actions + staff alerts
+2. Match Center (`/match`) → approve/verify results
+3. Squad (`/squad`) → treasury, transfers, governance
+4. Settings (`/settings`) → channels + notifications
+
+---
+
+## Role & Permissions (Target Behavior)
+
+| Action | Guest | Member | Captain |
+|---|---|---|---|
+| View landing + marketing | ✅ | ✅ | ✅ |
+| View dashboard data | Demo-only | ✅ | ✅ |
+| Submit match result | Demo-only | ✅ | ✅ |
+| Verify match result | Demo-only | View | ✅ |
+| Manage tactics/transfers/treasury | Demo-only | View | ✅ |
+| Connect channels (Telegram/WhatsApp/XMTP) | ✳️ CTA | Limited | ✅ |
+| Post to Lens / on-chain actions | ❌ | ✅ (verified) | ✅ (verified) |
+
+**Notes**
+- “Demo-only” means UI is available but no on-chain writes or protected data.
+- Verification-required actions must be enforced server-side (not just UI gating).
 
 ---
 
