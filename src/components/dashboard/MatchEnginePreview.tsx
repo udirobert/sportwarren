@@ -191,6 +191,16 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
     // Performance adaptation
     const [fps, setFps] = useState(60);
     const [lowPowerMode, setLowPowerMode] = useState(false);
+    const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') return;
+        const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const update = () => setPrefersReducedMotion(media.matches);
+        update();
+        media.addEventListener('change', update);
+        return () => media.removeEventListener('change', update);
+    }, []);
 
     useEffect(() => {
         let lastTime = performance.now();
@@ -258,11 +268,11 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
     // Initialize players with real data or high-fidelity fallback
     useEffect(() => {
         // Auto-start for guests to show life immediately - only run ONCE on mount
-      if (isGuest && !isPlaying && time === 0 && players.length === 0) {
+      if (isGuest && !prefersReducedMotion && !lowPowerMode && !isPlaying && time === 0 && players.length === 0) {
             const timer = setTimeout(() => setIsPlaying(true), 2500);
             return () => clearTimeout(timer);
         }
-    }, [isGuest]); // Remove isPlaying and time from deps - this should only run on mount
+    }, [isGuest, prefersReducedMotion, lowPowerMode]); // Run once for guests, skip reduced motion / low power
 
     // Fetch real team members
     const { members, loading: membersLoading } = useSquadDetails(squadId);

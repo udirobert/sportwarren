@@ -625,7 +625,7 @@ export const AdaptiveDashboard: React.FC = () => {
               </p>
             )}
             {address && showAuthStatus && (
-              <div className="flex items-center gap-2 mt-1 text-[10px] font-black uppercase tracking-widest">
+              <div className="flex items-center gap-2 mt-1 section-title">
                 <span className={`w-2 h-2 rounded-full ${isVerified ? 'bg-green-500' : 'bg-amber-500'}`} />
                 <span className={isVerified ? 'text-green-600' : 'text-amber-600'}>
                   {isVerified ? 'Verified' : 'Needs verification'}
@@ -634,7 +634,7 @@ export const AdaptiveDashboard: React.FC = () => {
                   <button
                     onClick={handleVerify}
                     disabled={authStatus.isRefreshing}
-                    className="text-[10px] font-black text-blue-600 hover:text-blue-700 disabled:opacity-60"
+                    className="section-title text-blue-600 hover:text-blue-700 disabled:opacity-60"
                   >
                     {authStatus.isRefreshing ? 'Verifying…' : 'Verify'}
                   </button>

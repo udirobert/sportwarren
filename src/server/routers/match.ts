@@ -5,6 +5,7 @@ import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { chainlinkService } from '../../../server/services/blockchain/chainlink';
 import { yellowService, type MatchSettlementResult } from '../../../server/services/blockchain/yellow';
 import { postTreasuryLedgerEntry, distributeMatchRewards } from '../../../server/services/economy/treasury-ledger';
+import { getSquadMembership, isSquadLeader } from '../services/permissions';
 import { getMatchFeeDistribution } from '../../lib/yellow/match-fees';
 import { simulateMatch, calculateWinProbabilities } from '../../lib/match/simulation-engine';
 import { Tactics, PlayerAttributes } from '@/types';
@@ -97,6 +98,20 @@ export const matchRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       try {
+        const submitterMembership = await getSquadMembership(ctx.prisma, input.homeSquadId, ctx.userId!);
+        if (!submitterMembership) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only squad members can submit matches',
+          });
+        }
+        if (!isSquadLeader(submitterMembership.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only captains can submit matches',
+          });
+        }
+
         // Validate squads exist
         const [homeSquad, awaySquad] = await Promise.all([
           ctx.prisma.squad.findUnique({ where: { id: input.homeSquadId } }),
@@ -263,6 +278,31 @@ export const matchRouter = createTRPCRouter({
 
         if (!match) {
           throw new TRPCError(Errors.MATCH_NOT_FOUND);
+        }
+
+        const homeMembership = await getSquadMembership(ctx.prisma, match.homeSquadId, ctx.userId!);
+        const awayMembership = await getSquadMembership(ctx.prisma, match.awaySquadId, ctx.userId!);
+        const verifyingMembership = homeMembership || awayMembership;
+
+        if (!verifyingMembership) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only match squad members can verify results',
+          });
+        }
+
+        if (!isSquadLeader(verifyingMembership.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only captains can verify match results',
+          });
+        }
+
+        if (match.submittedBy === ctx.userId) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Match submitters cannot verify their own result',
+          });
         }
 
         // Check if already verified by this user
@@ -433,6 +473,16 @@ export const matchRouter = createTRPCRouter({
         throw new TRPCError(Errors.MATCH_NOT_FOUND);
       }
 
+      const homeMembership = await getSquadMembership(ctx.prisma, match.homeSquadId, ctx.userId!);
+      const awayMembership = await getSquadMembership(ctx.prisma, match.awaySquadId, ctx.userId!);
+      const settlingMembership = homeMembership || awayMembership;
+      if (!settlingMembership || !isSquadLeader(settlingMembership.role)) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only captains can settle match fee sessions',
+        });
+      }
+
       if (!match.yellowFeeSessionId) {
         throw new TRPCError({
           code: 'BAD_REQUEST',
@@ -478,6 +528,16 @@ export const matchRouter = createTRPCRouter({
         });
 
         if (!match) throw new TRPCError(Errors.MATCH_NOT_FOUND);
+
+        const homeMembership = await getSquadMembership(ctx.prisma, match.homeSquadId, ctx.userId!);
+        const awayMembership = await getSquadMembership(ctx.prisma, match.awaySquadId, ctx.userId!);
+        const finalizeMembership = homeMembership || awayMembership;
+        if (!finalizeMembership || !isSquadLeader(finalizeMembership.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only captains can finalize matches',
+          });
+        }
 
         if (match.status !== 'verified') {
           throw new TRPCError({
@@ -671,6 +731,14 @@ export const matchRouter = createTRPCRouter({
     .input(z.object({ squadId: z.string().min(1, 'Squad ID is required') }))
     .query(async ({ ctx, input }) => {
       try {
+        const member = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+        if (!member) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only squad members can access Captain\'s Log',
+          });
+        }
+
         const matches = await ctx.prisma.match.findMany({
           where: {
             OR: [

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, publicProcedure, protectedProcedure, adminProcedure } from '../trpc';
 import { calculateSharpnessDecay, calculateActivityGain } from '../../lib/player/fitness-engine';
+import { getSquadMembership } from '../services/permissions';
 
 const AttributeType = z.enum([
   'pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical',
@@ -271,8 +272,29 @@ export const playerRouter = createTRPCRouter({
       });
 
       if (!match) throw new TRPCError({ code: 'NOT_FOUND', message: 'Match not found' });
+      const homeMembership = await getSquadMembership(ctx.prisma, match.homeSquadId, ctx.userId!);
+      const awayMembership = await getSquadMembership(ctx.prisma, match.awaySquadId, ctx.userId!);
+      if (!homeMembership && !awayMembership) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Only match participants can finalize XP' });
+      }
       if (match.status !== 'verified' && match.status !== 'finalized') {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Match must be verified first' });
+      }
+
+      const existingGains = await ctx.prisma.xPGain.findMany({
+        where: { matchId },
+      });
+
+      if (existingGains.length > 0) {
+        return {
+          success: true,
+          alreadyApplied: true,
+          results: existingGains.map((gain) => ({
+            profileId: gain.profileId,
+            totalXP: gain.totalXP,
+            attributeBreakdown: gain.attributeBreakdown ?? {},
+          })),
+        };
       }
 
       const results = [];
@@ -355,7 +377,14 @@ export const playerRouter = createTRPCRouter({
           data: { xpEarned: totalXP },
         });
 
-        results.push({ profileId: profile.id, totalXP, goals: stat.goals, assists: stat.assists, cleanSheet: stat.cleanSheet });
+        results.push({
+          profileId: profile.id,
+          totalXP,
+          attributeBreakdown,
+          goals: stat.goals,
+          assists: stat.assists,
+          cleanSheet: stat.cleanSheet,
+        });
       }
 
       return { success: true, count: results.length, results };

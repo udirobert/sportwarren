@@ -4,30 +4,9 @@ import React from "react";
 import Link from "next/link";
 import { BarChart3, Target, Trophy, TrendingUp, Shield, Zap, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { StatCard } from "@/components/common/StatCard";
 import { useWallet } from "@/contexts/WalletContext";
 import { usePlayerAttributes } from "@/hooks/player/usePlayerAttributes";
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  color,
-}: {
-  label: string;
-  value: string | number;
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-}) {
-  return (
-    <div className={`rounded-2xl border p-4 ${color}`}>
-      <div className="flex items-center gap-2 mb-2">
-        <Icon className="w-4 h-4 text-gray-600" />
-        <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">{label}</span>
-      </div>
-      <div className="text-2xl font-black text-gray-900">{value}</div>
-    </div>
-  );
-}
 
 export default function StatsPage() {
   const { address } = useWallet();
@@ -115,10 +94,10 @@ export default function StatsPage() {
 
       {/* Career summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Matches" value={attributes.totalMatches} icon={Target} color="border-gray-200 bg-gray-50" />
-        <StatCard label="Goals" value={attributes.totalGoals} icon={Zap} color="border-green-200 bg-green-50" />
-        <StatCard label="Assists" value={attributes.totalAssists} icon={TrendingUp} color="border-blue-200 bg-blue-50" />
-        <StatCard label="Reputation" value={attributes.reputationScore} icon={Trophy} color="border-amber-200 bg-amber-50" />
+        <StatCard title="Matches" value={attributes.totalMatches} icon={Target} color="blue" />
+        <StatCard title="Goals" value={attributes.totalGoals} icon={Zap} color="green" />
+        <StatCard title="Assists" value={attributes.totalAssists} icon={TrendingUp} color="orange" />
+        <StatCard title="Reputation" value={attributes.reputationScore} icon={Trophy} color="purple" />
       </div>
 
       {/* Skill ratings */}

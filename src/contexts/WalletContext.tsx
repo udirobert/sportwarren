@@ -12,6 +12,7 @@ const STORAGE_KEYS = {
   LENS_ADDRESS: 'sw_lens_address',
   PREFERRED_CHAIN: 'sw_preferred_chain',
   USER_PREFERENCES: 'sw_user_preferences',
+  GUEST_PENDING_MIGRATION: 'sw_guest_pending_migration',
 } as const;
 
 const toBase64 = (bytes: Uint8Array): string => {
@@ -130,6 +131,13 @@ const persistAuth = (signature: string, message: string, timestamp: number, addr
   localStorage.setItem(AUTH_STORAGE_KEYS.TIMESTAMP, String(timestamp));
   localStorage.setItem(AUTH_STORAGE_KEYS.ADDRESS, address);
   localStorage.setItem(AUTH_STORAGE_KEYS.CHAIN, chain);
+};
+
+const hasGuestProgress = () => {
+  if (typeof window === 'undefined') return false;
+  const drafts = localStorage.getItem('sw_guest_drafts');
+  const xp = localStorage.getItem('sw_guest_xp');
+  return Boolean(drafts || xp);
 };
 
 const clearAuth = () => {
@@ -399,6 +407,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   const connect = async (method: 'algorand' | 'avalanche' | 'lens' | 'google' | 'discord') => {
     try {
+      const pendingGuestMigration = hasGuestProgress();
+      if (pendingGuestMigration) {
+        localStorage.setItem(STORAGE_KEYS.GUEST_PENDING_MIGRATION, 'true');
+      }
       if (method === 'google' || method === 'discord') {
         // ── Social Onboarding Flow (Progressive Identity) via Privy ──
         clearAuth();
@@ -570,6 +582,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     setBalance(1000);
     setLoginMethod('guest');
     localStorage.setItem('sw_is_guest', 'true');
+    localStorage.removeItem(STORAGE_KEYS.GUEST_PENDING_MIGRATION);
   };
 
   const disconnect = () => {

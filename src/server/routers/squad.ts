@@ -8,6 +8,7 @@ import {
   postTreasuryLedgerEntry,
   TreasuryBalanceError,
 } from '../../../server/services/economy/treasury-ledger';
+import { getSquadMembership, isSquadLeader } from '../services/permissions';
 
 const formationSchema = z.enum([
   '4-4-2', '4-3-3', '4-2-3-1', '3-5-2', '5-3-2',
@@ -435,12 +436,20 @@ export const squadRouter = createTRPCRouter({
   // ============================================================================
 
   // Get squad tactics
-  getTactics: publicProcedure
+  getTactics: protectedProcedure
     .input(z.object({
       squadId: z.string().min(1, 'Squad ID is required'),
     }))
     .query(async ({ ctx, input }) => {
       try {
+        const member = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+        if (!member) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only squad members can access tactics',
+          });
+        }
+
         const tactics = await ctx.prisma.squadTactics.findUnique({
           where: { squadId: input.squadId },
         });
@@ -520,7 +529,7 @@ export const squadRouter = createTRPCRouter({
           },
         });
 
-        if (!member || (member.role !== 'captain' && member.role !== 'vice_captain')) {
+        if (!member || !isSquadLeader(member.role)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Only captain or vice-captain can update tactics',
@@ -553,12 +562,20 @@ export const squadRouter = createTRPCRouter({
   // ============================================================================
 
   // Get squad treasury
-  getTreasury: publicProcedure
+  getTreasury: protectedProcedure
     .input(z.object({
       squadId: z.string().min(1, 'Squad ID is required'),
     }))
     .query(async ({ ctx, input }) => {
       try {
+        const member = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+        if (!member) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only squad members can access treasury',
+          });
+        }
+
         const [treasury, yellowStatus] = await Promise.all([
           ctx.prisma.squadTreasury.findUnique({
             where: { squadId: input.squadId },
@@ -687,7 +704,7 @@ export const squadRouter = createTRPCRouter({
           },
         });
 
-        if (!member || (member.role !== 'captain' && member.role !== 'vice_captain')) {
+        if (!member || !isSquadLeader(member.role)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Only captain or vice-captain can withdraw from treasury',
@@ -759,7 +776,7 @@ export const squadRouter = createTRPCRouter({
   // ============================================================================
 
   // Get transfer offers for a squad
-  getTransferOffers: publicProcedure
+  getTransferOffers: protectedProcedure
     .input(z.object({
       squadId: z.string().min(1, 'Squad ID is required'),
       type: z.enum(['incoming', 'outgoing']).default('incoming'),
@@ -767,6 +784,13 @@ export const squadRouter = createTRPCRouter({
     .query(async ({ ctx, input }) => {
       try {
         const { squadId, type } = input;
+        const member = await getSquadMembership(ctx.prisma, squadId, ctx.userId!);
+        if (!member) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only squad members can access transfer offers',
+          });
+        }
         await expireTransferOffers(ctx.prisma, squadId);
 
         const where = type === 'incoming'
@@ -822,7 +846,7 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
-        if (fromMembership.role !== 'captain' && fromMembership.role !== 'vice_captain') {
+        if (!isSquadLeader(fromMembership.role)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Only captain or vice-captain can make transfer offers',
@@ -961,7 +985,7 @@ export const squadRouter = createTRPCRouter({
           },
         });
 
-        if (!member || (member.role !== 'captain' && member.role !== 'vice_captain')) {
+        if (!member || !isSquadLeader(member.role)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Only captain or vice-captain can respond to offers',
@@ -1064,7 +1088,7 @@ export const squadRouter = createTRPCRouter({
           },
         });
 
-        if (!member || (member.role !== 'captain' && member.role !== 'vice_captain')) {
+        if (!member || !isSquadLeader(member.role)) {
           throw new TRPCError({
             code: 'FORBIDDEN',
             message: 'Only captain or vice-captain can cancel offers',

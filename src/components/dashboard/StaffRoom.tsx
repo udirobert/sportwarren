@@ -22,6 +22,7 @@ import { useSquadDetails } from '@/hooks/squad/useSquad';
 import { useAgentAlerts } from '@/hooks/squad/useAgentAlerts';
 import { useAgentContext } from '@/context/AgentContext';
 import { useYellowSession } from '@/hooks/useYellowSession';
+import { useWallet } from '@/contexts/WalletContext';
 import { ContractNegotiationModal } from './ContractNegotiationModal';
 import { StaffAdvisor } from './StaffAdvisor';
 
@@ -133,6 +134,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     const [negotiatingPlayer, setNegotiatingPlayer] = useState<string>('');
     const [negotiatingWage, setNegotiatingWage] = useState<number>(500);
     const [inputText, setInputText] = useState<string>('');
+    const { isVerified } = useWallet();
 
     const agentChat = trpc.agent.chat.useMutation();
     const logDecision = trpc.memory.logDecision.useMutation();
@@ -156,11 +158,11 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     // Fetch real-time data for functional responses
     const { data: treasury, isLoading: treasuryLoading, isError: treasuryError } = trpc.squad.getTreasury.useQuery(
         { squadId: squadId || '' },
-        { enabled: !!squadId }
+        { enabled: !!squadId && isVerified }
     );
     const { data: tactics, isLoading: tacticsLoading } = trpc.squad.getTactics.useQuery(
         { squadId: squadId || '' },
-        { enabled: !!squadId }
+        { enabled: !!squadId && isVerified }
     );
     const { members, loading: membersLoading } = useSquadDetails(squadId);
 
