@@ -76,26 +76,28 @@ function ReputationPageInner() {
                   const won = myScore > oppScore;
                   const drew = myScore === oppScore;
                   return (
-                    <div key={match.id} className="flex items-center gap-3 p-3 border border-gray-100 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${
-                        match.status !== 'VERIFIED' ? 'bg-gray-300' : won ? 'bg-green-500' : drew ? 'bg-yellow-400' : 'bg-red-400'
-                      }`}>
-                        {match.status !== 'VERIFIED' ? '?' : won ? 'W' : drew ? 'D' : 'L'}
+                    <Link key={match.id} href={`/match?mode=detail&matchId=${match.id}`} className="block">
+                      <div className="flex items-center gap-3 p-3 border border-gray-100 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${
+                          match.status !== 'VERIFIED' ? 'bg-gray-300' : won ? 'bg-green-500' : drew ? 'bg-yellow-400' : 'bg-red-400'
+                        }`}>
+                          {match.status !== 'VERIFIED' ? '?' : won ? 'W' : drew ? 'D' : 'L'}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">vs {oppName ?? 'Unknown'}</p>
+                          <p className="text-xs text-gray-500">{myScore} – {oppScore} · {new Date(match.matchDate).toLocaleDateString()}</p>
+                        </div>
+                        {match.status === 'VERIFIED' ? (
+                          <span className="flex items-center gap-1 text-xs text-green-600 shrink-0">
+                            <CheckCircle className="w-3.5 h-3.5" /> +XP
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1 text-xs text-yellow-600 shrink-0">
+                            <Clock className="w-3.5 h-3.5" /> Pending
+                          </span>
+                        )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">vs {oppName ?? 'Unknown'}</p>
-                        <p className="text-xs text-gray-500">{myScore} – {oppScore} · {new Date(match.matchDate).toLocaleDateString()}</p>
-                      </div>
-                      {match.status === 'VERIFIED' ? (
-                        <span className="flex items-center gap-1 text-xs text-green-600 shrink-0">
-                          <CheckCircle className="w-3.5 h-3.5" /> +XP
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-xs text-yellow-600 shrink-0">
-                          <Clock className="w-3.5 h-3.5" /> Pending
-                        </span>
-                      )}
-                    </div>
+                    </Link>
                   );
                 })}
               </div>

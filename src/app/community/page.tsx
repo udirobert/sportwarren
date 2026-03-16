@@ -52,7 +52,7 @@ function CommunityPageInner() {
           ) : leaderboard && leaderboard.length > 0 ? (
             <div className="space-y-2">
               {leaderboard.map((player: any, i: number) => (
-                <div key={player.userId} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div key={player.userId} className="flex items-center gap-3 p-2 rounded-lg">
                   <span className={`w-6 text-center text-sm font-bold ${i === 0 ? 'text-yellow-500' : i === 1 ? 'text-gray-400' : i === 2 ? 'text-amber-600' : 'text-gray-400'}`}>{i + 1}</span>
                   <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-xs font-bold text-blue-700">
                     {(player.name ?? 'A').charAt(0).toUpperCase()}
@@ -92,7 +92,7 @@ function CommunityPageInner() {
           ) : squadsData?.squads && squadsData.squads.length > 0 ? (
             <div className="space-y-2">
               {squadsData.squads.map((squad: any) => (
-                <div key={squad.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+                <div key={squad.id} className="flex items-center gap-3 p-2 rounded-lg">
                   <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-xs font-bold text-green-700">
                     {squad.shortName?.charAt(0) ?? squad.name.charAt(0)}
                   </div>
@@ -131,7 +131,7 @@ function CommunityPageInner() {
         ) : recentMatches?.matches && recentMatches.matches.length > 0 ? (
           <div className="space-y-2">
             {recentMatches.matches.map((match: any) => (
-              <div key={match.id} className="flex items-center justify-between p-3 border border-gray-100 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
+              <div key={match.id} className="flex items-center justify-between p-3 border border-gray-100 dark:border-gray-700 rounded-lg">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <span className="text-sm font-medium text-gray-900 truncate">{match.homeSquad?.name ?? 'Home'}</span>
                   <span className="text-lg font-bold text-gray-700 shrink-0">{match.homeScore} – {match.awayScore}</span>

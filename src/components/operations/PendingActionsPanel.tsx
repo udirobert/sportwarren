@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { useMatchVerification } from "@/hooks/match/useMatchVerification";
 import { useTransfers } from "@/hooks/squad/useTransfers";
 import { useTreasury } from "@/hooks/squad/useTreasury";
+import { getTreasuryStatus } from "@/lib/utils";
 
 interface PendingActionsPanelProps {
   squadId?: string;
@@ -35,12 +36,7 @@ export function PendingActionsPanel({ squadId, variant = "full" }: PendingAction
   const { treasury } = useTreasury(squadId);
 
   const firstPendingMatch = pendingMatches[0];
-  const wageBudget = treasury?.allowances.weeklyWages ?? 0;
-  const treasuryNeedsAttention = Boolean(
-    treasury &&
-      wageBudget > 0 &&
-      treasury.balance < wageBudget,
-  );
+  const { needsAttention: treasuryNeedsAttention, wageBudget, balance: treasuryBalance } = getTreasuryStatus(treasury);
 
   const actions: ActionItem[] = [];
 
@@ -74,7 +70,7 @@ export function PendingActionsPanel({ squadId, variant = "full" }: PendingAction
     actions.push({
       id: "treasury",
       title: "Treasury top-up recommended",
-      description: `Balance is ${treasury?.balance.toLocaleString()} against a weekly wages budget of ${wageBudget.toLocaleString()}.`,
+      description: `Balance is ${treasuryBalance.toLocaleString()} against a weekly wages budget of ${wageBudget.toLocaleString()}.`,
       href: "/squad?tab=treasury",
       cta: "Open treasury",
       icon: Wallet,

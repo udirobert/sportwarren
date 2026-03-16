@@ -10,6 +10,7 @@ import { isHex, type Hex } from 'viem';
 import { trpc } from '@/lib/trpc-client';
 import { useYellowSession } from '@/hooks/useYellowSession';
 import type { TransferOffer } from '@/types';
+import { useWallet } from '@/contexts/WalletContext';
 
 interface UseTransfersReturn {
   incomingOffers: TransferOffer[];
@@ -70,16 +71,17 @@ function transformOffer(offer: any): TransferOffer {
 export function useTransfers(squadId?: string): UseTransfersReturn {
   const utils = trpc.useUtils();
   const yellowSession = useYellowSession();
+  const { isVerified } = useWallet();
   // Fetch incoming offers
   const { data: incomingData, isLoading: incomingLoading, refetch: refetchIncoming } = trpc.squad.getTransferOffers.useQuery(
     { squadId: squadId || '', type: 'incoming' },
-    { enabled: !!squadId, staleTime: 30 * 1000 }
+    { enabled: !!squadId && isVerified, staleTime: 30 * 1000 }
   );
 
   // Fetch outgoing offers
   const { data: outgoingData, isLoading: outgoingLoading, refetch: refetchOutgoing } = trpc.squad.getTransferOffers.useQuery(
     { squadId: squadId || '', type: 'outgoing' },
-    { enabled: !!squadId, staleTime: 30 * 1000 }
+    { enabled: !!squadId && isVerified, staleTime: 30 * 1000 }
   );
 
   // Create offer mutation

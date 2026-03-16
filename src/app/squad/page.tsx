@@ -57,7 +57,7 @@ export default function SquadPage() {
 
   const { data: tacticsData } = trpc.squad.getTactics.useQuery(
     { squadId: activeSquadId || '' },
-    { enabled: !!activeSquadId, staleTime: 30 * 1000 }
+    { enabled: !!activeSquadId && isVerified, staleTime: 30 * 1000 }
   );
   const saveTacticsMutation = trpc.squad.saveTactics.useMutation({
     onSuccess: () => {

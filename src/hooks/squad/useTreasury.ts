@@ -10,6 +10,7 @@ import { isHex, type Hex } from 'viem';
 import { trpc } from '@/lib/trpc-client';
 import { useYellowSession } from '@/hooks/useYellowSession';
 import type { Treasury } from '@/types';
+import { useWallet } from '@/contexts/WalletContext';
 
 interface YellowSettlementInput {
   sessionId: string;
@@ -38,9 +39,10 @@ function buildSettlementId(sessionId: string, version: number) {
 
 export function useTreasury(squadId?: string): UseTreasuryReturn {
   const utils = trpc.useUtils();
+  const { isVerified } = useWallet();
   const { data: rawData, isLoading } = trpc.squad.getTreasury.useQuery(
     { squadId: squadId || '' },
-    { enabled: !!squadId, staleTime: 30 * 1000 }
+    { enabled: !!squadId && isVerified, staleTime: 30 * 1000 }
   ) as { data: any; isLoading: boolean };
   const yellowSession = useYellowSession(rawData?.paymentRail?.sessionId);
 

@@ -102,7 +102,7 @@ export const StaffFeed: React.FC<StaffFeedProps> = ({ userId, onOpenStaffRoom })
                         <Bell className="w-4 h-4 text-blue-400" />
                     </div>
                     <div>
-                        <h2 className="text-xs font-black uppercase tracking-widest text-gray-500">Backroom Staff</h2>
+                        <h2 className="section-title text-gray-500">Backroom Staff</h2>
                         <p className="text-[10px] font-mono text-gray-400">4 Unread Reports from the Office</p>
                     </div>
                 </div>

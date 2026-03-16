@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { useWallet } from '@/contexts/WalletContext';
+import { useWallet, STORAGE_KEYS } from '@/contexts/WalletContext';
 import { trpc } from '@/lib/trpc-client';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -16,9 +16,9 @@ export const GuestMigrationPrompt: React.FC = () => {
         onSuccess: (data) => {
             alert(data.message);
             setShowPrompt(false);
+            localStorage.removeItem(STORAGE_KEYS.GUEST_PENDING_MIGRATION);
             localStorage.removeItem('sw_guest_drafts');
             localStorage.removeItem('sw_guest_xp');
-            localStorage.removeItem('sw_is_guest');
         },
         onError: (err) => {
             alert(err.message);
@@ -26,8 +26,8 @@ export const GuestMigrationPrompt: React.FC = () => {
     });
 
     useEffect(() => {
-        // Only show if user is logged in, NOT as guest, and they HAVE a guest flag lingering
-        if (connected && !isGuest && localStorage.getItem('sw_is_guest') === 'true') {
+        // Only show if user is logged in, NOT as guest, and we have pending guest progress
+        if (connected && !isGuest && localStorage.getItem(STORAGE_KEYS.GUEST_PENDING_MIGRATION) === 'true') {
             const hasDrafts = localStorage.getItem('sw_guest_drafts');
             const hasXP = localStorage.getItem('sw_guest_xp');
 
@@ -35,7 +35,7 @@ export const GuestMigrationPrompt: React.FC = () => {
                 setShowPrompt(true);
             } else {
                 // Nothing to migrate
-                localStorage.removeItem('sw_is_guest');
+                localStorage.removeItem(STORAGE_KEYS.GUEST_PENDING_MIGRATION);
             }
         }
     }, [connected, isGuest]);
@@ -65,7 +65,7 @@ export const GuestMigrationPrompt: React.FC = () => {
     };
 
     const handleDismiss = () => {
-        localStorage.removeItem('sw_is_guest');
+        localStorage.removeItem(STORAGE_KEYS.GUEST_PENDING_MIGRATION);
         localStorage.removeItem('sw_guest_drafts');
         localStorage.removeItem('sw_guest_xp');
         setShowPrompt(false);

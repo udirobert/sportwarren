@@ -6,6 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAgentAlerts } from '@/hooks/squad/useAgentAlerts';
 import { useSquadDetails } from '@/hooks/squad/useSquad';
 import { trpc } from '@/lib/trpc-client';
+import { getTreasuryStatus } from '@/lib/utils';
+import { useWallet } from '@/contexts/WalletContext';
 
 interface FeedEvent {
     id: string;
@@ -52,15 +54,16 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
     const [events, setEvents] = useState<FeedEvent[]>([]);
     const [filter, setFilter] = useState<FeedEvent['category'] | 'all'>('all');
     const injectedRef = useRef<Set<string>>(new Set());
+    const { isVerified } = useWallet();
 
     const { members, loading: membersLoading } = useSquadDetails(squadId);
     const { data: treasury, isLoading: treasuryLoading } = trpc.squad.getTreasury.useQuery(
         { squadId: squadId || '' },
-        { enabled: !!squadId }
+        { enabled: !!squadId && isVerified }
     );
     const { data: tactics, isLoading: tacticsLoading } = trpc.squad.getTactics.useQuery(
         { squadId: squadId || '' },
-        { enabled: !!squadId }
+        { enabled: !!squadId && isVerified }
     );
     const { data: matchData, isLoading: matchesLoading } = trpc.match.list.useQuery(
         { squadId, limit: 5 },
@@ -68,7 +71,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
     );
     const { data: incomingOffers, isLoading: offersLoading } = trpc.squad.getTransferOffers.useQuery(
         { squadId: squadId || '', type: 'incoming' },
-        { enabled: !!squadId, staleTime: 30 * 1000 }
+        { enabled: !!squadId && isVerified, staleTime: 30 * 1000 }
     );
 
     const dataReady = !membersLoading && !treasuryLoading && !tacticsLoading && !matchesLoading && !offersLoading && !!squadId;
@@ -77,11 +80,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
         id: m.id, name: m.name, role: m.role, stats: m.stats,
     }));
     const alertTreasury = treasury ? { balance: treasury.balance, transactions: treasury.transactions } : null;
-    const treasuryAny = treasury as Record<string, unknown> | null | undefined;
-    const treasuryBudgets = treasuryAny?.budgets && typeof treasuryAny.budgets === 'object'
-        ? treasuryAny.budgets as Record<string, unknown>
-        : null;
-    const wageBudget = typeof treasuryBudgets?.wages === 'number' ? treasuryBudgets.wages : 0;
+    const { needsAttention: treasuryNeedsAttention } = getTreasuryStatus(treasury as any);
     const tacticsAny = tactics as Record<string, unknown> | null | undefined;
     const alertTactics = tacticsAny
         ? { formation: typeof tacticsAny.formation === 'string' ? tacticsAny.formation : undefined }
@@ -118,11 +117,6 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
     const pendingMatches = (matchData?.matches || []).filter((match: any) => match.status === 'pending');
     const primaryPendingMatch = pendingMatches[0];
     const incomingOfferCount = incomingOffers?.length || 0;
-    const treasuryNeedsAttention = Boolean(
-        treasury &&
-        wageBudget > 0 &&
-        treasury.balance < wageBudget
-    );
 
     const filtered = filter === 'all' ? events : events.filter(e => e.category === filter);
     const unreadCount = events.filter(e => !e.read).length;
@@ -141,7 +135,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                 <div className="flex items-center gap-3">
-                    <span className="text-xs font-black uppercase tracking-widest text-gray-600">
+                    <span className="section-title text-gray-600">
                         📋 Backroom Feed
                     </span>
                     {unreadCount > 0 && (
@@ -153,7 +147,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                 {unreadCount > 0 && (
                     <button
                         onClick={markAllRead}
-                        className="text-xs font-black uppercase tracking-widest text-gray-500 hover:text-gray-300 transition-colors"
+                        className="section-title text-gray-500 hover:text-gray-300 transition-colors"
                     >
                         Mark all read
                     </button>
@@ -210,7 +204,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
             <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto scrollbar-none">
                 <AnimatePresence initial={false}>
                     {filtered.length === 0 ? (
-                        <div className="px-5 py-8 text-center text-gray-400 text-xs font-black uppercase tracking-widest">
+                        <div className="px-5 py-8 text-center section-title text-gray-400">
                             {dataReady ? 'No alerts — squad is in good shape.' : 'Loading squad data...'}
                         </div>
                     ) : (
@@ -229,13 +223,27 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                                     <div className={`w-1.5 h-1.5 rounded-full mt-1.5 ${event.read ? 'bg-gray-300' : CATEGORY_DOT[event.category]}`} />
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-xs font-black uppercase tracking-widest text-gray-500">
-                                            {event.staffEmoji} {event.sender}
-                                        </span>
-                                        <span className="text-xs text-gray-400">
-                                            {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </span>
+                                    <div className="flex items-start justify-between gap-2 mb-1">
+                                        <div className="flex items-center gap-2">
+                                            <span className="section-title text-gray-500">
+                                                {event.staffEmoji} {event.sender}
+                                            </span>
+                                            <span className="text-xs text-gray-400">
+                                                {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </span>
+                                        </div>
+                                        {!event.read && (
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    markRead(event.id);
+                                                }}
+                                                className="section-title text-gray-400 hover:text-gray-600"
+                                            >
+                                                Mark read
+                                            </button>
+                                        )}
                                     </div>
                                     <p className="text-xs text-gray-700 leading-relaxed line-clamp-2">
                                         {event.text}

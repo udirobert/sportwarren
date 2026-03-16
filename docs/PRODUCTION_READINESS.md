@@ -1,6 +1,6 @@
 # SportWarren — Production Readiness Assessment
 
-**Date:** 15 March 2026  
+**Date:** 17 March 2026  
 **Build Status:** ✅ `npm run build` passing (lint emits warnings)
 
 ---
@@ -109,19 +109,14 @@ Member vs Captain actions need clear, consistent UI and server-side enforcement.
 ## 🟡 Important — Fix Before Wide Beta
 
 ### 5. Guest → Wallet Migration (Data Loss Risk)
-A user drafts 3 players as Guest, then connects their wallet — their progress is lost. Testers will notice this immediately.
-
-```
-ACTION: Implement guest session migration in WalletContext.tsx
-        when a wallet first connects
-```
+**Status: ✅ RESOLVED**
+- Guest progress now persists through wallet connect and prompts for migration.
+- Pending migration flag (`sw_guest_pending_migration`) prevents silent data loss.
 
 ### 6. Error Monitoring (Zero Visibility)
-There is no Sentry or equivalent. When a real user hits an error in production, you'll never know it happened.
-
-```
-ACTION: Add @sentry/nextjs — 30 min job
-```
+**Status: ✅ RESOLVED**
+- Added `@sentry/nextjs` with client/server/edge configs.
+- Requires `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` in production envs.
 
 ### 7. Real Prospect Data
 The draft pool is still `MOCK_AVAILABLE_PLAYERS`. In production the market router returns them as-is. Testers will see the same 5 names every time.
