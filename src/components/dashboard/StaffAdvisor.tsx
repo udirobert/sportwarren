@@ -86,7 +86,7 @@ export const StaffAdvisor: React.FC<StaffAdvisorProps> = ({ squadId }) => {
                        <ActivityIcon className="w-3.5 h-3.5" />}
                     </div>
                     <div>
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-white">{alert.title}</h4>
+                      <h4 className="section-title text-white">{alert.title}</h4>
                       <p className="text-[8px] font-bold text-gray-500 uppercase">{alert.agentName}</p>
                     </div>
                   </div>

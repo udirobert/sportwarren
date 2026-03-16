@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   RPCProtocolVersion,
   type RPCAppSessionAllocation,
@@ -14,6 +14,8 @@ import { getMatchFeeDistribution } from '@/lib/yellow/match-fees';
 
 interface UseMatchVerificationReturn {
   matches: MatchResult[];
+  pendingMatches: MatchResult[];
+  settledMatches: MatchResult[];
   activeMatch: MatchResult | null;
   loading: boolean;
   error: string | null;
@@ -31,6 +33,7 @@ interface UseMatchVerificationReturn {
   refreshMatches: () => Promise<void>;
   hasMore: boolean;
   total: number;
+  railEnabledCount: number;
 }
 
 interface YellowSettlementInput {
@@ -134,6 +137,18 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
   });
 
   const matches = data?.matches.map(transformMatch) || [];
+  const pendingMatches = useMemo(
+    () => matches.filter((match) => match.status === 'pending'),
+    [matches],
+  );
+  const settledMatches = useMemo(
+    () => matches.filter((match) => match.status !== 'pending'),
+    [matches],
+  );
+  const railEnabledCount = useMemo(
+    () => matches.reduce((count, match) => count + (match.paymentRail?.enabled ? 1 : 0), 0),
+    [matches],
+  );
   const hasMore = data?.hasMore || false;
   const total = data?.total || 0;
 
@@ -349,6 +364,8 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
 
   return {
     matches,
+    pendingMatches,
+    settledMatches,
     activeMatch: matches[0] || null,
     loading:
       isLoading ||
@@ -363,6 +380,7 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
     refreshMatches,
     hasMore,
     total,
+    railEnabledCount,
   };
 }
 

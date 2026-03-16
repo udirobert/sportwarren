@@ -93,12 +93,12 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
       <Card className="py-8 px-4 space-y-6 bg-gradient-to-br from-white to-emerald-50/70 border-emerald-200">
         <div className="rounded-2xl border border-emerald-200/70 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Home</div>
+            <div className="section-title text-gray-500">Home</div>
             <div className="text-sm font-bold text-gray-900 truncate">{homeTeam}</div>
           </div>
           <div className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">VS</div>
           <div className="min-w-0 text-right">
-            <div className="text-[10px] font-black uppercase tracking-widest text-gray-500">Away</div>
+            <div className="section-title text-gray-500">Away</div>
             <div className="text-sm font-bold text-gray-900 truncate">{awayTeam}</div>
           </div>
         </div>

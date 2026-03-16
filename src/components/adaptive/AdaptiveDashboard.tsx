@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { StatCard } from '@/components/common/StatCard';
@@ -221,7 +221,7 @@ export const AdaptiveDashboard: React.FC = () => {
       requiredLevel: 'basic',
       category: 'stats',
       component: (
-        <StaffFeed userId={userAddress || 'demo-user'} />
+        <StaffFeed userId={userAddress || 'demo-user'} onOpenStaffRoom={handleOpenOffice} />
       ),
       },
       {
@@ -761,7 +761,7 @@ export const AdaptiveDashboard: React.FC = () => {
 
       {(() => {
         const todayIds = ['onboarding-checklist', 'pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine', 'quick-stats', 'achievements'];
-        const squadIds = ['treasury', 'transfers', 'governance', 'squad-dynamics', 'captains-log', 'communication-hub'];
+        const squadIds = ['governance', 'squad-dynamics', 'captains-log', 'communication-hub'];
         const progressIds = ['training', 'scouting-report', 'lens-social', 'nearby-squads', 'territory', 'upcoming-fixtures'];
 
         const todayWidgets = visibleWidgets.filter(w => todayIds.includes(w.id));
@@ -810,8 +810,8 @@ export const AdaptiveDashboard: React.FC = () => {
 
           return (
             <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-widest">{title}</h2>
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="section-title">{title}</h2>
               </div>
 
               {/* Mobile: feature stack + horizontal snap scroll */}
@@ -840,14 +840,14 @@ export const AdaptiveDashboard: React.FC = () => {
               )}
 
               {/* Desktop: featured full-width + dense grid */}
-              <div className="hidden md:block space-y-4">
+              <div className="hidden md:block space-y-3">
                 {featured.map(w => (
                   <div key={w.id} id={w.id}>
                     {w.component}
                   </div>
                 ))}
                 {rest.length > 0 && (
-                  <div className="grid grid-cols-12 gap-4 grid-flow-row-dense">
+                  <div className="grid grid-cols-12 gap-3 grid-flow-row-dense">
                     {rest.map(w => (
                       <div key={w.id} id={w.id} className={`${getSpan(title, w.id)} min-w-0`}>
                         {w.component}
@@ -861,7 +861,7 @@ export const AdaptiveDashboard: React.FC = () => {
         };
 
         return (
-          <div className="space-y-4 md:space-y-6">
+          <div className="space-y-3 md:space-y-5">
             <Section title="Today" widgets={todayWidgets} />
             <Section title="Squad" widgets={squadWidgets} />
             <Section title="Progress" widgets={progressWidgets} />

@@ -80,16 +80,16 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
             </p>
           </div>
 
-          <div className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest text-gray-400 mb-4">
-            <span className="px-2 py-1 rounded-full bg-gray-100 text-gray-900">1 Choose</span>
+          <div className="flex items-center justify-center gap-2 mb-4">
+            <span className="section-kicker bg-gray-100 text-gray-900">1 Choose</span>
             <span className="w-6 h-px bg-gray-200" />
-            <span className={`px-2 py-1 rounded-full ${
+            <span className={`section-kicker ${
               isVerified ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
             }`}>
               2 Sign
             </span>
             <span className="w-6 h-px bg-gray-200" />
-            <span className={`px-2 py-1 rounded-full ${
+            <span className={`section-kicker ${
               lensConnected ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'
             }`}>
               3 Social
@@ -110,7 +110,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
             }`}>
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-[10px] font-black uppercase tracking-widest">Wallet verification</div>
+                  <div className="section-title text-current">Wallet verification</div>
                   <div className="text-sm font-medium">
                     {needsVerification
                       ? (authStatus.state === 'expired'
@@ -163,7 +163,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
               </div>
               {selectedChain === 'algorand' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-blue-600" />}
               {hasWallet && chain === 'algorand' && !isConnecting && (
-                <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">Connected</span>
+                <span className="section-title text-blue-600">Connected</span>
               )}
             </button>
 
@@ -179,7 +179,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
               </div>
               {selectedChain === 'avalanche' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-red-600" />}
               {hasWallet && chain === 'avalanche' && !isConnecting && (
-                <span className="text-[10px] font-black uppercase tracking-widest text-red-600">Connected</span>
+                <span className="section-title text-red-600">Connected</span>
               )}
             </button>
 
@@ -195,7 +195,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
               </div>
               {selectedChain === 'lens' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-green-600" />}
               {hasWallet && chain === 'lens' && !isConnecting && (
-                <span className="text-[10px] font-black uppercase tracking-widest text-green-600">Connected</span>
+                <span className="section-title text-green-600">Connected</span>
               )}
             </button>
           </div>
@@ -236,7 +236,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
             </button>
           </div>
 
-          <div className="mt-8 pt-4 border-t border-gray-100 flex items-center justify-between text-[10px] font-black text-gray-400 uppercase tracking-widest">
+          <div className="mt-8 pt-4 border-t border-gray-100 flex items-center justify-between section-title">
             <div className="flex items-center gap-1.5">
               <Shield className="w-3 h-3" />
               <span>Secure</span>

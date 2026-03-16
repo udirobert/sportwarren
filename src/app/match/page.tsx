@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { MatchCapture } from "@/components/match/MatchCapture";
 import { MatchConsensusPanel } from "@/components/match/MatchConsensus";
@@ -10,6 +10,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { trpc } from "@/lib/trpc-client";
 import { useMatchVerification } from "@/hooks/match/useMatchVerification";
+import { useMatchCenterData } from "@/hooks/match/useMatchCenterData";
 import { useWallet } from "@/contexts/WalletContext";
 import { VerificationBanner } from "@/components/common/VerificationBanner";
 import {
@@ -43,21 +44,13 @@ export default function MatchPage() {
   const [selectedOpponentId, setSelectedOpponentId] = useState<string>("");
   const { isVerified } = useWallet();
 
-  const { data: memberships } = trpc.squad.getMySquads.useQuery(undefined, {
-    enabled: isVerified,
-    retry: false,
-  });
-  const activeMembership = memberships?.[0];
-  const activeSquad = activeMembership?.squad;
-  const activeSquadId = activeSquad?.id;
-
-  const { data: squadPool } = trpc.squad.list.useQuery(
-    { limit: 20 },
-    { staleTime: 30 * 1000 },
-  );
+  const { activeSquad, activeSquadId, availableOpponents } = useMatchCenterData(isVerified);
 
   const {
     matches,
+    pendingMatches,
+    settledMatches,
+    railEnabledCount,
     submitMatchResult,
     verifyMatch,
     getMatchById,
@@ -74,22 +67,6 @@ export default function MatchPage() {
   const matchChecklistDone = checklistItems.find(i => i.id === 'view_match_engine')?.completed ?? false;
 
   const selectedMatch = selectedMatchId ? getMatchById(selectedMatchId) : null;
-  const availableOpponents = useMemo(
-    () => (squadPool?.squads || []).filter((squad) => squad.id !== activeSquadId),
-    [activeSquadId, squadPool?.squads],
-  );
-  const pendingMatches = useMemo(
-    () => matches.filter((match) => match.status === "pending"),
-    [matches],
-  );
-  const settledMatches = useMemo(
-    () => matches.filter((match) => match.status !== "pending"),
-    [matches],
-  );
-  const railEnabledCount = useMemo(
-    () => matches.filter((match) => match.paymentRail?.enabled).length,
-    [matches],
-  );
   const hasOpponent = Boolean(selectedOpponentId);
 
   useEffect(() => {
@@ -198,7 +175,7 @@ export default function MatchPage() {
       <div className="rounded-3xl border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_45%),linear-gradient(135deg,#f5fffb,#ecfdf5)] p-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
-            <div className="mb-3 inline-flex items-center rounded-full bg-white/80 dark:bg-gray-800/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+            <div className="section-kicker mb-3 bg-white/80 dark:bg-gray-800/80 text-emerald-700">
               Match Operations
             </div>
             <h1 className="text-3xl font-bold text-gray-900">Match Center</h1>
@@ -292,7 +269,7 @@ export default function MatchPage() {
             <Card>
               <div className="grid gap-4 md:grid-cols-[1.1fr,0.9fr] md:items-end">
                 <div>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-700">
+                  <div className="section-kicker bg-emerald-50 text-emerald-700">
                     Match Setup
                   </div>
                   <h2 className="mt-3 text-lg font-semibold text-gray-900">New Match Submission</h2>
@@ -335,7 +312,7 @@ export default function MatchPage() {
             <Card>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold text-gray-900">Match Day Checklist</h3>
-                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Capture</span>
+                <span className="section-kicker bg-emerald-50 text-emerald-700">Capture</span>
               </div>
               <div className="space-y-3">
                 {[
@@ -378,7 +355,7 @@ export default function MatchPage() {
             <Card>
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-bold text-gray-900">Evidence Pack</h3>
-                <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Optional</span>
+                <span className="section-kicker bg-gray-100 text-gray-500">Optional</span>
               </div>
               <div className="space-y-2">
                 {[

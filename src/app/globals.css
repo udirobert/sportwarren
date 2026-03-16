@@ -82,6 +82,15 @@
   .text-mobile-base { font-size: 1rem; line-height: 1.5rem; }
   .text-mobile-lg { font-size: 1.125rem; line-height: 1.75rem; }
   .text-mobile-xl { font-size: 1.25rem; line-height: 1.75rem; }
+
+  /* Section headers and kickers */
+  .section-title {
+    @apply text-[10px] font-black uppercase tracking-widest text-gray-400 dark:text-gray-500;
+  }
+
+  .section-kicker {
+    @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest;
+  }
   
   /* Responsive spacing utilities */
   .space-mobile-tight > * + * { margin-top: 0.5rem; }
