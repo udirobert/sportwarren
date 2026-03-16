@@ -30,11 +30,10 @@ const TONE_STYLES: Record<ActionItem["tone"], string> = {
 };
 
 export function PendingActionsPanel({ squadId, variant = "full" }: PendingActionsPanelProps) {
-  const { matches } = useMatchVerification(squadId);
+  const { pendingMatches } = useMatchVerification(squadId);
   const { incomingOffers } = useTransfers(squadId);
   const { treasury } = useTreasury(squadId);
 
-  const pendingMatches = matches.filter((match) => match.status === "pending");
   const firstPendingMatch = pendingMatches[0];
   const wageBudget = treasury?.allowances.weeklyWages ?? 0;
   const treasuryNeedsAttention = Boolean(

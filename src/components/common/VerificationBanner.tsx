@@ -23,7 +23,7 @@ export const VerificationBanner: React.FC<VerificationBannerProps> = ({ classNam
         <div className="flex items-center gap-3">
           <ShieldAlert className="w-4 h-4 text-blue-600" />
           <div>
-            <div className="text-[10px] font-black uppercase tracking-widest text-blue-700">Connect Wallet</div>
+            <div className="section-title text-blue-700">Connect Wallet</div>
             <div className="text-sm text-blue-900">
               Connect a wallet to unlock protected data and verify matches.
             </div>
@@ -63,7 +63,7 @@ export const VerificationBanner: React.FC<VerificationBannerProps> = ({ classNam
       <div className="flex items-center gap-3">
         <ShieldAlert className="w-4 h-4 text-amber-600" />
         <div>
-          <div className="text-[10px] font-black uppercase tracking-widest text-amber-700">Verification Required</div>
+          <div className="section-title text-amber-700">Verification Required</div>
           <div className="text-sm text-amber-900">
             {authStatus.state === 'expired' ? 'Session expired — re-verify to continue.' : 'Verify your wallet to unlock protected data.'}
           </div>

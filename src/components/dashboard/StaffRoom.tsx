@@ -620,7 +620,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-none">
                         {dataLoading && (
                             <div className="flex items-center justify-center py-4">
-                                <div className="flex items-center space-x-2 text-gray-500 text-[10px] font-black uppercase tracking-widest">
+                                <div className="flex items-center space-x-2 section-title text-gray-500">
                                     <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />
                                     <span>Loading squad data...</span>
                                 </div>
@@ -692,7 +692,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                             >
                                 <div className="max-w-[90%] p-4 rounded-2xl text-sm leading-relaxed border border-yellow-500/30 bg-yellow-500/10">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-yellow-400 text-[10px] font-black uppercase tracking-widest">⛓️ On-chain Action Pending</span>
+                                        <span className="section-title text-yellow-400">⛓️ On-chain Action Pending</span>
                                     </div>
                                     <p className="text-gray-200 text-xs mb-1">{agentCtx.pendingOnChainAction.description}</p>
                                     {agentCtx.pendingOnChainAction.amount && (
@@ -792,7 +792,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                 {/* Right Sidebar: Proactive AI Alerts */}
                 <div className="hidden lg:block w-80 bg-black/40 border-l border-white/5 p-6 overflow-y-auto">
                     <div className="flex items-center justify-between mb-6">
-                        <h4 className="text-[10px] font-black text-gray-300 uppercase tracking-[0.2em]">Staff Intel</h4>
+                        <h4 className="section-title text-gray-300">Staff Intel</h4>
                         <div className="flex items-center space-x-1">
                             <div className="w-1 h-1 bg-green-500 rounded-full animate-pulse" />
                             <span className="text-[8px] font-bold text-green-500 uppercase">Live Analysis</span>
@@ -803,7 +803,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
 
                     <div className="mt-8 bg-blue-600/10 p-4 rounded-2xl border border-blue-500/20">
                         <TrendingUp className="w-5 h-5 text-blue-500 mb-2" />
-                        <h5 className="text-[10px] font-black text-white uppercase mb-1">Economic Outlook</h5>
+                        <h5 className="section-title text-white mb-1">Economic Outlook</h5>
                         <p className="text-[9px] text-blue-100 leading-tight">
                             Lens reputation scores are inflating. Now is the time to secure long-term contracts for "Gold" tier prospects before valuations skyrocket.
                         </p>

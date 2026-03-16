@@ -36,9 +36,9 @@ export const StatCard: React.FC<StatCardProps> = ({
     <div
       className={`
         bg-white rounded-xl border border-gray-200 shadow-sm 
-        hover:shadow-md active:shadow-lg transition-all duration-200 
+        transition-all duration-200 
         p-4 md:p-6 touch-manipulation
-        ${onClick ? 'cursor-pointer select-none' : ''}
+        ${onClick ? 'cursor-pointer select-none hover:shadow-md active:shadow-lg' : ''}
         ${loading ? 'opacity-80' : ''}
       `}
       onClick={onClick}

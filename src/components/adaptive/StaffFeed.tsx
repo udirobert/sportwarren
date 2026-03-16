@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import {
     Bell,
@@ -27,15 +28,17 @@ interface StaffMessage {
     timestamp: Date;
     actionLabel?: string;
     onAction?: () => void;
+    actionHref?: string;
     type: 'insight' | 'alert' | 'social' | 'reputation';
     priorityLevel: number; // 1-5
 }
 
 interface StaffFeedProps {
     userId: string;
+    onOpenStaffRoom?: () => void;
 }
 
-export const StaffFeed: React.FC<StaffFeedProps> = ({ userId }) => {
+export const StaffFeed: React.FC<StaffFeedProps> = ({ userId, onOpenStaffRoom }) => {
     const [activeTab, setActiveTab] = useState<'all' | 'priority'>('all');
     const [messages, setMessages] = useState<StaffMessage[]>([]);
 
@@ -49,6 +52,7 @@ export const StaffFeed: React.FC<StaffFeedProps> = ({ userId }) => {
                 message: 'Red Lions FC just claimed Pitch 4. Their captain is bragging on Lens. Want to challenge?',
                 timestamp: new Date(),
                 actionLabel: 'View Rival',
+                actionHref: '/community',
                 type: 'social',
                 priorityLevel: 3
             },
@@ -59,6 +63,7 @@ export const StaffFeed: React.FC<StaffFeedProps> = ({ userId }) => {
                 message: 'Your Hackney Marshes highlight has 12 new collect-actions on Lens. Reputation surging!',
                 timestamp: new Date(),
                 actionLabel: 'Check Socials',
+                actionHref: '/community',
                 type: 'reputation',
                 priorityLevel: 4
             },
@@ -69,6 +74,7 @@ export const StaffFeed: React.FC<StaffFeedProps> = ({ userId }) => {
                 message: 'Match against Northside FC verification complete. Results finalized on Algorand.',
                 timestamp: new Date(),
                 actionLabel: 'View Match',
+                actionHref: '/match?mode=history',
                 type: 'alert',
                 priorityLevel: 5
             },
@@ -79,6 +85,7 @@ export const StaffFeed: React.FC<StaffFeedProps> = ({ userId }) => {
                 message: 'New DAO Directive: Squad complexity limits increased. You can now deploy more advanced tactics in the match engine.',
                 timestamp: new Date(),
                 actionLabel: 'Update Tactics',
+                actionHref: '/squad?tab=tactics',
                 type: 'insight',
                 priorityLevel: 4
             }
@@ -128,7 +135,7 @@ export const StaffFeed: React.FC<StaffFeedProps> = ({ userId }) => {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: idx * 0.1 }}
                         >
-                            <Card className="p-3 border-l-2 border-gray-200 hover:border-blue-500 transition-colors group">
+                            <Card className="p-3 border-l-2 border-gray-200">
                                 <div className="flex items-start space-x-3">
                                     <div className={`mt-1 p-2 rounded-lg ${getIconBg(msg.role)}`}>
                                         {getIcon(msg.role)}
@@ -141,8 +148,21 @@ export const StaffFeed: React.FC<StaffFeedProps> = ({ userId }) => {
                                         <p className="text-xs text-gray-700 font-medium leading-relaxed mt-1">
                                             {msg.message}
                                         </p>
-                                        {msg.actionLabel && (
-                                            <button className="mt-2 flex items-center space-x-1 text-[10px] font-bold text-blue-600 uppercase hover:text-blue-700">
+                                        {msg.actionLabel && msg.actionHref && (
+                                            <Link
+                                                href={msg.actionHref}
+                                                className="mt-2 inline-flex items-center space-x-1 text-[10px] font-bold text-blue-600 uppercase hover:text-blue-700 group"
+                                            >
+                                                <span>{msg.actionLabel}</span>
+                                                <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
+                                            </Link>
+                                        )}
+                                        {msg.actionLabel && !msg.actionHref && msg.onAction && (
+                                            <button
+                                                type="button"
+                                                onClick={msg.onAction}
+                                                className="mt-2 inline-flex items-center space-x-1 text-[10px] font-bold text-blue-600 uppercase hover:text-blue-700 group"
+                                            >
                                                 <span>{msg.actionLabel}</span>
                                                 <ArrowRight className="w-3 h-3 group-hover:translate-x-1 transition-transform" />
                                             </button>
@@ -157,10 +177,24 @@ export const StaffFeed: React.FC<StaffFeedProps> = ({ userId }) => {
 
             {/* Footer / Shortcut */}
             <div className="pt-2 flex justify-center">
-                <button className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 flex items-center space-x-1 transition-colors">
-                    <span>Go to Staff Room</span>
-                    <ChevronRight className="w-3 h-3" />
-                </button>
+                {onOpenStaffRoom ? (
+                    <button
+                        type="button"
+                        onClick={onOpenStaffRoom}
+                        className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 flex items-center space-x-1 transition-colors"
+                    >
+                        <span>Go to Staff Room</span>
+                        <ChevronRight className="w-3 h-3" />
+                    </button>
+                ) : (
+                    <Link
+                        href="/dashboard"
+                        className="text-xs font-bold text-gray-400 uppercase tracking-widest hover:text-gray-600 flex items-center space-x-1 transition-colors"
+                    >
+                        <span>Go to Staff Room</span>
+                        <ChevronRight className="w-3 h-3" />
+                    </Link>
+                )}
             </div>
         </div>
     );
