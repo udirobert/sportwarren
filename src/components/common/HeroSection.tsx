@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Trophy, Zap, Shield, Users, Target, TrendingUp, Sparkles, ArrowRight, Play, AlertCircle, CheckCircle2, Cpu, Eye } from 'lucide-react';
+import { Trophy, Zap, Users, Target, TrendingUp, Sparkles, ArrowRight, Play, AlertCircle, CheckCircle2, Cpu } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 
 interface HeroSectionProps {
@@ -98,29 +98,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             Log your Sunday game in 30 seconds. Share verified results with your squad. Build your player reputation — season by season.
           </p>
 
-          {/* CTA - Guest-first approach */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-16">
+          {/* CTA - Single primary action */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
             {!connected ? (
-              <>
-                <button
-                  onClick={() => {
-                    loginAsGuest();
-                    onGuestStart?.();
-                  }}
-                  className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
-                >
-                  <Eye className="w-5 h-5 mr-2 group-hover:scale-110 transition-transform" />
-                  Explore as Guest
-                  <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-                </button>
-                <button
-                  onClick={onGetStarted}
-                  className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl hover:bg-white/20 transition-all"
-                >
-                  <Shield className="w-5 h-5 mr-2" />
-                  Connect Wallet
-                </button>
-              </>
+              <button
+                onClick={onGetStarted}
+                className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
+              >
+                <Zap className="w-5 h-5 mr-2" />
+                Get Started Free
+                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+              </button>
             ) : (
               <button
                 onClick={onGetStarted}
@@ -141,18 +129,30 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             </button>
           </div>
 
-          {/* Stats */}
-          <div className="relative inline-block">
-            <div className="absolute -top-6 left-1/2 -translate-x-1/2 bg-blue-500 text-white text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-tighter">
-              Projected 1-Year Goal
-            </div>
+          {!connected && (
+            <p className="text-center mb-16">
+              <button
+                onClick={() => {
+                  loginAsGuest();
+                  onGuestStart?.();
+                }}
+                className="text-sm text-gray-500 hover:text-gray-300 underline underline-offset-4 decoration-gray-600 hover:decoration-gray-400 transition-colors"
+              >
+                or explore as guest
+              </button>
+            </p>
+          )}
+          {connected && <div className="mb-16" />}
+
+          {/* Stats — live from API */}
+          {stats.totalPlayers > 0 ? (
             <div className="flex flex-wrap items-center justify-center gap-8 p-6 border border-white/5 rounded-2xl bg-white/2">
               <div className="flex items-center space-x-2 group">
                 <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                   <Users className="w-5 h-5 text-green-400" />
                 </div>
                 <div className="text-left">
-                  <div className="text-2xl font-bold text-white">50,000+</div>
+                  <div className="text-2xl font-bold text-white">{stats.totalPlayers.toLocaleString()}</div>
                   <div className="text-xs text-gray-400">Players</div>
                 </div>
               </div>
@@ -161,21 +161,28 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                   <Trophy className="w-5 h-5 text-blue-400" />
                 </div>
                 <div className="text-left">
-                  <div className="text-2xl font-bold text-white">125,000+</div>
+                  <div className="text-2xl font-bold text-white">{stats.totalMatches.toLocaleString()}</div>
                   <div className="text-xs text-gray-400">Matches</div>
                 </div>
               </div>
-              <div className="flex items-center space-x-2 group">
-                <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Sparkles className="w-5 h-5 text-purple-400" />
+              {stats.totalAgents > 0 && (
+                <div className="flex items-center space-x-2 group">
+                  <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Sparkles className="w-5 h-5 text-purple-400" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-2xl font-bold text-white">{stats.totalAgents.toLocaleString()}</div>
+                    <div className="text-xs text-gray-400">AI Agents</div>
+                  </div>
                 </div>
-                <div className="text-left">
-                  <div className="text-2xl font-bold text-white">5,000+</div>
-                  <div className="text-xs text-gray-400">AI Agents</div>
-                </div>
-              </div>
+              )}
             </div>
-          </div>
+          ) : (
+            <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+              <Users className="w-4 h-4" />
+              <span>Join the first players building their parallel season</span>
+            </div>
+          )}
         </div>
 
         {/* Scroll Indicator */}
