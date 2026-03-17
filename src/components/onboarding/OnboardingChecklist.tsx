@@ -3,9 +3,10 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Circle, ChevronRight, Trophy, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronRight, Trophy, RotateCcw, MessageCircle } from 'lucide-react';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { Card } from '@/components/ui/Card';
+import { PLATFORM_CONFIG, PLATFORM_LIST } from '@/types';
 
 interface OnboardingChecklistProps {
     onStepAction?: (featureKey: string) => void;
@@ -74,13 +75,40 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                         </div>
 
                         {/* Progress bar */}
-                        <div className="h-1.5 bg-white/5 rounded-full mb-6 overflow-hidden">
+                        <div className="h-1.5 bg-white/5 rounded-full mb-4 overflow-hidden">
                             <motion.div
                                 className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full"
                                 initial={{ width: 0 }}
                                 animate={{ width: `${progress}%` }}
                                 transition={{ duration: 0.6, ease: 'easeOut' }}
                             />
+                        </div>
+
+                        {/* Channel Progress Indicator */}
+                        <div className="flex items-center gap-2 mb-4 p-2 bg-white/5 rounded-lg">
+                            <MessageCircle className="w-4 h-4 text-gray-400" />
+                            <span className="text-xs text-gray-400 font-medium">Channels:</span>
+                            <div className="flex items-center gap-1 ml-auto">
+                                {PLATFORM_LIST.map(platform => {
+                                    const config = PLATFORM_CONFIG[platform];
+                                    const item = checklistItems.find(i => i.id === `connect_${platform}`);
+                                    const isConnected = item?.completed ?? false;
+                                    return (
+                                        <div
+                                            key={platform}
+                                            className={`w-6 h-6 rounded-md flex items-center justify-center text-xs ${
+                                                isConnected ? 'bg-green-500/20' : 'bg-white/5 opacity-40'
+                                            }`}
+                                            title={isConnected ? `${config.name} connected` : `${config.name} not connected`}
+                                        >
+                                            {config.icon}
+                                        </div>
+                                    );
+                                })}
+                                <span className="text-xs text-gray-500 ml-1">
+                                    {checklistItems.filter(i => i.id.startsWith('connect_') && i.completed).length}/{PLATFORM_LIST.length}
+                                </span>
+                            </div>
                         </div>
 
                         {/* Checklist items */}

@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback, Rea
 import { UserPreferences } from '@/types';
 import { usePrivy } from '@privy-io/react-auth';
 import { AUTH_STORAGE_KEYS, SIGNATURE_EXPIRY_MS } from '@/lib/auth/constants';
+import { trackWalletConnection, trackGuestMode, trackFeatureUsed } from '@/lib/analytics';
 
 // Storage keys - centralized for consistency
 const STORAGE_KEYS = {
@@ -301,9 +302,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         fetchLensBalance(savedLens);
       } else if (localStorage.getItem('sw_is_guest') === 'true') {
         setIsGuest(true);
-        setAddress('0xGUEST_ADDRESS_HACKNEY_MARSHES');
+        setAddress('0xGUEST_DEMO_MODE');
         setChain('lens');
         setBalance(1000);
+        trackGuestMode('started');
       } else if (savedPrefs?.preferredChain) {
         setChain(savedPrefs.preferredChain);
       }
@@ -498,6 +500,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         persistAuth(signature, message, timestamp, walletAddress, 'algorand');
         setLoginMethod('wallet');
         fetchAlgorandBalance(walletAddress);
+        trackWalletConnection('algorand', true);
+        trackFeatureUsed('wallet_connect');
 
       } else if (method === 'avalanche') {
         // ── EIP-1193: MetaMask / any EVM wallet ──
@@ -521,6 +525,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         persistAuth(signature, message, timestamp, walletAddress, 'avalanche');
         setLoginMethod('wallet');
         fetchAvalancheBalance(walletAddress);
+        trackWalletConnection('avalanche', true);
+        trackFeatureUsed('wallet_connect');
 
       } else if (method === 'lens') {
         // ── Lens Chain: also EVM via MetaMask ──
@@ -567,9 +573,12 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         persistAuth(signature, message, timestamp, walletAddress, 'lens');
         setLoginMethod('wallet');
         fetchLensBalance(walletAddress);
+        trackWalletConnection('lens', true);
+        trackFeatureUsed('wallet_connect');
       }
     } catch (error) {
       console.error('Failed to connect wallet:', error);
+      trackWalletConnection(method, false, error instanceof Error ? error.message : 'Unknown error');
       throw error;
     }
   };
@@ -577,12 +586,14 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const loginAsGuest = () => {
     clearAuth();
     setIsGuest(true);
-    setAddress('0xGUEST_ADDRESS_HACKNEY_MARSHES');
+    setAddress('0xGUEST_DEMO_MODE');
     setChain('lens');
     setBalance(1000);
     setLoginMethod('guest');
     localStorage.setItem('sw_is_guest', 'true');
     localStorage.removeItem(STORAGE_KEYS.GUEST_PENDING_MIGRATION);
+    trackGuestMode('started');
+    trackFeatureUsed('guest_login');
   };
 
   const disconnect = () => {

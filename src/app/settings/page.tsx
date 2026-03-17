@@ -9,7 +9,8 @@ import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { PlatformType, NotificationPreferences } from '@/types';
+import { PlatformType, NotificationPreferences, PLATFORM_CONFIG, PLATFORM_LIST } from '@/types';
+import { trackFeatureUsed } from '@/lib/analytics';
 
 const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -31,45 +32,6 @@ const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
     telegram: false,
     whatsapp: false,
     xmtp: false,
-  },
-};
-
-const PLATFORM_INFO: Record<PlatformType, { name: string; icon: string; color: string; description: string; benefits: string[]; preview: string }> = {
-  telegram: {
-    name: 'Telegram',
-    icon: '📱',
-    color: 'bg-blue-500',
-    description: 'Get instant match updates in your squad group',
-    benefits: [
-      'Real-time match result notifications',
-      'Squad group announcements',
-      'No phone number required',
-    ],
-    preview: '🏆 Match Result: W 3-1 vs Sunday Legends\n+150 XP earned!',
-  },
-  whatsapp: {
-    name: 'WhatsApp',
-    icon: '💬',
-    color: 'bg-green-500',
-    description: 'Share achievements to your existing squad chat',
-    benefits: [
-      'Share to your existing WhatsApp group',
-      'Rich media previews',
-      'Instant delivery to all members',
-    ],
-    preview: '🎉 We won 3-1!\n@username just earned +150 XP',
-  },
-  xmtp: {
-    name: 'XMTP',
-    icon: '🔐',
-    color: 'bg-purple-500',
-    description: 'Secure web3 messaging for verified communications',
-    benefits: [
-      'End-to-end encrypted messages',
-      'Wallet-based identity',
-      'Works without phone number',
-    ],
-    preview: '🔐 Verified: Match #12345 confirmed\nvs Red Lions FC',
   },
 };
 
@@ -131,8 +93,9 @@ export default function SettingsPage() {
 
   const handleConnect = (platform: PlatformType) => {
     updateConnection(platform);
-    completeChecklistItem('connect_channels');
+    completeChecklistItem(`connect_${platform}`);
     setCelebrating(platform);
+    trackFeatureUsed('channel_connect', { platform, total_connected: PLATFORM_LIST.filter(p => preferences.connections?.[p]?.connected || p === platform).length });
     setTimeout(() => setCelebrating(null), 3000);
   };
 
@@ -298,8 +261,8 @@ export default function SettingsPage() {
               <p className="text-sm text-gray-500">Link messaging platforms to share match updates with your squad automatically</p>
             </div>
             <div className="space-y-3">
-              {(Object.keys(PLATFORM_INFO) as PlatformType[]).map(platform => {
-                const info = PLATFORM_INFO[platform];
+              {(Object.keys(PLATFORM_CONFIG) as PlatformType[]).map(platform => {
+                const info = PLATFORM_CONFIG[platform];
                 const connection = connections[platform];
                 const isConnected = connection?.connected;
                 return (
@@ -431,20 +394,34 @@ export default function SettingsPage() {
       {/* Wallet Tab */}
       {activeTab === 'wallet' && <AlgorandWallet />}
 
-      {/* Celebration Toast */}
-      {celebrating && (
-        <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-          <div className="bg-green-600 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3">
-            <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
-              🎉
-            </div>
-            <div>
-              <p className="font-bold text-sm">{PLATFORM_INFO[celebrating].name} connected!</p>
-              <p className="text-xs text-green-100">You'll receive match updates here</p>
+      {/* Celebration Toast with XP and Next Step */}
+      {celebrating && (() => {
+        const connectedCount = PLATFORM_LIST.filter(p => preferences.connections?.[p]?.connected || p === celebrating).length;
+        const remaining = PLATFORM_LIST.length - connectedCount;
+        const nextPlatform = PLATFORM_LIST.find(p => !preferences.connections?.[p]?.connected && p !== celebrating);
+        
+        return (
+          <div className="fixed bottom-6 right-6 z-50 animate-bounce">
+            <div className="bg-green-600 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-xs">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl shrink-0">
+                {PLATFORM_CONFIG[celebrating].icon}
+              </div>
+              <div className="min-w-0">
+                <p className="font-bold text-sm">{PLATFORM_CONFIG[celebrating].name} connected!</p>
+                <p className="text-xs text-green-100">+50 XP for connecting your first channel</p>
+                {remaining > 0 && nextPlatform && (
+                  <p className="text-xs text-green-200 mt-0.5 truncate">
+                    💡 Connect {PLATFORM_CONFIG[nextPlatform].name} too ({connectedCount}/{PLATFORM_LIST.length})
+                  </p>
+                )}
+                {remaining === 0 && (
+                  <p className="text-xs text-green-200 mt-0.5">🏆 All channels connected!</p>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
