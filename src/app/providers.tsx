@@ -5,7 +5,6 @@ import { WalletProvider } from "@/contexts/WalletContext";
 import { LensProvider } from "@/contexts/LensContext";
 import { TRPCProvider } from "@/lib/trpc-provider";
 import { EnvironmentProvider } from "@/contexts/EnvironmentContext";
-import { OnboardingWizard } from "@/components/onboarding/OnboardingWizard";
 import { GuestMigrationPrompt } from "@/components/onboarding/GuestMigrationPrompt";
 import { PrivyProvider } from '@privy-io/react-auth';
 import { ThemeProvider } from '@/contexts/ThemeContext';
@@ -42,7 +41,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
                       <AnalyticsTracker />
                     </Suspense>
                     {children}
-                    <OnboardingWizard />
                     <GuestMigrationPrompt />
                   </ToastProvider>
                 </TRPCProvider>

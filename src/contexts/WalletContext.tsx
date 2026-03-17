@@ -274,11 +274,17 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   useEffect(() => {
     if (ready && authenticated && user) {
+      setIsGuest(false);
+      localStorage.removeItem('sw_is_guest');
+      setLoginMethod('social');
       if (user.wallet) {
         setAddress(user.wallet.address);
-        setChain('social'); // Or detect if it's lens/base
-        setLoginMethod('social');
-        setIsGuest(false);
+        setChain('social');
+      } else {
+        // Social-only login (Google/email) — Privy authenticated but no wallet yet
+        const socialId = user.email?.address || user.google?.email || user.id;
+        setAddress(socialId || `privy:${user.id}`);
+        setChain('social');
       }
     } else if (ready && !authenticated) {
       const savedPrefs = loadPreferences();
