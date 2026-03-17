@@ -5,39 +5,7 @@ import Link from 'next/link';
 import { Link2, Check, ArrowRight } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { PlatformType, PlatformConnections } from '@/types';
-
-interface PlatformInfo {
-  name: string;
-  icon: string;
-  color: string;
-  bgColor: string;
-  preview: string;
-}
-
-const PLATFORMS: Record<PlatformType, PlatformInfo> = {
-  telegram: {
-    name: 'Telegram',
-    icon: '📱',
-    color: 'text-blue-600',
-    bgColor: 'bg-blue-100',
-    preview: '🏆 W 3-1 vs Sunday Legends',
-  },
-  whatsapp: {
-    name: 'WhatsApp',
-    icon: '💬',
-    color: 'text-green-600',
-    bgColor: 'bg-green-100',
-    preview: '🎉 We won! +150 XP',
-  },
-  xmtp: {
-    name: 'XMTP',
-    icon: '🔐',
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-100',
-    preview: '🔐 Match verified',
-  },
-};
+import { PlatformType, PlatformConnections, PLATFORM_CONFIG, PLATFORM_LIST } from '@/types';
 
 interface CommunicationHubProps {
   connections?: PlatformConnections;
@@ -50,9 +18,8 @@ export const CommunicationHub: React.FC<CommunicationHubProps> = ({
   compact = false,
   onConnect,
 }) => {
-  const platformList = (Object.keys(PLATFORMS) as PlatformType[]);
-  const connectedCount = platformList.filter(p => connections[p]?.connected).length;
-  const allConnected = connectedCount === platformList.length;
+  const connectedCount = PLATFORM_LIST.filter(p => connections[p]?.connected).length;
+  const allConnected = connectedCount === PLATFORM_LIST.length;
 
   // Compact mode for sidebar
   if (compact) {
@@ -61,12 +28,12 @@ export const CommunicationHub: React.FC<CommunicationHubProps> = ({
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-xs font-bold text-gray-900 dark:text-white">Chat Channels</h3>
           <span className={`text-[10px] font-black ${allConnected ? 'text-green-600' : 'text-orange-500'}`}>
-            {connectedCount}/{platformList.length}
+            {connectedCount}/{PLATFORM_LIST.length}
           </span>
         </div>
         <div className="flex items-center gap-2">
-          {platformList.map(platform => {
-            const info = PLATFORMS[platform];
+          {PLATFORM_LIST.map(platform => {
+            const info = PLATFORM_CONFIG[platform];
             const isConnected = connections[platform]?.connected;
             return (
               <div
@@ -115,8 +82,8 @@ export const CommunicationHub: React.FC<CommunicationHubProps> = ({
       </div>
 
       <div className="space-y-2">
-        {platformList.map(platform => {
-          const info = PLATFORMS[platform];
+        {PLATFORM_LIST.map(platform => {
+          const info = PLATFORM_CONFIG[platform];
           const connection = connections[platform];
           const isConnected = connection?.connected;
 

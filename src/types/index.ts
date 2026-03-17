@@ -566,6 +566,68 @@ export interface PlatformConnection {
 
 export type PlatformType = 'telegram' | 'whatsapp' | 'xmtp';
 
+export interface PlatformConfig {
+  name: string;
+  icon: string;
+  color: string;
+  bgColor: string;
+  description: string;
+  benefits: string[];
+  preview: string;
+  sort: number;
+}
+
+/**
+ * Single source of truth for platform configuration
+ * Used by: CommunicationHub, Settings, Onboarding, Analytics
+ */
+export const PLATFORM_CONFIG: Record<PlatformType, PlatformConfig> = {
+  whatsapp: {
+    name: 'WhatsApp',
+    icon: '💬',
+    color: 'text-green-600',
+    bgColor: 'bg-green-100',
+    description: 'Share to your existing squad group',
+    benefits: [
+      'Share to existing WhatsApp group',
+      'Rich media previews',
+      'Instant delivery to all members',
+    ],
+    preview: '🎉 We won 3-1!\n@player just earned +150 XP',
+    sort: 1,
+  },
+  telegram: {
+    name: 'Telegram',
+    icon: '📱',
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-100',
+    description: 'Best for large squads and channels',
+    benefits: [
+      'Real-time match notifications',
+      'Squad group announcements',
+      'No phone number required',
+    ],
+    preview: '🏆 Match Result: W 3-1 vs Sunday Legends\n+150 XP earned!',
+    sort: 2,
+  },
+  xmtp: {
+    name: 'XMTP',
+    icon: '🔐',
+    color: 'text-purple-600',
+    bgColor: 'bg-purple-100',
+    description: 'Web3-native encrypted messaging',
+    benefits: [
+      'End-to-end encrypted',
+      'Wallet-based identity',
+      'No phone number needed',
+    ],
+    preview: '🔐 Verified: Match #12345 confirmed\nvs Red Lions FC',
+    sort: 3,
+  },
+};
+
+export const PLATFORM_LIST: PlatformType[] = ['whatsapp', 'telegram', 'xmtp'];
+
 export interface NotificationPreferences {
   matchReminders: boolean;
   verificationRequests: boolean;

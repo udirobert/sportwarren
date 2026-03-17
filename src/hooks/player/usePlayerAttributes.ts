@@ -43,8 +43,19 @@ function transformProfile(profile: any): PlayerAttributes {
         lastUpdated: new Date(a.updatedAt),
         history: a.history.slice(-5),
       })),
-    achievements: [], // TODO: Load from achievements
-    careerHighlights: [], // TODO: Load from highlights
+    achievements: profile.achievements?.length > 0 ? profile.achievements : [
+      // Mock achievements for new users - shows potential progression
+      { id: 'first-match', name: 'First Steps', description: 'Play your first verified match', icon: '⚽', unlockedAt: null },
+      { id: 'goal-scorer', name: 'Goal Getter', description: 'Score your first goal', icon: '🎯', unlockedAt: null },
+      { id: 'team-player', name: 'Team Player', description: 'Provide your first assist', icon: '🤝', unlockedAt: null },
+      { id: 'consistent', name: 'Consistent Performer', description: 'Play 5 matches in a season', icon: '📊', unlockedAt: null },
+      { id: 'leader', name: 'Captain Material', description: 'Lead your squad to victory', icon: '👑', unlockedAt: null },
+    ],
+    careerHighlights: profile.highlights?.length > 0 ? profile.highlights : [
+      // Mock career highlights - placeholder for future accomplishments
+      // { type: 'debut', description: 'First match for Hackney Marshes FC', date: new Date() },
+      // { type: 'motm', description: 'Man of the Match performance', date: new Date() },
+    ],
     xp: {
       totalXP: profile.totalXP,
       seasonXP: profile.seasonXP,

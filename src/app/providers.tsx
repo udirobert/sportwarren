@@ -10,6 +10,7 @@ import { GuestMigrationPrompt } from "@/components/onboarding/GuestMigrationProm
 import { PrivyProvider } from '@privy-io/react-auth';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { AnalyticsTracker } from '@/components/common/AnalyticsTracker';
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
@@ -36,6 +37,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <EnvironmentProvider>
                 <TRPCProvider>
                   <ToastProvider>
+                    <AnalyticsTracker />
                     {children}
                     <OnboardingWizard />
                     <GuestMigrationPrompt />
