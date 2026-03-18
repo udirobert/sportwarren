@@ -53,11 +53,11 @@ export class AlgorandService {
       // Read TEAL code
       const approvalProgramPath = path.resolve(
         __dirname,
-        "../../../squad_dao_approval.teal",
+        "../../../contracts/squad_dao/approval.teal",
       );
       const clearProgramPath = path.resolve(
         __dirname,
-        "../../../squad_dao_clear_state.teal",
+        "../../../contracts/squad_dao/clear_state.teal",
       );
 
       const approvalProgram = fs.readFileSync(approvalProgramPath, "utf8");
@@ -135,11 +135,11 @@ export class AlgorandService {
       // Read TEAL code
       const approvalProgramPath = path.resolve(
         __dirname,
-        "../../../match_verification_approval.teal",
+        "../../../contracts/match_verification/approval.teal",
       );
       const clearProgramPath = path.resolve(
         __dirname,
-        "../../../match_verification_clear_state.teal",
+        "../../../contracts/match_verification/clear_state.teal",
       );
 
       const approvalProgram = fs.readFileSync(approvalProgramPath, "utf8");
