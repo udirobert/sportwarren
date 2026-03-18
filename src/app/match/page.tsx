@@ -31,6 +31,7 @@ import {
 import { MOCK_XP_SUMMARY } from "@/lib/mocks";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
+import { trackCoreGrowthEvent, trackFeatureUsed, trackMatchSubmission } from "@/lib/analytics";
 
 type ViewMode = "capture" | "verify" | "detail" | "xp-summary" | "history";
 
@@ -42,6 +43,8 @@ export default function MatchPage() {
   const [showXPSummary, setShowXPSummary] = useState(false);
   const [xpSummaryData, setXpSummaryData] = useState<{ totalXP: number; attributeGains: { attribute: string; xp: number; oldRating: number; newRating: number }[] } | null>(null);
   const [selectedOpponentId, setSelectedOpponentId] = useState<string>("");
+  const [lastSubmittedMatchId, setLastSubmittedMatchId] = useState<string | null>(null);
+  const [inviteShareState, setInviteShareState] = useState<"idle" | "copied" | "shared" | "error">("idle");
   const { isVerified } = useWallet();
 
   const { activeSquad, activeSquadId, availableOpponents } = useMatchCenterData(isVerified);
@@ -64,16 +67,14 @@ export default function MatchPage() {
   });
 
   const { checklistItems, completeChecklistItem } = useOnboarding();
-  const matchChecklistDone = checklistItems.find(i => i.id === 'view_match_engine')?.completed ?? false;
+  const firstMatchSubmitted = checklistItems.find((item) => item.id === "verify_match")?.completed ?? false;
+  const verificationInviteShared = checklistItems.find((item) => item.id === "view_match_engine")?.completed ?? false;
+  const channelConnected = checklistItems.find((item) => item.id === "connect_channel")?.completed ?? false;
+  const identityConnected = checklistItems.find((item) => item.id === "claim_identity")?.completed ?? false;
+  const inviteTargetMatchId = lastSubmittedMatchId ?? pendingMatches[0]?.id ?? null;
 
   const selectedMatch = selectedMatchId ? getMatchById(selectedMatchId) : null;
   const hasOpponent = Boolean(selectedOpponentId);
-
-  useEffect(() => {
-    if (!selectedOpponentId && availableOpponents[0]?.id) {
-      setSelectedOpponentId(availableOpponents[0].id);
-    }
-  }, [availableOpponents, selectedOpponentId]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -103,15 +104,70 @@ export default function MatchPage() {
   }, [pendingMatches.length, requestedMatchId, requestedMode]);
 
   useEffect(() => {
-    completeChecklistItem("view_match_engine");
-  }, [completeChecklistItem]);
+    if (!selectedOpponentId && availableOpponents[0]?.id) {
+      setSelectedOpponentId(availableOpponents[0].id);
+    }
+  }, [availableOpponents, selectedOpponentId]);
+
+  const openVerificationQueue = () => {
+    setViewMode("verify");
+    trackCoreGrowthEvent("verification_queue_reviewed", {
+      source: "match_center",
+      pending_count: pendingMatches.length,
+    });
+  };
+
+  const buildVerificationInviteUrl = (matchId: string) => {
+    const relative = `/match?mode=detail&matchId=${encodeURIComponent(matchId)}`;
+    if (typeof window === "undefined") {
+      return relative;
+    }
+    return `${window.location.origin}${relative}`;
+  };
+
+  const handleShareVerificationInvite = async () => {
+    if (!inviteTargetMatchId) {
+      openVerificationQueue();
+      return;
+    }
+
+    const inviteUrl = buildVerificationInviteUrl(inviteTargetMatchId);
+    try {
+      let shareMethod: "clipboard" | "web_share" = "clipboard";
+      if (navigator.share && window.matchMedia("(max-width: 1024px)").matches) {
+        await navigator.share({
+          title: "Verify our SportWarren match",
+          text: "Please verify this match result.",
+          url: inviteUrl,
+        });
+        shareMethod = "web_share";
+        setInviteShareState("shared");
+      } else {
+        await navigator.clipboard.writeText(inviteUrl);
+        setInviteShareState("copied");
+      }
+
+      completeChecklistItem("view_match_engine");
+      trackFeatureUsed("verification_invite_shared", {
+        match_id: inviteTargetMatchId,
+        share_method: shareMethod,
+      });
+      trackCoreGrowthEvent("opponent_verification_invite_shared", {
+        match_id: inviteTargetMatchId,
+        share_method: shareMethod,
+        source: "match_kickoff_card",
+      });
+    } catch {
+      setInviteShareState("error");
+    }
+  };
 
   const handleMatchSubmit = async (result: any) => {
     if (!activeSquadId || !selectedOpponentId) {
       return;
     }
 
-    await submitMatchResult({
+    const submittedMatchId = await submitMatchResult({
       homeSquadId: activeSquadId,
       awaySquadId: selectedOpponentId,
       homeScore: result.homeScore,
@@ -121,7 +177,20 @@ export default function MatchPage() {
       longitude: result.evidence?.gps?.lng,
     });
 
+    const opponentName = availableOpponents.find((squad) => squad.id === selectedOpponentId)?.name || "unknown";
+    setLastSubmittedMatchId(submittedMatchId);
+    setInviteShareState("idle");
     completeChecklistItem("verify_match");
+    trackMatchSubmission(submittedMatchId, "capture");
+    trackFeatureUsed("first_match_submitted", {
+      match_id: submittedMatchId,
+      opponent: opponentName,
+    });
+    trackCoreGrowthEvent("first_match_submitted", {
+      match_id: submittedMatchId,
+      opponent: opponentName,
+      source: "match_capture",
+    });
     setShowXPSummary(true);
     setViewMode("xp-summary");
   };
@@ -149,7 +218,7 @@ export default function MatchPage() {
       setShowXPSummary(true);
       setViewMode("xp-summary");
     } else {
-      setViewMode("verify");
+      openVerificationQueue();
     }
   };
 
@@ -193,7 +262,7 @@ export default function MatchPage() {
             <Link href="/squad">
               <Button variant="outline">Back to Squad</Button>
             </Link>
-            <Button onClick={() => setViewMode(pendingMatches.length > 0 ? "verify" : "capture")}>
+            <Button onClick={() => (pendingMatches.length > 0 ? openVerificationQueue() : setViewMode("capture"))}>
               {pendingMatches.length > 0 ? "Review Pending Matches" : "Submit a Match"}
             </Button>
           </div>
@@ -239,7 +308,13 @@ export default function MatchPage() {
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
-            onClick={() => setViewMode(key as ViewMode)}
+            onClick={() => {
+              if (key === "verify") {
+                openVerificationQueue();
+              } else {
+                setViewMode(key as ViewMode);
+              }
+            }}
             className={`flex flex-1 items-center justify-center space-x-2 rounded-xl px-4 py-3 min-h-[44px] transition-all ${
               viewMode === key ? "bg-white dark:bg-gray-700 text-emerald-700 dark:text-emerald-400 shadow-sm" : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100"
             }`}
@@ -251,8 +326,61 @@ export default function MatchPage() {
         </div>
       </div>
 
+      {/* Early conversion path: activation -> viral trigger -> retention -> conversion */}
+      {!(firstMatchSubmitted && verificationInviteShared && channelConnected && identityConnected) && (
+        <Card className="border-emerald-200 bg-emerald-50/80 py-4">
+          <div className="flex items-start gap-3">
+            <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+            <div className="flex-1">
+              <p className="font-semibold text-emerald-900">Season Kickoff Path</p>
+              <p className="mt-1 text-sm text-emerald-700">
+                Hit these four milestones to lock in value: submit, verify, connect squad updates, and claim identity.
+              </p>
+              <div className="mt-3 space-y-2">
+                {[
+                  { label: "Submit your first match result", done: firstMatchSubmitted },
+                  { label: "Share verification link with your opponent", done: verificationInviteShared },
+                  { label: "Connect one messaging channel", done: channelConnected },
+                  { label: "Connect identity to save progression", done: identityConnected },
+                ].map((step) => (
+                  <div key={step.label} className="flex items-center gap-2 text-sm">
+                    <CheckCircle2 className={`h-4 w-4 ${step.done ? "text-emerald-600" : "text-gray-300"}`} />
+                    <span className={step.done ? "text-emerald-800" : "text-gray-700"}>{step.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {!firstMatchSubmitted && (
+                  <Button size="sm" onClick={() => setViewMode("capture")}>Submit first match</Button>
+                )}
+                {firstMatchSubmitted && !verificationInviteShared && (
+                  <Button size="sm" onClick={handleShareVerificationInvite}>
+                    {inviteShareState === "shared" ? "Invite Shared" : inviteShareState === "copied" ? "Invite Copied" : "Copy verification link"}
+                  </Button>
+                )}
+                {firstMatchSubmitted && verificationInviteShared && !channelConnected && (
+                  <Link href="/settings?tab=connections">
+                    <Button size="sm" variant="outline">Connect channel</Button>
+                  </Link>
+                )}
+                {firstMatchSubmitted && verificationInviteShared && channelConnected && !identityConnected && (
+                  <Link href="/settings?tab=wallet">
+                    <Button size="sm" variant="outline">Connect identity</Button>
+                  </Link>
+                )}
+              </div>
+              {inviteShareState === "error" && (
+                <p className="mt-2 text-xs text-rose-600">
+                  Couldn&apos;t copy the invite link on this device. Open the verification queue and share the match from there.
+                </p>
+              )}
+            </div>
+          </div>
+        </Card>
+      )}
+
       {/* First-visit hint — shown until the user has submitted their first match */}
-      {matches.length === 0 && !matchChecklistDone && (
+      {matches.length === 0 && !firstMatchSubmitted && (
         <Card className="border-blue-200 bg-blue-50/70 py-4">
           <div className="flex items-start gap-3">
             <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
@@ -504,7 +632,10 @@ export default function MatchPage() {
 
       {viewMode === "detail" && selectedMatch && (
         <div className="space-y-4">
-          <Button onClick={() => setViewMode(selectedMatch.status === "pending" ? "verify" : "history")} variant="outline">
+          <Button
+            onClick={() => (selectedMatch.status === "pending" ? openVerificationQueue() : setViewMode("history"))}
+            variant="outline"
+          >
             ← Back
           </Button>
 
@@ -530,7 +661,7 @@ export default function MatchPage() {
           <h2 className="text-lg font-semibold text-gray-900">Match not available</h2>
           <p className="mt-1 text-gray-600">That match is no longer in your active queue. Return to the current verification list.</p>
           <div className="mt-4">
-            <Button onClick={() => setViewMode("verify")} variant="outline">
+            <Button onClick={openVerificationQueue} variant="outline">
               Open verification queue
             </Button>
           </div>
@@ -542,7 +673,7 @@ export default function MatchPage() {
           <Button
             onClick={() => {
               setShowXPSummary(false);
-              setViewMode("verify");
+              openVerificationQueue();
             }}
             variant="outline"
           >
@@ -567,7 +698,7 @@ export default function MatchPage() {
               <Button
                 onClick={() => {
                   setShowXPSummary(false);
-                  setViewMode("verify");
+                  openVerificationQueue();
                 }}
               >
                 Back to Matches

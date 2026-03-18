@@ -4,11 +4,11 @@ import React from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Circle, ChevronRight, Trophy, RotateCcw } from 'lucide-react';
-import { useOnboarding } from '@/hooks/useOnboarding';
+import { useOnboarding, type ChecklistId } from '@/hooks/useOnboarding';
 import { Card } from '@/components/ui/Card';
 
 interface OnboardingChecklistProps {
-    onStepAction?: (featureKey: string) => void;
+    onStepAction?: (featureKey: ChecklistId) => void;
 }
 
 export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStepAction }) => {
@@ -69,7 +69,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                                     Getting Started
                                 </div>
                                 <h2 className="text-lg font-black uppercase tracking-tight">
-                                    Pre-Season Checklist
+                                    Season Kickoff Checklist
                                 </h2>
                             </div>
                             <div className="text-right">

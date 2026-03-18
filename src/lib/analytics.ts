@@ -4,10 +4,29 @@
  */
 
 type EventProperties = Record<string, string | number | boolean | null | undefined>;
+export type GrowthStage = 'activation' | 'conversion' | 'retention' | 'viral';
+
+export const CORE_GROWTH_EVENTS = {
+  first_match_submitted: { stage: 'activation' as GrowthStage },
+  opponent_verification_invite_shared: { stage: 'viral' as GrowthStage },
+  channel_connected: { stage: 'retention' as GrowthStage },
+  identity_connected: { stage: 'conversion' as GrowthStage },
+  verification_queue_reviewed: { stage: 'retention' as GrowthStage },
+} as const;
+
+export type CoreGrowthEvent = keyof typeof CORE_GROWTH_EVENTS;
 
 interface AnalyticsEvent {
   name: string;
   properties?: EventProperties;
+  timestamp: number;
+  sessionId: string;
+}
+
+interface CoreGrowthRecord {
+  event: CoreGrowthEvent;
+  stage: GrowthStage;
+  properties: EventProperties;
   timestamp: number;
   sessionId: string;
 }
@@ -74,6 +93,9 @@ export function trackEvent(eventName: string, properties?: EventProperties): voi
   
   // Store locally
   storeEvent(event);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('sw-analytics-updated', { detail: { name: eventName } }));
+  }
   
   // Send to Sentry as breadcrumb for context
   if (typeof window !== 'undefined' && (window as any).Sentry) {
@@ -157,6 +179,18 @@ export function trackFeatureUsed(featureName: string, details?: EventProperties)
 }
 
 /**
+ * Track core growth milestones used for activation/conversion/retention/viral loops
+ */
+export function trackCoreGrowthEvent(event: CoreGrowthEvent, properties?: EventProperties): void {
+  const { stage } = CORE_GROWTH_EVENTS[event];
+  trackEvent('core_growth_event', {
+    stage,
+    event,
+    ...properties,
+  });
+}
+
+/**
  * Get stored analytics events (for debugging/export)
  */
 export function getStoredEvents(): AnalyticsEvent[] {
@@ -168,6 +202,31 @@ export function getStoredEvents(): AnalyticsEvent[] {
   } catch {
     return [];
   }
+}
+
+/**
+ * Parse core growth milestone events from analytics logs.
+ */
+export function getCoreGrowthRecords(events: AnalyticsEvent[] = getStoredEvents()): CoreGrowthRecord[] {
+  return events.flatMap((event) => {
+    if (event.name !== 'core_growth_event') {
+      return [];
+    }
+
+    const rawEvent = event.properties?.event;
+    if (typeof rawEvent !== 'string' || !(rawEvent in CORE_GROWTH_EVENTS)) {
+      return [];
+    }
+
+    const growthEvent = rawEvent as CoreGrowthEvent;
+    return [{
+      event: growthEvent,
+      stage: CORE_GROWTH_EVENTS[growthEvent].stage,
+      properties: event.properties ?? {},
+      timestamp: event.timestamp,
+      sessionId: event.sessionId,
+    }];
+  });
 }
 
 /**
@@ -189,4 +248,4 @@ export function setAnalyticsEnabled(enabled: boolean): void {
 }
 
 // Export types
-export type { EventProperties, AnalyticsEvent };
+export type { EventProperties, AnalyticsEvent, CoreGrowthRecord };
