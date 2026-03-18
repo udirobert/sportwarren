@@ -63,7 +63,7 @@ export default function MatchPage() {
     onRefresh: () => utils.squad.getMySquads.invalidate(),
   });
 
-  const { checklistItems } = useOnboarding();
+  const { checklistItems, completeChecklistItem } = useOnboarding();
   const matchChecklistDone = checklistItems.find(i => i.id === 'view_match_engine')?.completed ?? false;
 
   const selectedMatch = selectedMatchId ? getMatchById(selectedMatchId) : null;
@@ -102,6 +102,10 @@ export default function MatchPage() {
     setViewMode(pendingMatches.length > 0 ? "verify" : "capture");
   }, [pendingMatches.length, requestedMatchId, requestedMode]);
 
+  useEffect(() => {
+    completeChecklistItem("view_match_engine");
+  }, [completeChecklistItem]);
+
   const handleMatchSubmit = async (result: any) => {
     if (!activeSquadId || !selectedOpponentId) {
       return;
@@ -117,6 +121,7 @@ export default function MatchPage() {
       longitude: result.evidence?.gps?.lng,
     });
 
+    completeChecklistItem("verify_match");
     setShowXPSummary(true);
     setViewMode("xp-summary");
   };
@@ -140,6 +145,7 @@ export default function MatchPage() {
       } catch {
         // finalizeMatchXP may fail if match not yet fully verified — fall back to mock
       }
+      completeChecklistItem("verify_match");
       setShowXPSummary(true);
       setViewMode("xp-summary");
     } else {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { AsyncState } from './types';
-import { createErrorState, createLoadingState, createSuccessState } from './types';
+import { createLoadingState, createSuccessState } from './types';
 
 interface DashboardStats {
   goals: number;
@@ -15,6 +15,7 @@ interface DashboardStats {
 }
 
 interface UseDashboardDataReturn extends AsyncState<DashboardStats> {
+  isDemoData: boolean;
   refetch: () => Promise<void>;
 }
 
@@ -37,9 +38,11 @@ export function useDashboardData(userAddress?: string): UseDashboardDataReturn {
     loading: true,
     error: null,
   });
+  const [isDemoData, setIsDemoData] = useState(false);
 
   const fetchData = useCallback(async () => {
     if (!userAddress) {
+      setIsDemoData(true);
       setState(createSuccessState(DEFAULT_STATS));
       return;
     }
@@ -54,6 +57,7 @@ export function useDashboardData(userAddress?: string): UseDashboardDataReturn {
       if (!IS_BACKEND_READY) {
         // Slow down slightly to simulate network for a better UI feel
         await new Promise(resolve => setTimeout(resolve, 800));
+        setIsDemoData(true);
         setState(createSuccessState(DEFAULT_STATS));
         return;
       }
@@ -66,14 +70,16 @@ export function useDashboardData(userAddress?: string): UseDashboardDataReturn {
       }
 
       const data = await response.json();
+      setIsDemoData(false);
       setState(createSuccessState(data));
-    } catch (err) {
+    } catch {
       // Only log if it's an actual unexpected error, not just a missing API in dev
       if (userAddress) {
         console.warn('Dashboard API not found. Reverting to mock data.');
       }
 
       // Fallback to default data
+      setIsDemoData(true);
       setState(createSuccessState(DEFAULT_STATS));
     }
   }, [userAddress]);
@@ -84,6 +90,7 @@ export function useDashboardData(userAddress?: string): UseDashboardDataReturn {
 
   return {
     ...state,
+    isDemoData,
     refetch: fetchData,
   };
 }

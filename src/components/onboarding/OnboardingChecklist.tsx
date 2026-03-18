@@ -23,6 +23,11 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
 
     const progress = Math.round((completedCount / totalCount) * 100);
 
+    const handleRestartTour = React.useCallback(() => {
+        resetOnboarding();
+        window.dispatchEvent(new CustomEvent('sw-tour-restart'));
+    }, [resetOnboarding]);
+
     if (allChecklistDone) return null;
 
     return (
@@ -146,7 +151,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                             </p>
                             <div className="flex items-center gap-3">
                                 <button
-                                    onClick={resetOnboarding}
+                                    onClick={handleRestartTour}
                                     className="text-xs text-gray-700 hover:text-gray-400 flex items-center space-x-1 transition-colors uppercase font-bold"
                                 >
                                     <RotateCcw className="w-2.5 h-2.5" />

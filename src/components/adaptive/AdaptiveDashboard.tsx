@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
 import { useToast } from '@/contexts/ToastContext';
+import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { VerificationBanner } from '@/components/common/VerificationBanner';
 import { EmptyState } from '@/components/common/EmptyState';
 import { useMySquads } from '@/hooks/squad/useSquad';
@@ -57,8 +58,10 @@ interface DashboardWidget {
 export const AdaptiveDashboard: React.FC = () => {
   const { preferences, trackFeatureUsage } = useUserPreferences();
   const { address, isGuest, authStatus, refreshAuthSignature } = useWallet();
+  const { venue } = useEnvironment();
   const { addToast } = useToast();
   const [isStaffRoomOpen, setIsStaffRoomOpen] = React.useState(false);
+  const [isTourActive, setIsTourActive] = React.useState(false);
   const [forcedSquadId, setForcedSquadId] = React.useState<string | null>(null);
   const userAddress = address || undefined;
   const needsVerification = !isGuest && (authStatus.state === 'missing' || authStatus.state === 'expired');
@@ -82,7 +85,7 @@ export const AdaptiveDashboard: React.FC = () => {
     }
   }, [addToast, refreshAuthSignature]);
 
-  const { data: stats, loading } = useDashboardData(userAddress);
+  const { data: stats, loading, isDemoData } = useDashboardData(userAddress);
   const router = useRouter();
   const { memberships, loading: squadLoading, refresh: refreshSquads } = useMySquads();
   const { completeChecklistItem, allChecklistDone } = useOnboarding();
@@ -109,15 +112,17 @@ export const AdaptiveDashboard: React.FC = () => {
     const widgets: DashboardWidget[] = [];
 
     if (!allChecklistDone && !personalizationDone) {
-      widgets.push({
-        id: 'quick-personalization',
-        priority: 1000,
-        requiredLevel: 'basic',
-        category: 'stats',
-        component: (
-          <QuickPersonalization onComplete={() => setPersonalizationDone(true)} />
-        ),
-      });
+      if (!isGuest) {
+        widgets.push({
+          id: 'quick-personalization',
+          priority: 1000,
+          requiredLevel: 'basic',
+          category: 'stats',
+          component: (
+            <QuickPersonalization onComplete={() => setPersonalizationDone(true)} />
+          ),
+        });
+      }
       widgets.push({
         id: 'onboarding-checklist',
         priority: 999,
@@ -279,7 +284,14 @@ export const AdaptiveDashboard: React.FC = () => {
       component: (
         <Card>
           <div className="mb-4 flex items-center justify-between gap-3">
-            <h2 className="text-lg font-bold text-gray-900">Match Center</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold text-gray-900">Match Center</h2>
+              {isDemoData && (
+                <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-blue-100 text-blue-700">
+                  Demo Data
+                </span>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <Link href="/match?mode=verify">
                 <Button size="sm" variant="outline">Review</Button>
@@ -505,7 +517,7 @@ export const AdaptiveDashboard: React.FC = () => {
     );
 
     return widgets;
-  }, [preferences, trackFeatureUsage, stats, loading, userAddress, primarySquadId, completeChecklistItem, handleOpenOffice, allChecklistDone, router]);
+  }, [preferences, trackFeatureUsage, stats, loading, userAddress, primarySquadId, completeChecklistItem, handleOpenOffice, allChecklistDone, personalizationDone, isGuest, isDemoData, router]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {
@@ -602,7 +614,9 @@ export const AdaptiveDashboard: React.FC = () => {
             <div className="bg-blue-600 text-white p-2 rounded-lg flex items-center justify-between shadow-lg shadow-blue-500/20">
               <div className="flex items-center space-x-3 px-2">
                 <Sparkles className="w-4 h-4" />
-                <span className="text-xs font-black uppercase tracking-widest leading-none">Guest Mode Active • Hackney Marshes Demo Experience</span>
+                <span className="text-xs font-black uppercase tracking-widest leading-none">
+                  Guest Mode Active • {venue} Demo Experience
+                </span>
               </div>
               <Button id="connect-wallet-btn" size="sm" variant="outline" className="h-7 text-xs border-white/20 hover:bg-white/10 text-white" onClick={() => router.push('/?connect=1')}>
                 Connect Wallet
@@ -614,8 +628,8 @@ export const AdaptiveDashboard: React.FC = () => {
 
       <VerificationBanner className="mb-4" />
 
-      <GuestTour />
-      <AgenticConcierge />
+      <GuestTour onVisibilityChange={setIsTourActive} />
+      {!isTourActive && <AgenticConcierge />}
 
       <div className="flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-widest">
         <Link href="/" className="inline-flex items-center gap-2 text-[11px] font-black tracking-widest text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
@@ -721,12 +735,16 @@ export const AdaptiveDashboard: React.FC = () => {
               )}
               <div className="text-right">
                 <div className="text-xs font-black text-gray-400 uppercase">Club Status</div>
-                <div className="text-xs font-bold text-green-600">Stable</div>
+                <div className="text-xs font-bold text-green-600">
+                  {isGuest ? 'Demo Simulation' : 'Stable'}
+                </div>
               </div>
               <div className="w-px h-8 bg-gray-200 dark:bg-gray-700" />
               <div className="text-right">
                 <div className="text-xs font-black text-gray-400 uppercase">Rank</div>
-                <div className="text-xs font-bold text-gray-900 dark:text-white">#42 Local</div>
+                <div className="text-xs font-bold text-gray-900 dark:text-white">
+                  {isGuest ? 'Demo #42 Local' : '#42 Local'}
+                </div>
               </div>
             </div>
           </div>
@@ -737,26 +755,30 @@ export const AdaptiveDashboard: React.FC = () => {
       <div className="flex items-center gap-6 py-2 px-1 overflow-x-auto scrollbar-hide text-[9px] font-black uppercase tracking-widest text-gray-500 border-b border-gray-100 dark:border-gray-800 shrink-0">
         <div className="flex items-center gap-1.5 shrink-0">
           <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-sm shadow-green-500/50" />
-          <span className="text-gray-900 dark:text-gray-100">Live</span>
-          <span>{pendingMatchesCount > 0 ? `${pendingMatchesCount} Match Reports Pending` : 'No Pending Matches'}</span>
+          <span className="text-gray-900 dark:text-gray-100">{isGuest ? 'Demo' : 'Live'}</span>
+          <span>
+            {isGuest
+              ? 'Demo Queue Available'
+              : (pendingMatchesCount > 0 ? `${pendingMatchesCount} Match Reports Pending` : 'No Pending Matches')}
+          </span>
         </div>
         <div className="w-px h-2.5 bg-gray-200 dark:bg-gray-700 shrink-0" />
         <div className="flex items-center gap-1.5 shrink-0">
           <TrendingUp className="w-3 h-3 text-blue-500" />
           <span className="text-gray-900 dark:text-gray-100">Scouting</span>
-          <span>Efficiency Active</span>
+          <span>{isGuest ? 'Demo Signals Active' : 'Efficiency Active'}</span>
         </div>
         <div className="w-px h-2.5 bg-gray-200 dark:bg-gray-700 shrink-0" />
         <div className="flex items-center gap-1.5 shrink-0">
           <Zap className="w-3 h-3 text-orange-500" />
           <span className="text-gray-900 dark:text-gray-100">Boost</span>
-          <span>Training Active</span>
+          <span>{isGuest ? 'Training Preview' : 'Training Active'}</span>
         </div>
         <div className="w-px h-2.5 bg-gray-200 dark:bg-gray-700 shrink-0" />
         <div className="flex items-center gap-1.5 shrink-0">
           <Users className="w-3 h-3 text-purple-500" />
           <span className="text-gray-900 dark:text-gray-100">Squad</span>
-          <span>{activeMembersCount} Active Members</span>
+          <span>{isGuest ? 'Demo Roster Preview' : `${activeMembersCount} Active Members`}</span>
         </div>
       </div>
 

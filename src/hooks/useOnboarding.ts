@@ -1,64 +1,76 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import { useWallet } from '@/contexts/WalletContext';
 
-export interface OnboardingStep {
-    id: string;
-    title: string;
+export const CHECKLIST_IDS = [
+    'connect_channel',
+    'view_match_engine',
+    'open_office',
+    'use_draft',
+    'verify_match',
+    'claim_identity',
+] as const;
+
+export type ChecklistId = (typeof CHECKLIST_IDS)[number];
+
+interface ChecklistConfig {
+    id: ChecklistId;
+    label: string;
     description: string;
-    action: string;    // button label
     emoji: string;
-    featureKey: string; // matches a dashboard widget ID or action
+    href: string;
+    actionLabel: string;
 }
 
-export const ONBOARDING_STEPS: OnboardingStep[] = [
+const CHECKLIST_CONFIG: ChecklistConfig[] = [
     {
-        id: 'welcome',
-        title: 'Welcome to SportWarren',
-        description: 'Your Sunday League season just went Championship Manager. Real matches. Real stats. On-chain reputation.',
-        action: "Let's Go",
-        emoji: '⚽',
-        featureKey: 'welcome',
+        id: 'connect_channel',
+        label: 'Connect a messaging channel',
+        description: 'Link WhatsApp, Telegram, or XMTP for match updates',
+        emoji: '💬',
+        href: '/settings?tab=connections',
+        actionLabel: 'Connect now →',
     },
     {
-        id: 'match-engine',
-        title: 'Watch Your Squad Simulated Live',
-        description: 'The Match Engine simulates your real pitch sessions using actual player stats and reputation tiers. See your squad move.',
-        action: 'Got It',
+        id: 'view_match_engine',
+        label: 'Open the Match Center',
+        description: 'Submit a result or review the current match queue',
         emoji: '🎮',
-        featureKey: 'match-engine',
+        href: '/match',
+        actionLabel: 'Open matches',
     },
     {
-        id: 'draft-engine',
-        title: 'Scout & Sign Prospects',
-        description: 'Your AI Scout is watching local academies. Use the Draft Engine to find and contract talented players — it connects to your squad treasury.',
-        action: 'Sounds Good',
-        emoji: '🔭',
-        featureKey: 'draft-engine',
-    },
-    {
-        id: 'staff-room',
-        title: 'Meet Your Backroom Staff',
-        description: 'Click "Enter Office" to talk to your Agent, Scout, and Coach. Ask about your budget, tactics, or squad morale — they know your real data.',
-        action: 'Nice',
+        id: 'open_office',
+        label: 'Visit the Staff Room',
+        description: 'Open the dashboard staff tools and talk to your Agent',
         emoji: '🎩',
-        featureKey: 'staff-room',
+        href: '/dashboard',
+        actionLabel: 'Open dashboard',
     },
     {
-        id: 'match-verify',
-        title: 'Log Your Real Matches',
-        description: 'After your Sunday game, submit the result. Both teams confirm, Chainlink verifies the location — and your players earn XP on-chain.',
-        action: 'Ready',
+        id: 'use_draft',
+        label: 'Open the transfer market',
+        description: 'Scout prospects and make your first squad move',
+        emoji: '📋',
+        href: '/squad?tab=transfers',
+        actionLabel: 'Open transfers',
+    },
+    {
+        id: 'verify_match',
+        label: 'Submit a real match result',
+        description: 'Log your Sunday game for XP and on-chain rep',
         emoji: '✅',
-        featureKey: 'recent-matches',
+        href: '/match?mode=capture',
+        actionLabel: 'Submit match',
     },
     {
-        id: 'complete',
-        title: "You're Ready to Play",
-        description: "Build your legend. Every goal, every assist, every win — permanently recorded. This is your football career, on-chain.",
-        action: 'Enter SportWarren',
-        emoji: '🏆',
-        featureKey: 'complete',
+        id: 'claim_identity',
+        label: 'Connect your wallet',
+        description: 'Unlock live squad, treasury, and on-chain progression',
+        emoji: '⚡',
+        href: '/settings?tab=wallet',
+        actionLabel: 'Open wallet settings',
     },
 ];
 
@@ -75,24 +87,22 @@ export interface ChecklistItem {
 const STORAGE_KEY = 'sw_onboarding_v2';
 
 interface OnboardingState {
-    wizardDone: boolean;
-    wizardStep: number;
-    checklistItems: Record<string, boolean>;
+    checklistItems: Record<ChecklistId, boolean>;
 }
 
 const DEFAULT_STATE: OnboardingState = {
-    wizardDone: false,
-    wizardStep: 0,
     checklistItems: {
+        connect_channel: false,
         view_match_engine: false,
         open_office: false,
         use_draft: false,
         verify_match: false,
-        connect_channel: false,
+        claim_identity: false,
     },
 };
 
 export function useOnboarding() {
+    const { connected, isGuest } = useWallet();
     const [state, setState] = useState<OnboardingState>(DEFAULT_STATE);
     const [hydrated, setHydrated] = useState(false);
 
@@ -100,7 +110,13 @@ export function useOnboarding() {
         try {
             const stored = localStorage.getItem(STORAGE_KEY);
             if (stored) {
-                setState(JSON.parse(stored));
+                const parsed = JSON.parse(stored) as Partial<OnboardingState>;
+                setState({
+                    checklistItems: {
+                        ...DEFAULT_STATE.checklistItems,
+                        ...(parsed.checklistItems ?? {}),
+                    },
+                });
             }
         } catch {
             // ignore
@@ -115,23 +131,11 @@ export function useOnboarding() {
         } catch { /* ignore */ }
     }, []);
 
-    const advanceWizard = useCallback(() => {
+    const completeChecklistItem = useCallback((id: ChecklistId) => {
         setState(prev => {
-            const next = { ...prev, wizardStep: prev.wizardStep + 1 };
-            if (next.wizardStep >= ONBOARDING_STEPS.length) {
-                next.wizardDone = true;
+            if (prev.checklistItems[id]) {
+                return prev;
             }
-            persist(next);
-            return next;
-        });
-    }, [persist]);
-
-    const completeWizard = useCallback(() => {
-        persist({ ...state, wizardDone: true, wizardStep: ONBOARDING_STEPS.length });
-    }, [state, persist]);
-
-    const completeChecklistItem = useCallback((id: string) => {
-        setState(prev => {
             const next = {
                 ...prev,
                 checklistItems: { ...prev.checklistItems, [id]: true },
@@ -145,79 +149,27 @@ export function useOnboarding() {
         persist(DEFAULT_STATE);
     }, [persist]);
 
-    const checklistItems: ChecklistItem[] = [
-        // Single collapsed channel connection step
-        {
-            id: 'connect_channel' as string,
-            label: 'Connect a messaging channel',
-            description: 'Link WhatsApp, Telegram, or XMTP for match updates',
-            completed: state.checklistItems.connect_channel ?? false,
-            emoji: '💬',
-            href: '/settings?tab=connections',
-            actionLabel: 'Connect now →',
-        },
-        {
-            id: 'view_match_engine',
-            label: 'Open the Match Center',
-            description: 'Submit a result or review the current match queue',
-            completed: state.checklistItems.view_match_engine ?? false,
-            emoji: '🎮',
-            href: '/match',
-            actionLabel: 'Open matches',
-        },
-        {
-            id: 'open_office',
-            label: 'Visit the Staff Room',
-            description: 'Open the dashboard staff tools and talk to your Agent',
-            completed: state.checklistItems.open_office ?? false,
-            emoji: '🎩',
-            href: '/dashboard',
-            actionLabel: 'Open dashboard',
-        },
-        {
-            id: 'use_draft',
-            label: 'Open the transfer market',
-            description: 'Scout prospects and make your first squad move',
-            completed: state.checklistItems.use_draft ?? false,
-            emoji: '📋',
-            href: '/squad?tab=transfers',
-            actionLabel: 'Open transfers',
-        },
-        {
-            id: 'verify_match',
-            label: 'Submit a real match result',
-            description: 'Log your Sunday game for XP and on-chain rep',
-            completed: state.checklistItems.verify_match ?? false,
-            emoji: '✅',
-            href: '/match?mode=capture',
-            actionLabel: 'Submit match',
-        },
-        {
-            id: 'claim_identity',
-            label: 'Connect your wallet',
-            description: 'Unlock live squad, treasury, and on-chain progression',
-            completed: state.wizardDone,
-            emoji: '⚡',
-            href: '/settings?tab=wallet',
-            actionLabel: 'Open wallet settings',
-        },
-    ];
+    useEffect(() => {
+        if (!hydrated || isGuest || !connected || state.checklistItems.claim_identity) {
+            return;
+        }
+        completeChecklistItem('claim_identity');
+    }, [completeChecklistItem, connected, hydrated, isGuest, state.checklistItems.claim_identity]);
+
+    const checklistItems: ChecklistItem[] = CHECKLIST_CONFIG.map((item) => ({
+        ...item,
+        completed: state.checklistItems[item.id] ?? false,
+    }));
 
     const allDone = checklistItems.every(i => i.completed);
     const completedCount = checklistItems.filter(i => i.completed).length;
 
     return {
         hydrated,
-        wizardDone: state.wizardDone,
-        wizardStep: state.wizardStep,
-        currentStep: ONBOARDING_STEPS[state.wizardStep] ?? ONBOARDING_STEPS[ONBOARDING_STEPS.length - 1],
-        steps: ONBOARDING_STEPS,
         checklistItems,
         allChecklistDone: allDone,
         completedCount,
         totalCount: checklistItems.length,
-        advanceWizard,
-        completeWizard,
         completeChecklistItem,
         resetOnboarding,
     };

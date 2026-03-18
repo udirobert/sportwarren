@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
-import { Button } from '@/components/ui/Button';
 
 interface TourStep {
     id: string;
@@ -27,6 +26,10 @@ interface TourStep {
     emoji: string;
     icon: React.ComponentType<any>;
     position: 'top' | 'bottom' | 'left' | 'right' | 'center';
+}
+
+interface GuestTourProps {
+    onVisibilityChange?: (isVisible: boolean) => void;
 }
 
 const TOUR_STEPS: TourStep[] = [
@@ -95,11 +98,10 @@ const TOUR_STEPS: TourStep[] = [
     }
 ];
 
-export const GuestTour: React.FC = () => {
+export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
     const { isGuest } = useWallet();
     const { venue } = useEnvironment();
     const [activeStep, setActiveStep] = useState(-1);
-    const [hasSeenTour, setHasSeenTour] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, height: 0 });
 
     const localizedSteps = TOUR_STEPS.map(step => {
@@ -121,6 +123,21 @@ export const GuestTour: React.FC = () => {
             return () => clearTimeout(timer);
         }
     }, [isGuest]);
+
+    useEffect(() => {
+        const handleTourRestart = () => {
+            localStorage.removeItem('sw_guest_tour_seen');
+            if (isGuest) {
+                setActiveStep(0);
+            }
+        };
+        window.addEventListener('sw-tour-restart', handleTourRestart);
+        return () => window.removeEventListener('sw-tour-restart', handleTourRestart);
+    }, [isGuest]);
+
+    useEffect(() => {
+        onVisibilityChange?.(isGuest && activeStep >= 0);
+    }, [activeStep, isGuest, onVisibilityChange]);
 
     const updateCoords = useCallback(() => {
         if (activeStep < 0 || activeStep >= localizedSteps.length) return;
@@ -182,7 +199,6 @@ export const GuestTour: React.FC = () => {
 
     const handleComplete = () => {
         setActiveStep(-1);
-        setHasSeenTour(true);
         localStorage.setItem('sw_guest_tour_seen', 'true');
     };
 
