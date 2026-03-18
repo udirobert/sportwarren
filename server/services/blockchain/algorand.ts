@@ -79,8 +79,8 @@ export class AlgorandService {
         .getTransactionParams()
         .do();
 
-      const numGlobalInts = 3; // DAO_CREATOR, GOVERNANCE_TOKEN_ID, PROPOSAL_COUNTER
-      const numGlobalBytes = 0;
+      const numGlobalInts = 3; // governance_token_id, proposal_counter (+ reserved)
+      const numGlobalBytes = 1; // creator
       const numLocalInts = 1; // USER_TOKEN_BALANCE
       const numLocalBytes = 0;
 
@@ -161,8 +161,8 @@ export class AlgorandService {
         .getTransactionParams()
         .do();
 
-      const numGlobalInts = 4; // ORACLE_CREATOR, MATCH_COUNTER, MIN_VERIFICATIONS, REPUTATION_THRESHOLD
-      const numGlobalBytes = 0;
+      const numGlobalInts = 4; // match_counter, min_verifications, reputation_threshold (+ reserved)
+      const numGlobalBytes = 1; // oracle_creator
       const numLocalInts = 2; // USER_REPUTATION, VERIFICATION_COUNT
       const numLocalBytes = 0;
 
