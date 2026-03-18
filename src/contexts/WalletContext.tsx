@@ -286,6 +286,17 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         setAddress(socialId || `privy:${user.id}`);
         setChain('social');
       }
+
+      // Persist email server-side for re-engagement (fire-and-forget)
+      const email = user.email?.address || user.google?.email;
+      const resolvedAddress = user.wallet?.address || email || `privy:${user.id}`;
+      if (email && resolvedAddress) {
+        fetch('/api/trpc/auth.persistEmail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ json: { email, walletAddress: resolvedAddress } }),
+        }).catch(() => {});
+      }
     } else if (ready && !authenticated) {
       const savedPrefs = loadPreferences();
 
