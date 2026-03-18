@@ -1,13 +1,50 @@
 "use client";
 
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import { Target, BarChart3, TrendingUp, TrendingDown, Minus, Star } from "lucide-react";
+import { Target, BarChart3, TrendingUp, TrendingDown, Minus, Star, RefreshCcw, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { useWallet } from "@/contexts/WalletContext";
 import { usePlayerAttributes } from "@/hooks/player/usePlayerAttributes";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
+import {
+  clearStoredEvents,
+  getCoreGrowthRecords,
+  getStoredEvents,
+  type AnalyticsEvent,
+  type CoreGrowthEvent,
+} from "@/lib/analytics";
+
+const FUNNEL_STEPS: Array<{
+  id: CoreGrowthEvent;
+  label: string;
+  summary: string;
+}> = [
+  {
+    id: "first_match_submitted",
+    label: "Activation",
+    summary: "First match submitted",
+  },
+  {
+    id: "opponent_verification_invite_shared",
+    label: "Viral Trigger",
+    summary: "Opponent invite shared",
+  },
+  {
+    id: "channel_connected",
+    label: "Retention",
+    summary: "First channel connected",
+  },
+  {
+    id: "identity_connected",
+    label: "Conversion",
+    summary: "Identity connected",
+  },
+];
+
+const formatPercent = (value: number): string => `${Math.round(value * 100)}%`;
 
 function AnalyticsPageInner() {
   const { address } = useWallet();
@@ -17,10 +54,70 @@ function AnalyticsPageInner() {
     { enabled: !!address }
   );
   const { data: leaderboard } = trpc.player.getLeaderboard.useQuery({ type: 'matches', limit: 5 });
+  const [events, setEvents] = useState<AnalyticsEvent[]>([]);
 
   const avgRating = form && form.length > 0
     ? (form.reduce((sum: number, f: { rating: number }) => sum + f.rating, 0) / form.length).toFixed(1)
     : null;
+
+  const refreshLocalAnalytics = useCallback(() => {
+    setEvents(getStoredEvents());
+  }, []);
+
+  useEffect(() => {
+    refreshLocalAnalytics();
+    const handleAnalyticsUpdate = () => refreshLocalAnalytics();
+    window.addEventListener("sw-analytics-updated", handleAnalyticsUpdate);
+    window.addEventListener("storage", handleAnalyticsUpdate);
+    return () => {
+      window.removeEventListener("sw-analytics-updated", handleAnalyticsUpdate);
+      window.removeEventListener("storage", handleAnalyticsUpdate);
+    };
+  }, [refreshLocalAnalytics]);
+
+  const growthRecords = useMemo(() => getCoreGrowthRecords(events), [events]);
+  const trackedSessions = useMemo(() => new Set(events.map((event) => event.sessionId)).size, [events]);
+  const latestEventTimestamp = useMemo(
+    () => events.reduce((latest, event) => Math.max(latest, event.timestamp), 0),
+    [events],
+  );
+
+  const funnelRows = useMemo(() => {
+    const stepCounts = FUNNEL_STEPS.map((step) => {
+      const sessionCount = new Set(
+        growthRecords
+          .filter((record) => record.event === step.id)
+          .map((record) => record.sessionId),
+      ).size;
+      return {
+        ...step,
+        sessionCount,
+      };
+    });
+
+    return stepCounts.map((step, index) => {
+      const previousCount = index === 0 ? trackedSessions : stepCounts[index - 1].sessionCount;
+      const conversionFromPrevious = previousCount > 0 ? step.sessionCount / previousCount : 0;
+      const conversionFromStart = trackedSessions > 0 ? step.sessionCount / trackedSessions : 0;
+      const dropoffFromPrevious = Math.max(previousCount - step.sessionCount, 0);
+      return {
+        ...step,
+        conversionFromPrevious,
+        conversionFromStart,
+        dropoffFromPrevious,
+      };
+    });
+  }, [growthRecords, trackedSessions]);
+
+  const recentGrowthRecords = useMemo(
+    () => [...growthRecords].sort((a, b) => b.timestamp - a.timestamp).slice(0, 8),
+    [growthRecords],
+  );
+
+  const handleClearLocalAnalytics = () => {
+    clearStoredEvents();
+    setEvents([]);
+  };
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 pb-24 md:pb-6 space-y-4 text-gray-900 dark:text-gray-100">
@@ -44,6 +141,95 @@ function AnalyticsPageInner() {
               </Button>
             </Link>
           </div>
+        </div>
+      </Card>
+
+      <Card className="border-emerald-200 bg-emerald-50/70">
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-emerald-900">Growth Funnel Snapshot</h2>
+            <p className="text-sm text-emerald-700">
+              Local conversion telemetry from this browser session history.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={refreshLocalAnalytics} className="flex items-center gap-1.5">
+              <RefreshCcw className="w-3.5 h-3.5" />
+              Refresh
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleClearLocalAnalytics} className="flex items-center gap-1.5">
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear Local Events
+            </Button>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-emerald-200 bg-white px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tracked Sessions</p>
+            <p className="text-2xl font-black text-gray-900 mt-1">{trackedSessions}</p>
+          </div>
+          <div className="rounded-xl border border-emerald-200 bg-white px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Core Growth Events</p>
+            <p className="text-2xl font-black text-gray-900 mt-1">{growthRecords.length}</p>
+          </div>
+          <div className="rounded-xl border border-emerald-200 bg-white px-4 py-3">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Latest Event</p>
+            <p className="text-sm font-semibold text-gray-900 mt-1">
+              {latestEventTimestamp > 0 ? new Date(latestEventTimestamp).toLocaleString() : "No events yet"}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {funnelRows.map((row, index) => (
+            <div key={row.id} className="rounded-xl border border-emerald-200 bg-white px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-700">
+                    Step {index + 1} • {row.label}
+                  </p>
+                  <p className="text-sm font-semibold text-gray-900 mt-1">{row.summary}</p>
+                </div>
+                <p className="text-xl font-black text-gray-900">{row.sessionCount}</p>
+              </div>
+              <div className="mt-3 grid grid-cols-3 gap-2">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500">From Prev</p>
+                  <p className="text-sm font-bold text-gray-900">{formatPercent(row.conversionFromPrevious)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500">From Start</p>
+                  <p className="text-sm font-bold text-gray-900">{formatPercent(row.conversionFromStart)}</p>
+                </div>
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-500">Drop-off</p>
+                  <p className="text-sm font-bold text-rose-600">{row.dropoffFromPrevious}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-4 rounded-xl border border-emerald-200 bg-white px-4 py-3">
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Recent Growth Events</p>
+          {recentGrowthRecords.length === 0 ? (
+            <p className="text-sm text-gray-600">
+              No growth events captured yet. Start with <Link href="/match?mode=capture" className="text-emerald-700 font-semibold">Submit a Match</Link>.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {recentGrowthRecords.map((record, index) => (
+                <div key={`${record.sessionId}-${record.timestamp}-${index}`} className="flex flex-col gap-1 rounded-lg border border-gray-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-900">{record.event}</p>
+                    <p className="text-[11px] text-gray-500">{record.stage} • source: {String(record.properties.source ?? "unknown")}</p>
+                  </div>
+                  <p className="text-[11px] text-gray-500">{new Date(record.timestamp).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </Card>
 

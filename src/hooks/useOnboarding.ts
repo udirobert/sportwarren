@@ -2,14 +2,15 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@/contexts/WalletContext';
+import { trackOnboarding, trackCoreGrowthEvent, type CoreGrowthEvent } from '@/lib/analytics';
 
 export const CHECKLIST_IDS = [
-    'connect_channel',
+    'verify_match',
     'view_match_engine',
+    'connect_channel',
+    'claim_identity',
     'open_office',
     'use_draft',
-    'verify_match',
-    'claim_identity',
 ] as const;
 
 export type ChecklistId = (typeof CHECKLIST_IDS)[number];
@@ -25,20 +26,36 @@ interface ChecklistConfig {
 
 const CHECKLIST_CONFIG: ChecklistConfig[] = [
     {
+        id: 'verify_match',
+        label: 'Submit your first match result',
+        description: 'Log one real game to unlock XP, reputation, and squad momentum',
+        emoji: '✅',
+        href: '/match?mode=capture',
+        actionLabel: 'Submit match',
+    },
+    {
+        id: 'view_match_engine',
+        label: 'Send opponent verification link',
+        description: 'Share a review link so the other captain can confirm the score',
+        emoji: '🔗',
+        href: '/match?mode=verify',
+        actionLabel: 'Copy invite link',
+    },
+    {
         id: 'connect_channel',
         label: 'Connect a messaging channel',
-        description: 'Link WhatsApp, Telegram, or XMTP for match updates',
+        description: 'Link WhatsApp, Telegram, or XMTP for verification and match updates',
         emoji: '💬',
         href: '/settings?tab=connections',
         actionLabel: 'Connect now →',
     },
     {
-        id: 'view_match_engine',
-        label: 'Open the Match Center',
-        description: 'Submit a result or review the current match queue',
-        emoji: '🎮',
-        href: '/match',
-        actionLabel: 'Open matches',
+        id: 'claim_identity',
+        label: 'Connect your identity',
+        description: 'Unlock live squad, treasury, and on-chain progression',
+        emoji: '⚡',
+        href: '/settings?tab=wallet',
+        actionLabel: 'Open wallet settings',
     },
     {
         id: 'open_office',
@@ -56,26 +73,17 @@ const CHECKLIST_CONFIG: ChecklistConfig[] = [
         href: '/squad?tab=transfers',
         actionLabel: 'Open transfers',
     },
-    {
-        id: 'verify_match',
-        label: 'Submit a real match result',
-        description: 'Log your Sunday game for XP and on-chain rep',
-        emoji: '✅',
-        href: '/match?mode=capture',
-        actionLabel: 'Submit match',
-    },
-    {
-        id: 'claim_identity',
-        label: 'Connect your wallet',
-        description: 'Unlock live squad, treasury, and on-chain progression',
-        emoji: '⚡',
-        href: '/settings?tab=wallet',
-        actionLabel: 'Open wallet settings',
-    },
 ];
 
+const CHECKLIST_GROWTH_EVENTS: Partial<Record<ChecklistId, CoreGrowthEvent>> = {
+    verify_match: 'first_match_submitted',
+    view_match_engine: 'opponent_verification_invite_shared',
+    connect_channel: 'channel_connected',
+    claim_identity: 'identity_connected',
+};
+
 export interface ChecklistItem {
-    id: string;
+    id: ChecklistId;
     label: string;
     description: string;
     completed: boolean;
@@ -141,6 +149,11 @@ export function useOnboarding() {
                 checklistItems: { ...prev.checklistItems, [id]: true },
             };
             persist(next);
+            trackOnboarding(id, true);
+            const growthEvent = CHECKLIST_GROWTH_EVENTS[id];
+            if (growthEvent) {
+                trackCoreGrowthEvent(growthEvent, { source: 'onboarding_checklist' });
+            }
             return next;
         });
     }, [persist]);
