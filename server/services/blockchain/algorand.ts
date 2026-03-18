@@ -2,8 +2,12 @@ import algosdk from "algosdk";
 import * as fs from "fs";
 import * as path from "path";
 import * as dotenv from "dotenv";
+import { fileURLToPath } from "url";
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export class AlgorandService {
   private algodClient: algosdk.Algodv2;
