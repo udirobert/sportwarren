@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { PlatformType, PLATFORM_CONFIG, PLATFORM_LIST } from '@/types';
 
 export interface OnboardingStep {
     id: string;
@@ -89,9 +88,7 @@ const DEFAULT_STATE: OnboardingState = {
         open_office: false,
         use_draft: false,
         verify_match: false,
-        connect_whatsapp: false,
-        connect_telegram: false,
-        connect_xmtp: false,
+        connect_channel: false,
     },
 };
 
@@ -149,19 +146,16 @@ export function useOnboarding() {
     }, [persist]);
 
     const checklistItems: ChecklistItem[] = [
-        // Channel connection items (individual for granular progress)
-        ...PLATFORM_LIST.map((platform: PlatformType) => {
-            const info = PLATFORM_CONFIG[platform];
-            return {
-                id: `connect_${platform}` as string,
-                label: `Connect ${info.name}`,
-                description: info.description,
-                completed: state.checklistItems[`connect_${platform}`] ?? false,
-                emoji: info.icon,
-                href: '/settings?tab=connections',
-                actionLabel: 'Connect now →',
-            };
-        }),
+        // Single collapsed channel connection step
+        {
+            id: 'connect_channel' as string,
+            label: 'Connect a messaging channel',
+            description: 'Link WhatsApp, Telegram, or XMTP for match updates',
+            completed: state.checklistItems.connect_channel ?? false,
+            emoji: '💬',
+            href: '/settings?tab=connections',
+            actionLabel: 'Connect now →',
+        },
         {
             id: 'view_match_engine',
             label: 'Open the Match Center',

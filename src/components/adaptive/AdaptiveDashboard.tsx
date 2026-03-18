@@ -18,6 +18,7 @@ import { EmptyState } from '@/components/common/EmptyState';
 import { useMySquads } from '@/hooks/squad/useSquad';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
+import { QuickPersonalization } from '@/components/onboarding/QuickPersonalization';
 import { GuestTour } from '@/components/onboarding/GuestTour';
 import { trpc } from '@/lib/trpc-client';
 
@@ -101,11 +102,22 @@ export const AdaptiveDashboard: React.FC = () => {
     completeChecklistItem('open_office');
   }, [completeChecklistItem]);
 
+  const [personalizationDone, setPersonalizationDone] = React.useState(false);
+
   // Define all possible widgets
   const allWidgets: DashboardWidget[] = useMemo(() => {
     const widgets: DashboardWidget[] = [];
 
-    if (!allChecklistDone) {
+    if (!allChecklistDone && !personalizationDone) {
+      widgets.push({
+        id: 'quick-personalization',
+        priority: 1000,
+        requiredLevel: 'basic',
+        category: 'stats',
+        component: (
+          <QuickPersonalization onComplete={() => setPersonalizationDone(true)} />
+        ),
+      });
       widgets.push({
         id: 'onboarding-checklist',
         priority: 999,
