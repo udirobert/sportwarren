@@ -4,15 +4,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
-    Users,
-    MessageSquare,
     X,
     Coffee,
-    Briefcase,
     TrendingUp,
-    FileText,
-    ChevronRight,
-    Search,
     ShieldCheck
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -38,32 +32,6 @@ function reputationTierLabel(score: number): string {
 function calcMarketValuation(level: number, score: number): number {
     return Math.round((level * 200 + score * 3) / 50) * 50;
 }
-
-// Scouting prospects data
-const SCOUTING_PROSPECTS: Record<string, { age: number; position: string; pace: number; technical: number; potential: string; location: string; trialCost: number }> = {
-    'Hackney Academy Report': { age: 17, position: 'MF', pace: 91, technical: 78, potential: '⭐⭐⭐⭐', location: 'Hackney Marshes Pitch 4', trialCost: 200 },
-    'Search for Midfielders': { age: 19, position: 'MF', pace: 84, technical: 85, potential: '⭐⭐⭐', location: 'Stratford Community League', trialCost: 150 },
-};
-
-// Tactical formations data
-const TACTICAL_SETUPS: Record<string, { formation: string; winRate: number; weaknesses: string; recommendation: string }> = {
-    '4-4-2': { formation: '4-4-2', winRate: 62, weaknesses: 'Vulnerable to high press in midfield', recommendation: 'Solid base. Consider shifting to 4-3-3 for more attacking output.' },
-    '4-3-3': { formation: '4-3-3', winRate: 71, weaknesses: 'Exposed on counter-attacks', recommendation: 'High risk, high reward. Best used against defensive sides.' },
-    '3-5-2': { formation: '3-5-2', winRate: 58, weaknesses: 'Wide areas can be exploited', recommendation: 'Good for possession-heavy games. Needs disciplined wing-backs.' },
-};
-
-// Fitness / injury data
-const SQUAD_FITNESS: Record<string, { status: string; recoveryDays: number; riskLevel: string; recommendation: string }> = {
-    'Marcus': { status: '🟢 Fit', recoveryDays: 0, riskLevel: 'Low', recommendation: 'Cleared for full training and match selection.' },
-    'Jamie': { status: '🟡 Monitoring', recoveryDays: 3, riskLevel: 'Medium', recommendation: 'Light training only. Reassess before Tuesday.' },
-    'Sarah': { status: '🔴 Injured', recoveryDays: 10, riskLevel: 'High', recommendation: 'Rest and physio sessions. Do not select for next two fixtures.' },
-};
-
-// Sponsorship deals data
-const SPONSORSHIP_DEALS: Record<string, { brand: string; value: number; duration: string; requirement: string; lensBoost: number }> = {
-    'Sponsorship Opportunity': { brand: 'Hackney Brew Co.', value: 5000, duration: '8 weeks', requirement: 'Min. 500 Lens followers', lensBoost: 15 },
-    'Brand Reputation': { brand: 'Phygital Sports Kit', value: 3200, duration: '12 weeks', requirement: 'Top 10 Hackney ranking', lensBoost: 10 },
-};
 
 type ChatMessage = { sender: string; text: string; actions?: { label: string; onClick: () => void }[]; id?: string };
 
@@ -169,6 +137,28 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     const dataLoading = squadId && (treasuryLoading || tacticsLoading || membersLoading);
     const dataError = squadId && treasuryError;
     const dataReady = !dataLoading && !!squadId;
+    const hasLiveMembers = members.length > 0;
+    const hasLiveTreasury = Boolean(treasury);
+    const activeFormation = typeof (tactics as { formation?: unknown } | null | undefined)?.formation === 'string'
+        ? (tactics as { formation: string }).formation
+        : null;
+    const averageLevel = hasLiveMembers
+        ? Math.round(members.reduce((acc, member) => acc + (member.stats?.level ?? 0), 0) / members.length)
+        : 0;
+    const membersByMatchLoad = [...members].sort((left, right) => (right.stats?.matches ?? 0) - (left.stats?.matches ?? 0));
+    const highLoadMembers = membersByMatchLoad.filter((member) => (member.stats?.matches ?? 0) >= 16);
+    const freshMembers = [...membersByMatchLoad].reverse().slice(0, Math.min(2, members.length));
+    const developmentMembers = [...members].sort((left, right) => (left.stats?.level ?? 0) - (right.stats?.level ?? 0)).slice(0, Math.min(2, members.length));
+    const contractCandidates = membersByMatchLoad.slice(0, Math.min(3, members.length));
+    const squadDepthTarget = 8;
+    const rotationGap = Math.max(0, squadDepthTarget - members.length);
+    const positionCounts = members.reduce<Record<string, number>>((counts, member) => {
+        if (member.position) {
+            counts[member.position] = (counts[member.position] ?? 0) + 1;
+        }
+        return counts;
+    }, {});
+    const missingPositions = ['GK', 'DF', 'MF', 'ST', 'WG'].filter((position) => !positionCounts[position]);
 
     const alertMembers: Array<{ id: string; name: string; role: 'captain' | 'vice_captain' | 'player'; stats?: { matches: number; goals: number; level: number } }> = members.map(member => ({
         id: member.id,
@@ -343,15 +333,16 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                 }, 1500);
                 response = null;
             } else if (text === "Squad Morale Check") {
-                const avgLevel = members?.length ? Math.round(members.reduce((acc, m) => acc + (m.stats?.level || 0), 0) / members.length) : 5;
-                const moraleStatus = avgLevel >= 7 ? '🟢 HIGH' : avgLevel >= 4 ? '🟡 STEADY' : '🔴 LOW';
-                const memberSummary = members?.length
+                const moraleStatus = averageLevel >= 7 ? '🟢 HIGH' : averageLevel >= 4 ? '🟡 STEADY' : '🔴 LOW';
+                const memberSummary = hasLiveMembers
                     ? members.slice(0, 4).map(m => `• ${m.name} — Lvl ${m.stats?.level ?? 1} (${m.stats?.matches ?? 0} matches)`).join('\n')
-                    : '• No squad data loaded yet';
+                    : '• No live squad data available yet';
                 setTimeout(() => {
                     setChatHistory(prev => [...prev, {
                         sender: selectedStaff?.name || 'Coach Kite',
-                        text: `Right, let me pull the morale data.\n\n🧠 Squad Avg Level: ${avgLevel}\n📊 Morale Status: ${moraleStatus}\n\n${memberSummary}\n\n💬 Dressing Room Vibe: ${avgLevel >= 7 ? 'Buzzing — the last win has them fired up.' : avgLevel >= 4 ? 'Steady. No major issues but they need a spark.' : 'Fragile. A poor result could cause real problems.'}\n\n${avgLevel < 4 ? 'I recommend a light session and a team talk before the next fixture.' : 'No immediate action needed, but keep an eye on rotation fatigue.'}\n\nWant me to schedule a morale-boosting training session, Boss?`,
+                        text: hasLiveMembers
+                            ? `Right, let me pull the morale data.\n\n🧠 Squad Avg Level: ${averageLevel}\n📊 Morale Status: ${moraleStatus}\n\n${memberSummary}\n\n💬 Dressing Room Vibe: ${averageLevel >= 7 ? 'The group looks confident and ready for a sharper tactical push.' : averageLevel >= 4 ? 'Steady. They can improve quickly if we keep the next session focused.' : 'Fragile. The next session needs to rebuild confidence before the next fixture.'}\n\n${highLoadMembers.length > 0 ? `⚠️ Rotation watch: ${highLoadMembers.slice(0, 2).map(member => member.name).join(', ')} are carrying the heaviest load.` : 'No immediate rotation pressure showing in the live squad data.'}\n\nWant me to schedule a morale-boosting training session, Boss?`
+                            : `I can't score morale properly until the live squad record is loaded. Once members, matches, and levels are available, I'll give you a proper dressing-room read.`,
                         actions: [
                             { label: '✅ Schedule Session', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Done. I've blocked out Thursday morning for a light tactical session with a team bonding element. The lads will appreciate it.` }]) },
                             { label: '❌ Leave it for now', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Understood. I'll keep monitoring. Come back to me if the numbers dip further.` }]) }
@@ -361,66 +352,91 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                 }, 1500);
                 response = null;
             } else if (text === "Tactical Briefing") {
-                const formation = tactics?.formation || '4-4-2';
-                const setup = TACTICAL_SETUPS[formation] || TACTICAL_SETUPS['4-4-2'];
+                const recommendedFormation = members.length >= 7 ? '4-3-3' : '4-4-2';
+                const formation = activeFormation || recommendedFormation;
+                const tacticalRisk = highLoadMembers.length >= 2 ? 'High-press shapes will stretch your current high-load players.' : 'The current load profile can support a more aggressive press.';
+                const tacticalRead = rotationGap > 0
+                    ? `We're still ${rotationGap} player${rotationGap > 1 ? 's' : ''} short of full rotation depth, so stability matters more than complexity right now.`
+                    : 'Depth is good enough to support a more assertive structure next match.';
                 setTimeout(() => {
                     setChatHistory(prev => [...prev, {
                         sender: selectedStaff?.name || 'Coach Kite',
-                        text: `Here's the current tactical picture, Boss.\n\n🗂️ Formation: ${setup.formation}\n📈 Win Rate: ${setup.winRate}% vs Hackney-tier sides\n⚠️ Weakness: ${setup.weaknesses}\n\n💡 My Read: ${setup.recommendation}\n\nShall I apply the recommended formation change for the next fixture?`,
+                        text: `Here's the current tactical picture, Boss.\n\n🗂️ Active Shape: ${formation}\n👥 Available Core: ${members.length} live squad members\n⚠️ Load Note: ${tacticalRisk}\n\n💡 My Read: ${activeFormation ? `You've already saved ${formation}, so the job now is tuning roles and rotation.` : `No saved formation is on record, so I'd start with ${formation} as the first stable base.`}\n\n${tacticalRead}\n\nShall I apply ${formation} as the working setup for the next fixture?`,
                         actions: [
-                            { label: '✅ Apply Formation', onClick: () => { agentDispatch({ type: 'SET_FORMATION', payload: { formation: setup.formation, winRate: setup.winRate } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Formation locked in. I've updated the match engine parameters. The squad will be briefed at tomorrow's session.` }]); } },
-                            { label: '❌ Keep Current Setup', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Noted. We'll stick with ${setup.formation} for now. I'll revisit after the next match.` }]) }
+                            { label: '✅ Apply Formation', onClick: () => { agentDispatch({ type: 'SET_FORMATION', payload: { formation, winRate: 64 } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Formation locked in. I've set ${formation} as the working shape and adjusted the prep notes for the next session.` }]); } },
+                            { label: '❌ Keep Current Setup', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Noted. We'll keep the current setup and revisit once more live match data lands.` }]) }
                         ]
                     }]);
                     setIsTyping(false);
                 }, 1500);
                 response = null;
             } else if (text === "Training Optimization") {
+                const highLoadNames = highLoadMembers.length > 0 ? highLoadMembers.slice(0, 2).map(member => member.name).join(', ') : 'none flagged';
+                const freshNames = freshMembers.length > 0 ? freshMembers.map(member => member.name).join(', ') : 'no clear freshness edge yet';
+                const developmentNames = developmentMembers.length > 0 ? developmentMembers.map(member => member.name).join(', ') : 'no developing group identified yet';
                 setTimeout(() => {
                     setChatHistory(prev => [...prev, {
                         sender: selectedStaff?.name || 'Coach Kite',
-                        text: `I've run the load analysis across the squad.\n\n🏋️ High Load Players: Marcus, Jamie (need rotation)\n🟢 Fresh & Ready: Alex, Noah\n📉 Underperforming in Training: Sarah (fatigue indicators)\n\nRecommendation: Reduce intensity for the top two and push the fresher players in the next session. This should peak performance for matchday.\n\nShall I restructure this week's training plan accordingly?`,
+                        text: hasLiveMembers
+                            ? `I've run the load analysis across the squad.\n\n🏋️ High Load Players: ${highLoadNames}\n🟢 Fresh & Ready: ${freshNames}\n📉 Development Focus: ${developmentNames}\n\nRecommendation: ${highLoadMembers.length > 0 ? 'Reduce intensity for the highest-load group and shift the next high-intensity block to the fresher players.' : 'The load profile is stable. Use the next session to sharpen combinations and build confidence.'}\n\nShall I restructure this week's training plan accordingly?`
+                            : `I need live member and training data before I can optimise the weekly load properly. Once the squad record is available, I'll split the group into high-load, fresh, and development cohorts.`,
                         actions: [
-                            { label: '✅ Restructure Plan', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Training plan updated. Marcus and Jamie are on light duties Wednesday. Alex and Noah will lead the high-intensity drills. Expect a 10–15% performance uplift by Saturday.` }]) },
+                            { label: '✅ Restructure Plan', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: hasLiveMembers ? `Training plan updated. ${highLoadMembers.length > 0 ? `${highLoadMembers.slice(0, 2).map(member => member.name).join(' and ')} are on managed load` : 'The whole squad stays on normal load'}, while ${freshMembers.length > 0 ? freshMembers.map(member => member.name).join(' and ') : 'the freshest group'} carry the sharpness work.` : `Understood. I'll wait for the live squad record, then rebuild the weekly plan from actual load data.` }]) },
                             { label: '❌ Keep Current Plan', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Coach Kite', text: `Understood. I'll flag it again if fatigue levels worsen before the weekend.` }]) }
                         ]
                     }]);
                     setIsTyping(false);
                 }, 1500);
                 response = null;
-            } else if (text === "Hackney Academy Report" || text === "Search for Midfielders") {
-                const prospect = SCOUTING_PROSPECTS[text];
-                if (prospect) {
-                    setTimeout(() => {
-                        setChatHistory(prev => [...prev, {
-                            sender: selectedStaff?.name || 'The Scout',
-                            text: `I've been watching this one closely, Boss. Here's the full dossier.\n\n👤 Age: ${prospect.age}\n📍 Location: ${prospect.location}\n🏃 Position: ${prospect.position}\n⚡ Pace: ${prospect.pace} | 🎯 Technical: ${prospect.technical}\n🌟 Potential: ${prospect.potential}\n💰 Trial Cost: ${prospect.trialCost.toLocaleString()} credits\n\n${prospect.potential.length >= 4 ? 'This one is special. I wouldn\'t wait — other clubs are sniffing around.' : 'Solid prospect. Worth a look before committing.'}\n\nShall I arrange a trial, Boss?`,
-                            actions: [
-                                { label: '✅ Arrange Trial', onClick: () => { agentDispatch({ type: 'SET_PROSPECT', payload: { name: `Prospect (${prospect.position})`, position: prospect.position, age: prospect.age, potential: prospect.potential, trialCost: prospect.trialCost } }); agentDispatch({ type: 'QUEUE_ONCHAIN_ACTION', payload: { id: `trial-${Date.now()}`, type: 'yellow_payment', description: `Trial fee for ${prospect.position} prospect`, amount: prospect.trialCost, assetSymbol: 'USDC' } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Trial booked. ${prospect.location}, this weekend. I'll have a full performance report on your desk by Monday. Cost: ${prospect.trialCost.toLocaleString()} credits deducted from scouting budget.` }]); } },
-                                { label: '❌ Pass on This One', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Understood. I'll keep him on the watchlist and revisit in a few weeks if the situation changes.` }]) }
-                            ]
-                        }]);
-                        setIsTyping(false);
-                    }, 1500);
-                    response = null as unknown as string;
-                } else {
-                    response = `I'm compiling the latest scouting data now, Boss. Give me a moment.`;
-                }
-            } else if (text === "Rival Team Analysis") {
+            } else if (text === "Squad Coverage Review") {
+                const coverageLine = missingPositions.length > 0
+                    ? `Priority gaps: ${missingPositions.join(', ')}`
+                    : 'Core positions are covered in the current squad record.';
+                const contractLine = contractCandidates.length > 0
+                    ? contractCandidates.map(member => `• ${member.name} — ${member.stats?.matches ?? 0} matches, Lvl ${member.stats?.level ?? 1}`).join('\n')
+                    : '• No members loaded yet';
                 setTimeout(() => {
                     setChatHistory(prev => [...prev, {
                         sender: selectedStaff?.name || 'The Scout',
-                        text: `I've been tracking Northside FC all week. Here's what we're up against.\n\n🏟️ Opponent: Northside FC\n⚠️ Key Threat: Marcus Johnson (ST) — 88 pace, 84 finishing\n📊 Their Form: 🔥 4W 1D last 5\n🔍 Weakness: Slow to recover defensively after set pieces\n\nMy recommendation: Press high early, exploit their right-back who's been caught out of position. Target set pieces in the final third.\n\nShall I prepare a full opposition briefing document for the squad?`,
+                        text: hasLiveMembers
+                            ? `I've run the squad coverage review, Boss.\n\n👥 Live Squad Size: ${members.length}\n📉 Rotation Gap: ${rotationGap}\n🎯 ${coverageLine}\n\n${contractLine}\n\nRecommendation: ${missingPositions.length > 0 ? `Start by scouting ${missingPositions[0]} depth before you make luxury moves.` : 'Focus on upgrading quality, not just adding bodies.'}\n\nWant me to queue a scouting brief?`
+                            : `I need the live squad record before I can map coverage properly. Once members and positions are loaded, I'll show you the real gaps and priorities.`,
                         actions: [
-                            { label: '✅ Prepare Briefing', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Briefing document prepared. I've flagged Marcus Johnson as Priority 1 threat and outlined three set-piece routines to exploit their defensive shape. Coach Kite has been copied in.` }]) },
-                            { label: '❌ Not Needed', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `No problem. The intel is here if you change your mind before matchday.` }]) }
+                            { label: '✅ Queue Scouting Brief', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: hasLiveMembers ? `Scouting brief queued. I'll prioritise ${missingPositions[0] || 'quality upgrades'} and bring back the cleanest options first.` : `Understood. I'll wait for live squad data, then generate the scouting brief from actual gaps.` }]) },
+                            { label: '❌ Hold Position', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Understood. I'll keep the watchlist warm and wait for a clearer need.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null;
+            } else if (text === "Scouting Priority Report") {
+                const budgetTier = (treasury?.balance ?? 0) >= 5000 ? 'strong' : (treasury?.balance ?? 0) >= 2000 ? 'selective' : 'tight';
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'The Scout',
+                        text: `Here's the scouting priority report, Boss.\n\n💰 Budget posture: ${budgetTier}\n👥 Rotation gap: ${rotationGap}\n🎯 Position priority: ${missingPositions.length > 0 ? missingPositions.join(', ') : 'best-player-available'}\n\n${budgetTier === 'tight' ? 'Recommendation: lean on draft signals and low-cost opportunities first.' : budgetTier === 'selective' ? 'Recommendation: one targeted move beats three speculative ones.' : 'Recommendation: you have room to move, so target the position that most improves your first XI.'}\n\nWant me to open the prospect board with that priority order?`,
+                        actions: [
+                            { label: '✅ Open Prospect Board', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Prospect board prioritised. First lane is ${missingPositions[0] || 'quality upgrades'}, then depth coverage, then opportunistic value.` }]) },
+                            { label: '❌ Wait for More Data', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Fair enough. I'll hold until another result or squad change gives us a sharper signal.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null;
+            } else if (text === "Opponent Prep Checklist") {
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'The Scout',
+                        text: `I don't have a live opponent dossier loaded yet, Boss, so here's the prep checklist built from our own squad state.\n\n1. Confirm the next opponent in Match Center.\n2. Lock the working shape: ${activeFormation || 'no saved formation yet'}.\n3. Review high-load players: ${highLoadMembers.length > 0 ? highLoadMembers.slice(0, 2).map(member => member.name).join(', ') : 'none flagged'}.\n4. Bring one evidence plan into the fixture: scoreline, GPS, and captain confirmation.\n\nOnce the opponent is locked and the match record exists, I can give you a proper opposition brief.`,
+                        actions: [
+                            { label: '✅ Prepare Checklist', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `Checklist prepared. Once you lock the opponent in Match Center, I'll tighten this into a real briefing.` }]) },
+                            { label: '❌ Not Needed', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Scout', text: `No problem. We'll wait until the fixture is properly on the board.` }]) }
                         ]
                     }]);
                     setIsTyping(false);
                 }, 1500);
                 response = null;
             } else if (text === "Fitness Status Report") {
-                // Use live member data to build fitness lines; fall back to static data if no members loaded
                 const fitnessLines = members?.length
                     ? members.map(m => {
                         const lvl = m.stats?.level ?? 1;
@@ -429,16 +445,18 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                         const recovery = matches > 30 ? ' (rest recommended)' : '';
                         return `${risk} ${m.name} — Lvl ${lvl}${recovery}`;
                     })
-                    : ['🟢 Low Marcus — Fit', '🟡 Medium Jamie — Monitoring', '🔴 High Sarah — Injured (10 days)'];
+                    : ['No live fitness data loaded yet'];
                 const atRisk = members?.length
                     ? members.filter(m => (m.stats?.matches ?? 0) > 15).length
-                    : 1;
+                    : 0;
                 setTimeout(() => {
                     setChatHistory(prev => [...prev, {
                         sender: selectedStaff?.name || 'The Physio',
-                        text: `I've run the full biometric sweep, Boss. Here's the picture.\n\n${fitnessLines.join('\n')}\n\n${atRisk > 0 ? `⚠️ ${atRisk} player(s) need attention before the next fixture.` : '✅ Squad is in excellent shape.'}\n\nShall I update the match selection availability list accordingly?`,
+                        text: hasLiveMembers
+                            ? `I've run the full biometric sweep, Boss. Here's the picture.\n\n${fitnessLines.join('\n')}\n\n${atRisk > 0 ? `⚠️ ${atRisk} player(s) need attention before the next fixture.` : '✅ Squad is in excellent shape.'}\n\nShall I update the match selection availability list accordingly?`
+                            : `I can't produce a real fitness report until the live squad record is loaded. Once match load and members are in, I'll flag who's fit, who's being monitored, and who needs rotation.`,
                         actions: [
-                            { label: '✅ Update Availability', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Availability list updated. Sarah is flagged as unavailable for the next two fixtures. Jamie is listed as a game-time decision. All others are cleared.` }]) },
+                            { label: '✅ Update Availability', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: hasLiveMembers ? `Availability list updated. ${highLoadMembers.length > 0 ? `${highLoadMembers.slice(0, 2).map(member => member.name).join(' and ')} are marked for load monitoring.` : 'Everyone is cleared from the current live record.'}` : `Understood. I'll update availability once the live squad data lands.` }]) },
                             { label: '❌ I\'ll Handle It', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Understood. The data is here whenever you need it. I'll flag anything urgent immediately.` }]) }
                         ]
                     }]);
@@ -446,57 +464,84 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                 }, 1500);
                 response = null;
             } else if (text === "Recovery Logistics") {
+                const averageMatches = hasLiveMembers
+                    ? Math.round(members.reduce((total, member) => total + (member.stats?.matches ?? 0), 0) / members.length)
+                    : 0;
                 setTimeout(() => {
                     setChatHistory(prev => [...prev, {
                         sender: selectedStaff?.name || 'The Physio',
-                        text: `Post-match recovery analysis is in, Boss.\n\n💤 Sleep Quality (avg): 7.2 / 10\n🧊 Ice Bath Compliance: 80%\n🏃 Active Recovery Sessions Completed: 3 / 4\n⚡ Lactic Acid Levels: Elevated in midfield (Jamie flagged)\n\nOverall the squad is recovering well, but Jamie needs an extra 48 hours before full training. I'd recommend we push his return to Thursday.\n\nShall I adjust his training schedule?`,
+                        text: hasLiveMembers
+                            ? `Post-match recovery analysis is in, Boss.\n\n📊 Average match load: ${averageMatches}\n⚠️ Managed recovery needed: ${highLoadMembers.length > 0 ? highLoadMembers.slice(0, 2).map(member => member.name).join(', ') : 'no one flagged'}\n🟢 Lowest load group: ${freshMembers.length > 0 ? freshMembers.map(member => member.name).join(', ') : 'none separated yet'}\n\nOverall the squad is ${highLoadMembers.length > 0 ? 'recovering, but we need to manage the top-load group carefully.' : 'recovering cleanly from the current schedule.'}\n\nShall I adjust the recovery schedule?`
+                            : `I can't map recovery properly without the live squad and match-load data. Once that's loaded, I'll identify who needs managed recovery and who can push on.`,
                         actions: [
-                            { label: '✅ Adjust Schedule', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Done. Jamie is on rest and light mobility work until Thursday. I'll clear him for full training if the biometrics look good by Wednesday evening.` }]) },
-                            { label: '❌ Keep Him On Schedule', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Noted. I'll monitor closely and pull him if the numbers worsen. Your call, Boss.` }]) }
+                            { label: '✅ Adjust Schedule', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: hasLiveMembers ? `Done. ${highLoadMembers.length > 0 ? `${highLoadMembers.slice(0, 2).map(member => member.name).join(' and ')} are on reduced load for the next block.` : 'The recovery schedule is now balanced against the current squad data.'}` : `Understood. I'll wait for live data, then rebuild the recovery schedule.` }]) },
+                            { label: '❌ Keep Current Schedule', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Noted. I'll monitor closely and escalate if the live risk profile worsens.` }]) }
                         ]
                     }]);
                     setIsTyping(false);
                 }, 1500);
                 response = null;
             } else if (text === "Injury Prevention") {
+                const highestRiskMember = highLoadMembers[0] || membersByMatchLoad[0];
                 setTimeout(() => {
                     setChatHistory(prev => [...prev, {
                         sender: selectedStaff?.name || 'The Physio',
-                        text: `I've run the predictive injury model across the squad.\n\n🔴 High Risk: Sarah — overloaded hamstring, recommend immediate load reduction\n🟡 Watch List: Marcus — minor knee inflammation, monitor daily\n🟢 Low Risk: Rest of squad\n\nIf we don't act on Sarah now, I'm projecting a 70% chance of a 3-week injury within the next two fixtures.\n\nShall I put her on a prevention protocol immediately?`,
+                        text: hasLiveMembers
+                            ? `I've run the predictive injury model across the squad.\n\n🔴 Highest Risk: ${highestRiskMember ? `${highestRiskMember.name} — ${highestRiskMember.stats?.matches ?? 0} matches logged` : 'No single player flagged'}\n🟡 Watch List: ${highLoadMembers.length > 1 ? highLoadMembers.slice(1, 3).map(member => member.name).join(', ') : 'No wider watch list from live data'}\n🟢 Low Risk: ${members.length - Math.min(highLoadMembers.length, members.length)} player(s)\n\nIf we act now, we can keep soft-tissue risk from compounding into the next fixture.\n\nShall I start a prevention protocol?`
+                            : `I need live load data before I can run a real injury-prevention model. Once the squad record is synced, I'll identify the highest-risk players properly.`,
                         actions: [
-                            { label: '✅ Start Protocol', onClick: () => { agentDispatch({ type: 'SET_INJURY', payload: { playerName: 'Sarah', riskLevel: 'High', recoveryDays: 14 } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Prevention protocol activated for Sarah. She's on reduced load, daily physio, and biometric monitoring. I'll reassess in 5 days. This should bring her risk level down to manageable.` }]); } },
+                            { label: '✅ Start Protocol', onClick: () => { if (highestRiskMember) { agentDispatch({ type: 'SET_INJURY', payload: { playerName: highestRiskMember.name, riskLevel: 'High', recoveryDays: 7 } }); } setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: hasLiveMembers && highestRiskMember ? `Prevention protocol activated for ${highestRiskMember.name}. They're on reduced load, targeted physio, and daily monitoring until the risk score drops.` : `Understood. I'll hold the protocol plan until the live data is available.` }]); } },
                             { label: '❌ Not Yet', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'The Physio', text: `Understood. I'll keep the flags live and escalate if the risk score increases. Don't leave it too long, Boss.` }]) }
                         ]
                     }]);
                     setIsTyping(false);
                 }, 1500);
                 response = null;
-            } else if (text === "Sponsorship Opportunity" || text === "Brand Reputation") {
-                const deal = SPONSORSHIP_DEALS[text];
-                if (deal) {
-                    setTimeout(() => {
-                        setChatHistory(prev => [...prev, {
-                            sender: selectedStaff?.name || 'Commercial Lead',
-                            text: `I've got a live deal on the table, Boss. Here are the details.\n\n🏷️ Brand: ${deal.brand}\n💰 Deal Value: ${deal.value.toLocaleString()} credits\n📅 Duration: ${deal.duration}\n✅ Requirement: ${deal.requirement}\n📣 Lens Boost: +${deal.lensBoost}% engagement on activation\n\nThis is a solid fit for our current Phygital positioning. I'd recommend we move quickly — they're talking to two other Hackney clubs.\n\nShall I open formal negotiations with ${deal.brand}?`,
-                            actions: [
-                                { label: '✅ Open Negotiations', onClick: () => { agentDispatch({ type: 'SET_DEAL_CLOSED', payload: { brand: deal.brand, value: deal.value, duration: deal.duration } }); agentDispatch({ type: 'QUEUE_ONCHAIN_ACTION', payload: { id: `deal-${Date.now()}`, type: 'lens_post', description: `Announce ${deal.brand} partnership on Lens`, postText: `🏆 Exciting news from the backroom — we've opened negotiations with ${deal.brand}! ${deal.duration} deal worth ${deal.value.toLocaleString()} credits. Big things coming. #SportWarren #Phygital` } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Excellent. I've sent the opening terms to ${deal.brand}. Expect a response within 48 hours. I'll keep you posted on every move.` }]); } },
-                                { label: '❌ Pass on This Deal', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Understood. I'll keep the pipeline warm and bring you something better when it comes in.` }]) }
-                            ]
-                        }]);
-                        setIsTyping(false);
-                    }, 1500);
-                    response = null as unknown as string;
-                } else {
-                    response = `Let me pull the latest commercial opportunities together for you, Boss.`;
-                }
-            } else if (text === "Social Engagement Stats") {
+            } else if (text === "Commercial Readiness") {
+                const budgetBalance = treasury?.balance ?? 0;
+                const revenueFocus = budgetBalance < 1500
+                    ? 'Revenue is urgent. The squad needs new inflow before the next aggressive move.'
+                    : budgetBalance < 4000
+                        ? 'Revenue is useful. One sponsor or community push would materially improve flexibility.'
+                        : 'Revenue is healthy enough that you can be selective and protect brand quality.';
                 setTimeout(() => {
                     setChatHistory(prev => [...prev, {
                         sender: selectedStaff?.name || 'Commercial Lead',
-                        text: `Here's the Lens engagement breakdown for this week, Boss.\n\n📊 Followers: 1,240 (+18% WoW)\n❤️ Avg Post Engagement: 8.4%\n🔥 Top Post: Match highlight vs Eastside — 340 reactions\n🌍 Reach: 4,200 unique Lens profiles\n\nWe're outperforming 90% of Hackney clubs on Lens right now. The phantom-fan conversion rate is up too — 12 new real-world merch orders this week.\n\nWant me to boost the top post with a Lens promotion to push it further?`,
+                        text: `Here's the commercial readiness read, Boss.\n\n💰 Treasury balance: ${budgetBalance.toLocaleString()} credits\n👥 Active squad: ${members.length} members\n🔐 Payment rail: ${yellowSession.status === 'authenticated' ? 'ready for live settlement' : 'not fully authenticated yet'}\n\n${revenueFocus}\n\nWant me to draft a sponsor brief around the current squad story?`,
                         actions: [
-                            { label: '✅ Boost Post', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Boost activated. I've allocated 50 credits from the marketing budget. Projected reach increase: +2,000 profiles over 48 hours. I'll report back on the results.` }]) },
-                            { label: '❌ Leave Organic', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Fair enough. Organic reach is strong enough for now. I'll flag the next high-performing post for a potential boost.` }]) }
+                            { label: '✅ Draft Sponsor Brief', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Sponsor brief drafted. I centred it on squad growth, verified results, and the next visible milestone.` }]) },
+                            { label: '❌ Not Yet', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Understood. I'll wait until the squad story or treasury position changes.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null;
+            } else if (text === "Growth Priorities") {
+                const priority = rotationGap > 0
+                    ? `close the ${rotationGap}-player rotation gap`
+                    : (treasury?.balance ?? 0) < 3000
+                        ? 'strengthen treasury and commercial headroom'
+                        : 'turn verified results into public momentum';
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'Commercial Lead',
+                        text: `I've ranked the next growth priorities, Boss.\n\n1. ${priority}\n2. Keep verification flowing so progress is visible.\n3. Package the next milestone into a squad update once it lands.\n\nThat sequence gives us the clearest path from early traction into retention and referral.\n\nWant me to lock those priorities in?`,
+                        actions: [
+                            { label: '✅ Lock Priorities', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Priorities locked. I'll align the next commercial and community prompts around ${priority}.` }]) },
+                            { label: '❌ Leave Flexible', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Understood. We'll stay opportunistic and reassess after the next squad action.` }]) }
+                        ]
+                    }]);
+                    setIsTyping(false);
+                }, 1500);
+                response = null;
+            } else if (text === "Community Update Plan") {
+                setTimeout(() => {
+                    setChatHistory(prev => [...prev, {
+                        sender: selectedStaff?.name || 'Commercial Lead',
+                        text: `Here's the community update plan, Boss.\n\n🎯 Lead with: ${members.length > 0 ? `${members.length}-member squad progress` : 'the next verified match result'}\n📣 Follow with: ${missingPositions.length > 0 ? `the search for ${missingPositions.join(', ')} depth` : 'the next tactical or treasury milestone'}\n🔁 CTA: invite rivals or teammates to verify and join the loop\n\nThis keeps the story grounded in real progression instead of filler metrics.\n\nWant me to queue the draft post?`,
+                        actions: [
+                            { label: '✅ Queue Draft Post', onClick: () => { agentDispatch({ type: 'QUEUE_ONCHAIN_ACTION', payload: { id: `lens-${Date.now()}`, type: 'lens_post', description: 'Publish the next squad progress update', postText: `Squad update: ${members.length > 0 ? `${members.length} active members and the next focus is ${missingPositions[0] || 'verified results'}.` : 'The next verified result will define the squad story.'} #SportWarren` } }); setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Draft queued. Review the post and sign it when you're ready to publish the next real milestone.` }]); } },
+                            { label: '❌ Hold the Update', onClick: () => setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Commercial Lead', text: `Understood. We'll wait until the next milestone gives us a stronger story to publish.` }]) }
                         ]
                     }]);
                     setIsTyping(false);
@@ -630,7 +675,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                         )}
                         {dataError && (
                             <div className="mx-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-[10px] font-bold text-red-400 uppercase tracking-widest">
-                                ⚠️ Could not load live squad data. Showing cached values.
+                                ⚠️ Could not load part of the live squad record. Only confirmed data and planning guidance are available right now.
                             </div>
                         )}
                         {chatHistory.map((chat, i) => (
@@ -750,7 +795,9 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     {/* Quick Actions & Input */}
                     <div className="p-6 border-t border-white/5 bg-black/20">
                         <div className="flex flex-wrap gap-2 mb-4 overflow-x-auto pb-1">
-                            {getQuickActions(selectedStaff?.id || '').map((action, i) => (
+                            {getQuickActions(selectedStaff?.id || '', {
+                                contractCandidates: contractCandidates.map(member => member.name.split(' ')[0]),
+                            }).map((action, i) => (
                                 <Button
                                     key={i}
                                     variant="outline"
@@ -807,7 +854,13 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                         <TrendingUp className="w-5 h-5 text-blue-500 mb-2" />
                         <h5 className="section-title text-white mb-1">Economic Outlook</h5>
                         <p className="text-[9px] text-blue-100 leading-tight">
-                            Lens reputation scores are inflating. Now is the time to secure long-term contracts for "Gold" tier prospects before valuations skyrocket.
+                            {hasLiveTreasury
+                                ? rotationGap > 0
+                                    ? `Depth is still ${rotationGap} player${rotationGap > 1 ? 's' : ''} short of a full rotation squad. Protect the treasury for priority positions first.`
+                                    : (treasury?.balance ?? 0) < 3000
+                                        ? 'Treasury is tight. One verified result or sponsor move would materially improve squad flexibility.'
+                                        : 'Treasury is healthy enough to be selective. Use the next move on quality, not just volume.'
+                                : 'Live finance signals appear here once treasury data is available.'}
                         </p>
                     </div>
                 </div>
@@ -828,13 +881,14 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
 };
 
 
-function getQuickActions(staffId: string): string[] {
+function getQuickActions(staffId: string, options: { contractCandidates: string[] }): string[] {
+    const contractActions = options.contractCandidates.map((name) => `Renegotiate ${name}'s Contract`);
     switch (staffId) {
-        case 'agent-1': return ["Renegotiate Marcus' Contract", "Renegotiate Jamie's Contract", "Renegotiate Sarah's Contract", "Balance Sheet Review", "Transfer Budget Inquiry"];
-        case 'scout-1': return ["Hackney Academy Report", "Rival Team Analysis", "Search for Midfielders"];
+        case 'agent-1': return [...contractActions, "Balance Sheet Review", "Transfer Budget Inquiry"];
+        case 'scout-1': return ["Squad Coverage Review", "Scouting Priority Report", "Opponent Prep Checklist"];
         case 'coach-1': return ["Tactical Briefing", "Squad Morale Check", "Training Optimization"];
         case 'physio-1': return ["Fitness Status Report", "Recovery Logistics", "Injury Prevention"];
-        case 'comms-1': return ["Sponsorship Opportunity", "Social Engagement Stats", "Brand Reputation"];
+        case 'comms-1': return ["Commercial Readiness", "Growth Priorities", "Community Update Plan"];
         default: return ["Status Report", "Next Match Preparation"];
     }
 }

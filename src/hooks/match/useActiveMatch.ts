@@ -68,7 +68,7 @@ export function useActiveMatch(
       awayTeam,
       homeScore: matchState.homeScore,
       awayScore: matchState.awayScore,
-      submitter: 'Current User', // Get from wallet
+      submitter: `${homeTeam} captain`,
       submitterTeam: 'home', // Determine based on user's team
       timestamp: new Date(),
       verifications: [],
@@ -80,14 +80,14 @@ export function useActiveMatch(
           id: `photo_${i}`,
           url,
           timestamp: new Date(),
-          uploadedBy: 'Current User',
+          uploadedBy: `${homeTeam} staff`,
           type: 'photo',
         })),
         voiceLogs: matchState.evidence.voiceNotes.map((url, i) => ({
           id: `voice_${i}`,
           url,
           timestamp: new Date(),
-          uploadedBy: 'Current User',
+          uploadedBy: `${homeTeam} staff`,
           type: 'voice',
         })),
         gps: matchState.evidence.gpsLocation ? {

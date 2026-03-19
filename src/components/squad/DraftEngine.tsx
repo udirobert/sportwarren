@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Trophy, Zap, Search, UserCheck, Star, Sparkles } from 'lucide-react';
+import { Trophy, Search, UserCheck, Star, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MOCK_AVAILABLE_PLAYERS } from '@/lib/mocks';
 
 import { trpc } from '@/lib/trpc-client';
 import { useOnboarding } from '@/hooks/useOnboarding';
@@ -20,8 +19,8 @@ export const DraftEngine: React.FC = () => {
     const { completeChecklistItem } = useOnboarding();
 
     // Dynamic prospect pool from server
-    const { data: serverProspects } = trpc.market.listProspects.useQuery();
-    const prospects = serverProspects || MOCK_AVAILABLE_PLAYERS.filter(p => p.isDraftEligible);
+    const { data: serverProspects, isLoading: prospectsLoading } = trpc.market.listProspects.useQuery();
+    const prospects = serverProspects ?? [];
 
     const signMutation = trpc.market.signProspect.useMutation({
         onSuccess: (data) => {
@@ -36,6 +35,10 @@ export const DraftEngine: React.FC = () => {
     });
 
     const startDraft = () => {
+        if (!prospects.length) {
+            return;
+        }
+
         setIsDrafting(true);
         setDraftStep(1);
 
@@ -85,14 +88,20 @@ export const DraftEngine: React.FC = () => {
                         </div>
                         <h3 className="text-2xl font-black uppercase tracking-tighter italic">Prospect Draft Engine</h3>
                         <p className="text-gray-400 text-sm max-w-sm mx-auto mt-2">
-                            Our AI scouts are monitoring local Hackney academies. Ready to discover your next superstar?
+                            Prospect pulls only open when the scouting network has active signals for your squad.
                         </p>
                         <Button
                             onClick={startDraft}
+                            disabled={prospectsLoading || prospects.length === 0}
                             className="mt-8 bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest px-10 py-6"
                         >
-                            Begin Draft Selection
+                            {prospectsLoading ? 'Loading scouting feed...' : prospects.length > 0 ? 'Begin Draft Selection' : 'No Draft Signals Yet'}
                         </Button>
+                        {!prospectsLoading && prospects.length === 0 && (
+                            <p className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">
+                                Check back after the scouting feed publishes new prospects.
+                            </p>
+                        )}
                     </div>
                 ) : (
                     <div className="py-10">
