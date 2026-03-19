@@ -2,10 +2,12 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { SquadDAO } from "@/components/squad/SquadDAO";
 import { TacticsBoard } from "@/components/squad/TacticsBoard";
 import { TransferMarket } from "@/components/squad/TransferMarket";
 import { Treasury } from "@/components/squad/Treasury";
+import { JourneyGateCard } from "@/components/common/JourneyGateCard";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
@@ -13,7 +15,7 @@ import {
   Shield, Vote, Activity, Info
 } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
-import { MOCK_SQUAD_PLAYERS } from "@/lib/mocks";
+import { CreateSquadFlow } from "@/components/squad/CreateSquadFlow";
 import { trpc } from "@/lib/trpc-client";
 import { useTreasury } from "@/hooks/squad/useTreasury";
 import { useTransfers } from "@/hooks/squad/useTransfers";
@@ -22,21 +24,38 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useSquadDetails } from "@/hooks/squad/useSquad";
 import { useWallet } from "@/contexts/WalletContext";
 import { VerificationBanner } from "@/components/common/VerificationBanner";
+import { getJourneyActionGate } from "@/lib/journey/action-gates";
+import { useJourneyState } from "@/hooks/useJourneyState";
 import type { Player, PlayerPosition, Tactics, Formation, PlayStyle, TeamInstructions } from "@/types";
 
 type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance";
 
 export default function SquadPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<SquadTab>("overview");
-  const { isVerified } = useWallet();
-  const { data: memberships } = trpc.squad.getMySquads.useQuery(undefined, {
-    enabled: isVerified,
-    retry: false,
-  });
+  const [showCreateSquadFlow, setShowCreateSquadFlow] = useState(false);
+  const { chain, hasAccount, hasWallet, isVerified } = useWallet();
+  const { journeyStage, memberships, refreshSquads } = useJourneyState();
 
   const activeMembership = memberships?.[0];
   const activeSquad = activeMembership?.squad;
   const activeSquadId = activeSquad?.id;
+  const squadWorkspaceGate = getJourneyActionGate('squad_workspace', {
+    stage: journeyStage,
+    hasAccount,
+    hasWallet,
+    isVerified,
+    hasSquad: Boolean(activeSquadId),
+    chain,
+  });
+  const governanceGate = getJourneyActionGate('squad_governance', {
+    stage: journeyStage,
+    hasAccount,
+    hasWallet,
+    isVerified,
+    hasSquad: Boolean(activeSquadId),
+    chain,
+  });
   const { members } = useSquadDetails(activeSquadId);
 
   const { checklistItems } = useOnboarding();
@@ -66,7 +85,7 @@ export default function SquadPage() {
   });
 
   const squadPlayers: Player[] = useMemo(() => {
-    if (!members.length) return MOCK_SQUAD_PLAYERS;
+    if (!members.length) return [];
     const defaults: PlayerPosition[] = ['GK', 'DF', 'DF', 'MF', 'MF', 'WG', 'ST', 'ST'];
     return members.map((member, idx) => ({
       id: member.id,
@@ -117,6 +136,34 @@ export default function SquadPage() {
   const handleWithdraw = (amount: number, reason: string) => {
     return treasuryState.withdraw(amount, reason, "other");
   };
+
+  if (showCreateSquadFlow) {
+    return (
+      <CreateSquadFlow
+        onCreated={async () => {
+          setShowCreateSquadFlow(false);
+          await refreshSquads();
+          router.push('/squad?new=1');
+        }}
+      />
+    );
+  }
+
+  if (squadWorkspaceGate.status === "blocked") {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-6 pb-24 md:pb-6 text-gray-900 dark:text-gray-100">
+        <JourneyGateCard
+          icon={Shield}
+          eyebrow={squadWorkspaceGate.eyebrow}
+          title={squadWorkspaceGate.title}
+          description={squadWorkspaceGate.description}
+          primaryAction={squadWorkspaceGate.primaryAction}
+          secondaryAction={squadWorkspaceGate.secondaryAction}
+          onPrimaryAction={squadWorkspaceGate.reason === 'missing_squad' ? () => setShowCreateSquadFlow(true) : undefined}
+        />
+      </div>
+    );
+  }
 
   return (
     <div ref={pullRef as React.RefObject<HTMLDivElement>} className="max-w-6xl mx-auto px-4 py-4 md:py-6 pb-24 md:pb-6 space-y-4 md:space-y-6 text-gray-900 dark:text-gray-100">
@@ -202,7 +249,7 @@ export default function SquadPage() {
           {/* Quick Stats — moved here so tab bar is near the top on mobile */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card className="text-center py-3">
-              <div className="text-2xl font-bold text-gray-900">{activeSquad?._count.members ?? 16}</div>
+              <div className="text-2xl font-bold text-gray-900">{activeSquad?.memberCount ?? 16}</div>
               <div className="text-sm text-gray-600">Players</div>
             </Card>
             <Card className="text-center py-3">
@@ -335,7 +382,18 @@ export default function SquadPage() {
       )}
 
       {activeTab === 'governance' && (
-        <SquadDAO />
+        governanceGate.status === 'blocked' ? (
+          <JourneyGateCard
+            icon={Vote}
+            eyebrow={governanceGate.eyebrow}
+            title={governanceGate.title}
+            description={governanceGate.description}
+            primaryAction={governanceGate.primaryAction}
+            secondaryAction={governanceGate.secondaryAction}
+          />
+        ) : (
+          <SquadDAO />
+        )
       )}
     </div>
   );
