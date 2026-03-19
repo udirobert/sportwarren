@@ -13,7 +13,30 @@ export interface NarrativeLedger {
     lastMatchResult?: string;
 }
 
-export const getNarrativeLedger = async (userId: string): Promise<NarrativeLedger> => {
+const resolveNarrativeUserId = async (userRef: string): Promise<string | null> => {
+    const directUser = await prisma.user.findUnique({
+        where: { id: userRef },
+        select: { id: true }
+    });
+
+    if (directUser) {
+        return directUser.id;
+    }
+
+    const walletUser = await prisma.user.findUnique({
+        where: { walletAddress: userRef },
+        select: { id: true }
+    });
+
+    return walletUser?.id ?? null;
+};
+
+export const getNarrativeLedger = async (userRef: string): Promise<NarrativeLedger | null> => {
+    const userId = await resolveNarrativeUserId(userRef);
+    if (!userId) {
+        return null;
+    }
+
     let memory = await prisma.aiMemory.findUnique({
         where: { userId }
     });
@@ -35,8 +58,12 @@ export const getNarrativeLedger = async (userId: string): Promise<NarrativeLedge
     };
 };
 
-export const updateNarrativeLedger = async (userId: string, entry: NarrativeEntry) => {
-    const ledger = await getNarrativeLedger(userId);
+export const updateNarrativeLedger = async (userRef: string, entry: NarrativeEntry) => {
+    const ledger = await getNarrativeLedger(userRef);
+    if (!ledger) {
+        return null;
+    }
+
     ledger.history.push(entry);
 
     // Keep only last 20 messages for context window management
@@ -45,7 +72,7 @@ export const updateNarrativeLedger = async (userId: string, entry: NarrativeEntr
     }
 
     await prisma.aiMemory.update({
-        where: { userId },
+        where: { userId: ledger.userId },
         data: {
             history: ledger.history as any
         }
@@ -54,13 +81,17 @@ export const updateNarrativeLedger = async (userId: string, entry: NarrativeEntr
     return ledger;
 };
 
-export const addKeyInsight = async (userId: string, insight: string) => {
-    const ledger = await getNarrativeLedger(userId);
+export const addKeyInsight = async (userRef: string, insight: string) => {
+    const ledger = await getNarrativeLedger(userRef);
+    if (!ledger) {
+        return null;
+    }
+
     if (!ledger.keyInsights.includes(insight)) {
         ledger.keyInsights.push(insight);
 
         await prisma.aiMemory.update({
-            where: { userId },
+            where: { userId: ledger.userId },
             data: {
                 keyInsights: ledger.keyInsights as any
             }
