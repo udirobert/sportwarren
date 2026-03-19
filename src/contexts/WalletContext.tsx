@@ -185,6 +185,8 @@ const computeAuthStatus = (
 interface WalletContextType {
   address: string | null;
   connected: boolean;
+  hasAccount: boolean;
+  hasWallet: boolean;
   isGuest: boolean;
   loginMethod: 'wallet' | 'social' | 'guest' | null;
   chain: 'algorand' | 'avalanche' | 'lens' | 'social' | null;
@@ -669,6 +671,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       value={{
         address,
         connected: !!address,
+        hasAccount: !!address && !isGuest,
+        hasWallet: !!address && !isGuest && isWalletChain(chain),
         isGuest,
         loginMethod,
         chain,

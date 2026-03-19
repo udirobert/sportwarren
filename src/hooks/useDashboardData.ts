@@ -15,12 +15,16 @@ interface DashboardStats {
 }
 
 interface UseDashboardDataReturn extends AsyncState<DashboardStats> {
-  isDemoData: boolean;
+  dataState: 'preview' | 'empty' | 'live';
   refetch: () => Promise<void>;
 }
 
-// Default/mock data for development
-const DEFAULT_STATS: DashboardStats = {
+interface UseDashboardDataOptions {
+  isGuest: boolean;
+  userAddress?: string;
+}
+
+const PREVIEW_STATS: DashboardStats = {
   goals: 12,
   assists: 8,
   matches: 15,
@@ -32,18 +36,32 @@ const DEFAULT_STATS: DashboardStats = {
   ],
 };
 
-export function useDashboardData(userAddress?: string): UseDashboardDataReturn {
+const EMPTY_STATS: DashboardStats = {
+  goals: 0,
+  assists: 0,
+  matches: 0,
+  rating: '0.0',
+  recentMatches: [],
+};
+
+export function useDashboardData({ isGuest, userAddress }: UseDashboardDataOptions): UseDashboardDataReturn {
   const [state, setState] = useState<AsyncState<DashboardStats>>({
     data: null,
     loading: true,
     error: null,
   });
-  const [isDemoData, setIsDemoData] = useState(false);
+  const [dataState, setDataState] = useState<'preview' | 'empty' | 'live'>('empty');
 
   const fetchData = useCallback(async () => {
+    if (isGuest) {
+      setDataState('preview');
+      setState(createSuccessState(PREVIEW_STATS));
+      return;
+    }
+
     if (!userAddress) {
-      setIsDemoData(true);
-      setState(createSuccessState(DEFAULT_STATS));
+      setDataState('empty');
+      setState(createSuccessState(EMPTY_STATS));
       return;
     }
 
@@ -55,10 +73,9 @@ export function useDashboardData(userAddress?: string): UseDashboardDataReturn {
       const IS_BACKEND_READY = false; // Toggle this once API is live
 
       if (!IS_BACKEND_READY) {
-        // Slow down slightly to simulate network for a better UI feel
-        await new Promise(resolve => setTimeout(resolve, 800));
-        setIsDemoData(true);
-        setState(createSuccessState(DEFAULT_STATS));
+        await new Promise(resolve => setTimeout(resolve, 300));
+        setDataState('empty');
+        setState(createSuccessState(EMPTY_STATS));
         return;
       }
 
@@ -70,19 +87,17 @@ export function useDashboardData(userAddress?: string): UseDashboardDataReturn {
       }
 
       const data = await response.json();
-      setIsDemoData(false);
+      setDataState('live');
       setState(createSuccessState(data));
     } catch {
-      // Only log if it's an actual unexpected error, not just a missing API in dev
-      if (userAddress) {
-        console.warn('Dashboard API not found. Reverting to mock data.');
+      if (userAddress && !isGuest) {
+        console.warn('Dashboard API not found. Reverting to an empty state for real users.');
       }
 
-      // Fallback to default data
-      setIsDemoData(true);
-      setState(createSuccessState(DEFAULT_STATS));
+      setDataState(isGuest ? 'preview' : 'empty');
+      setState(createSuccessState(isGuest ? PREVIEW_STATS : EMPTY_STATS));
     }
-  }, [userAddress]);
+  }, [isGuest, userAddress]);
 
   useEffect(() => {
     fetchData();
@@ -90,7 +105,7 @@ export function useDashboardData(userAddress?: string): UseDashboardDataReturn {
 
   return {
     ...state,
-    isDemoData,
+    dataState,
     refetch: fetchData,
   };
 }

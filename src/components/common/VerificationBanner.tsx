@@ -1,7 +1,6 @@
 "use client";
 
 import React from 'react';
-import Link from 'next/link';
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useWallet } from '@/contexts/WalletContext';
@@ -12,31 +11,11 @@ interface VerificationBannerProps {
 }
 
 export const VerificationBanner: React.FC<VerificationBannerProps> = ({ className }) => {
-  const { authStatus, refreshAuthSignature, isGuest, connected } = useWallet();
+  const { authStatus, refreshAuthSignature, isGuest, hasWallet } = useWallet();
   const { addToast } = useToast();
 
   if (isGuest) return null;
-
-  if (!connected) {
-    return (
-      <div className={`flex items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 ${className || ''}`}>
-        <div className="flex items-center gap-3">
-          <ShieldAlert className="w-4 h-4 text-blue-600" />
-          <div>
-            <div className="section-title text-blue-700">Connect Wallet</div>
-            <div className="text-sm text-blue-900">
-              Connect a wallet to unlock protected data and verify matches.
-            </div>
-          </div>
-        </div>
-        <Link href="/?connect=1">
-          <Button size="sm" className="h-9 text-xs font-black uppercase tracking-widest">
-            Connect
-          </Button>
-        </Link>
-      </div>
-    );
-  }
+  if (!hasWallet) return null;
 
   const needsVerification = authStatus.state === 'missing' || authStatus.state === 'expired';
   if (!needsVerification) return null;
