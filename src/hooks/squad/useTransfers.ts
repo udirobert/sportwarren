@@ -104,12 +104,18 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
       if (!squadId) return;
       utils.squad.getTransferOffers.invalidate({ squadId, type: 'incoming' });
       utils.squad.getTransferOffers.invalidate({ squadId, type: 'outgoing' });
+      utils.market.listScoutingFeed.invalidate({ squadId });
+      utils.market.listProspects.invalidate();
     },
   });
 
   // Respond mutation
   const respondMutation = trpc.squad.respondToTransferOffer.useMutation({
     onSuccess: () => {
+      if (squadId) {
+        utils.market.listScoutingFeed.invalidate({ squadId });
+      }
+      utils.market.listProspects.invalidate();
       refetchIncoming();
       refetchOutgoing();
     },
@@ -118,6 +124,10 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
   // Cancel mutation
   const cancelMutation = trpc.squad.cancelTransferOffer.useMutation({
     onSuccess: () => {
+      if (squadId) {
+        utils.market.listScoutingFeed.invalidate({ squadId });
+      }
+      utils.market.listProspects.invalidate();
       refetchIncoming();
       refetchOutgoing();
     },

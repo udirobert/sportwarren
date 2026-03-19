@@ -335,13 +335,13 @@ export interface TransferMarketPlayer {
   id: string;
   name: string;
   position: PlayerPosition;
-  age: number;
+  age?: number;
   ownerSquadId?: string;
   ownerSquadName?: string;
   overall: number;
   askingPrice: number;
   currentClub: string;
-  contractExpiry: Date;
+  contractExpiry?: Date | string | null;
   reputationScore: number;
   reputationTier: 'bronze' | 'silver' | 'gold' | 'platinum';
   isDraftEligible: boolean;
