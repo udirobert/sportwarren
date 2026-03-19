@@ -33,6 +33,11 @@ process.env.KAFKAJS_NO_PARTITIONER_WARNING = '1';
 
 const PORT = process.env.PORT || 4000;
 
+function isEnabled(value: string | undefined): boolean {
+  if (!value) return false;
+  return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
+}
+
 async function startServer() {
   // Initialize core services
   const dbService = new DatabaseService();
@@ -53,28 +58,36 @@ async function startServer() {
   // Initialize advanced services (each independently so one failure doesn't block others)
   await communicationBridge.initialize();
 
-  try {
-    await eventStreamService.initialize();
-  } catch (error) {
-    console.warn('⚠️ Kafka event streaming unavailable (non-fatal):', (error as Error).message);
+  if (isEnabled(process.env.ENABLE_EVENT_STREAMING)) {
+    try {
+      await eventStreamService.initialize();
+    } catch (error) {
+      console.warn('⚠️ Kafka event streaming unavailable (non-fatal):', (error as Error).message);
+    }
+  } else {
+    console.log('ℹ️ Kafka event streaming disabled (set ENABLE_EVENT_STREAMING=true to enable)');
   }
 
-  try {
-    const squadDAOAppId = await algorandService.deploySquadDAO();
-    if (squadDAOAppId) {
-      console.log(`Squad DAO deployed with ID: ${squadDAOAppId}`);
+  if (isEnabled(process.env.ALGORAND_AUTO_DEPLOY)) {
+    try {
+      const squadDAOAppId = await algorandService.deploySquadDAO();
+      if (squadDAOAppId) {
+        console.log(`Squad DAO deployed with ID: ${squadDAOAppId}`);
+      }
+    } catch (error) {
+      console.warn('⚠️ Squad DAO deployment skipped (non-fatal):', (error as Error).message);
     }
-  } catch (error) {
-    console.warn('⚠️ Squad DAO deployment skipped (non-fatal):', (error as Error).message);
-  }
 
-  try {
-    const matchVerificationAppId = await algorandService.deployMatchVerification();
-    if (matchVerificationAppId) {
-      console.log(`Match Verification deployed with ID: ${matchVerificationAppId}`);
+    try {
+      const matchVerificationAppId = await algorandService.deployMatchVerification();
+      if (matchVerificationAppId) {
+        console.log(`Match Verification deployed with ID: ${matchVerificationAppId}`);
+      }
+    } catch (error) {
+      console.warn('⚠️ Match Verification deployment skipped (non-fatal):', (error as Error).message);
     }
-  } catch (error) {
-    console.warn('⚠️ Match Verification deployment skipped (non-fatal):', (error as Error).message);
+  } else {
+    console.log('ℹ️ Algorand auto-deploy disabled (set ALGORAND_AUTO_DEPLOY=true to enable)');
   }
 
   // Create Express app and HTTP server
