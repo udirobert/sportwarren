@@ -1,5 +1,5 @@
 
-import { getVeniceClient, VENICE_MODEL_ID } from './venice';
+import { getOpenAIClient, getOptionalVeniceClient, OPENAI_MODEL_ID, VENICE_MODEL_ID } from './venice';
 import { getNarrativeLedger, updateNarrativeLedger } from './memory';
 
 export const MARCUS_SYSTEM_PROMPT = `You are Marcus, the Academy Director of SportWarren. 
@@ -18,11 +18,19 @@ const responseCache: Record<string, { reply: string, timestamp: number }> = {};
 const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
 export async function getMarcusResponse(message: string, context: { city?: string, venue?: string, history: any[], userId?: string }) {
-    const client = getVeniceClient();
     const { city, venue, history, userId } = context;
+    const veniceClient = getOptionalVeniceClient();
+    const openaiClient = getOpenAIClient();
 
-    // Retrieve ledger if userId is available
-    const ledger = userId ? await getNarrativeLedger(userId) : null;
+    // Guest sessions and raw wallet addresses should not hard-fail chat persistence.
+    let ledger = null;
+    if (userId) {
+        try {
+            ledger = await getNarrativeLedger(userId);
+        } catch (error) {
+            console.warn('[Marcus] Narrative ledger unavailable:', error);
+        }
+    }
     const keyInsights = ledger?.keyInsights.join(". ") || "";
 
     // Check cache
@@ -34,26 +42,52 @@ export async function getMarcusResponse(message: string, context: { city?: strin
     const contextPrefix = city && venue ? `[Context: ${city} Chapter near ${venue}] ` : '';
     const memoryPrefix = keyInsights ? `[Previous Insights: ${keyInsights}] ` : '';
 
-    const response = await client.chat.completions.create({
-        model: VENICE_MODEL_ID,
-        messages: [
-            { role: 'system', content: MARCUS_SYSTEM_PROMPT },
-            ...history,
-            { role: 'user', content: contextPrefix + memoryPrefix + message }
-        ],
-        temperature: 0.7,
-        max_tokens: 150,
-    });
+    const messages = [
+        { role: 'system' as const, content: MARCUS_SYSTEM_PROMPT },
+        ...history,
+        { role: 'user' as const, content: contextPrefix + memoryPrefix + message }
+    ];
 
-    const reply = response.choices[0]?.message?.content || "Signals weak. Focus on the tactical layout.";
+    if (!veniceClient && !openaiClient) {
+        return "Tactical systems are in offline mode. Connect your identity and I will guide your next move.";
+    }
+
+    let reply = "Signals weak. Focus on the tactical layout.";
+    try {
+        const response = await (veniceClient ?? openaiClient)!.chat.completions.create({
+            model: veniceClient ? VENICE_MODEL_ID : OPENAI_MODEL_ID,
+            messages,
+            temperature: 0.7,
+            max_tokens: 150,
+        });
+
+        reply = response.choices[0]?.message?.content || reply;
+    } catch (error) {
+        if (veniceClient && openaiClient) {
+            const fallbackResponse = await openaiClient.chat.completions.create({
+                model: OPENAI_MODEL_ID,
+                messages,
+                temperature: 0.7,
+                max_tokens: 150,
+            });
+
+            reply = fallbackResponse.choices[0]?.message?.content || reply;
+        } else {
+            throw error;
+        }
+    }
 
     // Save to cache
     responseCache[cacheKey] = { reply, timestamp: Date.now() };
 
     // Update ledger
     if (userId) {
-        await updateNarrativeLedger(userId, { role: 'user', content: message, timestamp: Date.now() });
-        await updateNarrativeLedger(userId, { role: 'assistant', content: reply, timestamp: Date.now() });
+        try {
+            await updateNarrativeLedger(userId, { role: 'user', content: message, timestamp: Date.now() });
+            await updateNarrativeLedger(userId, { role: 'assistant', content: reply, timestamp: Date.now() });
+        } catch (error) {
+            console.warn('[Marcus] Narrative ledger update skipped:', error);
+        }
     }
 
     return reply;

@@ -3,11 +3,14 @@ import { NextResponse } from 'next/server';
 import { getMarcusResponse } from '@/lib/ai/marcus';
 
 export async function POST(request: Request) {
-    const { message, city, venue, history, userId } = await request.json();
-
     try {
+        const { message, city, venue, history, userId } = await request.json();
+        if (!message || typeof message !== 'string') {
+            return NextResponse.json({ error: 'Message is required' }, { status: 400 });
+        }
+
         const response = await getMarcusResponse(message, { city, venue, history, userId });
-        return NextResponse.json({ response });
+        return NextResponse.json({ response, degraded: false });
     } catch (error: any) {
         console.error('[VENICE-AI] Chat failed:', error);
 
@@ -17,8 +20,9 @@ export async function POST(request: Request) {
             : "Strategic analysis interrupted. Re-synchronize your link.";
 
         return NextResponse.json({
-            error: 'Inference failed',
-            response: fallback
-        }, { status: 500 });
+            error: 'Inference degraded',
+            response: fallback,
+            degraded: true
+        });
     }
 }

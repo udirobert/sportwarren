@@ -71,7 +71,7 @@ export const AgenticConcierge: React.FC = () => {
                                 city,
                                 venue,
                                 history: [],
-                                userId: address || 'guest-marcus'
+                                userId: address || undefined
                             })
                         });
                         const data = await res.json();
@@ -131,7 +131,7 @@ export const AgenticConcierge: React.FC = () => {
                     city,
                     venue,
                     history,
-                    userId: address || 'guest-marcus'
+                    userId: address || undefined
                 })
             });
 
