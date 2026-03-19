@@ -4,17 +4,23 @@ import Link from "next/link";
 import { PlayerReputation } from "@/components/player/PlayerReputation";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/common/EmptyState";
 import { Target, History, CheckCircle, Clock, Trophy } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { useMySquads } from "@/hooks/squad/useSquad";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
 import { VerificationBanner } from "@/components/common/VerificationBanner";
+import { getJourneyZeroState } from "@/lib/journey/content";
+import { useJourneyState } from "@/hooks/useJourneyState";
 
 import { AchievementGallery } from "@/components/player/AchievementGallery";
 
 function ReputationPageInner() {
+  const { journeyStage } = useJourneyState();
   const { memberships } = useMySquads();
   const primarySquadId = memberships?.[0]?.squad?.id;
+  const noSquadState = getJourneyZeroState(journeyStage, 'reputation_no_squad');
+  const emptyReputationState = getJourneyZeroState(journeyStage, 'reputation_empty');
 
   const { data: matchData, isLoading } = trpc.match.list.useQuery(
     { squadId: primarySquadId, limit: 8 },
@@ -60,10 +66,14 @@ function ReputationPageInner() {
               </Link>
             </div>
             {!primarySquadId ? (
-              <div className="text-center py-8 text-gray-500">
-                <p className="text-sm">Join or create a squad to see your match contributions.</p>
-                <Link href="/squad"><Button size="sm" className="mt-3">Go to Squad</Button></Link>
-              </div>
+              <EmptyState
+                icon={Trophy}
+                title={noSquadState.title}
+                description={noSquadState.description}
+                actionLabel={noSquadState.actionLabel}
+                actionHref={noSquadState.actionHref}
+                className="py-8"
+              />
             ) : isLoading ? (
               <div className="space-y-3">{[...Array(4)].map((_, i) => <div key={i} className="h-14 bg-gray-100 rounded animate-pulse" />)}</div>
             ) : matchData?.matches && matchData.matches.length > 0 ? (
@@ -102,10 +112,14 @@ function ReputationPageInner() {
                 })}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
-                <p className="text-sm">No matches yet. Play and verify matches to earn reputation.</p>
-                <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Submit a Match</Button></Link>
-              </div>
+              <EmptyState
+                icon={Trophy}
+                title={emptyReputationState.title}
+                description={emptyReputationState.description}
+                actionLabel={emptyReputationState.actionLabel}
+                actionHref={emptyReputationState.actionHref}
+                className="py-8"
+              />
             )}
           </Card>
         </div>

@@ -5,7 +5,9 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Target, BarChart3, Users, MessageCircle, X, Plus, Activity, Settings, MoreHorizontal, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/contexts/ThemeContext';
+import { getJourneyNavigationSubtitle } from '@/lib/journey/content';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { useJourneyState } from '@/hooks/useJourneyState';
 import { ContextualHelp } from './ContextualHelp';
 
 const BOTTOM_NAV_MAX = 5;
@@ -22,9 +24,11 @@ const NAV_SHORTCUTS: Record<string, string> = {
 export const SmartNavigation: React.FC = () => {
   const pathname = usePathname();
   const { preferences, trackFeatureUsage } = useUserPreferences();
+  const { journeyStage, nextAction } = useJourneyState();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [hasUnconnectedPlatforms, setHasUnconnectedPlatforms] = useState(false);
+  const needsJourneySetup = journeyStage !== 'returning_manager';
 
   // Check for unconnected platforms to show badge on Settings
   useEffect(() => {
@@ -200,10 +204,10 @@ export const SmartNavigation: React.FC = () => {
     {
       id: 'navigation-help',
       title: 'Navigation Tips',
-      content: 'Use the navigation to explore different features. More options will unlock as you use the app!',
+      content: `Next best action: ${nextAction.label}. The rest of the navigation becomes more useful once that step is done.`,
       trigger: 'auto' as const,
       position: 'bottom' as const,
-      showCondition: () => preferences.featureDiscoveryLevel < 20,
+      showCondition: () => preferences.featureDiscoveryLevel < 20 || needsJourneySetup,
     },
   ];
 
@@ -223,7 +227,7 @@ export const SmartNavigation: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">SportWarren</h1>
-                <p className="text-xs text-gray-600 dark:text-gray-400">Track your legend</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400">{getJourneyNavigationSubtitle(journeyStage)}</p>
               </div>
             </Link>
 
@@ -242,6 +246,9 @@ export const SmartNavigation: React.FC = () => {
                   >
                     <div className="relative">
                       <Icon className="w-4 h-4" />
+                      {path === '/dashboard' && needsJourneySetup && (
+                        <span className="absolute -top-1 -right-1 w-2 h-2 bg-sky-500 rounded-full animate-pulse" />
+                      )}
                       {badge === 'connections' && hasUnconnectedPlatforms && (
                         <span className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
                       )}
@@ -323,6 +330,9 @@ export const SmartNavigation: React.FC = () => {
             >
               <div className="relative">
                 <Icon className={`w-5 h-5 mb-0.5 transition-transform ${isActive(path) ? 'scale-110' : ''}`} />
+                {path === '/dashboard' && needsJourneySetup && (
+                  <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-sky-500 rounded-full animate-pulse" />
+                )}
                 {badge === 'connections' && hasUnconnectedPlatforms && (
                   <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-orange-500 rounded-full animate-pulse" />
                 )}
