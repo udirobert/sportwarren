@@ -9,7 +9,7 @@ import { getJourneyStage } from '@/lib/journey/stage';
 
 export function useJourneyState() {
   const { hasAccount, hasWallet, isGuest, authStatus, isVerified } = useWallet();
-  const { memberships } = useMySquads();
+  const { memberships, refresh } = useMySquads();
   const { completedCount, totalCount } = useOnboarding();
 
   const squadCount = memberships.length;
@@ -39,6 +39,8 @@ export function useJourneyState() {
     journeyStage,
     journeyContent,
     nextAction,
+    memberships,
+    refreshSquads: refresh,
     hasAccount,
     hasWallet,
     isGuest,

@@ -13,6 +13,7 @@ import { useMatchVerification } from "@/hooks/match/useMatchVerification";
 import { useMatchCenterData } from "@/hooks/match/useMatchCenterData";
 import { useWallet } from "@/contexts/WalletContext";
 import { VerificationBanner } from "@/components/common/VerificationBanner";
+import { JourneyGateCard } from "@/components/common/JourneyGateCard";
 import {
   Trophy,
   Shield,
@@ -29,7 +30,9 @@ import {
   Info,
 } from "lucide-react";
 import { MOCK_XP_SUMMARY } from "@/lib/mocks";
+import { getJourneyActionGate } from "@/lib/journey/action-gates";
 import { useOnboarding } from "@/hooks/useOnboarding";
+import { useJourneyState } from "@/hooks/useJourneyState";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { trackCoreGrowthEvent, trackFeatureUsed, trackMatchSubmission } from "@/lib/analytics";
 
@@ -45,9 +48,21 @@ export default function MatchPage() {
   const [selectedOpponentId, setSelectedOpponentId] = useState<string>("");
   const [lastSubmittedMatchId, setLastSubmittedMatchId] = useState<string | null>(null);
   const [inviteShareState, setInviteShareState] = useState<"idle" | "copied" | "shared" | "error">("idle");
-  const { isVerified } = useWallet();
+  const { chain, hasAccount, hasWallet, isVerified } = useWallet();
+  const { journeyStage, memberships } = useJourneyState();
+  const activeMembership = memberships[0];
+  const activeSquad = activeMembership?.squad;
+  const activeSquadId = activeSquad?.id;
+  const matchCenterGate = getJourneyActionGate('match_center', {
+    stage: journeyStage,
+    hasAccount,
+    hasWallet,
+    isVerified,
+    hasSquad: Boolean(activeSquadId),
+    chain,
+  });
 
-  const { activeSquad, activeSquadId, availableOpponents } = useMatchCenterData(isVerified);
+  const { availableOpponents } = useMatchCenterData(activeSquadId);
 
   const {
     matches,
@@ -222,24 +237,17 @@ export default function MatchPage() {
     }
   };
 
-  if (!activeSquadId || !activeSquad) {
+  if (matchCenterGate.status === "blocked") {
     return (
       <div className="mx-auto max-w-4xl px-4 py-6 text-gray-900 dark:text-gray-100">
-        <Card className="py-12 text-center border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-white">
-          <Trophy className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-          <h1 className="mb-2 text-2xl font-bold text-gray-900">Match Center</h1>
-          <p className="mx-auto mb-6 max-w-md text-gray-600">
-            Join or create a squad before submitting or verifying matches.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/squad">
-              <Button>Create or Join Squad</Button>
-            </Link>
-            <Link href="/dashboard">
-              <Button variant="outline">Back to Dashboard</Button>
-            </Link>
-          </div>
-        </Card>
+        <JourneyGateCard
+          icon={Trophy}
+          eyebrow={matchCenterGate.eyebrow}
+          title={matchCenterGate.title}
+          description={matchCenterGate.description}
+          primaryAction={matchCenterGate.primaryAction}
+          secondaryAction={matchCenterGate.secondaryAction}
+        />
       </div>
     );
   }
@@ -435,10 +443,15 @@ export default function MatchPage() {
                 onSubmit={handleMatchSubmit}
               />
             ) : (
-              <Card className="py-10 text-center">
-                <AlertCircle className="mx-auto mb-3 h-10 w-10 text-amber-500" />
-                <p className="text-gray-600">Add another squad to unlock live match submission.</p>
-              </Card>
+              <JourneyGateCard
+                icon={Users}
+                eyebrow="Opponent Needed"
+                title="Add another squad before submitting a live match"
+                description="The match center needs a second squad in the network so the result can be challenged, verified, and carried into the community surfaces."
+                primaryAction={{ label: "Browse community squads", href: "/community" }}
+                secondaryAction={{ label: "Back to squad console", href: "/squad" }}
+                className="py-10"
+              />
             )}
           </div>
 
