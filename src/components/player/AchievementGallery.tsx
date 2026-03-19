@@ -4,9 +4,39 @@ import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { Trophy, Award, Shield, Star, ExternalLink, Loader2 } from 'lucide-react';
 import { useAchievements } from '@/hooks/useAchievements';
+import { useWallet } from '@/contexts/WalletContext';
 
 export const AchievementGallery: React.FC = () => {
+  const { address, chain, hasWallet } = useWallet();
   const { achievements, loading, error } = useAchievements();
+
+  if (!hasWallet || !address) {
+    return (
+      <Card className="p-8 text-center bg-gray-50 border-dashed border-2 border-gray-200">
+        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+          <Shield className="w-8 h-8 text-gray-300" />
+        </div>
+        <h4 className="text-lg font-semibold text-gray-900">Connect a Wallet for Trophy Sync</h4>
+        <p className="text-gray-500 text-sm mt-2 max-w-xs mx-auto">
+          On-chain trophies are tied to a wallet address. Your live season milestones still show in the reputation card above.
+        </p>
+      </Card>
+    );
+  }
+
+  if (chain !== 'avalanche') {
+    return (
+      <Card className="p-8 text-center bg-gray-50 border-dashed border-2 border-gray-200">
+        <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
+          <Trophy className="w-8 h-8 text-gray-300" />
+        </div>
+        <h4 className="text-lg font-semibold text-gray-900">Avalanche Trophy Rail</h4>
+        <p className="text-gray-500 text-sm mt-2 max-w-xs mx-auto">
+          Achievement NFTs are published on Avalanche. Switch to an Avalanche wallet to browse on-chain trophies for this account.
+        </p>
+      </Card>
+    );
+  }
 
   if (loading) {
     return (
@@ -33,7 +63,7 @@ export const AchievementGallery: React.FC = () => {
         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
           <Award className="w-8 h-8 text-gray-300" />
         </div>
-        <h4 className="text-lg font-semibold text-gray-900">No Trophies Yet</h4>
+        <h4 className="text-lg font-semibold text-gray-900">No On-Chain Trophies Yet</h4>
         <p className="text-gray-500 text-sm mt-2 max-w-xs mx-auto">
           Win matches, complete challenges, and earn verified on-chain achievements on the Avalanche Fuji network.
         </p>

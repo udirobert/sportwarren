@@ -9,13 +9,19 @@ const AttributeType = z.enum([
   'gk_diving', 'gk_handling', 'gk_kicking', 'gk_reflexes', 'gk_speed', 'gk_positioning'
 ]);
 
+const playerProfileInclude = {
+  attributes: true,
+  formHistory: {
+    orderBy: { createdAt: 'desc' },
+    take: 5,
+  },
+  user: { select: { name: true, avatar: true, position: true, walletAddress: true } },
+} as const;
+
 async function ensurePlayerProfile(prisma: any, userId: string) {
   let profile = await prisma.playerProfile.findUnique({
     where: { userId },
-    include: {
-      attributes: true,
-      user: { select: { name: true, avatar: true } }
-    },
+    include: playerProfileInclude,
   });
 
   if (profile) {
@@ -47,10 +53,7 @@ async function ensurePlayerProfile(prisma: any, userId: string) {
         ],
       },
     },
-    include: {
-      attributes: true,
-      user: { select: { name: true, avatar: true } }
-    },
+    include: playerProfileInclude,
   });
 }
 

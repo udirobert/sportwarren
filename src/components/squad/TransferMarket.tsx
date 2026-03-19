@@ -15,7 +15,9 @@ interface TransferMarketProps {
   squadBalance: number;
   incomingOffers?: TransferOffer[];
   outgoingOffers?: TransferOffer[];
-  availablePlayers?: TransferMarketPlayer[];
+  marketListings?: TransferMarketPlayer[];
+  draftProspects?: TransferMarketPlayer[];
+  marketFeedLoading?: boolean;
   currencyLabel?: string;
   paymentRailEnabled?: boolean;
   onMakeOffer?: (playerId: string, targetSquadId: string, amount: number, type: 'transfer' | 'loan') => void;
@@ -26,7 +28,9 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
   squadBalance,
   incomingOffers = [],
   outgoingOffers = [],
-  availablePlayers = [],
+  marketListings = [],
+  draftProspects = [],
+  marketFeedLoading = false,
   currencyLabel = 'ALGO',
   paymentRailEnabled = false,
   onMakeOffer,
@@ -39,19 +43,18 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
   const [offerAmount, setOfferAmount] = useState('');
   const [offerType, setOfferType] = useState<'transfer' | 'loan'>('transfer');
 
-  const filteredPlayers = availablePlayers.filter((player) => {
+  const filteredPlayers = marketListings.filter((player) => {
     const matchesSearch = player.name.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesPosition = positionFilter === 'all' || player.position === positionFilter;
     return matchesSearch && matchesPosition;
   });
-  const draftProspects = availablePlayers.filter((player) => player.isDraftEligible);
-  const hasLiveListings = availablePlayers.length > 0;
+  const hasLiveListings = marketListings.length > 0;
 
   useEffect(() => {
-    if (activeTab === 'browse' && !hasLiveListings && incomingOffers.length === 0 && outgoingOffers.length === 0) {
+    if (activeTab === 'browse' && !marketFeedLoading && !hasLiveListings && incomingOffers.length === 0 && outgoingOffers.length === 0) {
       setActiveTab('drafts');
     }
-  }, [activeTab, hasLiveListings, incomingOffers.length, outgoingOffers.length]);
+  }, [activeTab, hasLiveListings, incomingOffers.length, marketFeedLoading, outgoingOffers.length]);
 
   const handleMakeOffer = () => {
     if (selectedPlayer?.ownerSquadId && offerAmount) {
@@ -89,7 +92,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
       {/* Tabs */}
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
         {[
-          { key: 'browse', label: 'Listings', count: availablePlayers.length },
+          { key: 'browse', label: 'Scouting Feed', count: marketListings.length },
           { key: 'drafts', label: 'Drafts', count: draftProspects.length },
           { key: 'offers', label: 'Market Feed', count: incomingOffers.length + outgoingOffers.length },
         ].map(({ key, label, count }) => (
@@ -129,7 +132,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Search players..."
+                  placeholder="Search the scouting feed..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
@@ -151,7 +154,13 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
           </Card>
 
           {/* Player List */}
-          {hasLiveListings ? (
+          {marketFeedLoading ? (
+            <Card className="text-center py-12">
+              <Search className="w-12 h-12 text-gray-300 mx-auto mb-4 animate-pulse" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading live scouting feed</h3>
+              <p className="text-gray-600">Pulling current squad targets and free-agent signals from the network.</p>
+            </Card>
+          ) : hasLiveListings ? (
             filteredPlayers.length > 0 ? (
               <div className="grid md:grid-cols-2 gap-4">
                 {filteredPlayers.map((player) => (
@@ -173,9 +182,8 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                           </div>
                           <div className="flex items-center space-x-2 text-xs mt-0.5">
                             <span className="px-1.5 py-0.5 bg-gray-100 rounded font-mono text-gray-600">{player.position}</span>
-                            <span className="text-gray-400">AGE {player.age}</span>
-                            {player.isDraftEligible && (
-                              <span className="text-blue-500 font-black tracking-tighter uppercase italic">Draft Eligible</span>
+                            {typeof player.age === 'number' && (
+                              <span className="text-gray-400">AGE {player.age}</span>
                             )}
                           </div>
                         </div>
@@ -197,7 +205,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                         </div>
                       </div>
                       <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
-                        <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Asking Price</div>
+                        <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Suggested Opening Offer</div>
                         <div className="text-sm font-bold text-blue-600">{player.askingPrice.toLocaleString()} {currencyLabel}</div>
                       </div>
                     </div>
@@ -212,16 +220,16 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
             ) : (
               <Card className="text-center py-12">
                 <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">No listings match this search</h3>
-                <p className="text-gray-600">Try a different position filter or clear the search to review the live market feed.</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No scouting targets match this search</h3>
+                <p className="text-gray-600">Try a different position filter or clear the search to review the live scouting feed.</p>
               </Card>
             )
           ) : (
             <Card className="text-center py-12">
               <ArrowRightLeft className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No live transfer listings yet</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No rival squad targets surfaced yet</h3>
               <p className="text-gray-600 mb-4">
-                This squad has no published player listings in the live network right now. Use the draft engine or wait for another squad to open the market.
+                The live scouting feed is quiet right now. Use the draft engine for free agents or wait for more squad activity to surface new targets.
               </p>
               <Button onClick={() => setActiveTab('drafts')}>
                 Open Draft Engine
@@ -269,12 +277,12 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                       type="number"
                       value={offerAmount}
                       onChange={(e) => setOfferAmount(e.target.value)}
-                      placeholder={`Asking: ${selectedPlayer.askingPrice}`}
+                      placeholder={`Guide: ${selectedPlayer.askingPrice}`}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
                     />
                   </div>
                   <p className="text-sm text-gray-500 mt-1">
-                    Asking price: {selectedPlayer.askingPrice.toLocaleString()} {currencyLabel}
+                    Suggested opening offer: {selectedPlayer.askingPrice.toLocaleString()} {currencyLabel}
                   </p>
                   {!selectedPlayer.ownerSquadId && (
                     <p className="text-sm text-amber-600 mt-1">
@@ -410,11 +418,11 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
       {/* Drafts Tab */}
       {activeTab === 'drafts' && (
         <div className="space-y-6">
-          <DraftEngine />
+          <DraftEngine prospects={draftProspects} loading={marketFeedLoading} />
 
           {draftProspects.length > 0 && (
             <div>
-              <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-4 px-1">Published Prospects</h3>
+              <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-4 px-1">Live Free Agents</h3>
               <div className="grid md:grid-cols-2 gap-4">
                 {draftProspects.map((player) => (
                   <Card key={player.id} className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all cursor-pointer group">
@@ -426,14 +434,16 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                         <div>
                           <div className="flex items-center space-x-2">
                             <h4 className="font-bold text-gray-900">{player.name}</h4>
-                            <span className="text-[8px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded uppercase">U21</span>
+                            <span className="text-[8px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded uppercase">
+                              {typeof player.age === 'number' && player.age <= 21 ? 'U21' : 'Free Agent'}
+                            </span>
                           </div>
-                          <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">PUBLISHED SCOUTING SIGNAL</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">LIVE SCOUTING SIGNAL</p>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-[10px] font-black text-blue-600 uppercase">Valuation</div>
-                        <div className="text-sm font-black text-gray-900">{(player.marketValuation * 1.2).toLocaleString()}</div>
+                        <div className="text-[10px] font-black text-blue-600 uppercase">Suggested Bonus</div>
+                        <div className="text-sm font-black text-gray-900">{player.askingPrice.toLocaleString()}</div>
                       </div>
                     </div>
                   </Card>

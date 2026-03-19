@@ -25,10 +25,50 @@ import { useSquadDetails } from "@/hooks/squad/useSquad";
 import { useWallet } from "@/contexts/WalletContext";
 import { VerificationBanner } from "@/components/common/VerificationBanner";
 import { getJourneyActionGate } from "@/lib/journey/action-gates";
+import { describeMatchForSquad } from "@/lib/match/summary";
 import { useJourneyState } from "@/hooks/useJourneyState";
 import type { Player, PlayerPosition, Tactics, Formation, PlayStyle, TeamInstructions } from "@/types";
 
 type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance";
+
+const PLAY_STYLE_LABELS: Record<PlayStyle, string> = {
+  balanced: "Balanced",
+  possession: "Possession",
+  direct: "Direct",
+  counter: "Counter Attack",
+  high_press: "High Press",
+  low_block: "Low Block",
+};
+
+type OverviewEvent = {
+  id: string;
+  title: string;
+  detail: string;
+  href: string;
+  timestamp: number;
+};
+
+function parseTimestamp(value: unknown): number {
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+
+  if (typeof value === "string" || typeof value === "number") {
+    const parsed = new Date(value).getTime();
+    return Number.isNaN(parsed) ? 0 : parsed;
+  }
+
+  return 0;
+}
+
+function formatDateLabel(value: unknown, options?: Intl.DateTimeFormatOptions): string {
+  const timestamp = parseTimestamp(value);
+  if (timestamp === 0) {
+    return "Not available";
+  }
+
+  return new Date(timestamp).toLocaleDateString(undefined, options);
+}
 
 export default function SquadPage() {
   const router = useRouter();
@@ -38,8 +78,7 @@ export default function SquadPage() {
   const { journeyStage, memberships, refreshSquads } = useJourneyState();
 
   const activeMembership = memberships?.[0];
-  const activeSquad = activeMembership?.squad;
-  const activeSquadId = activeSquad?.id;
+  const activeSquadId = activeMembership?.squad?.id;
   const squadWorkspaceGate = getJourneyActionGate('squad_workspace', {
     stage: journeyStage,
     hasAccount,
@@ -56,15 +95,24 @@ export default function SquadPage() {
     hasSquad: Boolean(activeSquadId),
     chain,
   });
-  const { members } = useSquadDetails(activeSquadId);
+  const { squad: detailedSquad, members } = useSquadDetails(activeSquadId);
+  const activeSquad = detailedSquad ?? activeMembership?.squad;
 
   const { checklistItems } = useOnboarding();
   const squadChecklistDone = checklistItems.find(i => i.id === 'open_office')?.completed ?? false;
 
   const treasuryState = useTreasury(activeSquadId);
   const transfersState = useTransfers(activeSquadId);
+  const { data: recentMatchesData, isLoading: recentMatchesLoading } = trpc.match.list.useQuery(
+    { squadId: activeSquadId, limit: 5 },
+    { enabled: !!activeSquadId, staleTime: 30 * 1000 }
+  );
+  const { data: scoutingFeed, isLoading: scoutingFeedLoading } = trpc.market.listScoutingFeed.useQuery(
+    { squadId: activeSquadId || '' },
+    { enabled: !!activeSquadId && isVerified, staleTime: 30 * 1000 }
+  );
 
-  const squadBalance = treasuryState.treasury?.balance ?? activeSquad?.treasuryBalance ?? 15000;
+  const squadBalance = treasuryState.treasury?.balance ?? activeSquad?.treasuryBalance ?? 0;
   const squadCurrency = treasuryState.treasury?.currency ?? "ALGO";
   const activeOffers = transfersState.incomingOffers.length + transfersState.outgoingOffers.length;
 
@@ -106,6 +154,144 @@ export default function SquadPage() {
       setPieces: (data as { setPieces: unknown }).setPieces as Tactics['setPieces'],
     };
   }, [tacticsData]);
+
+  const squadSize = members.length || activeSquad?.memberCount || 0;
+  const captain = useMemo(() => members.find((member) => member.role === 'captain') ?? null, [members]);
+  const viceCaptains = useMemo(() => members.filter((member) => member.role === 'vice_captain'), [members]);
+  const averageLevel = useMemo(() => {
+    if (members.length === 0) {
+      return null;
+    }
+
+    return Math.round(
+      members.reduce((total, member) => total + (member.stats?.level ?? 0), 0) / members.length
+    );
+  }, [members]);
+  const positionCounts = useMemo(() => (
+    members.reduce<Record<string, number>>((counts, member) => {
+      if (member.position) {
+        counts[member.position] = (counts[member.position] ?? 0) + 1;
+      }
+      return counts;
+    }, {})
+  ), [members]);
+  const coveredPositions = Object.keys(positionCounts).length;
+  const missingPositions = useMemo(
+    () => ['GK', 'DF', 'MF', 'ST', 'WG'].filter((position) => !positionCounts[position]),
+    [positionCounts]
+  );
+  const rotationGap = Math.max(0, 8 - squadSize);
+  const lineupSlots = useMemo(() => {
+    const rawLineup = (tacticsData as { lineup?: unknown } | undefined)?.lineup;
+    if (!Array.isArray(rawLineup)) {
+      return 0;
+    }
+
+    return rawLineup.filter(Boolean).length;
+  }, [tacticsData]);
+  const recentMatches = useMemo(() => recentMatchesData?.matches ?? [], [recentMatchesData]);
+  const pendingReviewCount = useMemo(
+    () => recentMatches.filter((match: any) => match.status === 'pending').length,
+    [recentMatches]
+  );
+  const settledRecentMatches = useMemo(
+    () => recentMatches.filter((match: any) => match.status === 'verified' || match.status === 'finalized'),
+    [recentMatches]
+  );
+  const recentRecord = useMemo(() => {
+    let wins = 0;
+    let draws = 0;
+    let losses = 0;
+
+    settledRecentMatches.forEach((match: any) => {
+      const summary = describeMatchForSquad(match, activeSquadId);
+      if (summary.result === 'W') wins += 1;
+      if (summary.result === 'D') draws += 1;
+      if (summary.result === 'L') losses += 1;
+    });
+
+    return {
+      wins,
+      draws,
+      losses,
+      label: settledRecentMatches.length > 0 ? `${wins}-${draws}-${losses}` : 'No results',
+      form: settledRecentMatches.length > 0
+        ? settledRecentMatches.map((match: any) => describeMatchForSquad(match, activeSquadId).result).join('')
+        : 'No verified results yet',
+    };
+  }, [activeSquadId, settledRecentMatches]);
+  const overviewEvents = useMemo<OverviewEvent[]>(() => {
+    const events: OverviewEvent[] = [];
+
+    recentMatches.slice(0, 3).forEach((match: any) => {
+      const summary = describeMatchForSquad(match, activeSquadId);
+      const createdAt = parseTimestamp(match.createdAt || match.matchDate);
+      const statusLabel =
+        match.status === 'pending'
+          ? 'Awaiting verification'
+          : match.status === 'verified'
+            ? 'Verified result'
+            : match.status === 'finalized'
+              ? 'Finalized result'
+              : 'Match updated';
+
+      events.push({
+        id: `match-${match.id}`,
+        title: match.status === 'pending'
+          ? `${match.homeSquad?.name || 'Home squad'} vs ${match.awaySquad?.name || 'Away squad'} needs review`
+          : `${summary.result} ${summary.goalsFor}-${summary.goalsAgainst} vs ${summary.opponent}`,
+        detail: `${statusLabel} • ${formatDateLabel(match.createdAt || match.matchDate, { month: 'short', day: 'numeric' })}`,
+        href: `/match?mode=detail&matchId=${match.id}`,
+        timestamp: createdAt,
+      });
+    });
+
+    const incomingOffer = transfersState.incomingOffers[0];
+    if (incomingOffer) {
+      events.push({
+        id: `incoming-offer-${incomingOffer.id}`,
+        title: `${incomingOffer.fromSquadName || incomingOffer.fromSquad} made an offer for ${incomingOffer.player.name}`,
+        detail: `${incomingOffer.offerAmount.toLocaleString()} ${squadCurrency} • review in transfers`,
+        href: '/squad?tab=transfers',
+        timestamp: incomingOffer.timestamp.getTime(),
+      });
+    }
+
+    const outgoingOffer = transfersState.outgoingOffers[0];
+    if (outgoingOffer) {
+      events.push({
+        id: `outgoing-offer-${outgoingOffer.id}`,
+        title: `Offer sent for ${outgoingOffer.player.name}`,
+        detail: `${outgoingOffer.offerAmount.toLocaleString()} ${squadCurrency} to ${outgoingOffer.toSquadName || outgoingOffer.toSquad}`,
+        href: '/squad?tab=transfers',
+        timestamp: outgoingOffer.timestamp.getTime(),
+      });
+    }
+
+    const latestTreasuryTransaction = treasuryState.treasury?.transactions[0];
+    if (latestTreasuryTransaction) {
+      const verb = latestTreasuryTransaction.type === 'income' ? 'Treasury funded' : 'Treasury spend logged';
+      events.push({
+        id: `treasury-${latestTreasuryTransaction.id}`,
+        title: `${verb}: ${latestTreasuryTransaction.amount.toLocaleString()} ${squadCurrency}`,
+        detail: latestTreasuryTransaction.description || 'Latest treasury ledger entry',
+        href: '/squad?tab=treasury',
+        timestamp: latestTreasuryTransaction.timestamp.getTime(),
+      });
+    }
+
+    return events
+      .filter((event) => event.timestamp > 0)
+      .sort((left, right) => right.timestamp - left.timestamp)
+      .slice(0, 4);
+  }, [
+    activeSquadId,
+    recentMatches,
+    squadCurrency,
+    transfersState.incomingOffers,
+    transfersState.outgoingOffers,
+    treasuryState.treasury?.transactions,
+  ]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -249,7 +435,7 @@ export default function SquadPage() {
           {/* Quick Stats — moved here so tab bar is near the top on mobile */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Card className="text-center py-3">
-              <div className="text-2xl font-bold text-gray-900">{activeSquad?.memberCount ?? 16}</div>
+              <div className="text-2xl font-bold text-gray-900">{squadSize}</div>
               <div className="text-sm text-gray-600">Players</div>
             </Card>
             <Card className="text-center py-3">
@@ -257,37 +443,94 @@ export default function SquadPage() {
               <div className="text-sm text-gray-600">{squadCurrency} Balance</div>
             </Card>
             <Card className="text-center py-3">
-              <div className="text-2xl font-bold text-blue-600">4-3-3</div>
+              <div className="text-2xl font-bold text-blue-600">{initialTactics?.formation ?? 'Unset'}</div>
               <div className="text-sm text-gray-600">Formation</div>
             </Card>
             <Card className="text-center py-3">
-              <div className="text-2xl font-bold text-purple-600">{activeOffers}</div>
-              <div className="text-sm text-gray-600">Active Offers</div>
+              <div className="text-2xl font-bold text-purple-600">{recentRecord.label}</div>
+              <div className="text-sm text-gray-600">Recent Record</div>
             </Card>
           </div>
 
           <PendingActionsPanel squadId={activeSquadId} variant="compact" />
 
           <Card>
-            <h2 className="text-xl font-bold text-gray-900 mb-4">{activeSquad?.name ?? "Northside United"}</h2>
-            <div className="grid md:grid-cols-2 gap-6">
+            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
               <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Squad Overview</h3>
-                <ul className="space-y-2 text-gray-600">
-                  <li>• Founded: 2018</li>
-                  <li>• Home Ground: {activeSquad?.homeGround ?? "Hackney Marshes"}</li>
-                  <li>• League Position: 3rd</li>
-                  <li>• Form: WWDLW</li>
-                </ul>
+                <h2 className="text-xl font-bold text-gray-900">{activeSquad?.name ?? "Squad Overview"}</h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Live operating view across squad setup, recent fixtures, treasury movement, and market activity.
+                </p>
               </div>
-              <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Recent Activity</h3>
-                <ul className="space-y-2 text-gray-600">
-                  <li>• Won vs Red Lions (3-1)</li>
-                  <li>• New offer for Marcus Johnson</li>
-                  <li>• Tactics updated by captain</li>
-                  <li>• Treasury deposit: +500 ALGO</li>
-                </ul>
+              <div className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-gray-700">
+                {recentMatchesLoading || scoutingFeedLoading ? 'Syncing live data' : 'Live data connected'}
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
+                <h3 className="font-semibold text-gray-900">Squad Profile</h3>
+                <dl className="mt-4 space-y-3 text-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-gray-500">Founded</dt>
+                    <dd className="text-right font-medium text-gray-900">
+                      {activeSquad?.founded
+                        ? formatDateLabel(activeSquad.founded, { month: 'short', year: 'numeric' })
+                        : 'Not available'}
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-gray-500">Home ground</dt>
+                    <dd className="text-right font-medium text-gray-900">{activeSquad?.homeGround || 'Not set yet'}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-gray-500">Leadership</dt>
+                    <dd className="text-right font-medium text-gray-900">
+                      {captain
+                        ? `${captain.name}${viceCaptains.length > 0 ? ` + ${viceCaptains.length} vice captain${viceCaptains.length > 1 ? 's' : ''}` : ''}`
+                        : 'No captain assigned yet'}
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-gray-500">Coverage</dt>
+                    <dd className="text-right font-medium text-gray-900">
+                      {coveredPositions}/5 positions covered{rotationGap > 0 ? ` • ${rotationGap} short of full rotation` : ' • full rotation'}
+                    </dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-gray-500">Recent form</dt>
+                    <dd className="text-right font-medium text-gray-900">{recentRecord.form}</dd>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <dt className="text-gray-500">Average level</dt>
+                    <dd className="text-right font-medium text-gray-900">{averageLevel ?? 'Building data'}</dd>
+                  </div>
+                </dl>
+              </div>
+
+              <div className="rounded-2xl border border-gray-200 bg-white p-4">
+                <h3 className="font-semibold text-gray-900">Live Activity</h3>
+                <div className="mt-4 space-y-3">
+                  {overviewEvents.length > 0 ? overviewEvents.map((event) => (
+                    <Link
+                      key={event.id}
+                      href={event.href}
+                      className="block rounded-xl border border-gray-200 px-4 py-3 transition-colors hover:border-blue-200 hover:bg-blue-50/60"
+                    >
+                      <p className="font-medium text-gray-900">{event.title}</p>
+                      <p className="mt-1 text-sm text-gray-600">{event.detail}</p>
+                    </Link>
+                  )) : (
+                    <div className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center">
+                      <p className="font-medium text-gray-900">
+                        {recentMatchesLoading ? 'Loading squad activity...' : 'No live squad activity yet'}
+                      </p>
+                      <p className="mt-1 text-sm text-gray-600">
+                        Log a match, move in the market, or use the treasury to start building the squad timeline.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </Card>
@@ -298,8 +541,9 @@ export default function SquadPage() {
                 <Target className="w-6 h-6 text-green-600" />
                 <h3 className="font-semibold text-gray-900">Current Tactics</h3>
               </div>
-              <p className="text-gray-600">Formation: 4-3-3</p>
-              <p className="text-gray-600">Style: Balanced</p>
+              <p className="text-gray-600">Formation: {initialTactics?.formation ?? 'Not saved yet'}</p>
+              <p className="text-gray-600">Style: {initialTactics ? PLAY_STYLE_LABELS[initialTactics.style] : 'Choose a play style'}</p>
+              <p className="text-gray-600">{lineupSlots > 0 ? `${lineupSlots} lineup slots assigned` : 'No lineup saved yet'}</p>
               <Button variant="outline" className="mt-4 w-full">
                 Edit Tactics
               </Button>
@@ -308,12 +552,17 @@ export default function SquadPage() {
             <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('transfers')}>
               <div className="flex items-center space-x-3 mb-3">
                 <ArrowRightLeft className="w-6 h-6 text-blue-600" />
-                <h3 className="font-semibold text-gray-900">Transfer Activity</h3>
+                <h3 className="font-semibold text-gray-900">Market Pulse</h3>
               </div>
               <p className="text-gray-600">Incoming offers: {transfersState.incomingOffers.length}</p>
-              <p className="text-gray-600">Outgoing offers: {transfersState.outgoingOffers.length}</p>
+              <p className="text-gray-600">Live squad targets: {scoutingFeed?.listings.length ?? 0}</p>
+              <p className="text-gray-600">
+                {missingPositions.length > 0
+                  ? `Priority: add ${missingPositions.join(', ')} depth`
+                  : `Priority: upgrade quality across ${activeOffers} active market thread${activeOffers === 1 ? '' : 's'}`}
+              </p>
               <Button variant="outline" className="mt-4 w-full">
-                View Transfers
+                Open Market
               </Button>
             </Card>
           </div>
@@ -326,7 +575,11 @@ export default function SquadPage() {
                   <h3 className="font-semibold text-gray-900">Match Operations</h3>
                 </div>
                 <p className="text-gray-600">
-                  Submit results, review pending verifications, and monitor match fee settlement from one place.
+                  {pendingReviewCount > 0
+                    ? `${pendingReviewCount} match ${pendingReviewCount === 1 ? 'is' : 'are'} waiting for review.`
+                    : 'No matches are waiting for review right now.'} {settledRecentMatches.length > 0
+                    ? `${settledRecentMatches.length} recent verified result${settledRecentMatches.length === 1 ? '' : 's'} are already shaping squad form.`
+                    : 'Log your next result to start building the live performance record.'}
                 </p>
               </div>
               <div className="flex gap-3">
@@ -366,6 +619,9 @@ export default function SquadPage() {
           squadBalance={squadBalance}
           incomingOffers={transfersState.incomingOffers}
           outgoingOffers={transfersState.outgoingOffers}
+          marketListings={scoutingFeed?.listings ?? []}
+          draftProspects={scoutingFeed?.prospects ?? []}
+          marketFeedLoading={scoutingFeedLoading}
           currencyLabel={squadCurrency}
           paymentRailEnabled={Boolean(treasuryState.treasury?.paymentRail?.enabled)}
           onMakeOffer={handleMakeOffer}

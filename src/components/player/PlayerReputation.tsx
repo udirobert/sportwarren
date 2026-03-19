@@ -3,16 +3,21 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { User, Shield, Trophy, Star, CheckCircle, TrendingUp, Award } from 'lucide-react';
-import { usePlayerAttributes } from '@/hooks/player/usePlayerAttributes';
 import { usePlayerForm } from '@/hooks/player/usePlayerForm';
 import { AttributeProgress, AttributesSummary } from './AttributeProgress';
 import { FormIndicator, FormBadge } from './FormIndicator';
-import { XPGainPopup } from './XPGainPopup';
-import type { PlayerAttributes as PlayerReputationData, Endorsement, ProfessionalInterest } from '@/types';
+import type { PlayerAttributes as PlayerReputationData } from '@/types';
 
-export const PlayerReputation: React.FC = () => {
+interface PlayerReputationProps {
+  attributes: PlayerReputationData | null;
+  loading?: boolean;
+}
+
+export const PlayerReputation: React.FC<PlayerReputationProps> = ({
+  attributes,
+  loading = false,
+}) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'achievements' | 'endorsements' | 'scouts'>('overview');
-  const { attributes, loading } = usePlayerAttributes('ADDR_MARCUS_001');
   const { form } = usePlayerForm(attributes);
 
   if (loading) {
@@ -39,12 +44,14 @@ export const PlayerReputation: React.FC = () => {
   }
 
   const reputationLevel = getReputationLevel(attributes.reputationScore);
+  const careerHighlights = attributes.careerHighlights.slice(0, 3);
+  const recentAchievements = attributes.achievements.slice(0, 3);
+  const endorsements = attributes.endorsements ?? [];
+  const scoutInterest = attributes.professionalInterest ?? [];
+  const seasonProgress = Math.min((attributes.xp.seasonXP / attributes.xp.nextLevelXP) * 100, 100);
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
-      {/* XP Gain Notifications */}
-      <XPGainPopup />
-
       {/* Player Header */}
       <Card>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -81,17 +88,16 @@ export const PlayerReputation: React.FC = () => {
             <div className="w-px h-10 bg-gray-300" />
             <div>
               <div className="flex items-center space-x-2 mb-1">
-                <span className="text-sm font-medium text-gray-700">{attributes.xp.totalXP.toLocaleString()}</span>
-                <span className="text-xs text-gray-400">/ {attributes.xp.nextLevelXP.toLocaleString()} XP</span>
+                <span className="text-sm font-medium text-gray-700">{attributes.xp.totalXP.toLocaleString()} total XP</span>
               </div>
               <div className="w-32 bg-gray-200 rounded-full h-2">
                 <div 
                   className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full"
-                  style={{ width: `${(attributes.xp.totalXP / attributes.xp.nextLevelXP) * 100}%` }}
+                  style={{ width: `${seasonProgress}%` }}
                 />
               </div>
               <div className="text-xs text-gray-500 mt-1">
-                Season: +{attributes.xp.seasonXP.toLocaleString()} XP
+                Season: {attributes.xp.seasonXP.toLocaleString()} / {attributes.xp.nextLevelXP.toLocaleString()} XP
               </div>
             </div>
           </div>
@@ -149,47 +155,63 @@ export const PlayerReputation: React.FC = () => {
           <FormIndicator attributes={attributes} showChart />
 
           {/* Attributes Summary */}
-          <AttributesSummary skills={attributes.skills} position="Striker" />
+          <AttributesSummary skills={attributes.skills} position={attributes.position} />
 
           {/* Career Highlights */}
           <Card>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Career Highlights</h3>
-            <div className="space-y-3">
-              {attributes.careerHighlights.slice(0, 3).map((highlight) => (
-                <div key={highlight.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <Trophy className="w-5 h-5 text-yellow-600 mt-1 flex-shrink-0" />
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <h4 className="font-medium text-gray-900">{highlight.title}</h4>
-                      {highlight.verified && <CheckCircle className="w-4 h-4 text-green-600" />}
+            {careerHighlights.length > 0 ? (
+              <div className="space-y-3">
+                {careerHighlights.map((highlight) => (
+                  <div key={highlight.id} className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <Trophy className="w-5 h-5 text-yellow-600 mt-1 flex-shrink-0" />
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h4 className="font-medium text-gray-900">{highlight.title}</h4>
+                        {highlight.verified && <CheckCircle className="w-4 h-4 text-green-600" />}
+                      </div>
+                      <p className="text-sm text-gray-600">{highlight.description}</p>
+                      <p className="text-xs text-gray-500 mt-1">{highlight.date.toLocaleDateString()}</p>
                     </div>
-                    <p className="text-sm text-gray-600">{highlight.description}</p>
-                    <p className="text-xs text-gray-500 mt-1">{highlight.date.toLocaleDateString()}</p>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyPanel
+                icon={Trophy}
+                title="No verified highlights yet"
+                description="Log and settle the first result to start building a real highlight reel."
+              />
+            )}
           </Card>
 
           {/* Recent Achievements */}
           <Card>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Achievements</h3>
-            <div className="space-y-3">
-              {attributes.achievements.slice(0, 3).map((achievement) => (
-                <div key={achievement.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
-                  <Award className="w-5 h-5 text-purple-600" />
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <h4 className="font-medium text-gray-900">{achievement.title}</h4>
-                      <span className={`text-xs px-2 py-1 rounded-full ${getRarityColor(achievement.rarity)}`}>
-                        {achievement.rarity}
-                      </span>
+            {recentAchievements.length > 0 ? (
+              <div className="space-y-3">
+                {recentAchievements.map((achievement) => (
+                  <div key={achievement.id} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg">
+                    <Award className="w-5 h-5 text-purple-600" />
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h4 className="font-medium text-gray-900">{achievement.title}</h4>
+                        <span className={`text-xs px-2 py-1 rounded-full ${getRarityColor(achievement.rarity)}`}>
+                          {achievement.rarity}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-600">{achievement.description}</p>
                     </div>
-                    <p className="text-sm text-gray-600">{achievement.description}</p>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <EmptyPanel
+                icon={Award}
+                title="No live milestones yet"
+                description="The first verified matches, goals, and assists will start filling this panel."
+              />
+            )}
           </Card>
         </div>
       )}
@@ -208,83 +230,123 @@ export const PlayerReputation: React.FC = () => {
       {activeTab === 'achievements' && (
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 mb-6">All Achievements</h3>
-          <div className="grid md:grid-cols-2 gap-4">
-            {attributes.achievements.map((achievement) => (
-              <div key={achievement.id} className="p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-center space-x-3 mb-2">
-                  <Award className="w-6 h-6 text-purple-600" />
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <h4 className="font-semibold text-gray-900">{achievement.title}</h4>
-                      <span className={`text-xs px-2 py-1 rounded-full ${getRarityColor(achievement.rarity)}`}>
-                        {achievement.rarity}
-                      </span>
+          {attributes.achievements.length > 0 ? (
+            <div className="grid md:grid-cols-2 gap-4">
+              {attributes.achievements.map((achievement) => (
+                <div key={achievement.id} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <Award className="w-6 h-6 text-purple-600" />
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <h4 className="font-semibold text-gray-900">{achievement.title}</h4>
+                        <span className={`text-xs px-2 py-1 rounded-full ${getRarityColor(achievement.rarity)}`}>
+                          {achievement.rarity}
+                        </span>
+                      </div>
                     </div>
                   </div>
+                  <p className="text-sm text-gray-600 mb-2">{achievement.description}</p>
+                  <p className="text-xs text-gray-500">Earned: {achievement.dateEarned?.toLocaleDateString() || 'Not yet earned'}</p>
                 </div>
-                <p className="text-sm text-gray-600 mb-2">{achievement.description}</p>
-                <p className="text-xs text-gray-500">Earned: {achievement.dateEarned?.toLocaleDateString() || 'Not yet earned'}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyPanel
+              icon={Award}
+              title="No achievements unlocked yet"
+              description="Use verified matches to turn live season progress into visible milestones."
+            />
+          )}
         </Card>
       )}
 
       {activeTab === 'endorsements' && (
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Player Endorsements</h3>
-          <div className="space-y-4">
-            {attributes.endorsements?.map((endorsement, index) => (
-              <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <Star className="w-5 h-5 text-yellow-500" />
-                    <div>
-                      <h4 className="font-medium text-gray-900">{endorsement.endorser}</h4>
-                      <p className="text-sm text-gray-600 capitalize">{endorsement.endorserRole}</p>
+          {endorsements.length > 0 ? (
+            <div className="space-y-4">
+              {endorsements.map((endorsement, index) => (
+                <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <Star className="w-5 h-5 text-yellow-500" />
+                      <div>
+                        <h4 className="font-medium text-gray-900">{endorsement.endorser}</h4>
+                        <p className="text-sm text-gray-600 capitalize">{endorsement.endorserRole}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold text-gray-900">{endorsement.rating}/10</div>
+                      <div className="text-xs text-gray-600">{endorsement.skill}</div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-bold text-gray-900">{endorsement.rating}/10</div>
-                    <div className="text-xs text-gray-600">{endorsement.skill}</div>
-                  </div>
+                  <p className="text-gray-700 mb-2">&ldquo;{endorsement.comment}&rdquo;</p>
+                  <p className="text-xs text-gray-500">{endorsement.date.toLocaleDateString()}</p>
                 </div>
-                <p className="text-gray-700 mb-2">&ldquo;{endorsement.comment}&rdquo;</p>
-                <p className="text-xs text-gray-500">{endorsement.date.toLocaleDateString()}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyPanel
+              icon={Star}
+              title="No endorsements yet"
+              description="Endorsements appear once teammates, opponents, or officials have a reason to back your season."
+            />
+          )}
         </Card>
       )}
 
       {activeTab === 'scouts' && (
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 mb-6">Professional Scout Interest</h3>
-          <div className="space-y-4">
-            {attributes.professionalInterest?.map((interest, index) => (
-              <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <Shield className="w-5 h-5 text-blue-600" />
-                    <div>
-                      <h4 className="font-medium text-gray-900">{interest.scoutName}</h4>
-                      <p className="text-sm text-gray-600">{interest.organization}</p>
+          {scoutInterest.length > 0 ? (
+            <div className="space-y-4">
+              {scoutInterest.map((interest, index) => (
+                <div key={index} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-center space-x-3">
+                      <Shield className="w-5 h-5 text-blue-600" />
+                      <div>
+                        <h4 className="font-medium text-gray-900">{interest.scoutName}</h4>
+                        <p className="text-sm text-gray-600">{interest.organization}</p>
+                      </div>
                     </div>
+                    <span className={`text-xs px-2 py-1 rounded-full ${getInterestLevelColor(interest.interestLevel)}`}>
+                      {interest.interestLevel.replace('_', ' ').toUpperCase()}
+                    </span>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${getInterestLevelColor(interest.interestLevel)}`}>
-                    {interest.interestLevel.replace('_', ' ').toUpperCase()}
-                  </span>
+                  <p className="text-gray-700 mb-2">&ldquo;{interest.notes}&rdquo;</p>
+                  <p className="text-xs text-gray-500">{interest.date.toLocaleDateString()}</p>
                 </div>
-                <p className="text-gray-700 mb-2">&ldquo;{interest.notes}&rdquo;</p>
-                <p className="text-xs text-gray-500">{interest.date.toLocaleDateString()}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyPanel
+              icon={Shield}
+              title="No scout signal yet"
+              description="Strong verified runs and rising reputation will turn this from empty to actionable."
+            />
+          )}
         </Card>
       )}
     </div>
   );
 };
+
+const EmptyPanel = ({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  description: string;
+}) => (
+  <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-6 text-center">
+    <Icon className="mx-auto h-5 w-5 text-gray-400" />
+    <h4 className="mt-3 text-sm font-semibold text-gray-900">{title}</h4>
+    <p className="mt-1 text-sm text-gray-600">{description}</p>
+  </div>
+);
 
 // Helper functions
 function getReputationLevel(score: number) {

@@ -7,7 +7,7 @@
  * - src/app/squad/page.tsx (MOCK_PLAYERS)
  */
 
-import type { PlayerAttributes, Player, SkillRating, FormRating, PlayerXP, TransferMarketPlayer } from '@/types';
+import type { PlayerAttributes, Player, SkillRating, FormRating, PlayerXP } from '@/types';
 
 /**
  * Default skill ratings for a new player
@@ -149,14 +149,6 @@ export const MOCK_MATCH_PLAYER_STATS = [
     rating: 7.5,
     verified: false,
   },
-];
-
-export const MOCK_AVAILABLE_PLAYERS: TransferMarketPlayer[] = [
-  { id: 'tp1', name: 'Alex Thompson', position: 'ST', age: 24, overall: 78, askingPrice: 2500, currentClub: 'Riverside FC', contractExpiry: new Date('2025-06-30'), reputationScore: 450, reputationTier: 'silver', isDraftEligible: true, marketValuation: 2800 },
-  { id: 'tp2', name: 'Jordan Lee', position: 'MF', age: 22, overall: 75, askingPrice: 1800, currentClub: 'City United', contractExpiry: new Date('2025-12-31'), reputationScore: 300, reputationTier: 'bronze', isDraftEligible: true, marketValuation: 1950 },
-  { id: 'tp3', name: 'Sam Rodriguez', position: 'DF', age: 28, overall: 82, askingPrice: 3200, currentClub: 'Northside United', contractExpiry: new Date('2025-05-15'), reputationScore: 880, reputationTier: 'platinum', isDraftEligible: false, marketValuation: 12000 },
-  { id: 'tp4', name: 'Casey Kim', position: 'GK', age: 26, overall: 80, askingPrice: 2800, currentClub: 'East Enders', contractExpiry: new Date('2026-01-01'), reputationScore: 620, reputationTier: 'gold', isDraftEligible: false, marketValuation: 7500 },
-  { id: 'tp5', name: 'Morgan Taylor', position: 'WG', age: 21, overall: 73, askingPrice: 1500, currentClub: 'Youth Academy', contractExpiry: new Date('2025-08-20'), reputationScore: 150, reputationTier: 'bronze', isDraftEligible: true, marketValuation: 1400 },
 ];
 
 /**
