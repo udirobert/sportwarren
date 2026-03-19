@@ -16,6 +16,7 @@ import { useToast } from '@/contexts/ToastContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { VerificationBanner } from '@/components/common/VerificationBanner';
 import { EmptyState } from '@/components/common/EmptyState';
+import { getJourneyZeroState } from '@/lib/journey/content';
 import { useMySquads } from '@/hooks/squad/useSquad';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
@@ -130,6 +131,9 @@ export const AdaptiveDashboard: React.FC = () => {
     stats?.matches,
     totalCount,
   ]);
+  const matchesZeroState = useMemo(() => getJourneyZeroState(entryState.id, 'dashboard_matches'), [entryState.id]);
+  const squadActivityZeroState = useMemo(() => getJourneyZeroState(entryState.id, 'dashboard_squad_activity'), [entryState.id]);
+  const nextMatchZeroState = useMemo(() => getJourneyZeroState(entryState.id, 'dashboard_next_match'), [entryState.id]);
 
   // Define all possible widgets
   const allWidgets: DashboardWidget[] = useMemo(() => {
@@ -373,10 +377,10 @@ export const AdaptiveDashboard: React.FC = () => {
           ) : (
             <EmptyState
               icon={Trophy}
-              title="No matches logged yet"
-              description="Log your first match in 30 seconds — just enter the score and opponent."
-              actionLabel="Log First Match"
-              actionHref="/match?mode=capture"
+              title={matchesZeroState.title}
+              description={matchesZeroState.description}
+              actionLabel={matchesZeroState.actionLabel}
+              actionHref={matchesZeroState.actionHref}
             />
           )}
         </Card>
@@ -447,8 +451,10 @@ export const AdaptiveDashboard: React.FC = () => {
               ) : (
                 <EmptyState
                   icon={Users}
-                  title="No squad activity"
-                  description="Start your first match to see activity from your squad."
+                  title={squadActivityZeroState.title}
+                  description={squadActivityZeroState.description}
+                  actionLabel={squadActivityZeroState.actionLabel}
+                  actionHref={squadActivityZeroState.actionHref}
                 />
               )}
             </div>
@@ -532,8 +538,10 @@ export const AdaptiveDashboard: React.FC = () => {
           ) : (
             <EmptyState
               icon={Calendar}
-              title="No upcoming matches"
-              description="Schedule your next match or create a squad to start playing."
+              title={nextMatchZeroState.title}
+              description={nextMatchZeroState.description}
+              actionLabel={nextMatchZeroState.actionLabel}
+              actionHref={nextMatchZeroState.actionHref}
             />
           )}
         </Card>
@@ -542,7 +550,7 @@ export const AdaptiveDashboard: React.FC = () => {
     );
 
     return widgets;
-  }, [preferences, trackFeatureUsage, stats, loading, userAddress, primarySquadId, completeChecklistItem, handleOpenOffice, allChecklistDone, personalizationDone, isGuest, dataState, router]);
+  }, [allChecklistDone, completeChecklistItem, dataState, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, stats, trackFeatureUsage, userAddress]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {

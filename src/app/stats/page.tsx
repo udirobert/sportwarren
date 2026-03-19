@@ -4,26 +4,30 @@ import React from "react";
 import Link from "next/link";
 import { BarChart3, Target, Trophy, TrendingUp, Shield, Zap, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/common/EmptyState";
 import { StatCard } from "@/components/common/StatCard";
 import { useWallet } from "@/contexts/WalletContext";
-import { usePlayerAttributes } from "@/hooks/player/usePlayerAttributes";
+import { useCurrentPlayerAttributes } from "@/hooks/player/usePlayerAttributes";
+import { getJourneyZeroState } from "@/lib/journey/content";
+import { useJourneyState } from "@/hooks/useJourneyState";
 
 export default function StatsPage() {
-  const { address } = useWallet();
-  const { attributes, loading } = usePlayerAttributes(address ?? undefined);
+  const { hasAccount, hasWallet, isGuest, isVerified } = useWallet();
+  const { journeyStage } = useJourneyState();
+  const lockedState = getJourneyZeroState(journeyStage, 'stats_locked');
+  const emptyState = getJourneyZeroState(journeyStage, 'stats_empty');
+  const { attributes, loading } = useCurrentPlayerAttributes(hasWallet && isVerified);
 
-  if (!address) {
+  if (!hasAccount || isGuest || !hasWallet || !isVerified) {
     return (
-      <main className="max-w-2xl mx-auto px-4 py-12 pb-24 md:pb-6 text-center">
-        <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <h1 className="text-2xl font-black text-gray-900 mb-2">Your Stats</h1>
-        <p className="text-gray-500 mb-6">Connect your wallet to see your verified on-chain stats.</p>
-        <Link
-          href="/settings"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors"
-        >
-          Connect Wallet <ArrowRight className="w-4 h-4" />
-        </Link>
+      <main className="max-w-2xl mx-auto px-4 py-12 pb-24 md:pb-6">
+        <EmptyState
+          icon={BarChart3}
+          title={lockedState.title}
+          description={lockedState.description}
+          actionLabel={lockedState.actionLabel}
+          actionHref={lockedState.actionHref}
+        />
       </main>
     );
   }
@@ -45,16 +49,14 @@ export default function StatsPage() {
 
   if (!attributes) {
     return (
-      <main className="max-w-2xl mx-auto px-4 py-12 pb-24 md:pb-6 text-center">
-        <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-        <h1 className="text-2xl font-black text-gray-900 mb-2">No stats yet</h1>
-        <p className="text-gray-500 mb-6">Submit your first match result to start building your verified record.</p>
-        <Link
-          href="/match?mode=capture"
-          className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors"
-        >
-          Submit a Match <ArrowRight className="w-4 h-4" />
-        </Link>
+      <main className="max-w-2xl mx-auto px-4 py-12 pb-24 md:pb-6">
+        <EmptyState
+          icon={BarChart3}
+          title={emptyState.title}
+          description={emptyState.description}
+          actionLabel={emptyState.actionLabel}
+          actionHref={emptyState.actionHref}
+        />
       </main>
     );
   }

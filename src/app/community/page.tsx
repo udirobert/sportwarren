@@ -3,14 +3,21 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { EmptyState } from "@/components/common/EmptyState";
 import { Target, Users, Trophy, Star, Shield, Swords } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
+import { getJourneyZeroState } from "@/lib/journey/content";
+import { useJourneyState } from "@/hooks/useJourneyState";
 
 function CommunityPageInner() {
+  const { journeyStage } = useJourneyState();
   const { data: leaderboard, isLoading: loadingLeaderboard } = trpc.player.getLeaderboard.useQuery({ type: 'overall', limit: 10 });
   const { data: squadsData, isLoading: loadingSquads } = trpc.squad.list.useQuery({ limit: 8 });
   const { data: recentMatches, isLoading: loadingMatches } = trpc.match.list.useQuery({ limit: 5 });
+  const playersZeroState = getJourneyZeroState(journeyStage, 'community_players');
+  const squadsZeroState = getJourneyZeroState(journeyStage, 'community_squads');
+  const matchesZeroState = getJourneyZeroState(journeyStage, 'community_matches');
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 pb-24 md:pb-6 space-y-4 text-gray-900 dark:text-gray-100">
@@ -69,12 +76,14 @@ function CommunityPageInner() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Trophy className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm font-medium text-gray-700">No players ranked yet.</p>
-              <p className="text-xs text-gray-500 mt-1">Submit a verified match result — your name will appear here.</p>
-              <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Log Your First Match</Button></Link>
-            </div>
+            <EmptyState
+              icon={Trophy}
+              title={playersZeroState.title}
+              description={playersZeroState.description}
+              actionLabel={playersZeroState.actionLabel}
+              actionHref={playersZeroState.actionHref}
+              className="py-8"
+            />
           )}
         </Card>
 
@@ -110,12 +119,14 @@ function CommunityPageInner() {
               ))}
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <Shield className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-              <p className="text-sm font-medium text-gray-700">No squads yet — be the first.</p>
-              <p className="text-xs text-gray-500 mt-1">Create your squad and it will appear here for others to challenge.</p>
-              <Link href="/squad"><Button size="sm" className="mt-3">Create a Squad</Button></Link>
-            </div>
+            <EmptyState
+              icon={Shield}
+              title={squadsZeroState.title}
+              description={squadsZeroState.description}
+              actionLabel={squadsZeroState.actionLabel}
+              actionHref={squadsZeroState.actionHref}
+              className="py-8"
+            />
           )}
         </Card>
       </div>
@@ -145,11 +156,14 @@ function CommunityPageInner() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 text-gray-500">
-            <p className="text-sm font-medium text-gray-700">No matches played yet — be the first.</p>
-            <p className="text-xs text-gray-500 mt-1">Submit a match result and your squad will appear on the community feed.</p>
-            <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Submit a Match Result</Button></Link>
-          </div>
+          <EmptyState
+            icon={Target}
+            title={matchesZeroState.title}
+            description={matchesZeroState.description}
+            actionLabel={matchesZeroState.actionLabel}
+            actionHref={matchesZeroState.actionHref}
+            className="py-8"
+          />
         )}
       </Card>
     </div>

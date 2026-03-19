@@ -5,6 +5,30 @@ export interface JourneyPrompt {
   message: string;
 }
 
+export interface JourneyAction {
+  label: string;
+  href: string;
+}
+
+export interface JourneyZeroState {
+  title: string;
+  description: string;
+  actionLabel: string;
+  actionHref: string;
+}
+
+export type JourneyZeroStateSurface =
+  | 'dashboard_matches'
+  | 'dashboard_squad_activity'
+  | 'dashboard_next_match'
+  | 'stats_locked'
+  | 'stats_empty'
+  | 'reputation_no_squad'
+  | 'reputation_empty'
+  | 'community_players'
+  | 'community_squads'
+  | 'community_matches';
+
 export interface JourneyContentContext {
   city?: string;
   venue?: string;
@@ -49,6 +73,131 @@ export interface JourneyContent {
 const DEFAULT_CITY = 'local';
 const DEFAULT_VENUE = 'your ground';
 const DEFAULT_RIVAL = 'the next opponent';
+
+export function getJourneyNavigationSubtitle(stage: JourneyStage): string {
+  switch (stage) {
+    case 'guest_preview':
+      return 'Preview the flow, then claim your own season';
+    case 'account_ready':
+      return 'Log one result to make the account feel real';
+    case 'wallet_unverified':
+      return 'Verify once to unlock protected actions';
+    case 'verified_no_squad':
+      return 'Create the squad your season will run through';
+    case 'season_kickoff':
+      return 'Make the first verified result stick';
+    case 'returning_manager':
+      return 'Keep the weekly squad loop moving';
+    case 'public_visitor':
+    default:
+      return 'Turn Sunday results into proof, reputation, and squad momentum';
+  }
+}
+
+export function getJourneyNextAction(stage: JourneyStage): JourneyAction {
+  switch (stage) {
+    case 'guest_preview':
+      return { label: 'Start your own season', href: '/?connect=1' };
+    case 'account_ready':
+      return { label: 'Log your first match', href: '/match?mode=capture' };
+    case 'wallet_unverified':
+      return { label: 'Verify wallet', href: '/settings?tab=wallet' };
+    case 'verified_no_squad':
+      return { label: 'Create squad', href: '/squad' };
+    case 'season_kickoff':
+      return { label: 'Log your first result', href: '/match?mode=capture' };
+    case 'returning_manager':
+      return { label: 'Review match center', href: '/match?mode=verify' };
+    case 'public_visitor':
+    default:
+      return { label: 'Start your season', href: '/?connect=1' };
+  }
+}
+
+export function getJourneyZeroState(
+  stage: JourneyStage,
+  surface: JourneyZeroStateSurface,
+): JourneyZeroState {
+  const nextAction = getJourneyNextAction(stage);
+
+  switch (surface) {
+    case 'dashboard_matches':
+      return {
+        title: 'No verified matches yet',
+        description: 'The first logged result creates the proof, XP, and momentum that makes the dashboard worth revisiting.',
+        actionLabel: nextAction.label,
+        actionHref: nextAction.href,
+      };
+    case 'dashboard_squad_activity':
+      return {
+        title: 'No squad activity yet',
+        description: 'Activity appears once you log a result, send the verification link, or bring teammates into the same season loop.',
+        actionLabel: nextAction.label,
+        actionHref: nextAction.href,
+      };
+    case 'dashboard_next_match':
+      return {
+        title: 'No next match on the board',
+        description: 'Use the match flow to log the next fixture or result so the squad has a live operating rhythm.',
+        actionLabel: nextAction.label,
+        actionHref: nextAction.href,
+      };
+    case 'stats_locked':
+      return {
+        title: stage === 'wallet_unverified' ? 'Verify to unlock protected stats' : 'Your verified record is not live yet',
+        description: stage === 'account_ready'
+          ? 'Log the first result now. Add wallet protection when you need secure progression and protected actions.'
+          : stage === 'guest_preview'
+            ? 'Preview users do not keep a protected record. Claim your season when you want stats that stick.'
+            : 'This view becomes useful once your identity and first proof-backed result are in place.',
+        actionLabel: nextAction.label,
+        actionHref: nextAction.href,
+      };
+    case 'stats_empty':
+      return {
+        title: 'No verified stats yet',
+        description: 'One verified result is enough to turn this into a living player record.',
+        actionLabel: nextAction.label,
+        actionHref: nextAction.href,
+      };
+    case 'reputation_no_squad':
+      return {
+        title: 'No squad context yet',
+        description: 'Reputation compounds faster once results, invites, and proof are tied to a real squad.',
+        actionLabel: nextAction.label,
+        actionHref: nextAction.href,
+      };
+    case 'reputation_empty':
+      return {
+        title: 'No reputation events yet',
+        description: 'Play and verify one real match to create the first contribution in your reputation timeline.',
+        actionLabel: nextAction.label,
+        actionHref: nextAction.href,
+      };
+    case 'community_players':
+      return {
+        title: 'No players ranked yet',
+        description: 'The leaderboard starts filling as soon as verified results begin landing.',
+        actionLabel: nextAction.label,
+        actionHref: nextAction.href,
+      };
+    case 'community_squads':
+      return {
+        title: 'No squads listed yet',
+        description: 'Create the first active squad and it becomes the team others can challenge and track.',
+        actionLabel: nextAction.label,
+        actionHref: nextAction.href,
+      };
+    case 'community_matches':
+    default:
+      return {
+        title: 'No community matches yet',
+        description: 'The community feed comes alive once the first proof-backed result is submitted.',
+        actionLabel: nextAction.label,
+        actionHref: nextAction.href,
+      };
+  }
+}
 
 export function getJourneyContent(
   stage: JourneyStage,
