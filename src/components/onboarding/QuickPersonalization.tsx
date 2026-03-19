@@ -6,22 +6,25 @@ import { Check, ChevronRight } from 'lucide-react';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { UserPreferences } from '@/types';
 import { Card } from '@/components/ui/Card';
+import { getJourneyContent } from '@/lib/journey/content';
+import type { DashboardEntryStateId } from '@/lib/dashboard/entry-state';
 
 const ROLE_OPTIONS = ['Player', 'Team Organizer', 'Coach', 'Fan/Supporter'] as const;
 const INTEREST_OPTIONS = [
-    'Personal stats',
-    'Team coordination',
-    'Social & banter',
-    'Achievements',
-    'Analytics',
+    'Log results fast',
+    'Get opponent confirmations',
+    'Build squad momentum',
+    'Track my reputation',
+    'Scout players and moves',
 ] as const;
 
-export const QuickPersonalization: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
+export const QuickPersonalization: React.FC<{ onComplete: () => void; journeyStage?: DashboardEntryStateId }> = ({ onComplete, journeyStage = 'account_ready' }) => {
     const { preferences, savePreferences } = useUserPreferences();
     const [step, setStep] = useState<'role' | 'interests'>('role');
     const [role, setRole] = useState<string | null>(null);
     const [interests, setInterests] = useState<Set<string>>(new Set());
     const [isCompleting, setIsCompleting] = useState(false);
+    const journeyContent = getJourneyContent(journeyStage);
 
     // Skip if already personalized
     if (preferences.onboardingCompleted) return null;
@@ -45,20 +48,32 @@ export const QuickPersonalization: React.FC<{ onComplete: () => void }> = ({ onC
             'Fan/Supporter': 'fan',
         };
 
-        const featureMap: Partial<Record<string, 'statistics' | 'social' | 'gamification' | 'notifications'>> = {
-            'Personal stats': 'statistics',
-            'Team coordination': 'social',
-            'Social & banter': 'social',
-            'Achievements': 'gamification',
-            'Analytics': 'statistics',
+        const featureMap: Partial<Record<string, Partial<UserPreferences['preferredFeatures']>>> = {
+            'Log results fast': {
+                statistics: 'advanced',
+                notifications: 'moderate',
+            },
+            'Get opponent confirmations': {
+                notifications: 'all',
+                social: 'active',
+            },
+            'Build squad momentum': {
+                social: 'active',
+                gamification: 'full',
+            },
+            'Track my reputation': {
+                gamification: 'full',
+                statistics: 'detailed',
+            },
+            'Scout players and moves': {
+                statistics: 'advanced',
+                social: 'moderate',
+            },
         };
 
         const updatedFeatures = { ...preferences.preferredFeatures };
         for (const interest of interests) {
-            const key = featureMap[interest];
-            if (key) {
-                (updatedFeatures as Record<string, string>)[key] = 'advanced';
-            }
+            Object.assign(updatedFeatures, featureMap[interest] || {});
         }
 
         savePreferences({
@@ -90,12 +105,12 @@ export const QuickPersonalization: React.FC<{ onComplete: () => void }> = ({ onC
                             transition={{ duration: 0.2 }}
                         >
                             <div className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em] mb-1">
-                                Quick Setup
+                                {journeyContent.personalization.eyebrow}
                             </div>
                             <h2 className="text-lg font-black uppercase tracking-tight mb-1">
-                                What's your role?
+                                {journeyContent.personalization.title}
                             </h2>
-                            <p className="text-xs text-gray-500 mb-4">We'll tailor your dashboard</p>
+                            <p className="text-xs text-gray-500 mb-4">{journeyContent.personalization.description}</p>
 
                             <div className="grid grid-cols-2 gap-2 mb-4">
                                 {ROLE_OPTIONS.map(option => (
@@ -141,12 +156,12 @@ export const QuickPersonalization: React.FC<{ onComplete: () => void }> = ({ onC
                             transition={{ duration: 0.2 }}
                         >
                             <div className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em] mb-1">
-                                Quick Setup
+                                {journeyContent.personalization.eyebrow}
                             </div>
                             <h2 className="text-lg font-black uppercase tracking-tight mb-1">
-                                What interests you?
+                                {journeyContent.personalization.interestsTitle}
                             </h2>
-                            <p className="text-xs text-gray-500 mb-4">Pick as many as you like</p>
+                            <p className="text-xs text-gray-500 mb-4">{journeyContent.personalization.interestsDescription}</p>
 
                             <div className="space-y-2 mb-4">
                                 {INTEREST_OPTIONS.map(option => (
@@ -172,7 +187,7 @@ export const QuickPersonalization: React.FC<{ onComplete: () => void }> = ({ onC
                                 disabled={isCompleting}
                                 className="w-full py-2.5 bg-white text-gray-900 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-green-400 transition-colors disabled:opacity-50 flex items-center justify-center gap-1"
                             >
-                                {isCompleting ? 'Done!' : 'Start Using SportWarren'}
+                                {isCompleting ? 'Done!' : journeyContent.personalization.completeLabel}
                                 <ChevronRight className="w-4 h-4" />
                             </button>
 

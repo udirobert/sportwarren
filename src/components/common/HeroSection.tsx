@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Trophy, Zap, Users, Target, TrendingUp, Sparkles, ArrowRight, Play, AlertCircle, CheckCircle2, Cpu } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
+import { getJourneyContent } from '@/lib/journey/content';
+import { getJourneyStage } from '@/lib/journey/stage';
 
 interface HeroSectionProps {
   onGetStarted?: () => void;
@@ -21,7 +23,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
     totalMatches: 0,
     totalAgents: 0,
   });
-  const { loginAsGuest, hasAccount } = useWallet();
+  const { loginAsGuest, hasAccount, hasWallet, isGuest, authStatus } = useWallet();
   const [scrollY, setScrollY] = useState(0);
   const parallaxRef = useRef<HTMLDivElement>(null);
   const problemRef = useRef<HTMLDivElement>(null);
@@ -60,6 +62,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
   }, []);
 
   const parallaxOffset = scrollY * 0.5;
+  const journeyStage = getJourneyStage({
+    isGuest,
+    hasAccount,
+    hasWallet,
+    authState: authStatus.state,
+  });
+  const journeyContent = getJourneyContent(journeyStage);
 
   return (
     <div className="relative bg-gray-900 overflow-hidden">
@@ -100,25 +109,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
 
           {/* CTA - Single primary action */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
-            {!hasAccount ? (
-              <button
-                onClick={onGetStarted}
-                className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
-              >
-                <Zap className="w-5 h-5 mr-2" />
-                Get Started Free
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </button>
-            ) : (
-              <button
-                onClick={onGetStarted}
-                className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
-              >
-                <Zap className="w-5 h-5 mr-2" />
-                Go to Dashboard
-                <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
-              </button>
-            )}
+            <button
+              onClick={onGetStarted}
+              className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
+            >
+              <Zap className="w-5 h-5 mr-2" />
+              {journeyContent.hero.primaryCtaLabel}
+              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
+            </button>
 
             <button
               onClick={() => problemRef.current?.scrollIntoView({ behavior: 'smooth' })}
@@ -129,7 +127,24 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             </button>
           </div>
 
-          {!hasAccount && (
+          {journeyContent.hero.stageLine && (
+            <p className="mb-6 text-sm font-bold uppercase tracking-[0.16em] text-green-300">
+              {journeyContent.hero.stageLine}
+            </p>
+          )}
+
+          <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
+            {journeyContent.hero.highlights.map((highlight) => (
+              <span
+                key={highlight}
+                className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-gray-200 backdrop-blur-sm"
+              >
+                {highlight}
+              </span>
+            ))}
+          </div>
+
+          {!hasAccount && journeyContent.hero.previewLinkLabel && (
             <p className="text-center mb-16">
               <button
                 onClick={() => {
@@ -138,7 +153,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                 }}
                 className="text-sm text-gray-500 hover:text-gray-300 underline underline-offset-4 decoration-gray-600 hover:decoration-gray-400 transition-colors"
               >
-                or explore as guest
+                {journeyContent.hero.previewLinkLabel}
               </button>
             </p>
           )}

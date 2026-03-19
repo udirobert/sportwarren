@@ -37,7 +37,7 @@ const TOUR_STEPS: TourStep[] = [
         id: 'welcome',
         targetId: 'dashboard-header',
         title: "Welcome to the Marshes",
-        content: "You're currently in Guest Mode. This is a live demo of the Hackney Marshes Sunday League. Let's see how the squads are doing.",
+        content: "You're currently in Preview Mode. This is a live preview of the Hackney Marshes Sunday League. Let's see how the squads are doing.",
         emoji: '🏟️',
         icon: Sparkles,
         position: 'bottom',
@@ -90,8 +90,8 @@ const TOUR_STEPS: TourStep[] = [
     {
         id: 'claim-identity',
         targetId: 'connect-wallet-btn',
-        title: "Claim Your Identity",
-        content: "Ready to start your own season? Connect your wallet to bridge your real-world football skills to the blockchain.",
+        title: "Start Your Own Season",
+        content: "Ready to leave the preview behind? Create your account now, then add a wallet later when you want protected actions and on-chain progression.",
         emoji: '⚡',
         icon: Zap,
         position: 'bottom',
@@ -109,7 +109,7 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
             return {
                 ...step,
                 title: `Welcome to ${venue.split(' ')[0]}`,
-                content: `You're currently in Guest Mode. This is a live demo at ${venue}. Let's see how the local squads are doing.`
+                content: `You're currently in Preview Mode. This is a live preview at ${venue}. Let's see how the local squads are doing.`
             };
         }
         return step;

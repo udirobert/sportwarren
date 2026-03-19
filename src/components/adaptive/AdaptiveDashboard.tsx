@@ -143,7 +143,7 @@ export const AdaptiveDashboard: React.FC = () => {
           requiredLevel: 'basic',
           category: 'stats',
           component: (
-            <QuickPersonalization onComplete={() => setPersonalizationDone(true)} />
+            <QuickPersonalization onComplete={() => setPersonalizationDone(true)} journeyStage={entryState.id} />
           ),
         });
       }
@@ -154,6 +154,7 @@ export const AdaptiveDashboard: React.FC = () => {
         category: 'stats',
         component: (
           <OnboardingChecklist
+            journeyStage={entryState.id}
             onStepAction={(id) => {
               if (id === 'open_office') handleOpenOffice();
             }}
@@ -800,7 +801,7 @@ export const AdaptiveDashboard: React.FC = () => {
       <VerificationBanner className="mb-4" />
 
       <GuestTour onVisibilityChange={setIsTourActive} />
-      {!isTourActive && <AgenticConcierge />}
+      {!isTourActive && <AgenticConcierge journeyStage={entryState.id} />}
 
       <AnimatePresence>
         {isStaffRoomOpen && (

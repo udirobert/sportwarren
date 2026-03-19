@@ -9,7 +9,7 @@ import { Trophy, RefreshCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export const GuestMigrationPrompt: React.FC = () => {
-    const { connected, isGuest } = useWallet();
+    const { hasAccount, isGuest } = useWallet();
     const [showPrompt, setShowPrompt] = useState(false);
 
     const migrateMutation = trpc.auth.migrateGuestProgress.useMutation({
@@ -26,8 +26,8 @@ export const GuestMigrationPrompt: React.FC = () => {
     });
 
     useEffect(() => {
-        // Only show if user is logged in, NOT as guest, and we have pending guest progress
-        if (connected && !isGuest && localStorage.getItem(STORAGE_KEYS.GUEST_PENDING_MIGRATION) === 'true') {
+        // Only show if the user has claimed a real account, NOT as guest, and we have pending guest progress
+        if (hasAccount && !isGuest && localStorage.getItem(STORAGE_KEYS.GUEST_PENDING_MIGRATION) === 'true') {
             const hasDrafts = localStorage.getItem('sw_guest_drafts');
             const hasXP = localStorage.getItem('sw_guest_xp');
 
@@ -38,7 +38,7 @@ export const GuestMigrationPrompt: React.FC = () => {
                 localStorage.removeItem(STORAGE_KEYS.GUEST_PENDING_MIGRATION);
             }
         }
-    }, [connected, isGuest]);
+    }, [hasAccount, isGuest]);
 
     if (!showPrompt) return null;
 
@@ -86,7 +86,7 @@ export const GuestMigrationPrompt: React.FC = () => {
                         </div>
                         <h3 className="text-xl font-black italic text-white uppercase tracking-tight mb-2">Claim Your Progress</h3>
                         <p className="text-sm text-gray-300 leading-relaxed font-semibold mb-4 pr-10">
-                            We noticed you made some progress during your guest session! Want to sync your draft picks and match XP to your connected account?
+                            We noticed you made some progress during your guest session. Want to sync your draft picks and match XP into your real account now?
                         </p>
 
                         <div className="flex space-x-3">

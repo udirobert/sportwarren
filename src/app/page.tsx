@@ -8,13 +8,13 @@ import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 
 export default function Home() {
-  const { hasAccount, isGuest } = useWallet();
+  const { hasAccount } = useWallet();
   const { authenticated } = usePrivy();
   const router = useRouter();
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState(false);
 
-  const isLoggedIn = hasAccount || isGuest || authenticated;
+  const hasRealSession = hasAccount || authenticated;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -28,15 +28,15 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    if (pendingRedirect && isLoggedIn) {
+    if (pendingRedirect && hasRealSession) {
       setShowWalletModal(false);
       setPendingRedirect(false);
       router.push('/dashboard');
     }
-  }, [pendingRedirect, isLoggedIn, router]);
+  }, [hasRealSession, pendingRedirect, router]);
 
   const handleEnterApp = () => {
-    if (isLoggedIn) {
+    if (hasRealSession) {
       router.push('/dashboard');
     } else {
       setPendingRedirect(true);

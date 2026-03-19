@@ -401,7 +401,7 @@ export const MatchConsensusPanel: React.FC<MatchConsensusProps> = ({ match }) =>
             enabled={match.paymentRail.enabled}
             body={match.paymentRail.enabled 
               ? `Fees are locked in a Yellow session (${match.paymentRail.sessionId?.slice(0, 8)}). Post-verification, winnings are distributed automatically.` 
-              : "This match is using manual settlement because one or more participants have not connected a Yellow-compatible EVM wallet."
+              : "This match is using manual settlement because one or more participants do not have an eligible EVM wallet available for Yellow settlement."
             }
           />
         )}
