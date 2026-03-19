@@ -7,8 +7,8 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Briefcase, Plus, MessageCircle, Bell, Share2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2 } from 'lucide-react';
+import { AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
 import { useWallet } from '@/contexts/WalletContext';
@@ -22,6 +22,7 @@ import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist
 import { QuickPersonalization } from '@/components/onboarding/QuickPersonalization';
 import { GuestTour } from '@/components/onboarding/GuestTour';
 import { trpc } from '@/lib/trpc-client';
+import { getDashboardEntryState, type DashboardEntryAction } from '@/lib/dashboard/entry-state';
 
 import dynamic from 'next/dynamic';
 
@@ -57,16 +58,15 @@ interface DashboardWidget {
 
 export const AdaptiveDashboard: React.FC = () => {
   const { preferences, trackFeatureUsage } = useUserPreferences();
-  const { address, isGuest, authStatus, refreshAuthSignature } = useWallet();
+  const { address, isGuest, hasAccount, hasWallet, authStatus, refreshAuthSignature } = useWallet();
   const { venue } = useEnvironment();
   const { addToast } = useToast();
   const [isStaffRoomOpen, setIsStaffRoomOpen] = React.useState(false);
   const [isTourActive, setIsTourActive] = React.useState(false);
   const [forcedSquadId, setForcedSquadId] = React.useState<string | null>(null);
-  const userAddress = address || undefined;
-  const needsVerification = !isGuest && (authStatus.state === 'missing' || authStatus.state === 'expired');
+  const [showCreateSquadFlow, setShowCreateSquadFlow] = React.useState(false);
+  const userAddress = hasAccount ? address || undefined : undefined;
   const isVerified = !isGuest && authStatus.state === 'valid';
-  const showAuthStatus = !isGuest && (authStatus.state === 'valid' || authStatus.state === 'missing' || authStatus.state === 'expired');
 
   const handleVerify = React.useCallback(async () => {
     const ok = await refreshAuthSignature();
@@ -85,12 +85,15 @@ export const AdaptiveDashboard: React.FC = () => {
     }
   }, [addToast, refreshAuthSignature]);
 
-  const { data: stats, loading, isDemoData } = useDashboardData(userAddress);
+  const { data: stats, loading, dataState } = useDashboardData({ isGuest, userAddress });
   const router = useRouter();
-  const { memberships, loading: squadLoading, refresh: refreshSquads } = useMySquads();
-  const { completeChecklistItem, allChecklistDone } = useOnboarding();
+  const { memberships, refresh: refreshSquads } = useMySquads();
+  const { completeChecklistItem, allChecklistDone, completedCount, totalCount } = useOnboarding();
 
-  const primarySquadId = forcedSquadId || memberships?.[0]?.squad.id;
+  const primaryMembership = memberships?.[0];
+  const primarySquadId = forcedSquadId || primaryMembership?.squad.id;
+  const primarySquadName = primaryMembership?.squad?.name || null;
+  const hasSquad = memberships.length > 0;
 
   // Ticker data queries
   const { data: matchData } = trpc.match.list.useQuery(
@@ -98,7 +101,7 @@ export const AdaptiveDashboard: React.FC = () => {
     { enabled: !!primarySquadId, staleTime: 30 * 1000 }
   );
   const pendingMatchesCount = matchData?.matches?.filter((m: { status: string }) => m.status === 'pending').length ?? 0;
-  const activeMembersCount = memberships?.length ?? 0;
+  const activeMembersCount = primaryMembership?.squad?.memberCount ?? 0;
 
   const handleOpenOffice = React.useCallback(() => {
     setIsStaffRoomOpen(true);
@@ -106,6 +109,27 @@ export const AdaptiveDashboard: React.FC = () => {
   }, [completeChecklistItem]);
 
   const [personalizationDone, setPersonalizationDone] = React.useState(false);
+  const entryState = useMemo(() => getDashboardEntryState({
+    isGuest,
+    hasAccount,
+    hasWallet,
+    isVerified,
+    squadCount: memberships.length,
+    pendingMatchesCount,
+    completedChecklistCount: completedCount,
+    totalChecklistCount: totalCount,
+    totalMatches: stats?.matches ?? 0,
+  }), [
+    completedCount,
+    hasAccount,
+    hasWallet,
+    isGuest,
+    isVerified,
+    memberships.length,
+    pendingMatchesCount,
+    stats?.matches,
+    totalCount,
+  ]);
 
   // Define all possible widgets
   const allWidgets: DashboardWidget[] = useMemo(() => {
@@ -286,9 +310,9 @@ export const AdaptiveDashboard: React.FC = () => {
           <div className="mb-4 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <h2 className="text-lg font-bold text-gray-900">Match Center</h2>
-              {isDemoData && (
+              {dataState === 'preview' && (
                 <span className="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded bg-blue-100 text-blue-700">
-                  Demo Data
+                  Preview Data
                 </span>
               )}
             </div>
@@ -517,13 +541,22 @@ export const AdaptiveDashboard: React.FC = () => {
     );
 
     return widgets;
-  }, [preferences, trackFeatureUsage, stats, loading, userAddress, primarySquadId, completeChecklistItem, handleOpenOffice, allChecklistDone, personalizationDone, isGuest, isDemoData, router]);
+  }, [preferences, trackFeatureUsage, stats, loading, userAddress, primarySquadId, completeChecklistItem, handleOpenOffice, allChecklistDone, personalizationDone, isGuest, dataState, router]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {
     const hiddenWidgets = preferences.dashboardCustomization?.hiddenWidgets || [];
     const pinnedWidgets = preferences.dashboardCustomization?.pinnedWidgets || [];
     const widgetOrder = preferences.dashboardCustomization?.widgetOrder || [];
+    const squadScopedWidgets = new Set([
+      'pending-actions',
+      'captains-log',
+      'event-feed',
+      'governance',
+      'squad-dynamics',
+      'territory',
+      'match-engine',
+    ]);
     
     // For new users, show only essential widgets
     const isNewUser = preferences.featureDiscoveryLevel < 10 && preferences.dashboardLayout === 'minimal';
@@ -533,6 +566,8 @@ export const AdaptiveDashboard: React.FC = () => {
       .filter(widget => {
         // Hide widgets user has explicitly hidden
         if (hiddenWidgets.includes(widget.id)) return false;
+
+        if (!isGuest && !hasSquad && squadScopedWidgets.has(widget.id)) return false;
         
         // For new users, only show essential widgets
         if (isNewUser && !essentialWidgets.includes(widget.id)) return false;
@@ -578,20 +613,101 @@ export const AdaptiveDashboard: React.FC = () => {
         
         return b.priority - a.priority;
       });
-  }, [allWidgets, preferences]);
+  }, [allWidgets, hasSquad, isGuest, preferences]);
 
-  // Show squad creation flow for connected (non-guest) users with no squad
-  if (!isGuest && isVerified && !squadLoading && memberships.length === 0 && !forcedSquadId) {
+  if (showCreateSquadFlow) {
     return (
       <CreateSquadFlow
         onCreated={async (id) => {
           setForcedSquadId(id);
+          setShowCreateSquadFlow(false);
           await refreshSquads();
           router.push('/squad?tab=overview&new=1');
         }}
       />
     );
   }
+
+  const entryAccountLabel = isGuest
+    ? 'Guest preview'
+    : hasWallet
+      ? (isVerified ? 'Verified member' : 'Wallet connected')
+      : 'Signed in';
+  const entryWalletLabel = isGuest
+    ? 'Preview only'
+    : hasWallet
+      ? (isVerified ? 'Verified' : 'Signature needed')
+      : 'Not connected';
+  const entrySquadLabel = primarySquadName
+    ? `${primarySquadName}${primaryMembership?.role ? ` • ${primaryMembership.role.replace(/_/g, ' ')}` : ''}`
+    : entryState.squadLabel;
+  const entryFocusLabel = entryState.queueLabel;
+
+  const renderEntryAction = (action: DashboardEntryAction | undefined, tone: 'primary' | 'secondary') => {
+    if (!action) return null;
+
+    const className = tone === 'primary'
+      ? 'bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-widest text-xs shadow-xl shadow-green-600/20'
+      : 'font-black uppercase tracking-widest text-xs';
+
+    if (action.intent === 'verify_wallet') {
+      return (
+        <Button
+          key={action.label}
+          size="sm"
+          onClick={handleVerify}
+          disabled={authStatus.isRefreshing}
+          className={className}
+          variant={tone === 'secondary' ? 'outline' : undefined}
+        >
+          {authStatus.isRefreshing ? 'Verifying…' : action.label}
+        </Button>
+      );
+    }
+
+    if (action.intent === 'create_squad') {
+      return (
+        <Button
+          key={action.label}
+          size="sm"
+          onClick={() => setShowCreateSquadFlow(true)}
+          className={className}
+          variant={tone === 'secondary' ? 'outline' : undefined}
+        >
+          {action.label}
+        </Button>
+      );
+    }
+
+    if (action.intent === 'open_staff_room') {
+      return (
+        <Button
+          key={action.label}
+          size="sm"
+          onClick={handleOpenOffice}
+          className={className}
+          variant={tone === 'secondary' ? 'outline' : undefined}
+        >
+          {action.label}
+        </Button>
+      );
+    }
+
+    if (!action.href) return null;
+
+    return (
+      <Link key={action.label} href={action.href}>
+        <Button
+          id={action.intent === 'open_wallet' ? 'connect-wallet-btn' : undefined}
+          size="sm"
+          className={className}
+          variant={tone === 'secondary' ? 'outline' : undefined}
+        >
+          {action.label}
+        </Button>
+      </Link>
+    );
+  };
 
   const getLayoutClass = () => {
     switch (preferences.dashboardLayout) {
@@ -604,183 +720,87 @@ export const AdaptiveDashboard: React.FC = () => {
 
   return (
     <div className={`max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 nav-spacer-bottom ${getLayoutClass()}`}>
-      <AnimatePresence>
-        {isGuest && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            className="mb-4 overflow-hidden"
-          >
-            <div className="bg-blue-600 text-white p-2 rounded-lg flex items-center justify-between shadow-lg shadow-blue-500/20">
-              <div className="flex items-center space-x-3 px-2">
-                <Sparkles className="w-4 h-4" />
-                <span className="text-xs font-black uppercase tracking-widest leading-none">
-                  Guest Mode Active • {venue} Demo Experience
-                </span>
-              </div>
-              <Button id="connect-wallet-btn" size="sm" variant="outline" className="h-7 text-xs border-white/20 hover:bg-white/10 text-white" onClick={() => router.push('/?connect=1')}>
-                Connect Wallet
-              </Button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <VerificationBanner className="mb-4" />
-
-      <GuestTour onVisibilityChange={setIsTourActive} />
-      {!isTourActive && <AgenticConcierge />}
-
       <div className="flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-widest">
         <Link href="/" className="inline-flex items-center gap-2 text-[11px] font-black tracking-widest text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
           <span className="text-base leading-none">←</span>
           Back to Landing
         </Link>
+        <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-black tracking-[0.18em] text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
+          {entryState.surfaceLabel}
+        </span>
       </div>
 
-      <div id="dashboard-header" className="border-b border-gray-200 dark:border-gray-700 pb-3 mb-2">
-        {/* Mobile header — compact single row */}
-        <div className="flex items-center justify-between md:hidden">
-          <div className="min-w-0">
-            <h1 className="text-lg font-black text-gray-900 dark:text-white tracking-tight truncate">
-              {memberships?.[0]?.squad?.name ?? (isGuest ? 'Demo Squad' : 'My Squad')}
-            </h1>
-            {address && (
-              <p className="text-xs text-gray-400 font-medium">
-                {address.slice(0, 6)}…{address.slice(-4)}
-              </p>
-            )}
-            {address && showAuthStatus && (
-              <div className="flex items-center gap-2 mt-1 section-title">
-                <span className={`w-2 h-2 rounded-full ${isVerified ? 'bg-green-500' : 'bg-amber-500'}`} />
-                <span className={isVerified ? 'text-green-600' : 'text-amber-600'}>
-                  {isVerified ? 'Verified' : 'Needs verification'}
-                </span>
-                {needsVerification && (
-                  <button
-                    onClick={handleVerify}
-                    disabled={authStatus.isRefreshing}
-                    className="section-title text-blue-600 hover:text-blue-700 disabled:opacity-60"
-                  >
-                    {authStatus.isRefreshing ? 'Verifying…' : 'Verify'}
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-          <button
-            onClick={handleOpenOffice}
-            className="ml-3 shrink-0 flex items-center gap-1.5 bg-gray-900 dark:bg-gray-700 text-white text-xs font-black uppercase tracking-widest px-3 py-2 rounded-lg"
-          >
-            <Briefcase className="w-3 h-3 text-blue-400" />
-            Hub
-          </button>
-        </div>
-        {/* Desktop header — full */}
-        <div className="hidden md:flex items-end justify-between">
-          <div>
-            <h1 className="text-3xl font-black text-gray-900 dark:text-white tracking-tight">
-              {memberships?.[0]?.squad?.name ?? (isGuest ? 'Demo Squad' : 'My Squad')}
-              {address && (
-                <span className="text-gray-400 font-medium text-lg ml-2">
-                  / {address.slice(0, 6)}…{address.slice(-4)}
-                </span>
-              )}
-            </h1>
-            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mt-1">
-              {memberships?.[0]?.squad?.name
-                ? `${memberships[0].squad.name} • Manager`
-                : (isGuest
-                  ? 'Guest Mode • Demo Experience'
-                  : (needsVerification ? 'Verify wallet to unlock squad data' : 'Connect wallet to get started'))}
-            </p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <Link href="/match?mode=capture">
-              <Button
-                size="sm"
-                className="bg-green-600 hover:bg-green-700 text-white font-black uppercase tracking-widest text-xs flex items-center space-x-2 px-4 shadow-xl shadow-green-600/30"
-              >
-                <Plus className="w-3 h-3" />
-                <span>Log a Match</span>
-              </Button>
-            </Link>
-            <Button
-              onClick={handleOpenOffice}
-              size="sm"
-              className="bg-gray-900 hover:bg-black text-white border-white/5 font-black uppercase tracking-widest text-xs flex items-center space-x-2 px-4 shadow-xl"
-            >
-              <Briefcase className="w-3 h-3 text-blue-400" />
-              <span>Squad Hub</span>
-            </Button>
-            <div className="flex items-center space-x-4">
-              {address && showAuthStatus && (
-                <>
-                  <div className="text-right">
-                    <div className="text-xs font-black text-gray-400 uppercase">Auth</div>
-                    {isVerified ? (
-                      <div className="text-xs font-bold text-green-600">Verified</div>
-                    ) : (
-                      <button
-                        onClick={handleVerify}
-                        disabled={authStatus.isRefreshing}
-                        className="text-xs font-bold text-amber-600 hover:text-amber-700 disabled:opacity-60"
-                      >
-                        {authStatus.isRefreshing ? 'Verifying…' : 'Verify'}
-                      </button>
-                    )}
-                  </div>
-                  <div className="w-px h-8 bg-gray-200 dark:bg-gray-700" />
-                </>
-              )}
-              <div className="text-right">
-                <div className="text-xs font-black text-gray-400 uppercase">Club Status</div>
-                <div className="text-xs font-bold text-green-600">
-                  {isGuest ? 'Demo Simulation' : 'Stable'}
+      <div id="dashboard-header" className="mb-4">
+        <Card className="overflow-hidden border-gray-200/80 bg-gradient-to-br from-white via-white to-gray-50 dark:border-gray-700 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+          <div className="space-y-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="min-w-0">
+                <div className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-green-600 dark:text-green-400">
+                  {entryState.eyebrow}
+                </div>
+                <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white md:text-4xl">
+                  {entryState.headline}
+                </h1>
+                <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-600 dark:text-gray-300 md:text-base">
+                  {entryState.description}
+                </p>
+                <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-gray-400">
+                  {isGuest ? (
+                    <span>{venue} preview</span>
+                  ) : primarySquadName ? (
+                    <span>{entrySquadLabel}</span>
+                  ) : (
+                    <span>{entryAccountLabel}</span>
+                  )}
+                  {hasWallet && address && (
+                    <>
+                      <span className="text-gray-300">/</span>
+                      <span>{address.slice(0, 6)}…{address.slice(-4)}</span>
+                    </>
+                  )}
+                  {!hasWallet && hasAccount && (
+                    <>
+                      <span className="text-gray-300">/</span>
+                      <span>Wallet optional until you need protected actions</span>
+                    </>
+                  )}
                 </div>
               </div>
-              <div className="w-px h-8 bg-gray-200 dark:bg-gray-700" />
-              <div className="text-right">
-                <div className="text-xs font-black text-gray-400 uppercase">Rank</div>
-                <div className="text-xs font-bold text-gray-900 dark:text-white">
-                  {isGuest ? 'Demo #42 Local' : '#42 Local'}
-                </div>
+
+              <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                {renderEntryAction(entryState.secondaryAction, 'secondary')}
+                {renderEntryAction(entryState.primaryAction, 'primary')}
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              {[
+                { label: 'Account', value: entryAccountLabel },
+                { label: 'Wallet', value: entryWalletLabel },
+                { label: 'Squad', value: primarySquadName ? `${activeMembersCount || 1} active members` : entryState.squadLabel },
+                { label: 'Next', value: entryFocusLabel },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/70"
+                >
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
+                    {item.label}
+                  </div>
+                  <div className="mt-2 text-sm font-bold text-gray-900 dark:text-white">
+                    {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Squad Pulse Ticker — Plugs the gap between header and content */}
-      <div className="flex items-center gap-6 py-2 px-1 overflow-x-auto scrollbar-hide text-[9px] font-black uppercase tracking-widest text-gray-500 border-b border-gray-100 dark:border-gray-800 shrink-0">
-        <div className="flex items-center gap-1.5 shrink-0">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse shadow-sm shadow-green-500/50" />
-          <span className="text-gray-900 dark:text-gray-100">{isGuest ? 'Demo' : 'Live'}</span>
-          <span>
-            {isGuest
-              ? 'Demo Queue Available'
-              : (pendingMatchesCount > 0 ? `${pendingMatchesCount} Match Reports Pending` : 'No Pending Matches')}
-          </span>
-        </div>
-        <div className="w-px h-2.5 bg-gray-200 dark:bg-gray-700 shrink-0" />
-        <div className="flex items-center gap-1.5 shrink-0">
-          <TrendingUp className="w-3 h-3 text-blue-500" />
-          <span className="text-gray-900 dark:text-gray-100">Scouting</span>
-          <span>{isGuest ? 'Demo Signals Active' : 'Efficiency Active'}</span>
-        </div>
-        <div className="w-px h-2.5 bg-gray-200 dark:bg-gray-700 shrink-0" />
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Zap className="w-3 h-3 text-orange-500" />
-          <span className="text-gray-900 dark:text-gray-100">Boost</span>
-          <span>{isGuest ? 'Training Preview' : 'Training Active'}</span>
-        </div>
-        <div className="w-px h-2.5 bg-gray-200 dark:bg-gray-700 shrink-0" />
-        <div className="flex items-center gap-1.5 shrink-0">
-          <Users className="w-3 h-3 text-purple-500" />
-          <span className="text-gray-900 dark:text-gray-100">Squad</span>
-          <span>{isGuest ? 'Demo Roster Preview' : `${activeMembersCount} Active Members`}</span>
-        </div>
-      </div>
+      <VerificationBanner className="mb-4" />
+
+      <GuestTour onVisibilityChange={setIsTourActive} />
+      {!isTourActive && <AgenticConcierge />}
 
       <AnimatePresence>
         {isStaffRoomOpen && (

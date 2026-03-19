@@ -16,7 +16,7 @@ interface WalletConnectModalProps {
 }
 
 export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, onClose, onConnected }) => {
-  const { connect, connected, chain, refreshAuthSignature, authStatus, isGuest } = useWallet();
+  const { connect, hasWallet, refreshAuthSignature, authStatus } = useWallet();
   const { login: privyLogin, authenticated, ready } = usePrivy();
   const { login, isConnected: lensConnected, profile: lensProfile } = useLens();
   const { addToast } = useToast();
@@ -24,9 +24,8 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showWalletOptions, setShowWalletOptions] = useState(false);
-  const hasWallet = connected && !isGuest;
   const needsVerification = authStatus.state === 'missing' || authStatus.state === 'expired';
-  const showAuthBanner = authStatus.state !== 'none' && authStatus.state !== 'guest';
+  const showAuthBanner = hasWallet && authStatus.state !== 'none' && authStatus.state !== 'guest';
 
   if (!isOpen) return null;
 
@@ -241,7 +240,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">You're In!</h2>
             <p className="text-gray-600 text-sm">
-              Your account is ready. Connect a wallet to unlock blockchain features.
+              Your account is ready. Log your first match now, then add a wallet when you want protected actions and on-chain progression.
             </p>
           </div>
 

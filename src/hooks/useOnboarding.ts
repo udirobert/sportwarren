@@ -51,11 +51,11 @@ const CHECKLIST_CONFIG: ChecklistConfig[] = [
     },
     {
         id: 'claim_identity',
-        label: 'Connect your identity',
-        description: 'Unlock live squad, treasury, and on-chain progression',
+        label: 'Save your season',
+        description: 'Create your account or add a wallet so progress, squad data, and reputation can stick',
         emoji: '⚡',
         href: '/settings?tab=wallet',
-        actionLabel: 'Open wallet settings',
+        actionLabel: 'Open account settings',
     },
     {
         id: 'open_office',
@@ -110,7 +110,7 @@ const DEFAULT_STATE: OnboardingState = {
 };
 
 export function useOnboarding() {
-    const { connected, isGuest } = useWallet();
+    const { hasAccount, isGuest } = useWallet();
     const [state, setState] = useState<OnboardingState>(DEFAULT_STATE);
     const [hydrated, setHydrated] = useState(false);
 
@@ -163,11 +163,11 @@ export function useOnboarding() {
     }, [persist]);
 
     useEffect(() => {
-        if (!hydrated || isGuest || !connected || state.checklistItems.claim_identity) {
+        if (!hydrated || isGuest || !hasAccount || state.checklistItems.claim_identity) {
             return;
         }
         completeChecklistItem('claim_identity');
-    }, [completeChecklistItem, connected, hydrated, isGuest, state.checklistItems.claim_identity]);
+    }, [completeChecklistItem, hasAccount, hydrated, isGuest, state.checklistItems.claim_identity]);
 
     const checklistItems: ChecklistItem[] = CHECKLIST_CONFIG.map((item) => ({
         ...item,

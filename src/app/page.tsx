@@ -8,13 +8,13 @@ import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 
 export default function Home() {
-  const { connected, isGuest } = useWallet();
+  const { hasAccount, isGuest } = useWallet();
   const { authenticated } = usePrivy();
   const router = useRouter();
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState(false);
 
-  const isLoggedIn = connected || isGuest || authenticated;
+  const isLoggedIn = hasAccount || isGuest || authenticated;
 
   useEffect(() => {
     if (typeof window === 'undefined') return;

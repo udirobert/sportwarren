@@ -21,7 +21,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
     totalMatches: 0,
     totalAgents: 0,
   });
-  const { loginAsGuest, connected } = useWallet();
+  const { loginAsGuest, hasAccount } = useWallet();
   const [scrollY, setScrollY] = useState(0);
   const parallaxRef = useRef<HTMLDivElement>(null);
   const problemRef = useRef<HTMLDivElement>(null);
@@ -100,7 +100,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
 
           {/* CTA - Single primary action */}
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-6">
-            {!connected ? (
+            {!hasAccount ? (
               <button
                 onClick={onGetStarted}
                 className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
@@ -129,7 +129,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             </button>
           </div>
 
-          {!connected && (
+          {!hasAccount && (
             <p className="text-center mb-16">
               <button
                 onClick={() => {
@@ -142,7 +142,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               </button>
             </p>
           )}
-          {connected && <div className="mb-16" />}
+          {hasAccount && <div className="mb-16" />}
 
           {/* Stats — live from API */}
           {stats.totalPlayers > 0 ? (
