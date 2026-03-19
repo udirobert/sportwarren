@@ -5,17 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     MessageSquare,
     X,
-    Sparkles,
-    ChevronRight,
     Send,
     Bot,
-    Coffee,
-    Zap,
-    HelpCircle
 } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
-import { Button } from '@/components/ui/Button';
+import { getJourneyContent } from '@/lib/journey/content';
+import type { DashboardEntryStateId } from '@/lib/dashboard/entry-state';
 
 interface Message {
     id: string;
@@ -25,8 +21,12 @@ interface Message {
     agentType?: 'concierge' | 'scout' | 'coach';
 }
 
-export const AgenticConcierge: React.FC = () => {
-    const { isGuest, address } = useWallet();
+interface AgenticConciergeProps {
+    journeyStage?: DashboardEntryStateId;
+}
+
+export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage = 'guest_preview' }) => {
+    const { address } = useWallet();
     const { city, rivals, venue } = useEnvironment();
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -34,9 +34,11 @@ export const AgenticConcierge: React.FC = () => {
     const [isTyping, setIsTyping] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
     const tourStepProcessed = useRef<Set<string>>(new Set());
-
-    const guestWelcome = `Welcome to the ${city} Chapter! I'm Marcus, your Academy Director. Since you're in Guest Mode, I've initialized a live simulation at your local ground. Ask me anything!`;
-    const memberWelcome = "Welcome back, Manager. The squad is looking sharp today. How can I assist with your tactical preparations?";
+    const journeyContent = getJourneyContent(journeyStage, {
+        city,
+        venue,
+        rivalName: rivals.away,
+    });
 
     useEffect(() => {
         if (messages.length === 0) {
@@ -44,13 +46,13 @@ export const AgenticConcierge: React.FC = () => {
                 {
                     id: '1',
                     role: 'agent',
-                    content: isGuest ? guestWelcome : memberWelcome,
+                    content: journeyContent.assistant.welcome,
                     timestamp: new Date(),
                     agentType: 'concierge'
                 }
             ]);
         }
-    }, [isGuest]);
+    }, [journeyContent.assistant.welcome, messages.length]);
 
     // Listen for Tour Steps
     useEffect(() => {
@@ -67,7 +69,7 @@ export const AgenticConcierge: React.FC = () => {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                message: `I'm observing the simulation at ${venue}. The squad is facing the ${rivals.away}. Provide a quick tactical analysis of their formation (e.g. they are playing a high-line) and suggest that the manager should connect their identity to take control.`,
+                                message: journeyContent.assistant.tourPrompt,
                                 city,
                                 venue,
                                 history: [],
@@ -95,7 +97,7 @@ export const AgenticConcierge: React.FC = () => {
         };
         window.addEventListener('sw-tour-step', handleTourStep);
         return () => window.removeEventListener('sw-tour-step', handleTourStep);
-    }, [venue, rivals, city]);
+    }, [address, city, journeyContent.assistant.tourPrompt, rivals, venue]);
 
     useEffect(() => {
         if (scrollRef.current) {
@@ -221,7 +223,7 @@ export const AgenticConcierge: React.FC = () => {
                                     value={inputValue}
                                     onChange={(e) => setInputValue(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && handleSend()}
-                                    placeholder="Ask anything..."
+                                    placeholder={journeyContent.assistant.placeholder}
                                     className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
                                 />
                                 <button
@@ -233,18 +235,15 @@ export const AgenticConcierge: React.FC = () => {
                                 </button>
                             </div>
                             <div className="mt-4 grid grid-cols-2 gap-2">
-                                <button
-                                    className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-left hover:text-blue-400 transition-colors truncate"
-                                    onClick={() => setInputValue("How does CRE work?")}
-                                >
-                                    • How does CRE work?
-                                </button>
-                                <button
-                                    className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-left hover:text-blue-400 transition-colors truncate"
-                                    onClick={() => setInputValue("What is Guest Mode?")}
-                                >
-                                    • What is Guest Mode?
-                                </button>
+                                {journeyContent.assistant.prompts.map((prompt) => (
+                                    <button
+                                        key={prompt.label}
+                                        className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-left hover:text-blue-400 transition-colors truncate"
+                                        onClick={() => setInputValue(prompt.message)}
+                                    >
+                                        • {prompt.label}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </motion.div>

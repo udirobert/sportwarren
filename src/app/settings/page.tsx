@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Settings, Wallet, User, Bell, Link2, Check, X, Copy, LogOut, Trophy, Target, Star, MessageCircle } from 'lucide-react';
-import { AlgorandWallet } from '@/components/algorand/AlgorandWallet';
+import { Settings, Wallet, User, Bell, Link2, Check, X, Copy, LogOut, Trophy, Target, Star, MessageCircle, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useMySquads } from '@/hooks/squad/useSquad';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { WalletConnectModal } from '@/components/common/WalletConnectModal';
 import { PlatformType, NotificationPreferences, PLATFORM_CONFIG, PLATFORM_LIST } from '@/types';
 import { trackFeatureUsed } from '@/lib/analytics';
 
@@ -37,7 +37,8 @@ const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('profile');
-  const { address, chain, balance, isGuest, disconnect } = useWallet();
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const { address, chain, balance, isGuest, hasAccount, hasWallet, loginMethod, authStatus, disconnect } = useWallet();
   const { preferences, updateConnection, disconnectPlatform } = useUserPreferences();
   const { completeChecklistItem } = useOnboarding();
   const { memberships } = useMySquads();
@@ -46,6 +47,40 @@ export default function SettingsPage() {
   const [celebrating, setCelebrating] = useState<PlatformType | null>(null);
 
   const connections = preferences.connections ?? {};
+  const needsVerification = hasWallet && (authStatus.state === 'missing' || authStatus.state === 'expired');
+  const hasYellowEligibleWallet = hasWallet && (chain === 'avalanche' || chain === 'lens');
+  const accountStatusLabel = isGuest
+    ? 'Guest preview'
+    : hasWallet
+      ? 'Wallet connected'
+      : hasAccount
+        ? 'Account ready'
+        : 'Not signed in';
+  const accountReference = hasWallet && address
+    ? `${address.slice(0, 8)}...${address.slice(-6)}`
+    : hasAccount
+      ? (loginMethod === 'social' ? 'Social sign-in active' : 'Account active')
+      : 'No account connected';
+  const networkLabel = hasWallet
+    ? (chain || 'Unknown')
+    : hasAccount
+      ? 'Account sign-in'
+      : isGuest
+        ? 'Guest preview'
+        : 'Not connected';
+  const verificationLabel = !hasWallet
+    ? 'Not required yet'
+    : needsVerification
+      ? (authStatus.state === 'expired' ? 'Session expired' : 'Signature needed')
+      : 'Verified';
+  const yellowRailLabel = !hasWallet
+    ? 'Connect a wallet first'
+    : needsVerification
+      ? 'Verify wallet first'
+      : hasYellowEligibleWallet
+        ? 'Ready'
+        : 'Requires Avalanche or Lens';
+  const disconnectLabel = hasWallet ? 'Disconnect Wallet' : 'Sign Out';
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -69,7 +104,7 @@ export default function SettingsPage() {
   }, []);
 
   const copyAddress = async () => {
-    if (address) {
+    if (hasWallet && address) {
       await navigator.clipboard.writeText(address);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -142,45 +177,85 @@ export default function SettingsPage() {
       {/* Profile Tab */}
       {activeTab === 'profile' && (
         <div className="space-y-4">
-          {/* Wallet Info Card */}
+          {/* Account Summary */}
           <Card>
-            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Account</h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">Wallet Address</p>
-                  <p className="font-mono text-sm text-gray-900 dark:text-white">
-                    {address ? `${address.slice(0, 8)}...${address.slice(-6)}` : 'Not connected'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={copyAddress}
-                    className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-lg transition-colors"
-                    title="Copy address"
-                  >
-                    {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                  </button>
-                </div>
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Account</h2>
+                <p className="text-sm text-gray-500">
+                  Identity, wallet access, and protected actions all start here.
+                </p>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${
+                isGuest
+                  ? 'bg-blue-100 text-blue-700'
+                  : hasWallet
+                    ? 'bg-green-100 text-green-700'
+                    : hasAccount
+                      ? 'bg-amber-100 text-amber-700'
+                      : 'bg-gray-100 text-gray-700'
+              }`}>
+                {accountStatusLabel}
+              </span>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Account Reference</p>
+                <p className={`${hasWallet ? 'font-mono' : 'font-medium'} text-sm text-gray-900 dark:text-white`}>
+                  {accountReference}
+                </p>
               </div>
 
-              <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <div>
-                  <p className="text-xs text-gray-500 uppercase tracking-wide">Network</p>
-                  <p className="font-medium text-gray-900 dark:text-white capitalize">{chain || 'Not connected'}</p>
-                </div>
-                {isGuest && (
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-medium">Guest Mode</span>
-                )}
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Network</p>
+                <p className="font-medium text-gray-900 dark:text-white capitalize">{networkLabel}</p>
               </div>
 
-              {balance > 0 && (
-                <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase tracking-wide">Balance</p>
-                    <p className="font-medium text-gray-900 dark:text-white">{balance.toLocaleString()}</p>
-                  </div>
-                </div>
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Verification</p>
+                <p className={`font-medium ${needsVerification ? 'text-amber-600' : 'text-gray-900 dark:text-white'}`}>
+                  {verificationLabel}
+                </p>
+              </div>
+
+              <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Yellow Rail</p>
+                <p className={`font-medium ${hasYellowEligibleWallet && !needsVerification ? 'text-green-600' : 'text-gray-900 dark:text-white'}`}>
+                  {yellowRailLabel}
+                </p>
+              </div>
+            </div>
+
+            {hasWallet && balance > 0 && (
+              <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Balance</p>
+                <p className="font-medium text-gray-900 dark:text-white">{balance.toLocaleString()}</p>
+              </div>
+            )}
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              {hasWallet ? (
+                <button
+                  onClick={copyAddress}
+                  className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:text-gray-200 dark:hover:bg-gray-800"
+                  title="Copy address"
+                >
+                  {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
+                  Copy wallet
+                </button>
+              ) : (
+                <Button onClick={() => setShowWalletModal(true)}>
+                  <Wallet className="w-4 h-4 mr-2" />
+                  {isGuest ? 'Start your account' : 'Connect wallet'}
+                </Button>
+              )}
+
+              {needsVerification && (
+                <Button variant="outline" onClick={() => setShowWalletModal(true)}>
+                  <ShieldAlert className="w-4 h-4 mr-2" />
+                  Verify wallet
+                </Button>
               )}
             </div>
           </Card>
@@ -233,20 +308,20 @@ export default function SettingsPage() {
           </Card>
 
           {/* Disconnect Button */}
-          {address && !isGuest && (
+          {hasAccount && !isGuest && (
             <Button
               variant="outline"
               onClick={disconnect}
               className="w-full text-red-600 border-red-200 hover:bg-red-50"
             >
               <LogOut className="w-4 h-4 mr-2" />
-              Disconnect Wallet
+              {disconnectLabel}
             </Button>
           )}
 
           {isGuest && (
-            <div className="text-center py-4 text-gray-500 text-sm">
-              Guest sessions are temporary. Connect a wallet to save your progress.
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm text-blue-900">
+              Guest sessions are temporary. Create an account or connect a wallet when you want to save progress, unlock squad actions, and use payment rails.
             </div>
           )}
         </div>
@@ -392,7 +467,78 @@ export default function SettingsPage() {
       )}
 
       {/* Wallet Tab */}
-      {activeTab === 'wallet' && <AlgorandWallet />}
+      {activeTab === 'wallet' && (
+        <div className="space-y-4">
+          <Card>
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Wallet Access</h2>
+                <p className="text-sm text-gray-500">
+                  Wallets are optional until you need protected actions. Yellow settlement requires a verified Avalanche or Lens wallet.
+                </p>
+              </div>
+              {hasWallet && !needsVerification ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-green-700">
+                  <ShieldCheck className="w-3 h-3" />
+                  Verified
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-amber-700">
+                  <ShieldAlert className="w-3 h-3" />
+                  {hasWallet ? 'Needs Verification' : 'Wallet Optional'}
+                </span>
+              )}
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2">
+              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Current State</div>
+                <div className="mt-2 text-sm font-bold text-gray-900 dark:text-white">{accountStatusLabel}</div>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                  {hasWallet
+                    ? `Connected on ${chain}. ${needsVerification ? 'Approve a signature to unlock protected actions.' : 'Protected actions are available.'}`
+                    : isGuest
+                      ? 'You are still exploring in preview mode. Start an account to keep progress.'
+                      : hasAccount
+                        ? 'Your account is ready. Connect a wallet when you want treasury actions, on-chain progression, and Yellow settlement.'
+                        : 'Sign in first, then connect a wallet if you want protected actions.'}
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Yellow Rail</div>
+                <div className="mt-2 text-sm font-bold text-gray-900 dark:text-white">{yellowRailLabel}</div>
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                  Treasury settlements, match fee locks, and transfer escrow only activate when the connected wallet can authorize Yellow on a supported EVM chain.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {(!hasWallet || needsVerification) && (
+                <Button onClick={() => setShowWalletModal(true)}>
+                  <Wallet className="w-4 h-4 mr-2" />
+                  {hasWallet ? 'Review Wallet Access' : 'Connect Wallet'}
+                </Button>
+              )}
+              {hasWallet && (
+                <Button variant="outline" onClick={disconnect}>
+                  <LogOut className="w-4 h-4 mr-2" />
+                  Disconnect Wallet
+                </Button>
+              )}
+            </div>
+          </Card>
+
+          {hasWallet && !hasYellowEligibleWallet && (
+            <Card className="border-blue-200 bg-blue-50">
+              <p className="text-sm text-blue-900">
+                Algorand wallets can still unlock SportWarren identity and protected data, but Yellow settlement currently requires Avalanche or Lens because the rail is EVM-based.
+              </p>
+            </Card>
+          )}
+        </div>
+      )}
 
       {/* Celebration Toast with XP and Next Step */}
       {celebrating && (() => {
@@ -422,6 +568,12 @@ export default function SettingsPage() {
           </div>
         );
       })()}
+
+      <WalletConnectModal
+        isOpen={showWalletModal}
+        onClose={() => setShowWalletModal(false)}
+        onConnected={() => setShowWalletModal(false)}
+      />
     </div>
   );
 }

@@ -714,7 +714,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                                     if (yellowSession.status === 'authenticated') {
                                                         setChatHistory(prev => [...prev, { sender: '⛓️ Yellow Network', text: `✅ Payment of ${action.amount?.toLocaleString()} ${action.assetSymbol || 'USDC'} authorised via Yellow state channel. Transaction queued.` }]);
                                                     } else {
-                                                        setChatHistory(prev => [...prev, { sender: '⛓️ Yellow Network', text: `⚠️ Yellow session not active (status: ${yellowSession.status}). Connect your EVM wallet to authorise payments via Yellow Network.` }]);
+                                                        setChatHistory(prev => [...prev, { sender: '⛓️ Yellow Network', text: `⚠️ Yellow session not active (status: ${yellowSession.status}). Connect an eligible EVM wallet to authorise payments through Yellow Network.` }]);
                                                     }
                                                 } else if (action.type === 'lens_post') {
                                                     lensPost.mutate({ text: action.postText || action.description, tags: ['SportWarren', 'Phygital'] });

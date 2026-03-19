@@ -118,7 +118,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
           assetSymbol={treasury.paymentRail.assetSymbol}
           enabled={treasury.paymentRail.enabled}
           mode={treasury.paymentRail.mode}
-          body="Deposits and withdrawals update the squad treasury ledger first, then settle against the Yellow session when the wallet path is available."
+          body="Deposits and withdrawals update the squad treasury ledger first, then settle against Yellow when an eligible wallet can authorize the session."
         />
       )}
 

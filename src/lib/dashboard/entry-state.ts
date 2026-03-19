@@ -1,10 +1,6 @@
-export type DashboardEntryStateId =
-  | 'guest_preview'
-  | 'account_ready'
-  | 'wallet_unverified'
-  | 'verified_no_squad'
-  | 'season_kickoff'
-  | 'returning_manager';
+import { getJourneyStage, type JourneyStage } from '@/lib/journey/stage';
+
+export type DashboardEntryStateId = Exclude<JourneyStage, 'public_visitor'>;
 
 export type DashboardEntryActionIntent =
   | 'open_wallet'
@@ -51,19 +47,19 @@ const getPendingLabel = (count: number) =>
     : 'No pending match reports';
 
 export function getDashboardEntryState(input: DashboardEntryStateInput): DashboardEntryState {
-  const {
-    isGuest,
-    hasAccount,
-    hasWallet,
-    isVerified,
-    squadCount,
-    pendingMatchesCount,
-    completedChecklistCount,
-    totalChecklistCount,
-    totalMatches,
-  } = input;
+  const stage = getJourneyStage({
+    isGuest: input.isGuest,
+    hasAccount: input.hasAccount,
+    hasWallet: input.hasWallet,
+    authState: input.isVerified ? 'valid' : (input.hasWallet ? 'missing' : 'none'),
+    squadCount: input.squadCount,
+    pendingMatchesCount: input.pendingMatchesCount,
+    completedChecklistCount: input.completedChecklistCount,
+    totalChecklistCount: input.totalChecklistCount,
+    totalMatches: input.totalMatches,
+  });
 
-  if (isGuest) {
+  if (stage === 'guest_preview') {
     return {
       id: 'guest_preview',
       eyebrow: 'Guest Preview',
@@ -78,7 +74,7 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
     };
   }
 
-  if (!hasAccount || !hasWallet) {
+  if (stage === 'account_ready' || stage === 'public_visitor') {
     return {
       id: 'account_ready',
       eyebrow: 'Season Kickoff',
@@ -89,11 +85,11 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       surfaceLabel: 'Account Ready',
       queueLabel: 'First result not logged yet',
       identityLabel: 'Wallet not connected',
-      squadLabel: squadCount > 0 ? 'Squad linked' : 'No squad yet',
+      squadLabel: input.squadCount > 0 ? 'Squad linked' : 'No squad yet',
     };
   }
 
-  if (!isVerified) {
+  if (stage === 'wallet_unverified') {
     return {
       id: 'wallet_unverified',
       eyebrow: 'Verification Required',
@@ -102,13 +98,13 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       primaryAction: { intent: 'verify_wallet', label: 'Verify wallet' },
       secondaryAction: { intent: 'log_match', label: 'Log a match', href: '/match?mode=capture' },
       surfaceLabel: 'Wallet Connected',
-      queueLabel: getPendingLabel(pendingMatchesCount),
+      queueLabel: getPendingLabel(input.pendingMatchesCount),
       identityLabel: 'Verification pending',
-      squadLabel: squadCount > 0 ? 'Squad linked' : 'No squad yet',
+      squadLabel: input.squadCount > 0 ? 'Squad linked' : 'No squad yet',
     };
   }
 
-  if (squadCount === 0) {
+  if (stage === 'verified_no_squad') {
     return {
       id: 'verified_no_squad',
       eyebrow: 'Squad Setup',
@@ -117,15 +113,13 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       primaryAction: { intent: 'create_squad', label: 'Create squad' },
       secondaryAction: { intent: 'open_staff_room', label: 'Open Staff Room' },
       surfaceLabel: 'Identity Secured',
-      queueLabel: getPendingLabel(pendingMatchesCount),
+      queueLabel: getPendingLabel(input.pendingMatchesCount),
       identityLabel: 'Verified',
       squadLabel: 'No squad yet',
     };
   }
 
-  const kickoffThreshold = Math.min(totalChecklistCount, 3);
-  const needsKickoff = totalMatches === 0 || completedChecklistCount < kickoffThreshold;
-  if (needsKickoff) {
+  if (stage === 'season_kickoff') {
     return {
       id: 'season_kickoff',
       eyebrow: 'Season Kickoff',
@@ -134,7 +128,7 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       primaryAction: { intent: 'log_match', label: 'Log your first result', href: '/match?mode=capture' },
       secondaryAction: { intent: 'open_match_center', label: 'Open Match Center', href: '/match?mode=verify' },
       surfaceLabel: 'Season Live',
-      queueLabel: getPendingLabel(pendingMatchesCount),
+      queueLabel: getPendingLabel(input.pendingMatchesCount),
       identityLabel: 'Verified',
       squadLabel: 'Squad active',
     };
@@ -143,18 +137,18 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
   return {
     id: 'returning_manager',
     eyebrow: 'Manager Console',
-    headline: pendingMatchesCount > 0
-      ? `${pendingMatchesCount} match report${pendingMatchesCount === 1 ? '' : 's'} need review`
+    headline: input.pendingMatchesCount > 0
+      ? `${input.pendingMatchesCount} match report${input.pendingMatchesCount === 1 ? '' : 's'} need review`
       : 'Welcome back to your squad console',
-    description: pendingMatchesCount > 0
+    description: input.pendingMatchesCount > 0
       ? 'Clear the queue, confirm the latest results, and keep the season moving.'
       : 'Your squad is live. Review operations, log the next result, or use the Staff Room to coordinate what happens next.',
-    primaryAction: pendingMatchesCount > 0
+    primaryAction: input.pendingMatchesCount > 0
       ? { intent: 'open_match_center', label: 'Review pending reports', href: '/match?mode=verify' }
       : { intent: 'log_match', label: 'Log a new match', href: '/match?mode=capture' },
     secondaryAction: { intent: 'open_staff_room', label: 'Open Staff Room' },
     surfaceLabel: 'Live',
-    queueLabel: getPendingLabel(pendingMatchesCount),
+    queueLabel: getPendingLabel(input.pendingMatchesCount),
     identityLabel: 'Verified',
     squadLabel: 'Squad active',
   };

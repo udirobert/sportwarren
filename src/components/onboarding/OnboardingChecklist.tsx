@@ -6,12 +6,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Circle, ChevronRight, Trophy, RotateCcw } from 'lucide-react';
 import { useOnboarding, type ChecklistId } from '@/hooks/useOnboarding';
 import { Card } from '@/components/ui/Card';
+import { getJourneyContent } from '@/lib/journey/content';
+import type { DashboardEntryStateId } from '@/lib/dashboard/entry-state';
 
 interface OnboardingChecklistProps {
     onStepAction?: (featureKey: ChecklistId) => void;
+    journeyStage?: DashboardEntryStateId;
 }
 
-export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStepAction }) => {
+export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStepAction, journeyStage = 'account_ready' }) => {
     const {
         allChecklistDone,
         checklistItems,
@@ -20,6 +23,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
         resetOnboarding,
     } = useOnboarding();
     const [expanded, setExpanded] = React.useState(false);
+    const journeyContent = getJourneyContent(journeyStage);
 
     const progress = Math.round((completedCount / totalCount) * 100);
 
@@ -44,7 +48,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                 >
                     <div className="flex items-center gap-2">
                         <Trophy className="w-4 h-4 text-green-400" />
-                        <span className="text-sm font-bold uppercase tracking-tight">Getting Started</span>
+                        <span className="text-sm font-bold uppercase tracking-tight">{journeyContent.checklist.eyebrow}</span>
                         <span className="text-xs text-green-400 font-bold">{completedCount}/{totalCount}</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -66,10 +70,10 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                         <div className="flex items-center justify-between mb-6">
                             <div>
                                 <div className="text-[10px] font-black text-green-400 uppercase tracking-[0.2em] mb-1">
-                                    Getting Started
+                                    {journeyContent.checklist.eyebrow}
                                 </div>
                                 <h2 className="text-lg font-black uppercase tracking-tight">
-                                    Season Kickoff Checklist
+                                    {journeyContent.checklist.title}
                                 </h2>
                             </div>
                             <div className="text-right">
@@ -147,7 +151,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                         {/* Footer */}
                         <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
                             <p className="text-[10px] text-gray-600 font-mono uppercase">
-                                Progress is saved automatically
+                                {journeyContent.checklist.footer}
                             </p>
                             <div className="flex items-center gap-3">
                                 <button

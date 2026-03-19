@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { useWallet } from '@/contexts/WalletContext';
 import { useLens } from '@/contexts/LensContext';
 import { useToast } from '@/contexts/ToastContext';
+import { getJourneyContent } from '@/lib/journey/content';
 import { usePrivy } from '@privy-io/react-auth';
 
 interface WalletConnectModalProps {
@@ -26,6 +27,8 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
   const [showWalletOptions, setShowWalletOptions] = useState(false);
   const needsVerification = authStatus.state === 'missing' || authStatus.state === 'expired';
   const showAuthBanner = hasWallet && authStatus.state !== 'none' && authStatus.state !== 'guest';
+  const publicContent = getJourneyContent('public_visitor');
+  const accountReadyContent = getJourneyContent('account_ready');
 
   if (!isOpen) return null;
 
@@ -86,8 +89,8 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
               <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/20">
                 <span className="text-3xl">⚽</span>
               </div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Join SportWarren</h2>
-              <p className="text-gray-600 text-sm">Sign in to track your Sunday league season</p>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{publicContent.authModal.title}</h2>
+              <p className="text-gray-600 text-sm">{publicContent.authModal.description}</p>
             </div>
 
             {error && (
@@ -102,7 +105,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
               className="w-full py-3.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-green-500/30 transition-all hover:scale-[1.02] disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {!ready && <Loader2 className="w-5 h-5 animate-spin" />}
-              Get Started Free
+              {publicContent.authModal.primaryActionLabel}
               <ArrowRight className="w-4 h-4" />
             </button>
 
@@ -234,19 +237,27 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
         </button>
 
         <div className="p-8">
-          <div className="text-center mb-6">
-            <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/20">
-              <span className="text-3xl">✅</span>
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/20">
+                <span className="text-3xl">✅</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">{accountReadyContent.authModal.title}</h2>
+              <p className="text-gray-600 text-sm">{accountReadyContent.authModal.description}</p>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">You're In!</h2>
-            <p className="text-gray-600 text-sm">
-              Your account is ready. Log your first match now, then add a wallet when you want protected actions and on-chain progression.
-            </p>
-          </div>
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
               {error}
+            </div>
+          )}
+
+          {!showWalletOptions && (
+            <div className="mb-4 grid gap-2">
+              {accountReadyContent.authModal.benefits.map((item) => (
+                <div key={item} className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                  {item}
+                </div>
+              ))}
             </div>
           )}
 
@@ -256,7 +267,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                 onClick={() => { onConnected?.(); onClose(); }}
                 className="w-full py-3.5 bg-gradient-to-r from-green-500 to-emerald-600 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-green-500/30 transition-all hover:scale-[1.02] flex items-center justify-center gap-2"
               >
-                Go to Dashboard
+                {accountReadyContent.authModal.primaryActionLabel}
                 <ArrowRight className="w-4 h-4" />
               </button>
 
@@ -264,7 +275,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                 onClick={() => setShowWalletOptions(true)}
                 className="w-full py-3 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
               >
-                Connect a wallet (optional) →
+                {accountReadyContent.authModal.secondaryActionLabel} →
               </button>
             </div>
           ) : (

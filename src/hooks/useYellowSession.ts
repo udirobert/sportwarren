@@ -114,7 +114,7 @@ function createPendingError(message: string) {
 }
 
 export function useYellowSession(sessionId?: string | null) {
-  const { address, chain, connected } = useWallet();
+  const { address, chain, hasWallet } = useWallet();
   const [state, setState] = useState<YellowSessionState>(() => ({
     ...DEFAULT_STATE,
     enabled: readBooleanEnv(process.env.NEXT_PUBLIC_YELLOW_ENABLED),
@@ -231,7 +231,7 @@ export function useYellowSession(sessionId?: string | null) {
       return;
     }
 
-    if (!connected || !address) {
+    if (!hasWallet || !address) {
       authenticatedRef.current = false;
       sessionSignerRef.current = null;
       setState((current) => ({
@@ -438,7 +438,7 @@ export function useYellowSession(sessionId?: string | null) {
       websocketRef.current = null;
       pendingRef.current.clear();
     };
-  }, [address, chain, connected, sendRawMessage]);
+  }, [address, chain, hasWallet, sendRawMessage]);
 
   return {
     ...state,
