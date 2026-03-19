@@ -29,14 +29,15 @@ import {
   Users,
   Info,
 } from "lucide-react";
-import { MOCK_XP_SUMMARY } from "@/lib/mocks";
 import { getJourneyActionGate } from "@/lib/journey/action-gates";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { useJourneyState } from "@/hooks/useJourneyState";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { trackCoreGrowthEvent, trackFeatureUsed, trackMatchSubmission } from "@/lib/analytics";
+import { useCurrentPlayerAttributes } from "@/hooks/player/usePlayerAttributes";
 
 type ViewMode = "capture" | "verify" | "detail" | "xp-summary" | "history";
+type XPResultState = "idle" | "pending" | "available";
 
 export default function MatchPage() {
   const [requestedMode, setRequestedMode] = useState<string | null>(null);
@@ -45,14 +46,17 @@ export default function MatchPage() {
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [showXPSummary, setShowXPSummary] = useState(false);
   const [xpSummaryData, setXpSummaryData] = useState<{ totalXP: number; attributeGains: { attribute: string; xp: number; oldRating: number; newRating: number }[] } | null>(null);
+  const [xpResultState, setXpResultState] = useState<XPResultState>("idle");
   const [selectedOpponentId, setSelectedOpponentId] = useState<string>("");
   const [lastSubmittedMatchId, setLastSubmittedMatchId] = useState<string | null>(null);
   const [inviteShareState, setInviteShareState] = useState<"idle" | "copied" | "shared" | "error">("idle");
   const { chain, hasAccount, hasWallet, isVerified } = useWallet();
   const { journeyStage, memberships } = useJourneyState();
+  const { attributes: currentPlayerAttributes } = useCurrentPlayerAttributes(isVerified);
   const activeMembership = memberships[0];
   const activeSquad = activeMembership?.squad;
   const activeSquadId = activeSquad?.id;
+  const isSquadLeader = activeMembership?.role === "captain" || activeMembership?.role === "vice_captain";
   const matchCenterGate = getJourneyActionGate('match_center', {
     stage: journeyStage,
     hasAccount,
@@ -87,8 +91,16 @@ export default function MatchPage() {
   const channelConnected = checklistItems.find((item) => item.id === "connect_channel")?.completed ?? false;
   const identityConnected = checklistItems.find((item) => item.id === "claim_identity")?.completed ?? false;
   const inviteTargetMatchId = lastSubmittedMatchId ?? pendingMatches[0]?.id ?? null;
+  const currentPlayerId = currentPlayerAttributes?.address ?? "";
 
   const selectedMatch = selectedMatchId ? getMatchById(selectedMatchId) : null;
+  const selectedMatchUserTeam = selectedMatch
+    ? activeSquad?.name === selectedMatch.homeTeam
+      ? "home"
+      : activeSquad?.name === selectedMatch.awayTeam
+        ? "away"
+        : null
+    : null;
   const hasOpponent = Boolean(selectedOpponentId);
 
   useEffect(() => {
@@ -206,13 +218,16 @@ export default function MatchPage() {
       opponent: opponentName,
       source: "match_capture",
     });
-    setShowXPSummary(true);
-    setViewMode("xp-summary");
+    setXpSummaryData(null);
+    setXpResultState("idle");
+    setShowXPSummary(false);
+    openVerificationQueue();
   };
 
   const handleVerify = async (matchId: string, verified: boolean) => {
     await verifyMatch(matchId, verified);
     if (verified) {
+      let nextSummary: { totalXP: number; attributeGains: { attribute: string; xp: number; oldRating: number; newRating: number }[] } | null = null;
       try {
         const result = await finalizeMatchXP.mutateAsync({ matchId });
         if (result?.results?.length) {
@@ -224,15 +239,28 @@ export default function MatchPage() {
               newRating: 0,
             }))
           );
-          setXpSummaryData({ totalXP, attributeGains: attributeGains.map((g: any) => ({ attribute: g.attribute, xp: g.xpGained, oldRating: 0, newRating: 0 })) });
+          nextSummary = {
+            totalXP,
+            attributeGains: attributeGains.map((g: any) => ({
+              attribute: g.attribute,
+              xp: g.xpGained,
+              oldRating: 0,
+              newRating: 0,
+            })),
+          };
         }
       } catch {
-        // finalizeMatchXP may fail if match not yet fully verified — fall back to mock
+        nextSummary = null;
       }
+      setXpSummaryData(nextSummary);
+      setXpResultState(nextSummary ? "available" : "pending");
       completeChecklistItem("verify_match");
       setShowXPSummary(true);
       setViewMode("xp-summary");
     } else {
+      setXpSummaryData(null);
+      setXpResultState("idle");
+      setShowXPSummary(false);
       openVerificationQueue();
     }
   };
@@ -656,9 +684,9 @@ export default function MatchPage() {
 
           <MatchConfirmation
             match={selectedMatch}
-            userAddress="CURRENT_USER_ADDR"
-            isCaptain
-            userTeam={selectedMatch.submitterTeam === "home" ? "away" : "home"}
+            userAddress={currentPlayerId}
+            isCaptain={isSquadLeader}
+            userTeam={selectedMatchUserTeam}
             onVerify={(verified) => handleVerify(selectedMatch.id, verified)}
             onDispute={(reason) => {
               console.log("Disputed:", reason);
@@ -686,6 +714,7 @@ export default function MatchPage() {
           <Button
             onClick={() => {
               setShowXPSummary(false);
+              setXpResultState("idle");
               openVerificationQueue();
             }}
             variant="outline"
@@ -693,31 +722,58 @@ export default function MatchPage() {
             ← Back to Matches
           </Button>
 
-          <XPGainSummary
-            totalXP={xpSummaryData?.totalXP ?? MOCK_XP_SUMMARY.totalXP}
-            attributeGains={(xpSummaryData?.attributeGains ?? MOCK_XP_SUMMARY.attributeGains) as any}
-          />
+          {xpResultState === "available" && xpSummaryData ? (
+            <>
+              <XPGainSummary
+                totalXP={xpSummaryData.totalXP}
+                attributeGains={xpSummaryData.attributeGains as any}
+              />
 
-          <Card className="py-6 text-center">
-            <Sparkles className="mx-auto mb-3 h-12 w-12 text-yellow-500" />
-            <h3 className="mb-2 text-lg font-semibold text-gray-900">XP Applied</h3>
-            <p className="mb-4 text-gray-600">
-              Your attributes have been updated from the submitted or verified match.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link href="/reputation">
-                <Button variant="outline">View Reputation →</Button>
-              </Link>
-              <Button
-                onClick={() => {
-                  setShowXPSummary(false);
-                  openVerificationQueue();
-                }}
-              >
-                Back to Matches
-              </Button>
-            </div>
-          </Card>
+              <Card className="py-6 text-center">
+                <Sparkles className="mx-auto mb-3 h-12 w-12 text-yellow-500" />
+                <h3 className="mb-2 text-lg font-semibold text-gray-900">XP Applied</h3>
+                <p className="mb-4 text-gray-600">
+                  Your attributes have been updated from the verified match.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <Link href="/reputation">
+                    <Button variant="outline">View Reputation →</Button>
+                  </Link>
+                  <Button
+                    onClick={() => {
+                      setShowXPSummary(false);
+                      setXpResultState("idle");
+                      openVerificationQueue();
+                    }}
+                  >
+                    Back to Matches
+                  </Button>
+                </div>
+              </Card>
+            </>
+          ) : (
+            <Card className="py-8 text-center">
+              <Clock3 className="mx-auto mb-3 h-12 w-12 text-blue-500" />
+              <h3 className="mb-2 text-lg font-semibold text-gray-900">Verification recorded</h3>
+              <p className="mx-auto mb-4 max-w-xl text-gray-600">
+                Your confirmation has been saved. XP and reputation will appear here once the remaining verification threshold is reached and the settlement run completes.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button
+                  onClick={() => {
+                    setShowXPSummary(false);
+                    setXpResultState("idle");
+                    openVerificationQueue();
+                  }}
+                >
+                  Back to Matches
+                </Button>
+                <Link href="/reputation">
+                  <Button variant="outline">Open Reputation</Button>
+                </Link>
+              </div>
+            </Card>
+          )}
         </div>
       )}
 

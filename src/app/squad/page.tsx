@@ -121,8 +121,8 @@ export default function SquadPage() {
     }
   }, []);
 
-  const handleMakeOffer = (playerId: string, amount: number, type: 'transfer' | 'loan') => {
-    return transfersState.makeOffer(playerId, amount, type);
+  const handleMakeOffer = (playerId: string, targetSquadId: string, amount: number, type: 'transfer' | 'loan') => {
+    return transfersState.makeOffer(playerId, targetSquadId, amount, type);
   };
 
   const handleRespondToOffer = (offerId: string, accept: boolean) => {

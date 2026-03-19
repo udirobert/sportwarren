@@ -7,7 +7,7 @@
  * - src/app/squad/page.tsx (MOCK_PLAYERS)
  */
 
-import type { PlayerAttributes, Player, SkillRating, FormRating, PlayerXP } from '@/types';
+import type { PlayerAttributes, Player, SkillRating, FormRating, PlayerXP, TransferMarketPlayer } from '@/types';
 
 /**
  * Default skill ratings for a new player
@@ -150,25 +150,6 @@ export const MOCK_MATCH_PLAYER_STATS = [
     verified: false,
   },
 ];
-
-/**
- * Available players for transfer market
- * Extended type with transfer-specific fields
- */
-export interface TransferMarketPlayer {
-  id: string;
-  name: string;
-  position: string;
-  age: number;
-  overall: number;
-  askingPrice: number;
-  currentClub: string;
-  contractExpiry: Date;
-  reputationScore: number;
-  reputationTier: 'bronze' | 'silver' | 'gold' | 'platinum';
-  isDraftEligible: boolean;
-  marketValuation: number;
-}
 
 export const MOCK_AVAILABLE_PLAYERS: TransferMarketPlayer[] = [
   { id: 'tp1', name: 'Alex Thompson', position: 'ST', age: 24, overall: 78, askingPrice: 2500, currentClub: 'Riverside FC', contractExpiry: new Date('2025-06-30'), reputationScore: 450, reputationTier: 'silver', isDraftEligible: true, marketValuation: 2800 },

@@ -806,7 +806,17 @@ export const squadRouter = createTRPCRouter({
           orderBy: { createdAt: 'desc' },
         });
 
-        return offers;
+        const playerIds = Array.from(new Set(offers.map((offer) => offer.playerId)));
+        const players = await ctx.prisma.user.findMany({
+          where: { id: { in: playerIds } },
+          select: { id: true, name: true, position: true, walletAddress: true },
+        });
+        const playerById = new Map(players.map((player) => [player.id, player]));
+
+        return offers.map((offer) => ({
+          ...offer,
+          player: playerById.get(offer.playerId) ?? null,
+        }));
       } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',

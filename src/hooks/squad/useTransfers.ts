@@ -16,7 +16,7 @@ interface UseTransfersReturn {
   incomingOffers: TransferOffer[];
   outgoingOffers: TransferOffer[];
   loading: boolean;
-  makeOffer: (playerId: string, amount: number, type: 'transfer' | 'loan', loanDuration?: number) => Promise<void>;
+  makeOffer: (playerId: string, targetSquadId: string, amount: number, type: 'transfer' | 'loan', loanDuration?: number) => Promise<void>;
   respondToOffer: (offerId: string, accept: boolean) => Promise<void>;
   cancelOffer: (offerId: string) => Promise<void>;
   refreshOffers: () => Promise<void>;
@@ -47,7 +47,21 @@ function transformOffer(offer: any): TransferOffer {
     toSquad: offer.toSquad.id,
     fromSquadName: offer.fromSquad.name,
     toSquadName: offer.toSquad.name,
-    player: { id: offer.playerId } as any,
+    player: {
+      id: offer.player?.id || offer.playerId,
+      address: offer.player?.walletAddress || '',
+      name: offer.player?.name || 'Unnamed Player',
+      position: (offer.player?.position || 'MF') as any,
+      status: 'available',
+      squadNumber: 0,
+      contract: {
+        type: 'amateur',
+        wage: 0,
+        expiry: offer.expiresAt ? new Date(offer.expiresAt) : new Date(),
+      },
+      isCaptain: false,
+      isViceCaptain: false,
+    } as any,
     offerAmount: offer.amount,
     offerType: offer.offerType as 'transfer' | 'loan',
     loanDuration: offer.loanDuration || undefined,
@@ -234,15 +248,16 @@ export function useTransfers(squadId?: string): UseTransfersReturn {
 
   const makeOffer = useCallback(async (
     playerId: string,
+    targetSquadId: string,
     amount: number,
     type: 'transfer' | 'loan',
     loanDuration?: number
   ) => {
-    if (!squadId) return;
-    const yellowSettlement = await createYellowEscrow(squadId, amount, type, playerId);
+    if (!squadId || !targetSquadId) return;
+    const yellowSettlement = await createYellowEscrow(targetSquadId, amount, type, playerId);
 
     await createMutation.mutateAsync({
-      toSquadId: squadId,
+      toSquadId: targetSquadId,
       playerId,
       offerType: type === 'transfer' ? 'permanent' : 'loan',
       amount,

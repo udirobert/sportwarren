@@ -1,32 +1,32 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PaymentRailNotice } from '@/components/payments/PaymentRailNotice';
 import {
   ArrowRightLeft, DollarSign, Clock, Check, X,
-  Search, Filter, TrendingUp, User, Trophy, Zap
+  Search, TrendingUp, User
 } from 'lucide-react';
-import type { TransferOffer, SquadPlayer, PlayerAttributes } from '@/types';
-import { MOCK_OFFERS, MOCK_AVAILABLE_PLAYERS } from '@/lib/mocks';
+import type { TransferOffer, TransferMarketPlayer } from '@/types';
 import { DraftEngine } from './DraftEngine';
-import { calculateMarketValuation } from '@/lib/utils/calculations';
 
 interface TransferMarketProps {
   squadBalance: number;
   incomingOffers?: TransferOffer[];
   outgoingOffers?: TransferOffer[];
+  availablePlayers?: TransferMarketPlayer[];
   currencyLabel?: string;
   paymentRailEnabled?: boolean;
-  onMakeOffer?: (playerId: string, amount: number, type: 'transfer' | 'loan') => void;
+  onMakeOffer?: (playerId: string, targetSquadId: string, amount: number, type: 'transfer' | 'loan') => void;
   onRespondToOffer?: (offerId: string, accept: boolean) => void;
 }
 
 export const TransferMarket: React.FC<TransferMarketProps> = ({
   squadBalance,
-  incomingOffers = MOCK_OFFERS.filter(o => o.toSquad === 'Northside United'),
-  outgoingOffers = MOCK_OFFERS.filter(o => o.fromSquad === 'Northside United'),
+  incomingOffers = [],
+  outgoingOffers = [],
+  availablePlayers = [],
   currencyLabel = 'ALGO',
   paymentRailEnabled = false,
   onMakeOffer,
@@ -35,19 +35,27 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
   const [activeTab, setActiveTab] = useState<'browse' | 'offers' | 'drafts' | 'my-players'>('browse');
   const [searchQuery, setSearchQuery] = useState('');
   const [positionFilter, setPositionFilter] = useState<string>('all');
-  const [selectedPlayer, setSelectedPlayer] = useState<typeof MOCK_AVAILABLE_PLAYERS[0] | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<TransferMarketPlayer | null>(null);
   const [offerAmount, setOfferAmount] = useState('');
   const [offerType, setOfferType] = useState<'transfer' | 'loan'>('transfer');
 
-  const filteredPlayers = MOCK_AVAILABLE_PLAYERS.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPosition = positionFilter === 'all' || p.position === positionFilter;
+  const filteredPlayers = availablePlayers.filter((player) => {
+    const matchesSearch = player.name.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesPosition = positionFilter === 'all' || player.position === positionFilter;
     return matchesSearch && matchesPosition;
   });
+  const draftProspects = availablePlayers.filter((player) => player.isDraftEligible);
+  const hasLiveListings = availablePlayers.length > 0;
+
+  useEffect(() => {
+    if (activeTab === 'browse' && !hasLiveListings && incomingOffers.length === 0 && outgoingOffers.length === 0) {
+      setActiveTab('drafts');
+    }
+  }, [activeTab, hasLiveListings, incomingOffers.length, outgoingOffers.length]);
 
   const handleMakeOffer = () => {
-    if (selectedPlayer && offerAmount) {
-      onMakeOffer?.(selectedPlayer.id, parseInt(offerAmount), offerType);
+    if (selectedPlayer?.ownerSquadId && offerAmount) {
+      onMakeOffer?.(selectedPlayer.id, selectedPlayer.ownerSquadId, parseInt(offerAmount), offerType);
       setSelectedPlayer(null);
       setOfferAmount('');
     }
@@ -81,8 +89,8 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
       {/* Tabs */}
       <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
         {[
-          { key: 'browse', label: 'Browse', count: MOCK_AVAILABLE_PLAYERS.length },
-          { key: 'drafts', label: 'Drafts', count: MOCK_AVAILABLE_PLAYERS.filter(p => p.isDraftEligible).length },
+          { key: 'browse', label: 'Listings', count: availablePlayers.length },
+          { key: 'drafts', label: 'Drafts', count: draftProspects.length },
           { key: 'offers', label: 'Market Feed', count: incomingOffers.length + outgoingOffers.length },
         ].map(({ key, label, count }) => (
           <button
@@ -143,62 +151,83 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
           </Card>
 
           {/* Player List */}
-          <div className="grid md:grid-cols-2 gap-4">
-            {filteredPlayers.map((player) => (
-              <Card
-                key={player.id}
-                className={`cursor-pointer transition-all ${selectedPlayer?.id === player.id ? 'ring-2 ring-blue-500' : 'hover:shadow-md'
-                  }`}
-                onClick={() => setSelectedPlayer(player)}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                      <User className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <h4 className="font-bold text-gray-900 truncate">{player.name}</h4>
-                        {getReputationBadge(player.reputationTier)}
+          {hasLiveListings ? (
+            filteredPlayers.length > 0 ? (
+              <div className="grid md:grid-cols-2 gap-4">
+                {filteredPlayers.map((player) => (
+                  <Card
+                    key={player.id}
+                    className={`cursor-pointer transition-all ${selectedPlayer?.id === player.id ? 'ring-2 ring-blue-500' : 'hover:shadow-md'
+                      }`}
+                    onClick={() => setSelectedPlayer(player)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center space-x-3">
+                        <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                          <User className="w-6 h-6 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <h4 className="font-bold text-gray-900 truncate">{player.name}</h4>
+                            {getReputationBadge(player.reputationTier)}
+                          </div>
+                          <div className="flex items-center space-x-2 text-xs mt-0.5">
+                            <span className="px-1.5 py-0.5 bg-gray-100 rounded font-mono text-gray-600">{player.position}</span>
+                            <span className="text-gray-400">AGE {player.age}</span>
+                            {player.isDraftEligible && (
+                              <span className="text-blue-500 font-black tracking-tighter uppercase italic">Draft Eligible</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`text-xl font-black leading-none ${player.overall >= 80 ? 'text-blue-600' : 'text-gray-900'}`}>
+                            {player.overall}
+                          </div>
+                          <div className="text-xs font-black text-gray-400 uppercase tracking-widest">OVR</div>
+                        </div>
                       </div>
-                      <div className="flex items-center space-x-2 text-xs mt-0.5">
-                        <span className="px-1.5 py-0.5 bg-gray-100 rounded font-mono text-gray-600">{player.position}</span>
-                        <span className="text-gray-400">AGE {player.age}</span>
-                        {player.isDraftEligible && (
-                          <span className="text-blue-500 font-black tracking-tighter uppercase italic">Draft Eligible</span>
-                        )}
-                      </div>
                     </div>
-                    <div className="text-right">
-                      <div className={`text-xl font-black leading-none ${player.overall >= 80 ? 'text-blue-600' : 'text-gray-900'}`}>
-                        {player.overall}
-                      </div>
-                      <div className="text-xs font-black text-gray-400 uppercase tracking-widest">OVR</div>
-                    </div>
-                  </div>
-                </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2">
-                  <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
-                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Market Valuation</div>
-                    <div className="text-sm font-bold text-gray-900 flex items-center space-x-1">
-                      <span>{player.marketValuation.toLocaleString()}</span>
-                      <TrendingUp className={`w-3 h-3 ${player.marketValuation > player.askingPrice ? 'text-green-500' : 'text-gray-400'}`} />
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                        <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Market Valuation</div>
+                        <div className="text-sm font-bold text-gray-900 flex items-center space-x-1">
+                          <span>{player.marketValuation.toLocaleString()}</span>
+                          <TrendingUp className={`w-3 h-3 ${player.marketValuation > player.askingPrice ? 'text-green-500' : 'text-gray-400'}`} />
+                        </div>
+                      </div>
+                      <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
+                        <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Asking Price</div>
+                        <div className="text-sm font-bold text-blue-600">{player.askingPrice.toLocaleString()} {currencyLabel}</div>
+                      </div>
                     </div>
-                  </div>
-                  <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
-                    <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Asking Price</div>
-                    <div className="text-sm font-bold text-blue-600">{player.askingPrice.toLocaleString()} {currencyLabel}</div>
-                  </div>
-                </div>
 
-                <div className="mt-3 flex items-center justify-between text-xs">
-                  <div className="text-gray-500 italic">Reputation: {player.reputationScore} pts</div>
-                  <div className="font-mono text-gray-400 uppercase">{player.currentClub}</div>
-                </div>
+                    <div className="mt-3 flex items-center justify-between text-xs">
+                      <div className="text-gray-500 italic">Reputation: {player.reputationScore} pts</div>
+                      <div className="font-mono text-gray-400 uppercase">{player.ownerSquadName || player.currentClub}</div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <Card className="text-center py-12">
+                <Search className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No listings match this search</h3>
+                <p className="text-gray-600">Try a different position filter or clear the search to review the live market feed.</p>
               </Card>
-            ))}
-          </div>
+            )
+          ) : (
+            <Card className="text-center py-12">
+              <ArrowRightLeft className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No live transfer listings yet</h3>
+              <p className="text-gray-600 mb-4">
+                This squad has no published player listings in the live network right now. Use the draft engine or wait for another squad to open the market.
+              </p>
+              <Button onClick={() => setActiveTab('drafts')}>
+                Open Draft Engine
+              </Button>
+            </Card>
+          )}
 
           {/* Make Offer Modal */}
           {selectedPlayer && (
@@ -247,9 +276,14 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                   <p className="text-sm text-gray-500 mt-1">
                     Asking price: {selectedPlayer.askingPrice.toLocaleString()} {currencyLabel}
                   </p>
+                  {!selectedPlayer.ownerSquadId && (
+                    <p className="text-sm text-amber-600 mt-1">
+                      This listing is missing the owning squad, so the offer cannot be routed yet.
+                    </p>
+                  )}
                 </div>
                 <div className="flex space-x-3">
-                  <Button onClick={handleMakeOffer} className="flex-1">
+                  <Button onClick={handleMakeOffer} className="flex-1" disabled={!selectedPlayer.ownerSquadId}>
                     Submit Offer
                   </Button>
                   <Button onClick={() => setSelectedPlayer(null)} variant="outline">
@@ -366,8 +400,8 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
           {incomingOffers.length === 0 && outgoingOffers.length === 0 && (
             <Card className="text-center py-12">
               <ArrowRightLeft className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Active Offers</h3>
-              <p className="text-gray-600">Browse players to make your first offer</p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No live offers yet</h3>
+              <p className="text-gray-600">Once your squad sends or receives a real offer, the market feed will show it here.</p>
             </Card>
           )}
         </div>
@@ -378,33 +412,35 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
         <div className="space-y-6">
           <DraftEngine />
 
-          <div>
-            <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-4 px-1">Available Prospects</h3>
-            <div className="grid md:grid-cols-2 gap-4">
-              {MOCK_AVAILABLE_PLAYERS.filter(p => p.isDraftEligible).map(player => (
-                <Card key={player.id} className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all cursor-pointer group">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-600 transition-colors">
-                        <User className="w-6 h-6 text-blue-600 group-hover:text-white" />
-                      </div>
-                      <div>
-                        <div className="flex items-center space-x-2">
-                          <h4 className="font-bold text-gray-900">{player.name}</h4>
-                          <span className="text-[8px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded uppercase">U21</span>
+          {draftProspects.length > 0 && (
+            <div>
+              <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-4 px-1">Published Prospects</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                {draftProspects.map((player) => (
+                  <Card key={player.id} className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all cursor-pointer group">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center group-hover:bg-blue-600 transition-colors">
+                          <User className="w-6 h-6 text-blue-600 group-hover:text-white" />
                         </div>
-                        <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">POTENTIAL: A+</p>
+                        <div>
+                          <div className="flex items-center space-x-2">
+                            <h4 className="font-bold text-gray-900">{player.name}</h4>
+                            <span className="text-[8px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded uppercase">U21</span>
+                          </div>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">PUBLISHED SCOUTING SIGNAL</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-[10px] font-black text-blue-600 uppercase">Valuation</div>
+                        <div className="text-sm font-black text-gray-900">{(player.marketValuation * 1.2).toLocaleString()}</div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-[10px] font-black text-blue-600 uppercase">Valuation</div>
-                      <div className="text-sm font-black text-gray-900">{(player.marketValuation * 1.2).toLocaleString()}</div>
-                    </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
 

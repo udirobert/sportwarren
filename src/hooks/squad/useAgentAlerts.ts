@@ -102,7 +102,7 @@ export function useAgentAlerts({ members, treasury, tactics, dataReady }: UseAge
             alerts.push({
                 staffId: 'scout-1',
                 sender: 'The Scout',
-                text: `Boss, I've been watching the numbers. We're ${needed} player${needed > 1 ? 's' : ''} short of a full rotation squad. I've got ${needed + 1} prospects on my shortlist from Hackney Marshes — want me to run through the dossiers?`,
+                text: `Boss, I've been watching the numbers. We're ${needed} player${needed > 1 ? 's' : ''} short of a full rotation squad. I've got ${needed + 1} scouting leads lined up from the wider network — want me to break down the positions we should prioritise first?`,
             });
         }
 
@@ -136,7 +136,7 @@ export function useAgentAlerts({ members, treasury, tactics, dataReady }: UseAge
             alerts.push({
                 staffId: 'comms-1',
                 sender: 'Commercial Lead',
-                text: `Boss, I've been tracking the sponsorship market. With our current budget at ${balance.toLocaleString()} credits, a brand deal would make a real difference right now. Hackney Brew Co. have been asking about us — want me to put together a proposal?`,
+                text: `Boss, I've been tracking the commercial side. With our current budget at ${balance.toLocaleString()} credits, a sponsor push or community update would materially improve our room to move. Want me to outline the fastest route to new revenue?`,
             });
         }
 
