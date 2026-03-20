@@ -79,12 +79,12 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       id: 'account_ready',
       eyebrow: 'Season Kickoff',
       headline: 'Start your season',
-      description: 'Your account is ready. Log your first match in under a minute, then add a wallet when you want protected actions and on-chain progression.',
+      description: 'Your account is ready. Log your first match in under a minute — you can add a wallet later when you want protected actions.',
       primaryAction: { intent: 'log_match', label: 'Log your first match', href: '/match?mode=capture' },
-      secondaryAction: { intent: 'open_wallet', label: 'Connect wallet', href: '/?connect=1' },
+      secondaryAction: { intent: 'open_staff_room', label: 'Explore the Staff Room' },
       surfaceLabel: 'Account Ready',
       queueLabel: 'First result not logged yet',
-      identityLabel: 'Wallet not connected',
+      identityLabel: 'Account active',
       squadLabel: input.squadCount > 0 ? 'Squad linked' : 'No squad yet',
     };
   }
@@ -92,14 +92,14 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
   if (stage === 'wallet_unverified') {
     return {
       id: 'wallet_unverified',
-      eyebrow: 'Verification Required',
-      headline: 'Verify your wallet to unlock protected actions',
-      description: 'Your wallet is connected, but protected data, squad actions, and secure progression stay locked until you approve a verification signature.',
-      primaryAction: { intent: 'verify_wallet', label: 'Verify wallet' },
-      secondaryAction: { intent: 'log_match', label: 'Log a match', href: '/match?mode=capture' },
+      eyebrow: 'Verification Optional',
+      headline: 'Your wallet is connected',
+      description: 'You can log matches now. Verify your wallet later when you want protected squad actions and on-chain progression.',
+      primaryAction: { intent: 'log_match', label: 'Log a match', href: '/match?mode=capture' },
+      secondaryAction: { intent: 'verify_wallet', label: 'Verify wallet' },
       surfaceLabel: 'Wallet Connected',
       queueLabel: getPendingLabel(input.pendingMatchesCount),
-      identityLabel: 'Verification pending',
+      identityLabel: 'Wallet connected',
       squadLabel: input.squadCount > 0 ? 'Squad linked' : 'No squad yet',
     };
   }

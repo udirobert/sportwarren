@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { PaymentRailNotice } from '@/components/payments/PaymentRailNotice';
 import { 
   Wallet, ArrowUpRight, ArrowDownRight, Plus, Minus, 
-  History, PieChart, TrendingUp, AlertCircle 
+  History, PieChart
 } from 'lucide-react';
 import type { Treasury as TreasuryType, TreasuryTransaction } from '@/types';
 import { MOCK_TREASURY } from '@/lib/mocks';
@@ -69,8 +69,14 @@ export const Treasury: React.FC<TreasuryProps> = ({
             <h2 className="text-4xl font-bold">{treasury.balance.toLocaleString()} {treasury.currency}</h2>
             {treasury.paymentRail && (
               <p className="mt-2 text-sm text-green-100">
-                Yellow {treasury.paymentRail.mode} •
-                Settled {treasury.paymentRail.settledBalance.toLocaleString()} {treasury.paymentRail.assetSymbol}
+                {treasury.paymentRail.enabled
+                  ? 'Yellow off-chain rail'
+                  : treasury.paymentRail.mode === 'unconfigured'
+                    ? 'Yellow unavailable'
+                    : 'Manual ledger'}{' '}
+                •{' '}
+                {treasury.paymentRail.enabled ? 'Session balance' : 'Tracked balance'}{' '}
+                {treasury.paymentRail.settledBalance.toLocaleString()} {treasury.paymentRail.assetSymbol}
               </p>
             )}
           </div>
@@ -118,7 +124,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
           assetSymbol={treasury.paymentRail.assetSymbol}
           enabled={treasury.paymentRail.enabled}
           mode={treasury.paymentRail.mode}
-          body="Deposits and withdrawals update the squad treasury ledger first, then settle against Yellow when an eligible wallet can authorize the session."
+          body="Deposits and withdrawals update the treasury ledger immediately. When Yellow is available, the matching balance changes are coordinated inside the squad's off-chain session instead of restarting the full wallet flow each time."
         />
       )}
 

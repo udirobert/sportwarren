@@ -27,7 +27,7 @@ interface UseMatchVerificationReturn {
     matchDate?: Date;
     latitude?: number;
     longitude?: number;
-  }) => Promise<string>;
+  }) => Promise<{ id: string; shareSlug: string }>;
   verifyMatch: (matchId: string, verified: boolean, homeScore?: number, awayScore?: number) => Promise<void>;
   getMatchById: (matchId: string) => MatchResult | undefined;
   refreshMatches: () => Promise<void>;
@@ -258,13 +258,13 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
       latitude?: number;
       longitude?: number;
     }
-  ): Promise<string> => {
+  ): Promise<{ id: string; shareSlug: string }> => {
     const yellowSettlement = await createYellowMatchFeeLock(match);
     const result = await submitMutation.mutateAsync({
       ...match,
       yellowSettlement,
     });
-    return result.id;
+    return { id: result.id, shareSlug: result.shareSlug ?? result.id };
   }, [createYellowMatchFeeLock, submitMutation]);
 
   const verifyMatch = useCallback(async (

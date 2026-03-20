@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
-import { Play, Pause, RotateCcw, Activity, Shield, Trophy, Zap } from 'lucide-react';
+import { Play, Pause, RotateCcw, Activity, Trophy, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSquadDetails } from '@/hooks/squad/useSquad';
@@ -15,7 +15,7 @@ import {
     tickPlayer, selectPassTarget, executePass,
     computeSupportOptions, determineBallState, tryGkSave,
     type PlayerPuck, type BallState, type MatchCommentary,
-    type MatchEvent, type SupportOptions, type LiveMatch,
+    type MatchEvent, type SupportOptions,
 } from '@/lib/match/matchEngine';
 
 type MatchPhase = 'first_half' | 'halftime' | 'second_half' | 'fulltime';
@@ -30,8 +30,6 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
     const [commentary, setCommentary] = useState<MatchCommentary[]>([]);
     const [time, setTime] = useState(0);
     const [score, setScore] = useState({ home: 0, away: 0 });
-    const [activeMatch, setActiveMatch] = useState<string>('m1');
-    const [daoAlert, setDaoAlert] = useState<string | null>(null);
     const [tempo, setTempo] = useState(1);
     const [showIntent, setShowIntent] = useState(true);
     const [latestEvent, setLatestEvent] = useState<string>('');
@@ -104,18 +102,6 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             type === 'incident' ? 'incident' : 'pass';
         addEvent(text, evtType);
     }, [addEvent]);
-
-    const triggerDaoCommand = useCallback(() => {
-        const commands = ["All out attack", "Increase the tempo", "High press trigger", "Recover the second ball"];
-        const cmd = commands[Math.floor(Math.random() * commands.length)];
-        setDaoAlert(cmd);
-        addCommentary(`Sample instruction: ${cmd}.`, 'dao');
-        if (cmd.toLowerCase().includes("tempo")) {
-            setTempo(1.5);
-            tempoRef.current = 1.5;
-        }
-        setTimeout(() => setDaoAlert(null), 3000);
-    }, [addCommentary]);
 
     const reset = useCallback(() => {
         if (halftimeTimerRef.current) {
@@ -519,9 +505,6 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             }, 4000);
         }
 
-        // ── DAO command trigger ───────────────────────────────────────────────
-        if (nextTick > 0 && nextTick % 150 === 0 && Math.random() > 0.7) triggerDaoCommand();
-
         // ── Update refs ───────────────────────────────────────────────────────
         ballRef.current = { x: nextBallX, y: nextBallY, vx: nextBallVx, vy: nextBallVy, ownerId: currentOwnerId };
         playersRef.current = cooledPlayers;
@@ -536,7 +519,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             lastRenderedPhaseRef.current = matchPhaseRef.current;
             setMatchPhase(matchPhaseRef.current);
         }
-    }, [addEvent, triggerDaoCommand]);
+    }, [addEvent]);
 
     // ── Effects ───────────────────────────────────────────────────────────────
 
@@ -697,12 +680,6 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
 
     // ── Derived values ────────────────────────────────────────────────────────
 
-    const matches: LiveMatch[] = [
-        { id: 'm1', home: env.rivals.home.split(' ')[0], away: env.rivals.away.split(' ')[0], homeScore: score.home, awayScore: score.away, status: 'live' },
-        { id: 'm2', home: 'PREV', away: 'FLOW', homeScore: 1, awayScore: 0, status: 'ht' },
-        { id: 'm3', home: 'TACT', away: 'OPS', homeScore: 2, awayScore: 2, status: 'live' },
-    ];
-
     const hotPlayerIds = useMemo(() => {
         const ids = new Set<string>();
         if (!players.length) return ids;
@@ -721,25 +698,11 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
 
     return (
         <Card className="bg-gray-900 border-gray-800 overflow-hidden">
-            {/* Preview fixture switcher */}
-            <div className="bg-black/50 border-b border-white/5 p-2 flex items-center space-x-4 overflow-x-auto scrollbar-none">
-                {matches.map(m => (
-                    <button
-                        key={m.id}
-                        onClick={() => setActiveMatch(m.id)}
-                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-full text-xs whitespace-nowrap transition-all ${activeMatch === m.id ? 'bg-blue-600 text-white font-bold' : 'bg-gray-800 text-gray-200 hover:bg-gray-700'}`}
-                    >
-                        <span className={m.status === 'live' ? 'w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse' : 'w-1.5 h-1.5 bg-gray-500 rounded-full'} />
-                        <span>{m.home} {m.homeScore} - {m.awayScore} {m.away}</span>
-                    </button>
-                ))}
-            </div>
-
             <div className="p-4">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-2">
                         <Activity className="w-5 h-5 text-green-500" />
-                        <h2 className="text-sm font-black uppercase tracking-widest text-white italic">Preview Engine <span className="text-blue-500">v0.6</span></h2>
+                        <h2 className="text-sm font-black uppercase tracking-widest text-white italic">Match Visualization</h2>
                         {matchPhase === 'halftime' && <span className="text-xs font-bold text-yellow-400 ml-2">HALF TIME</span>}
                         {matchPhase === 'fulltime' && <span className="text-xs font-bold text-red-400 ml-2">FULL TIME</span>}
                     </div>
@@ -810,26 +773,6 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                             </div>
                         </div>
                     </div>
-                    {/* DAO Overlay */}
-                    <AnimatePresence>
-                        {daoAlert && (
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none"
-                            >
-                                <div className="bg-blue-600/90 backdrop-blur-md px-6 py-3 rounded-xl border border-blue-400 shadow-2xl flex items-center space-x-3">
-                                    <Shield className="w-6 h-6 text-white animate-bounce" />
-                                    <div>
-                                        <div className="text-xs font-black text-blue-200 uppercase tracking-widest">Illustrative squad instruction</div>
-                                        <div className="text-xl font-black text-white italic">{daoAlert}</div>
-                                    </div>
-                                </div>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-
                     {/* Score Overlay */}
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center space-x-4">
                         <div className="bg-black/80 px-4 py-1.5 rounded-lg border border-white/10 flex items-center space-x-4 font-mono shadow-2xl">
@@ -951,9 +894,9 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                     </AnimatePresence>
                 </div>
 
-                {/* Commentary log and preview context */}
-                <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-                    <div className="col-span-2 p-3 bg-black/70 h-28 overflow-hidden rounded-xl border border-white/10 order-1">
+                {/* Commentary log */}
+                <div className="mt-3">
+                    <div className="p-3 bg-black/70 h-28 overflow-hidden rounded-xl border border-white/10">
                         <div className="space-y-1.5">
                             {commentary.map((c) => (
                                 <motion.div
@@ -970,56 +913,6 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                                 </motion.div>
                             ))}
                         </div>
-                    </div>
-
-                    {/* Preview context */}
-                    <div className="bg-green-900/80 p-3 rounded-xl border border-green-400/60 flex flex-col justify-between order-2 md:order-2">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center space-x-1.5">
-                                <Activity className="w-3.5 h-3.5 text-green-200" />
-                                <span className="text-xs font-black text-white uppercase tracking-widest">Preview Context</span>
-                            </div>
-                            <span className="text-xs text-green-100 font-mono font-semibold">Illustrative</span>
-                        </div>
-                        <div className="space-y-1.5">
-                            <div className="flex justify-between text-xs">
-                                <span className="text-green-100 font-medium">Venue</span>
-                                <span className="text-white font-bold">{env.venue}</span>
-                            </div>
-                            <div className="flex justify-between text-xs">
-                                <span className="text-green-100 font-medium">Conditions</span>
-                                <span className="text-white font-bold">{env.temp} • {env.weather}</span>
-                            </div>
-                        </div>
-                        <div className="mt-2 pt-2 border-t border-green-400/50">
-                            <div className="text-xs font-black text-green-100 uppercase leading-none mb-1">How to read it</div>
-                            <div className="text-xs text-white italic leading-tight">Real submissions can add venue and verification context here when those signals are actually available.</div>
-                        </div>
-                    </div>
-
-                    {/* Sample next win */}
-                    <div className="bg-yellow-900/80 p-3 rounded-xl border border-yellow-400/60 flex flex-col justify-between order-3 md:order-3">
-                        <div className="flex items-center space-x-1.5 mb-1">
-                            <Zap className="w-3.5 h-3.5 text-yellow-200" />
-                            <span className="text-xs font-black text-white uppercase tracking-widest italic">Sample Next Win</span>
-                        </div>
-                        <div>
-                            <div className="text-xs font-black text-white leading-tight mb-1">{env.localMission.title}</div>
-                            <div className="text-xs text-yellow-50 leading-tight">A real season starts when you move from preview to a verified result at <span className="text-white font-bold">{env.localMission.landmark}</span>.</div>
-                        </div>
-                        <div className="mt-2 bg-yellow-400/40 rounded-lg py-1 px-2 border border-yellow-400/60">
-                            <div className="text-xs font-bold text-white text-center uppercase tracking-tight">{env.localMission.bonus}</div>
-                        </div>
-                    </div>
-
-                    <div className="bg-blue-900/80 p-3 rounded-xl border border-blue-400/60 flex flex-col justify-center order-4 md:order-4">
-                        <div className="flex items-center space-x-2 mb-1.5">
-                            <Shield className="w-3.5 h-3.5 text-blue-200" />
-                            <span className="text-xs font-black text-white uppercase tracking-widest">Sample Governance Note</span>
-                        </div>
-                        <p className="text-xs text-blue-50 italic leading-tight">
-                            &ldquo;Protected actions, treasury rules, and squad policy appear here once a real squad is running live.&rdquo;
-                        </p>
                     </div>
                 </div>
             </div>

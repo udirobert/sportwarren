@@ -128,7 +128,6 @@ export default function SettingsPage() {
 
   const handleConnect = (platform: PlatformType) => {
     updateConnection(platform);
-    completeChecklistItem('connect_channel');
     setCelebrating(platform);
     trackFeatureUsed('channel_connect', { platform, total_connected: PLATFORM_LIST.filter(p => preferences.connections?.[p]?.connected || p === platform).length });
     setTimeout(() => setCelebrating(null), 3000);

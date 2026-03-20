@@ -9,7 +9,7 @@ import {
     TrendingUp,
     ShieldCheck
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 import { trpc } from '@/lib/trpc-client';
 import { useSquadDetails } from '@/hooks/squad/useSquad';
@@ -739,7 +739,11 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                             >
                                 <div className="max-w-[90%] p-4 rounded-2xl text-sm leading-relaxed border border-yellow-500/30 bg-yellow-500/10">
                                     <div className="flex items-center gap-2 mb-2">
-                                        <span className="section-title text-yellow-400">⛓️ On-chain Action Pending</span>
+                                        <span className="section-title text-yellow-400">
+                                            {agentCtx.pendingOnChainAction.type === 'yellow_payment'
+                                                ? '⛓️ Yellow Approval Pending'
+                                                : '⛓️ Action Pending'}
+                                        </span>
                                     </div>
                                     <p className="text-gray-200 text-xs mb-1">{agentCtx.pendingOnChainAction.description}</p>
                                     {agentCtx.pendingOnChainAction.amount && (
@@ -755,11 +759,17 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                             onClick={async () => {
                                                 const action = agentCtx.pendingOnChainAction!;
                                                 if (action.type === 'yellow_payment') {
-                                                    // Initiate Yellow state channel session
+                                                    // Initiate Yellow off-chain session
                                                     if (yellowSession.status === 'authenticated') {
-                                                        setChatHistory(prev => [...prev, { sender: '⛓️ Yellow Network', text: `✅ Payment of ${action.amount?.toLocaleString()} ${action.assetSymbol || 'USDC'} authorised via Yellow state channel. Transaction queued.` }]);
+                                                        setChatHistory(prev => [...prev, {
+                                                            sender: '⚡ Yellow Network',
+                                                            text: `✅ Payment of ${action.amount?.toLocaleString()} ${action.assetSymbol || 'USDC'} authorised for Yellow off-chain settlement. The session is queued, so follow-up balance updates can move without another full wallet prompt.`,
+                                                        }]);
                                                     } else {
-                                                        setChatHistory(prev => [...prev, { sender: '⛓️ Yellow Network', text: `⚠️ Yellow session not active (status: ${yellowSession.status}). Connect an eligible EVM wallet to authorise payments through Yellow Network.` }]);
+                                                        setChatHistory(prev => [...prev, {
+                                                            sender: '⚡ Yellow Network',
+                                                            text: `⚠️ Yellow off-chain rail not active (status: ${yellowSession.status}). Connect an eligible EVM wallet to open the session.`,
+                                                        }]);
                                                     }
                                                 } else if (action.type === 'lens_post') {
                                                     try {
@@ -773,7 +783,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                                                 ? '✅ Lens post submitted.'
                                                                 : `⚠️ ${result.message}`,
                                                         }]);
-                                                    } catch (error) {
+                                                    } catch {
                                                         setChatHistory(prev => [...prev, {
                                                             sender: '📡 Lens Protocol',
                                                             text: '⚠️ Lens publishing is unavailable right now.',
@@ -784,7 +794,9 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                             }}
                                             className="px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border bg-yellow-500/20 border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/30 transition-all"
                                         >
-                                            ✅ Sign &amp; Execute
+                                            {agentCtx.pendingOnChainAction.type === 'yellow_payment'
+                                                ? '⚡ Authorise Yellow'
+                                                : '✅ Sign & Execute'}
                                         </button>
                                         <button
                                             onClick={() => agentDispatch({ type: 'CLEAR_ONCHAIN_ACTION' })}

@@ -24,6 +24,22 @@ interface PostTreasuryLedgerEntryInput {
   txHash?: string | null;
 }
 
+interface PostTreasuryLedgerEntryResult {
+  treasury: Awaited<ReturnType<typeof ensureSquadTreasury>>;
+  transaction: {
+    id: string;
+    treasuryId: string;
+    type: string;
+    category: string;
+    amount: number;
+    description: string | null;
+    txHash: string | null;
+    verified: boolean;
+    createdAt: Date;
+  };
+  duplicate?: boolean;
+}
+
 export async function ensureSquadTreasury(prisma: PrismaClient, squadId: string) {
   const existing = await prisma.squadTreasury.findUnique({
     where: { squadId },
@@ -89,6 +105,36 @@ export async function postTreasuryLedgerEntry({
     treasury: updatedTreasury,
     transaction,
   };
+}
+
+export async function postTreasuryLedgerEntryOnce(
+  input: PostTreasuryLedgerEntryInput,
+): Promise<PostTreasuryLedgerEntryResult> {
+  if (!input.txHash) {
+    return postTreasuryLedgerEntry(input);
+  }
+
+  const existing = await input.prisma.treasuryTransaction.findFirst({
+    where: {
+      txHash: input.txHash,
+      type: input.type,
+      category: input.category,
+      amount: Math.abs(input.amountDelta),
+      treasury: {
+        squadId: input.squadId,
+      },
+    },
+  });
+
+  if (existing) {
+    return {
+      treasury: await ensureSquadTreasury(input.prisma, input.squadId),
+      transaction: existing,
+      duplicate: true,
+    };
+  }
+
+  return postTreasuryLedgerEntry(input);
 }
 
 /**

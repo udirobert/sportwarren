@@ -99,7 +99,7 @@ export default function SquadPage() {
   const activeSquad = detailedSquad ?? activeMembership?.squad;
 
   const { checklistItems } = useOnboarding();
-  const squadChecklistDone = checklistItems.find(i => i.id === 'open_office')?.completed ?? false;
+  const squadChecklistDone = true; // open_office removed from checklist
 
   const treasuryState = useTreasury(activeSquadId);
   const transfersState = useTransfers(activeSquadId);

@@ -1,11 +1,13 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import { isAddress, type Address } from 'viem';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { yellowService } from '../../../server/services/blockchain/yellow';
 import { managerInsightService } from '../../../server/services/ai/manager-insights';
 import {
   ensureSquadTreasury,
   postTreasuryLedgerEntry,
+  postTreasuryLedgerEntryOnce,
   TreasuryBalanceError,
 } from '../../../server/services/economy/treasury-ledger';
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
@@ -33,8 +35,8 @@ const yellowTreasurySettlementSchema = z.object({
   settlementId: z.string().min(1).optional(),
 });
 
-async function getSquadLeaderWallet(prisma: any, squadId: string) {
-  const leader = await prisma.squadMember.findFirst({
+async function getSquadLeaderWallets(prisma: any, squadId: string) {
+  const leaders = await prisma.squadMember.findMany({
     where: {
       squadId,
       role: { in: ['captain', 'vice_captain'] },
@@ -47,9 +49,20 @@ async function getSquadLeaderWallet(prisma: any, squadId: string) {
     orderBy: {
       joinedAt: 'asc',
     },
+    take: 2,
   });
 
-  return leader?.user.walletAddress ?? null;
+  const participants = new Map<string, Address>();
+  for (const leader of leaders) {
+    const walletAddress = leader.user?.walletAddress;
+    if (!walletAddress || !isAddress(walletAddress)) {
+      continue;
+    }
+
+    participants.set(walletAddress.toLowerCase(), walletAddress as Address);
+  }
+
+  return Array.from(participants.values());
 }
 
 async function movePlayerToSquad(prisma: any, offer: { playerId: string; fromSquadId: string; toSquadId: string }) {
@@ -639,7 +652,26 @@ export const squadRouter = createTRPCRouter({
 
         const treasury = await ensureSquadTreasury(ctx.prisma, squadId);
         const settlement = yellowSettlement
-          ? yellowService.recordClientSettlement(yellowSettlement)
+          ? (
+              yellowService.isEnabled()
+                ? await yellowService.verifyClientSettlement({
+                    settlement: yellowSettlement,
+                    participantCandidates:
+                      ctx.walletAddress && isAddress(ctx.walletAddress)
+                        ? [ctx.walletAddress]
+                        : [],
+                    expectedApplication: `sportwarren-treasury-${squadId}`,
+                    expectedParticipants:
+                      ctx.walletAddress && isAddress(ctx.walletAddress)
+                        ? [ctx.walletAddress]
+                        : [],
+                    expectedSessionData: {
+                      squadId,
+                      intent: 'deposit',
+                    },
+                  })
+                : yellowService.recordClientSettlement(yellowSettlement)
+            )
           : null;
 
         if (settlement?.sessionId && settlement.sessionId !== treasury.yellowSessionId) {
@@ -649,7 +681,7 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
-        return await postTreasuryLedgerEntry({
+        return await postTreasuryLedgerEntryOnce({
           prisma: ctx.prisma,
           squadId,
           amountDelta: amount,
@@ -724,7 +756,26 @@ export const squadRouter = createTRPCRouter({
         }
 
         const settlement = yellowSettlement
-          ? yellowService.recordClientSettlement(yellowSettlement)
+          ? (
+              yellowService.isEnabled()
+                ? await yellowService.verifyClientSettlement({
+                    settlement: yellowSettlement,
+                    participantCandidates:
+                      ctx.walletAddress && isAddress(ctx.walletAddress)
+                        ? [ctx.walletAddress]
+                        : [],
+                    expectedApplication: `sportwarren-treasury-${squadId}`,
+                    expectedParticipants:
+                      ctx.walletAddress && isAddress(ctx.walletAddress)
+                        ? [ctx.walletAddress]
+                        : [],
+                    expectedSessionData: {
+                      squadId,
+                      intent: 'withdraw',
+                    },
+                  })
+                : yellowService.recordClientSettlement(yellowSettlement)
+            )
           : null;
 
         if (settlement?.sessionId && settlement.sessionId !== treasury.yellowSessionId) {
@@ -734,7 +785,7 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
-        return await postTreasuryLedgerEntry({
+        return await postTreasuryLedgerEntryOnce({
           prisma: ctx.prisma,
           squadId,
           amountDelta: -amount,
@@ -878,6 +929,31 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
+        const transferParticipants = [
+          ...(await getSquadLeaderWallets(ctx.prisma, fromMembership.squadId)),
+          ...(await getSquadLeaderWallets(ctx.prisma, toSquadId)),
+          ...(ctx.walletAddress && isAddress(ctx.walletAddress) ? [ctx.walletAddress as Address] : []),
+        ];
+        const escrow = yellowSettlement
+          ? (
+              yellowService.isEnabled()
+                ? await yellowService.verifyClientSettlement({
+                    settlement: yellowSettlement,
+                    participantCandidates: transferParticipants,
+                    applicationPrefixes: ['sportwarren-transfer-'],
+                    expectedParticipants: transferParticipants,
+                    expectedSessionData: {
+                      squadId: fromMembership.squadId,
+                      toSquadId,
+                      playerId: input.playerId,
+                      offerType: input.offerType === 'permanent' ? 'transfer' : 'loan',
+                      amount: input.amount,
+                    },
+                  })
+                : yellowService.recordClientSettlement(yellowSettlement)
+            )
+          : null;
+
         let offer: any = await ctx.prisma.transferOffer.create({
           data: {
             fromSquadId: fromMembership.squadId,
@@ -895,10 +971,6 @@ export const squadRouter = createTRPCRouter({
           },
         });
 
-        const escrow = yellowSettlement
-          ? yellowService.recordClientSettlement(yellowSettlement)
-          : null;
-
         if (escrow?.sessionId) {
           offer = await ctx.prisma.transferOffer.update({
             where: { id: offer.id },
@@ -910,7 +982,7 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
-        await postTreasuryLedgerEntry({
+        await postTreasuryLedgerEntryOnce({
           prisma: ctx.prisma,
           squadId: fromMembership.squadId,
           amountDelta: -input.amount,
@@ -992,8 +1064,27 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
+        const transferParticipants = [
+          ...(await getSquadLeaderWallets(ctx.prisma, offer.fromSquadId)),
+          ...(await getSquadLeaderWallets(ctx.prisma, offer.toSquadId)),
+          ...(ctx.walletAddress && isAddress(ctx.walletAddress) ? [ctx.walletAddress as Address] : []),
+        ];
         const settlement = yellowSettlement
-          ? yellowService.recordClientSettlement(yellowSettlement)
+          ? (
+              yellowService.isEnabled()
+                ? await yellowService.verifyClientSettlement({
+                    settlement: yellowSettlement,
+                    participantCandidates: transferParticipants,
+                    expectedSessionId: offer.yellowSessionId,
+                    applicationPrefixes: ['sportwarren-transfer-'],
+                    expectedParticipants: transferParticipants,
+                    expectedSessionData: {
+                      offerId,
+                      recipient: accept ? 'seller' : 'buyer',
+                    },
+                  })
+                : yellowService.recordClientSettlement(yellowSettlement)
+            )
           : null;
 
         const updatedOffer = await ctx.prisma.transferOffer.update({
@@ -1008,7 +1099,7 @@ export const squadRouter = createTRPCRouter({
         });
 
         if (accept) {
-          await postTreasuryLedgerEntry({
+          await postTreasuryLedgerEntryOnce({
             prisma: ctx.prisma,
             squadId: offer.toSquadId,
             amountDelta: offer.amount,
@@ -1019,7 +1110,7 @@ export const squadRouter = createTRPCRouter({
           });
           await movePlayerToSquad(ctx.prisma, offer);
         } else {
-          await postTreasuryLedgerEntry({
+          await postTreasuryLedgerEntryOnce({
             prisma: ctx.prisma,
             squadId: offer.fromSquadId,
             amountDelta: offer.amount,
@@ -1095,8 +1186,27 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
+        const transferParticipants = [
+          ...(await getSquadLeaderWallets(ctx.prisma, offer.fromSquadId)),
+          ...(await getSquadLeaderWallets(ctx.prisma, offer.toSquadId)),
+          ...(ctx.walletAddress && isAddress(ctx.walletAddress) ? [ctx.walletAddress as Address] : []),
+        ];
         const settlement = yellowSettlement
-          ? yellowService.recordClientSettlement(yellowSettlement)
+          ? (
+              yellowService.isEnabled()
+                ? await yellowService.verifyClientSettlement({
+                    settlement: yellowSettlement,
+                    participantCandidates: transferParticipants,
+                    expectedSessionId: offer.yellowSessionId,
+                    applicationPrefixes: ['sportwarren-transfer-'],
+                    expectedParticipants: transferParticipants,
+                    expectedSessionData: {
+                      offerId,
+                      recipient: 'buyer',
+                    },
+                  })
+                : yellowService.recordClientSettlement(yellowSettlement)
+            )
           : null;
 
         await ctx.prisma.transferOffer.update({
@@ -1104,7 +1214,7 @@ export const squadRouter = createTRPCRouter({
           data: { status: 'cancelled' },
         });
 
-        await postTreasuryLedgerEntry({
+        await postTreasuryLedgerEntryOnce({
           prisma: ctx.prisma,
           squadId: offer.fromSquadId,
           amountDelta: offer.amount,

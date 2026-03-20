@@ -33,7 +33,6 @@ export const DraftEngine: React.FC<DraftEngineProps> = ({
         utils.market.listScoutingFeed.invalidate(),
       ]);
       alert(data.message);
-      completeChecklistItem('use_draft');
       setIsDrafting(false);
       setDraftStep(0);
       setSelectedProspect(null);
@@ -79,7 +78,6 @@ export const DraftEngine: React.FC<DraftEngineProps> = ({
       }
 
       alert(`[GUEST MODE] ${selectedProspect.name} recruited! Connect wallet to permanently sign them.`);
-      completeChecklistItem('use_draft');
       setIsDrafting(false);
       setDraftStep(0);
       setSelectedProspect(null);
