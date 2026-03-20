@@ -279,7 +279,7 @@ export default function MatchPage() {
 
   if (matchCenterGate.status === "blocked") {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-6 text-gray-900 dark:text-gray-100">
+      <div className="mx-auto max-w-4xl px-4 py-6 nav-spacer-top nav-spacer-bottom text-gray-900 dark:text-gray-100">
         <JourneyGateCard
           icon={Trophy}
           eyebrow={matchCenterGate.eyebrow}
@@ -293,7 +293,7 @@ export default function MatchPage() {
   }
 
   return (
-    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="mx-auto max-w-6xl space-y-6 px-4 py-6 pb-24 md:pb-6">
+    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="mx-auto max-w-6xl space-y-6 px-4 py-6 nav-spacer-top nav-spacer-bottom">
       <VerificationBanner />
       <div className="rounded-3xl border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_45%),linear-gradient(135deg,#f5fffb,#ecfdf5)] p-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">

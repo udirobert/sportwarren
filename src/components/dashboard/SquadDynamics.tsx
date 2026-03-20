@@ -26,12 +26,16 @@ export const SquadDynamics: React.FC<SquadDynamicsProps> = ({ squadId }) => {
     { squadId: squadId || '' },
     { enabled: !!squadId && isVerified, staleTime: 30 * 1000 }
   );
-  const { data: matchData, isLoading: matchesLoading } = trpc.match.list.useQuery(
+  const { data: rawMatchData, isLoading: matchesLoading } = trpc.match.list.useQuery(
     { squadId, limit: 8 },
     { enabled: !!squadId, staleTime: 30 * 1000 }
   );
+  const simpleMatchData = rawMatchData as { matches?: Array<{ status?: string | null; matchDate?: string | null }> } | undefined;
 
-  const matches = matchData?.matches ?? [];
+  const matches = useMemo(
+    () => simpleMatchData?.matches ?? [],
+    [simpleMatchData]
+  );
   const settledMatches = useMemo(
     () => matches.filter((match) => isSettledMatchStatus(match.status)),
     [matches]

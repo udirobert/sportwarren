@@ -140,7 +140,7 @@ export default function SettingsPage() {
   const primarySquad = memberships?.[0]?.squad;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 pb-24 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 py-8 nav-spacer-top nav-spacer-bottom space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 bg-gray-900 dark:bg-gray-700 rounded-xl flex items-center justify-center">

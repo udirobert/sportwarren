@@ -44,7 +44,7 @@ export default function StatsPage() {
 
   if (!hasAccount || isGuest || !hasWallet || !isVerified) {
     return (
-      <main className="max-w-2xl mx-auto px-4 py-12 pb-24 md:pb-6">
+      <main className="max-w-2xl mx-auto px-4 py-12 nav-spacer-top nav-spacer-bottom">
         <EmptyState
           icon={BarChart3}
           title={lockedState.title}
@@ -58,7 +58,7 @@ export default function StatsPage() {
 
   if (attributesLoading || matchesLoading) {
     return (
-      <main className="max-w-4xl mx-auto px-4 py-12 pb-24 md:pb-6 text-gray-900 dark:text-gray-100">
+      <main className="max-w-4xl mx-auto px-4 py-12 nav-spacer-top nav-spacer-bottom text-gray-900 dark:text-gray-100">
         <div className="animate-pulse space-y-4">
           <div className="h-20 bg-gray-100 rounded-2xl" />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -74,7 +74,7 @@ export default function StatsPage() {
 
   if (!attributes) {
     return (
-      <main className="max-w-2xl mx-auto px-4 py-12 pb-24 md:pb-6">
+      <main className="max-w-2xl mx-auto px-4 py-12 nav-spacer-top nav-spacer-bottom">
         <EmptyState
           icon={BarChart3}
           title={emptyState.title}
@@ -104,7 +104,7 @@ export default function StatsPage() {
   const seasonProgress = Math.min((attributes.xp.seasonXP / attributes.xp.nextLevelXP) * 100, 100);
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-8 space-y-6 text-gray-900 dark:text-gray-100">
+    <main className="max-w-4xl mx-auto px-4 py-8 nav-spacer-top nav-spacer-bottom space-y-6 text-gray-900 dark:text-gray-100">
       <Card className="border-gray-100 bg-gray-50">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>

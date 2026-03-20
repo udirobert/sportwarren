@@ -737,12 +737,9 @@ export const AdaptiveDashboard: React.FC = () => {
   };
 
   return (
-    <div className={`max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 nav-spacer-bottom ${getLayoutClass()}`}>
+    <>
+      <div className={`max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 nav-spacer-top nav-spacer-bottom ${getLayoutClass()}`}>
       <div className="flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-widest">
-        <Link href="/" className="inline-flex items-center gap-2 text-[11px] font-black tracking-widest text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors">
-          <span className="text-base leading-none">←</span>
-          Back to Landing
-        </Link>
         <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-black tracking-[0.18em] text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
           {entryState.surfaceLabel}
         </span>
@@ -899,7 +896,7 @@ export const AdaptiveDashboard: React.FC = () => {
               {rest.length > 0 && (
                 <div className="md:hidden -mx-3 px-3 relative">
                   <div
-                    className={`flex gap-3 overflow-x-auto pb-2 snap-x snap-mandatory scrollbar-hide ${rest.length > 1 ? 'carousel-fade-right' : ''}`}
+                    className={`flex gap-3 overflow-x-auto pb-2 snap-x snap-proximity scrollbar-hide scroll-lock-x ${rest.length > 1 ? 'carousel-fade-right' : ''}`}
                     style={{ scrollbarWidth: 'none' }}
                   >
                     {rest.slice(0, 5).map(w => (
@@ -942,10 +939,10 @@ export const AdaptiveDashboard: React.FC = () => {
         );
       })()}
 
-      {/* Floating Action Button — always-visible primary action on mobile */}
+      {/* Floating Action Button — primary action on mobile (left side to avoid concierge overlap) */}
       <Link
         href="/match?mode=capture"
-        className="fixed bottom-6 right-6 z-50 md:hidden bg-green-600 hover:bg-green-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl shadow-green-600/40 transition-all active:scale-95"
+        className="fixed bottom-6 left-6 z-50 md:hidden bg-green-600 hover:bg-green-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl shadow-green-600/40 transition-all active:scale-95"
         aria-label="Log a match"
       >
         <Plus className="w-6 h-6" />
@@ -994,6 +991,7 @@ export const AdaptiveDashboard: React.FC = () => {
           </div>
         </Card>
       )}
-    </div>
+      </div>
+    </>
   );
 };
