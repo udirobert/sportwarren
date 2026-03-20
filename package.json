@@ -19,6 +19,7 @@
     "test:chainlink": "tsx scripts/test-chainlink.ts",
     "test:kite": "tsx scripts/test-kite.ts",
     "test:verification": "tsx scripts/test-verification.ts",
+    "yellow:recover": "tsx scripts/yellow-recovery.ts",
     "setup:analytics": "bash scripts/setup-analytics.sh",
     "postinstall": "prisma generate",
     "test": "vitest run",

@@ -8,12 +8,8 @@ import {
     ChevronLeft,
     Sparkles,
     Cpu,
-    Shield,
-    Trophy,
-    Users,
     Zap,
     MousePointer2,
-    Share2
 } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
@@ -43,7 +39,7 @@ const TOUR_STEPS: TourStep[] = [
         id: 'welcome',
         targetId: 'dashboard-header',
         title: "Welcome to the Preview",
-        content: "You're currently in Preview Mode. This guided walkthrough shows how SportWarren moves from one logged result into verification, squad operations, and season momentum.",
+        content: "You're currently in Preview Mode. This quick walkthrough shows the core loop: log a game, share the link, start your season.",
         emoji: '🏟️',
         icon: Sparkles,
         position: 'bottom',
@@ -51,55 +47,18 @@ const TOUR_STEPS: TourStep[] = [
     {
         id: 'match-engine',
         targetId: 'match-engine',
-        title: "The Match Canvas",
-        content: "This is an illustrative match canvas. It shows how the product can visualize tempo, momentum, and tactical context before you submit a real result.",
+        title: "Log Your First Game",
+        content: "This is the match canvas — it visualizes your game in real time. When you're ready, submit a real result and share the link with your opponent.",
         emoji: '🎮',
         icon: Cpu,
         position: 'left',
         checklistId: 'view_match_engine',
     },
     {
-        id: 'match-verification',
-        targetId: 'recent-matches',
-        title: "Match Verification",
-        content: "Real match verification happens after an actual submission. When supported data is available, weather and location signals help strengthen the trust score for that result.",
-        emoji: '✅',
-        icon: Shield,
-        position: 'top',
-    },
-    {
-        id: 'staff-room',
-        targetId: 'staff-feed',
-        title: "Your Agentic Squad",
-        content: "These are your AI Agents. They monitor squad morale and match data around the clock, giving you tactical insights you won't find anywhere else.",
-        emoji: '🎩',
-        icon: Users,
-        position: 'bottom',
-        checklistId: 'open_office',
-    },
-    {
-        id: 'lens-social-step',
-        targetId: 'lens-social',
-        title: "The Social Graph",
-        content: "This is where share-ready results can be published once a real match is settled and the social integration is available for your account.",
-        emoji: '🌿',
-        icon: Share2,
-        position: 'top',
-    },
-    {
-        id: 'rpg-stats',
-        targetId: 'quick-stats',
-        title: "RPG Progression",
-        content: "Your real-world performance translates into XP. Level up your attributes and build your legacy across the parallel season.",
-        emoji: '📈',
-        icon: Trophy,
-        position: 'bottom',
-    },
-    {
         id: 'claim-identity',
         targetId: 'connect-wallet-btn',
-        title: "Start Your Own Season",
-        content: "Ready to leave the preview behind? Create your account now, then add a wallet later when you want protected actions and on-chain progression.",
+        title: "Start Your Season",
+        content: "Ready to leave the preview? Create your account now. You can add a wallet later when you want protected actions.",
         emoji: '⚡',
         icon: Zap,
         position: 'bottom',
@@ -112,6 +71,7 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
     const { venue } = useEnvironment();
     const { completeChecklistItem } = useOnboarding();
     const [activeStep, setActiveStep] = useState(-1);
+    const [showBanner, setShowBanner] = useState(false);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, height: 0 });
     const [targetResolved, setTargetResolved] = useState(false);
     const [showConfetti, setShowConfetti] = useState(false);
@@ -132,16 +92,12 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
         return step;
     }), [venue]);
 
-    // Initialize tour - restore from localStorage or start fresh
+    // Initialize tour - opt-in banner instead of auto-start
     useEffect(() => {
         const seen = localStorage.getItem(TOUR_COMPLETED_KEY);
-        const savedStep = localStorage.getItem(TOUR_STORAGE_KEY);
-        
         if (isGuest && !seen) {
-            // Restore saved progress or start fresh
-            const initialStep = savedStep ? parseInt(savedStep, 10) : 0;
-            const timer = setTimeout(() => setActiveStep(initialStep), 1000);
-            return () => clearTimeout(timer);
+            // Show banner hint but don't auto-start
+            setShowBanner(true);
         }
     }, [isGuest]);
 
@@ -306,7 +262,32 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
         }
     }, [activeStep, localizedSteps, completeChecklistItem]);
 
-    if (activeStep < 0 || !isGuest) return null;
+    if (activeStep < 0 || !isGuest) {
+        // Show opt-in banner when not in tour
+        if (showBanner && isGuest) {
+            return (
+                <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[300] pointer-events-auto">
+                    <div className="bg-gray-900 border border-white/10 rounded-2xl px-4 py-3 flex items-center space-x-3 shadow-2xl">
+                        <Sparkles className="w-4 h-4 text-green-400 flex-shrink-0" />
+                        <span className="text-sm text-white font-medium">Take a quick tour?</span>
+                        <button
+                            onClick={() => { setShowBanner(false); setActiveStep(0); }}
+                            className="bg-green-500 hover:bg-green-400 text-black text-xs font-bold px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                            Start
+                        </button>
+                        <button
+                            onClick={() => setShowBanner(false)}
+                            className="text-gray-400 hover:text-white transition-colors"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            );
+        }
+        return null;
+    }
 
     const step = localizedSteps[activeStep];
     const Icon = step.icon;

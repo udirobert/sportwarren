@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { Check, X, AlertCircle, Shield, Users, Cpu, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PaymentRailNotice } from '@/components/payments/PaymentRailNotice';
-import type { MatchResult, Verification, TrustTier } from '@/types';
+import type { MatchResult, Verification } from '@/types';
 import {
   checkConsensus,
   getTrustTierColor,
@@ -42,16 +42,16 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
         type: 'info' as const
       },
       {
-        text: "YELLOW: Initializing match fee session...",
+        text: 'YELLOW: Opening off-chain match fee session...',
         timestamp: timeStr,
         type: 'info' as const
       },
       match.paymentRail?.sessionId ? {
-        text: `YELLOW: Match fee session active: ${match.paymentRail.sessionId.slice(0, 12)}... [LOCKED: ${(match.paymentRail.feeAmount ?? 0) * 2} ${match.paymentRail.assetSymbol}]`,
+        text: `YELLOW: Match fee session active: ${match.paymentRail.sessionId.slice(0, 12)}... [OFF-CHAIN LOCKED: ${(match.paymentRail.feeAmount ?? 0) * 2} ${match.paymentRail.assetSymbol}]`,
         timestamp: timeStr,
         type: 'success' as const
       } : {
-        text: "YELLOW: Falling back to manual settlement (EVM identity missing).",
+        text: 'YELLOW: Falling back to manual fee settlement (eligible EVM identity missing).',
         timestamp: timeStr,
         type: 'warning' as const
       },
@@ -107,12 +107,12 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
             type: 'warning' as const
           },
       match.status === 'verified' && match.paymentRail?.sessionId ? {
-        text: `YELLOW: Executing post-match fee settlement...`,
+        text: 'YELLOW: Closing off-chain fee session after consensus...',
         timestamp: timeStr,
         type: 'info' as const
       } : null,
       match.status === 'verified' && match.paymentRail?.sessionId ? {
-        text: `YELLOW: Payout distributed: 1.95 ${match.paymentRail.assetSymbol} to winner, 0.05 ${match.paymentRail.assetSymbol} platform fee.`,
+        text: `YELLOW: Session closeout signed. Winner receives 1.95 ${match.paymentRail.assetSymbol}; platform fee 0.05 ${match.paymentRail.assetSymbol}.`,
         timestamp: timeStr,
         type: 'success' as const
       } : null,
@@ -399,9 +399,10 @@ export const MatchConsensusPanel: React.FC<MatchConsensusProps> = ({ match }) =>
             title="Match Fee Settlement"
             assetSymbol={match.paymentRail.assetSymbol}
             enabled={match.paymentRail.enabled}
+            mode={match.paymentRail.enabled ? 'shared session' : undefined}
             body={match.paymentRail.enabled 
-              ? `Fees are locked in a Yellow session (${match.paymentRail.sessionId?.slice(0, 8)}). Post-verification, winnings are distributed automatically.` 
-              : "This match is using manual settlement because one or more participants do not have an eligible EVM wallet available for Yellow settlement."
+              ? `Both match fees are locked in Yellow session ${match.paymentRail.sessionId?.slice(0, 8)}. Consensus happens first, then the payout closes the session when the result is final.` 
+              : 'This match is using the manual ledger because one or more participants do not have an eligible EVM wallet available for the Yellow off-chain flow.'
             }
           />
         )}

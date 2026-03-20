@@ -7,10 +7,7 @@ import { trackOnboarding, trackCoreGrowthEvent, type CoreGrowthEvent } from '@/l
 export const CHECKLIST_IDS = [
     'verify_match',
     'view_match_engine',
-    'connect_channel',
     'claim_identity',
-    'open_office',
-    'use_draft',
 ] as const;
 
 export type ChecklistId = (typeof CHECKLIST_IDS)[number];
@@ -27,58 +24,33 @@ interface ChecklistConfig {
 const CHECKLIST_CONFIG: ChecklistConfig[] = [
     {
         id: 'verify_match',
-        label: 'Submit your first match result',
-        description: 'Log one real game to unlock XP, reputation, and squad momentum',
+        label: 'Log your first game',
+        description: 'Submit one real match result to unlock XP, reputation, and squad momentum',
         emoji: '✅',
         href: '/match?mode=capture',
-        actionLabel: 'Submit match',
+        actionLabel: 'Log match',
     },
     {
         id: 'view_match_engine',
-        label: 'Send opponent verification link',
-        description: 'Share a review link so the other captain can confirm the score',
+        label: 'Share a match link',
+        description: 'Copy the link and send it to your opponent so they can verify the result',
         emoji: '🔗',
         href: '/match?mode=verify',
-        actionLabel: 'Copy invite link',
-    },
-    {
-        id: 'connect_channel',
-        label: 'Connect a messaging channel',
-        description: 'Link WhatsApp, Telegram, or XMTP for verification and match updates',
-        emoji: '💬',
-        href: '/settings?tab=connections',
-        actionLabel: 'Connect now →',
+        actionLabel: 'Copy link',
     },
     {
         id: 'claim_identity',
-        label: 'Save your season',
-        description: 'Create your account or add a wallet so progress, squad data, and reputation can stick',
+        label: 'Save your progress',
+        description: 'Create an account so your results, XP, and squad data persist',
         emoji: '⚡',
         href: '/settings?tab=wallet',
-        actionLabel: 'Open account settings',
-    },
-    {
-        id: 'open_office',
-        label: 'Visit the Staff Room',
-        description: 'Open the dashboard staff tools and talk to your Agent',
-        emoji: '🎩',
-        href: '/dashboard',
-        actionLabel: 'Open dashboard',
-    },
-    {
-        id: 'use_draft',
-        label: 'Open the transfer market',
-        description: 'Scout prospects and make your first squad move',
-        emoji: '📋',
-        href: '/squad?tab=transfers',
-        actionLabel: 'Open transfers',
+        actionLabel: 'Save progress',
     },
 ];
 
 const CHECKLIST_GROWTH_EVENTS: Partial<Record<ChecklistId, CoreGrowthEvent>> = {
     verify_match: 'first_match_submitted',
     view_match_engine: 'opponent_verification_invite_shared',
-    connect_channel: 'channel_connected',
     claim_identity: 'identity_connected',
 };
 
@@ -100,10 +72,7 @@ interface OnboardingState {
 
 const DEFAULT_STATE: OnboardingState = {
     checklistItems: {
-        connect_channel: false,
         view_match_engine: false,
-        open_office: false,
-        use_draft: false,
         verify_match: false,
         claim_identity: false,
     },

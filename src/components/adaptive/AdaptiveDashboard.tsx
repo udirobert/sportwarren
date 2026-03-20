@@ -115,8 +115,7 @@ export const AdaptiveDashboard: React.FC = () => {
 
   const handleOpenOffice = React.useCallback(() => {
     setIsStaffRoomOpen(true);
-    completeChecklistItem('open_office');
-  }, [completeChecklistItem]);
+  }, []);
 
   const [personalizationDone, setPersonalizationDone] = React.useState(false);
   const entryState = useMemo(() => getDashboardEntryState({
@@ -169,7 +168,7 @@ export const AdaptiveDashboard: React.FC = () => {
           <OnboardingChecklist
             journeyStage={entryState.id}
             onStepAction={(id) => {
-              if (id === 'open_office') handleOpenOffice();
+              // tour step actions handled by checklist
             }}
           />
         ),
@@ -501,7 +500,7 @@ export const AdaptiveDashboard: React.FC = () => {
         </ProgressiveDisclosure>
       ),
       },
-      ...(isGuest ? [{
+      {
         id: 'match-engine',
         priority: 160,
         requiredLevel: 'basic' as const,
@@ -511,7 +510,7 @@ export const AdaptiveDashboard: React.FC = () => {
             <MatchEnginePreview squadId={primarySquadId} />
           </div>
         ),
-      }] : []),
+      },
       {
       id: 'squad-dynamics',
       priority: 89,
@@ -574,13 +573,12 @@ export const AdaptiveDashboard: React.FC = () => {
       'squad-dynamics',
       'territory',
     ]);
-    const previewOnlyWidgets = new Set(['match-engine']);
     
     // For new users, show only essential widgets
     const isNewUser = preferences.featureDiscoveryLevel < 10 && preferences.dashboardLayout === 'minimal';
     const essentialWidgets = isGuest
       ? ['onboarding-checklist', 'quick-stats', 'recent-matches', 'staff-feed', 'lens-social', 'match-engine']
-      : ['onboarding-checklist', 'quick-stats', 'recent-matches'];
+      : ['onboarding-checklist', 'quick-stats', 'recent-matches', 'match-engine'];
 
     return allWidgets
       .filter(widget => {
@@ -588,7 +586,6 @@ export const AdaptiveDashboard: React.FC = () => {
         if (hiddenWidgets.includes(widget.id)) return false;
 
         if (!hasOperationalSquad && squadScopedWidgets.has(widget.id)) return false;
-        if (!isGuest && previewOnlyWidgets.has(widget.id)) return false;
         
         // For new users, only show essential widgets
         if (isNewUser && !essentialWidgets.includes(widget.id)) return false;

@@ -389,6 +389,9 @@ model Match {
   // Status
   status String @default("pending") // pending, verified, disputed, finalized
 
+  // Public sharing
+  shareSlug String? @unique @map("share_slug") // Short slug for public match URLs
+
   // Timestamps
   matchDate DateTime @map("match_date")
   createdAt DateTime @default(now()) @map("created_at")

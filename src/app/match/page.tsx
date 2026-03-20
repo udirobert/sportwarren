@@ -6,6 +6,7 @@ import { MatchCapture } from "@/components/match/MatchCapture";
 import { MatchConsensusPanel } from "@/components/match/MatchConsensus";
 import { MatchConfirmation } from "@/components/match/MatchConfirmation";
 import { XPGainSummary } from "@/components/player/XPGainPopup";
+import { MatchEnginePreview } from "@/components/dashboard/MatchEnginePreview";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { trpc } from "@/lib/trpc-client";
@@ -88,7 +89,6 @@ export default function MatchPage() {
   const { checklistItems, completeChecklistItem } = useOnboarding();
   const firstMatchSubmitted = checklistItems.find((item) => item.id === "verify_match")?.completed ?? false;
   const verificationInviteShared = checklistItems.find((item) => item.id === "view_match_engine")?.completed ?? false;
-  const channelConnected = checklistItems.find((item) => item.id === "connect_channel")?.completed ?? false;
   const identityConnected = checklistItems.find((item) => item.id === "claim_identity")?.completed ?? false;
   const inviteTargetMatchId = lastSubmittedMatchId ?? pendingMatches[0]?.id ?? null;
   const currentPlayerId = currentPlayerAttributes?.address ?? "";
@@ -144,13 +144,15 @@ export default function MatchPage() {
     });
   };
 
-  const buildVerificationInviteUrl = (matchId: string) => {
-    const relative = `/match?mode=detail&matchId=${encodeURIComponent(matchId)}`;
+  const buildShareUrl = (shareSlug: string) => {
+    const relative = `/match/${encodeURIComponent(shareSlug)}`;
     if (typeof window === "undefined") {
       return relative;
     }
     return `${window.location.origin}${relative}`;
   };
+
+  const buildVerificationInviteUrl = buildShareUrl;
 
   const handleShareVerificationInvite = async () => {
     if (!inviteTargetMatchId) {
@@ -194,7 +196,7 @@ export default function MatchPage() {
       return;
     }
 
-    const submittedMatchId = await submitMatchResult({
+    const { id: submittedMatchId, shareSlug } = await submitMatchResult({
       homeSquadId: activeSquadId,
       awaySquadId: selectedOpponentId,
       homeScore: result.homeScore,
@@ -218,6 +220,16 @@ export default function MatchPage() {
       opponent: opponentName,
       source: "match_capture",
     });
+
+    // Auto-copy share link
+    const shareUrl = buildShareUrl(shareSlug);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setInviteShareState("copied");
+    } catch {
+      // clipboard unavailable
+    }
+
     setXpSummaryData(null);
     setXpResultState("idle");
     setShowXPSummary(false);
@@ -362,22 +374,21 @@ export default function MatchPage() {
         </div>
       </div>
 
-      {/* Early conversion path: activation -> viral trigger -> retention -> conversion */}
-      {!(firstMatchSubmitted && verificationInviteShared && channelConnected && identityConnected) && (
+      {/* Season kickoff path: submit -> share -> save */}
+      {!(firstMatchSubmitted && verificationInviteShared && identityConnected) && (
         <Card className="border-emerald-200 bg-emerald-50/80 py-4">
           <div className="flex items-start gap-3">
             <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
             <div className="flex-1">
               <p className="font-semibold text-emerald-900">Season Kickoff Path</p>
               <p className="mt-1 text-sm text-emerald-700">
-                Hit these four milestones to lock in value: submit, verify, connect squad updates, and claim identity.
+                Three steps to lock in value: log a match, share the link, save your progress.
               </p>
               <div className="mt-3 space-y-2">
                 {[
-                  { label: "Submit your first match result", done: firstMatchSubmitted },
-                  { label: "Share verification link with your opponent", done: verificationInviteShared },
-                  { label: "Connect one messaging channel", done: channelConnected },
-                  { label: "Connect identity to save progression", done: identityConnected },
+                  { label: "Log your first match result", done: firstMatchSubmitted },
+                  { label: "Share the match link with your opponent", done: verificationInviteShared },
+                  { label: "Save your progress", done: identityConnected },
                 ].map((step) => (
                   <div key={step.label} className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className={`h-4 w-4 ${step.done ? "text-emerald-600" : "text-gray-300"}`} />
@@ -387,21 +398,16 @@ export default function MatchPage() {
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
                 {!firstMatchSubmitted && (
-                  <Button size="sm" onClick={() => setViewMode("capture")}>Submit first match</Button>
+                  <Button size="sm" onClick={() => setViewMode("capture")}>Log first match</Button>
                 )}
                 {firstMatchSubmitted && !verificationInviteShared && (
                   <Button size="sm" onClick={handleShareVerificationInvite}>
-                    {inviteShareState === "shared" ? "Invite Shared" : inviteShareState === "copied" ? "Invite Copied" : "Copy verification link"}
+                    {inviteShareState === "shared" ? "Invite Shared" : inviteShareState === "copied" ? "Invite Copied" : "Copy match link"}
                   </Button>
                 )}
-                {firstMatchSubmitted && verificationInviteShared && !channelConnected && (
-                  <Link href="/settings?tab=connections">
-                    <Button size="sm" variant="outline">Connect channel</Button>
-                  </Link>
-                )}
-                {firstMatchSubmitted && verificationInviteShared && channelConnected && !identityConnected && (
+                {firstMatchSubmitted && verificationInviteShared && !identityConnected && (
                   <Link href="/settings?tab=wallet">
-                    <Button size="sm" variant="outline">Connect identity</Button>
+                    <Button size="sm" variant="outline">Save progress</Button>
                   </Link>
                 )}
               </div>
@@ -693,6 +699,8 @@ export default function MatchPage() {
               handleVerify(selectedMatch.id, false);
             }}
           />
+
+          <MatchEnginePreview squadId={activeSquadId || undefined} />
         </div>
       )}
 

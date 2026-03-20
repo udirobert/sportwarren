@@ -96,26 +96,29 @@ export function getJourneyActionGate(
     );
   }
 
-  if (!input.hasWallet) {
-    return createBlockedGate(
-      'missing_wallet',
-      'Wallet Required',
-      `Connect a wallet to unlock ${surfaceLabel}`,
-      `Your account is ready, but ${surfaceLabel} rely on a verified wallet identity so the squad can trust who is acting.`,
-      { label: 'Connect wallet', href: SETTINGS_WALLET_HREF },
-      { label: 'Back to dashboard', href: DASHBOARD_HREF },
-    );
-  }
+  // Match center is available without a wallet — only squad governance requires one
+  if (surface !== 'match_center') {
+    if (!input.hasWallet) {
+      return createBlockedGate(
+        'missing_wallet',
+        'Wallet Required',
+        `Connect a wallet to unlock ${surfaceLabel}`,
+        `Your account is ready, but ${surfaceLabel} rely on a verified wallet identity so the squad can trust who is acting.`,
+        { label: 'Connect wallet', href: SETTINGS_WALLET_HREF },
+        { label: 'Back to dashboard', href: DASHBOARD_HREF },
+      );
+    }
 
-  if (!input.isVerified) {
-    return createBlockedGate(
-      'unverified_wallet',
-      'Verification Required',
-      `Verify your wallet to unlock ${surfaceLabel}`,
-      `Your wallet is connected, but protected squad and match actions stay locked until you approve the verification signature.`,
-      { label: 'Verify wallet', href: SETTINGS_WALLET_HREF },
-      { label: 'Back to dashboard', href: DASHBOARD_HREF },
-    );
+    if (!input.isVerified) {
+      return createBlockedGate(
+        'unverified_wallet',
+        'Verification Required',
+        `Verify your wallet to unlock ${surfaceLabel}`,
+        `Your wallet is connected, but protected squad and match actions stay locked until you approve the verification signature.`,
+        { label: 'Verify wallet', href: SETTINGS_WALLET_HREF },
+        { label: 'Back to dashboard', href: DASHBOARD_HREF },
+      );
+    }
   }
 
   if (!input.hasSquad) {

@@ -82,7 +82,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
               <div className="text-sm text-gray-600">Squad Balance</div>
               <div className="text-xl font-bold text-green-600">{squadBalance.toLocaleString()} {currencyLabel}</div>
               {paymentRailEnabled && (
-                <div className="text-xs text-gray-500">Escrow rail active via Yellow</div>
+                <div className="text-xs text-gray-500">Shared off-chain escrow via Yellow</div>
               )}
             </div>
           </div>
@@ -119,7 +119,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
         assetSymbol={currencyLabel}
         enabled={paymentRailEnabled}
         mode={paymentRailEnabled ? 'shared session' : 'disabled'}
-        body="Incoming and outgoing offers can lock funds in Yellow escrow so both squads can settle the same transfer session."
+        body="Incoming and outgoing offers can lock funds in a shared Yellow session, keep the escrow state off-chain during negotiation, and only close the session when the transfer is accepted, rejected, or cancelled."
       />
 
       {/* Browse Players */}
