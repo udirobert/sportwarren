@@ -20,7 +20,7 @@ import {
 
 type MatchPhase = 'first_half' | 'halftime' | 'second_half' | 'fulltime';
 
-export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: number; hasKeeper?: boolean }> = ({ squadId, playersPerSide = 11, hasKeeper = true }) => {
+export const MatchEnginePreview: React.FC<{ squadId?: string; awaySquadId?: string; playersPerSide?: number; hasKeeper?: boolean }> = ({ squadId, awaySquadId, playersPerSide = 11, hasKeeper = true }) => {
     // ── React state (rendering only) ──────────────────────────────────────────
     const [isPlaying, setIsPlaying] = useState(false);
     const [matchPhase, setMatchPhase] = useState<MatchPhase>('first_half');
@@ -604,11 +604,12 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
 
     // Fetch real team members
     const { members, loading: membersLoading } = useSquadDetails(squadId);
+    const { members: awayMembers, loading: awayMembersLoading } = useSquadDetails(awaySquadId);
 
     // Initialize players (runs once after members load)
     useEffect(() => {
         if (playersInitialised.current) return;
-        if (membersLoading) return;
+        if (membersLoading || awayMembersLoading) return;
 
         const createPlayer = (id: string, name: string, x: number, y: number, team: 'home' | 'away', role: string, stats: any): PlayerPuck => ({
             id, name, x, y, vx: 0, vy: 0, team, role, stats,
@@ -626,33 +627,35 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
 
         let seededPlayers: PlayerPuck[] = [];
 
-        if (members && members.length > 0) {
-            const homePlayers = homeFormation.map(([x, y, role], i) => {
-                const m = members[i];
-                const level = m?.stats?.level || 8;
+        // Home team — real data if available
+        const homePlayers = homeFormation.map(([x, y, role], i) => {
+            const m = members?.[i];
+            const level = m?.stats?.level || 8;
+            const baseStat = 60 + (level * 1.5);
+            return createPlayer(
+                m?.id || `h${i}`, m ? m.name.split(' ')[0] : homeNames[i],
+                x, y, 'home', role,
+                { level, pace: Math.min(99, baseStat + (role === 'ST' || role.endsWith('W') ? 8 : 0)), agility: Math.min(99, baseStat + 2), strength: Math.min(99, baseStat - 5), passing: Math.min(99, baseStat + (role === 'CM' ? 8 : 0)) }
+            );
+        });
+
+        // Away team — real data if available, random otherwise
+        const awayPlayers = awayFormation.map(([x, y, role], i) => {
+            const m = awayMembers?.[i];
+            if (m) {
+                const level = m.stats?.level || 8;
                 const baseStat = 60 + (level * 1.5);
                 return createPlayer(
-                    m?.id || `h${i}`, m ? m.name.split(' ')[0] : homeNames[i],
-                    x, y, 'home', role,
+                    m.id, m.name.split(' ')[0],
+                    x, y, 'away', role,
                     { level, pace: Math.min(99, baseStat + (role === 'ST' || role.endsWith('W') ? 8 : 0)), agility: Math.min(99, baseStat + 2), strength: Math.min(99, baseStat - 5), passing: Math.min(99, baseStat + (role === 'CM' ? 8 : 0)) }
                 );
-            });
-            const awayPlayers = awayFormation.map(([x, y, role], i) =>
-                createPlayer(`a${i}`, awayNames[i], x, y, 'away', role,
-                    { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20), passing: 65 + Math.floor(Math.random() * 20) })
-            );
-            seededPlayers = [...homePlayers, ...awayPlayers];
-        } else {
-            const homePlayers = homeFormation.map(([x, y, role], i) =>
-                createPlayer(`h${i}`, homeNames[i], x, y, 'home', role,
-                    { level: 10 + Math.floor(Math.random() * 12), pace: 68 + Math.floor(Math.random() * 24), agility: 65 + Math.floor(Math.random() * 22), strength: 60 + Math.floor(Math.random() * 25), passing: 68 + Math.floor(Math.random() * 22) })
-            );
-            const awayPlayers2 = awayFormation.map(([x, y, role], i) =>
-                createPlayer(`a${i}`, awayNames[i], x, y, 'away', role,
-                    { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20), passing: 65 + Math.floor(Math.random() * 20) })
-            );
-            seededPlayers = [...homePlayers, ...awayPlayers2];
-        }
+            }
+            return createPlayer(`a${i}`, awayNames[i], x, y, 'away', role,
+                { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20), passing: 65 + Math.floor(Math.random() * 20) });
+        });
+
+        seededPlayers = [...homePlayers, ...awayPlayers];
 
         const kickoffCandidates = seededPlayers.filter(p => p.role !== 'GK');
         const kickoffStarter = kickoffCandidates[Math.floor(Math.random() * kickoffCandidates.length)] ?? seededPlayers[0];
@@ -667,7 +670,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             setLatestEvent(`${kickoffStarter.name} takes the kickoff.`);
         }
         playersInitialised.current = true;
-    }, [members, membersLoading, playersPerSide, hasKeeper]);
+    }, [members, membersLoading, awayMembers, awayMembersLoading, playersPerSide, hasKeeper]);
 
     // Game loop — interval is stable because movePlayers has no deps
     useEffect(() => {
