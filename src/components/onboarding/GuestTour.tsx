@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X,
@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
+import { useOnboarding, type ChecklistId } from '@/hooks/useOnboarding';
 
 interface TourStep {
     id: string;
@@ -26,6 +27,7 @@ interface TourStep {
     emoji: string;
     icon: React.ComponentType<any>;
     position: 'top' | 'bottom' | 'left' | 'right' | 'center';
+    checklistId?: ChecklistId;
 }
 
 interface GuestTourProps {
@@ -50,6 +52,7 @@ const TOUR_STEPS: TourStep[] = [
         emoji: '🎮',
         icon: Cpu,
         position: 'left',
+        checklistId: 'view_match_engine',
     },
     {
         id: 'match-verification',
@@ -68,6 +71,7 @@ const TOUR_STEPS: TourStep[] = [
         emoji: '🎩',
         icon: Users,
         position: 'bottom',
+        checklistId: 'open_office',
     },
     {
         id: 'lens-social-step',
@@ -95,16 +99,19 @@ const TOUR_STEPS: TourStep[] = [
         emoji: '⚡',
         icon: Zap,
         position: 'bottom',
+        checklistId: 'claim_identity',
     }
 ];
 
 export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
     const { isGuest } = useWallet();
     const { venue } = useEnvironment();
+    const { completeChecklistItem } = useOnboarding();
     const [activeStep, setActiveStep] = useState(-1);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, height: 0 });
+    const [targetResolved, setTargetResolved] = useState(false);
 
-    const localizedSteps = TOUR_STEPS.map(step => {
+    const localizedSteps = useMemo(() => TOUR_STEPS.map(step => {
         if (step.id === 'welcome') {
             return {
                 ...step,
@@ -115,7 +122,7 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
             };
         }
         return step;
-    });
+    }), [venue]);
 
     useEffect(() => {
         const seen = localStorage.getItem('sw_guest_tour_seen');
@@ -145,23 +152,59 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
         if (activeStep < 0 || activeStep >= localizedSteps.length) return;
 
         const step = localizedSteps[activeStep];
-        const element = document.getElementById(step.targetId);
+        
+        // Find the visible element if multiple exist with same ID (e.g. mobile/desktop variants)
+        const findVisibleElement = (id: string) => {
+            const elements = document.querySelectorAll(`[id="${id}"]`);
+            if (elements.length === 0) return null;
+            if (elements.length === 1) return elements[0] as HTMLElement;
+            
+            return Array.from(elements).find(el => {
+                const rect = el.getBoundingClientRect();
+                return rect.width > 0 && rect.height > 0;
+            }) as HTMLElement | null;
+        };
+
+        const element = findVisibleElement(step.targetId);
 
         if (element) {
             const rect = element.getBoundingClientRect();
-            setCoords({
-                top: rect.top,
-                left: rect.left,
-                width: rect.width,
-                height: rect.height
+            if (rect.width <= 0 || rect.height <= 0) {
+                setTargetResolved(false);
+                return;
+            }
+            setTargetResolved(true);
+            
+            // Only update if changed to avoid unnecessary re-renders
+            setCoords(prev => {
+                if (
+                    prev.top === rect.top && 
+                    prev.left === rect.left && 
+                    prev.width === rect.width && 
+                    prev.height === rect.height
+                ) {
+                    return prev;
+                }
+                return {
+                    top: rect.top,
+                    left: rect.left,
+                    width: rect.width,
+                    height: rect.height
+                };
             });
 
             // Scroll into view if not visible
             if (activeStep !== 0 && (rect.top < 0 || rect.bottom > window.innerHeight)) {
                 element.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }
-        } else if (step.position === 'center') {
-            setCoords({ top: window.innerHeight / 2, left: window.innerWidth / 2, width: 0, height: 0 });
+        } else {
+            setTargetResolved(false);
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            setCoords(prev => {
+                if (prev.top === centerY && prev.left === centerX) return prev;
+                return { top: centerY, left: centerX, width: 0, height: 0 };
+            });
         }
     }, [activeStep, localizedSteps]);
 
@@ -169,21 +212,49 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
         updateCoords();
         window.addEventListener('resize', updateCoords);
         window.addEventListener('scroll', updateCoords, { passive: true });
+
+        const mutationObserver = new MutationObserver(() => updateCoords());
+        mutationObserver.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+        });
+        
         return () => {
             window.removeEventListener('resize', updateCoords);
             window.removeEventListener('scroll', updateCoords);
+            mutationObserver.disconnect();
         };
     }, [updateCoords]);
 
-    // Dispatch event to sync other components (MatchEngine, Concierge)
+    // Keyboard Navigation
+    useEffect(() => {
+        if (activeStep < 0) return;
+
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') handleComplete();
+            if (e.key === 'ArrowRight') handleNext();
+            if (e.key === 'ArrowLeft') handleBack();
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [activeStep]);
+
+    // Dispatch event to sync other components (MatchEngine, Concierge) + Link Progress
     useEffect(() => {
         if (activeStep >= 0) {
             const step = localizedSteps[activeStep];
             window.dispatchEvent(new CustomEvent('sw-tour-step', {
                 detail: { id: step.id, activeStep }
             }));
+
+            // Link to checklist progress
+            if (step.checklistId) {
+                completeChecklistItem(step.checklistId);
+            }
         }
-    }, [activeStep, localizedSteps]);
+    }, [activeStep, localizedSteps, completeChecklistItem]);
 
     const handleNext = () => {
         if (activeStep < localizedSteps.length - 1) {
@@ -211,7 +282,7 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
 
     // Smart positioning logic
     const getPopupStyle = () => {
-        if (step.position === 'center') {
+        if (step.position === 'center' || !targetResolved) {
             return { top: '40%', left: '50%', transform: 'translate(-50%, -40%)' };
         }
 
@@ -246,23 +317,47 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="absolute inset-0 bg-black/60 backdrop-blur-[2px]"
+                className="absolute inset-0 bg-black/60 backdrop-blur-[2px] pointer-events-auto"
                 style={{
-                    clipPath: step.position === 'center'
+                    clipPath: step.position === 'center' || !targetResolved
                         ? 'none'
                         : `polygon(0% 0%, 0% 100%, ${coords.left}px 100%, ${coords.left}px ${coords.top}px, ${coords.left + coords.width}px ${coords.top}px, ${coords.left + coords.width}px ${coords.top + coords.height}px, ${coords.left}px ${coords.top + coords.height}px, ${coords.left}px 100%, 100% 100%, 100% 0%)`
                 }}
             />
 
+            {/* Visual Ping Animation */}
+            {step.position !== 'center' && targetResolved && (
+                <motion.div
+                    key={`ping-${activeStep}`}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ 
+                        opacity: [0, 0.4, 0],
+                        scale: [0.8, 1.2, 1.4],
+                    }}
+                    transition={{
+                        duration: 2,
+                        repeat: Infinity,
+                        ease: "easeOut"
+                    }}
+                    className="absolute border-2 border-green-400 rounded-3xl pointer-events-none"
+                    style={{
+                        top: coords.top - 8,
+                        left: coords.left - 8,
+                        width: coords.width + 16,
+                        height: coords.height + 16,
+                    }}
+                />
+            )}
+
             {/* Interaction Layer */}
-            <div className="absolute inset-0 pointer-events-auto">
+            <div className="absolute inset-0 pointer-events-none">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={activeStep}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="fixed z-[350]"
+                        className="fixed z-[350] pointer-events-auto"
                         style={getPopupStyle()}
                     >
                         <div className="bg-white rounded-3xl p-6 shadow-2xl w-[320px] relative overflow-hidden group">
@@ -330,7 +425,7 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
                             <motion.div
                                 animate={{ y: [0, 5, 0] }}
                                 transition={{ repeat: Infinity, duration: 1.5 }}
-                                className="absolute -bottom-6 left-1/2 -translateX-1/2 opacity-20"
+                                className="absolute -bottom-6 left-1/2 -translate-x-1/2 opacity-20"
                             >
                                 <MousePointer2 className="w-12 h-12 text-gray-900 fill-current" />
                             </motion.div>
