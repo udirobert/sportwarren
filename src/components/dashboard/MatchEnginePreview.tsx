@@ -81,8 +81,10 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             lastPlayerEvent.current.set(playerName, { type: evtType, tick });
         }
 
-        const minute = Math.floor(tick / 20);
-        const timeStr = `${minute}:00`;
+        const matchSeconds = tick; // 1 tick = 1 match-second; 1800 ticks = 90 min
+        const clockMin = Math.floor(matchSeconds / 60);
+        const clockSec = matchSeconds % 60;
+        const timeStr = `${clockMin}:${clockSec.toString().padStart(2, '0')}`;
         const commentaryType: MatchCommentary['type'] =
             evtType === 'goal' ? 'goal' :
             evtType === 'dao' ? 'dao' :
@@ -157,8 +159,33 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         let nextBallVy = currentBall.vy * friction;
         let shotFired = false;
 
+        // Offside check at pass moment — compares target's x to last defender + ball
+        const isTargetOffside = (passer: PlayerPuck, target: PlayerPuck, opps: PlayerPuck[]): boolean => {
+            const attackDir = passer.team === 'home' ? 1 : -1;
+            const targetAdv = attackDir * target.x;
+            const ballAdv = attackDir * passer.x;
+            // Second-last opponent (last outfield defender)
+            const defPositions = opps
+                .filter(o => o.role !== 'GK')
+                .map(o => attackDir * o.x)
+                .sort((a, b) => b - a); // highest "advanced" first
+            const lastDefAdv = defPositions[1] ?? 0; // second-last opponent
+            // Offside: ahead of both ball and second-last defender
+            return targetAdv > lastDefAdv && targetAdv > ballAdv;
+        };
+
         // Helper to execute a pass — wraps velocity calc + state bookkeeping
-        const performPass = (passer: PlayerPuck, target: PlayerPuck) => {
+        const performPass = (passer: PlayerPuck, target: PlayerPuck, opps: PlayerPuck[]) => {
+            // Check offside at the moment the ball is played
+            if (isTargetOffside(passer, target, opps)) {
+                addEvent(`🚩 Offside! ${target.name} flagged in advanced position.`, 'incident', passer.team);
+                // Free kick to opponents — ball goes backwards toward their half
+                const defDir = passer.team === 'home' ? -1 : 1;
+                currentOwnerId = null;
+                isPassRef.current = false;
+                ownerCarryTicks.current = 0;
+                return { vx: defDir * (1.5 + Math.random()), vy: (Math.random() - 0.5) * 2 };
+            }
             const pv = executePass(passer, target, passer.stats.passing);
             currentOwnerId = null;
             isPassRef.current = true;
@@ -319,7 +346,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                     const teammatePool = currentPlayers.filter(c => c.team === player.team && c.id !== player.id && c.role !== 'GK');
                     const target = selectPassTarget(player, teammatePool, opponents, supportOptionsRef.current);
                     if (target) {
-                        const pv = performPass(player, target);
+                        const pv = performPass(player, target, opponents);
                         nextBallVx = pv.vx;
                         nextBallVy = pv.vy;
                     }
@@ -336,7 +363,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                     const teammatePool = currentPlayers.filter(c => c.team === player.team && c.id !== player.id && c.role !== 'GK');
                     const target = selectPassTarget(player, teammatePool, opponents, supportOptionsRef.current);
                     if (target) {
-                        const pv = performPass(player, target);
+                        const pv = performPass(player, target, opponents);
                         nextBallVx = pv.vx;
                         nextBallVy = pv.vy;
                     }
