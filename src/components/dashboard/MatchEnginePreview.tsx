@@ -144,6 +144,7 @@ const SIM_PARAMS = {
     // Ball physics
     friction: 0.98,
     drag: 0.92,
+    flightSpeedThreshold: 0.8,    // Speed above which ball is "in flight"
 };
 
 /** Pass distribution weights - fixes central-stickiness */
@@ -211,6 +212,12 @@ interface PlayerPuck {
     cooldownUntil?: number;
 }
 
+interface SupportOptions {
+    short: { player: PlayerPuck | null; distance: number };
+    wide: { player: PlayerPuck | null; distance: number };
+    advanced: { player: PlayerPuck | null; distance: number };
+}
+
 interface MatchCommentary {
     id: string;
     time: string;
@@ -248,7 +255,7 @@ function tickDefender(p: PlayerPuck, ctx: EngineContext): { targetX: number; tar
     }
 
     // Hold defensive shape - stay narrow (CB) or hold width (FB)
-    const baseY = (p as any).homePos.y;
+    const baseY = p.homePos.y;
     const narrowFactor = isCB ? profile.narrowness : isFB ? 1 - profile.narrowness : 0.5;
     const targetY = baseY + (ctx.ball.y - 50) * narrowFactor * 0.3;
 
@@ -256,8 +263,8 @@ function tickDefender(p: PlayerPuck, ctx: EngineContext): { targetX: number; tar
     const defensiveLineX = 50 - (profile.lineHeight * 100);
 
     return {
-        targetX: Math.max((p as any).homePos.x - profile.maxDrift, 
-                         Math.min((p as any).homePos.x + profile.maxDrift, 
+        targetX: Math.max(p.homePos.x - profile.maxDrift, 
+                         Math.min(p.homePos.x + profile.maxDrift, 
                                  p.team === 'home' ? defensiveLineX : 100 - defensiveLineX)),
         targetY,
     };
@@ -284,7 +291,7 @@ function tickMidfielder(p: PlayerPuck, ctx: EngineContext): { targetX: number; t
     if (p.role === 'DM' || p.role === 'MID') {
         const screenY = 50; // Stay central
         return {
-            targetX: (p as any).homePos.x + (ctx.ball.x - 50) * 0.2,
+            targetX: p.homePos.x + (ctx.ball.x - 50) * 0.2,
             targetY: screenY + (ctx.ball.y - 50) * (1 - profile.narrowness) * 0.3,
         };
     }
@@ -292,8 +299,8 @@ function tickMidfielder(p: PlayerPuck, ctx: EngineContext): { targetX: number; t
     // CM/AM: support carrier, arrive late
     const arrivalBonus = profile.arriveLate ? Math.sin(ctx.time * 0.03) * 8 : 0;
     return {
-        targetX: (p as any).homePos.x + (ctx.ball.x - 50) * 0.3,
-        targetY: (p as any).homePos.y + Math.sin(ctx.time * 0.05 + (p as any).homePos.x) * 10 + arrivalBonus,
+        targetX: p.homePos.x + (ctx.ball.x - 50) * 0.3,
+        targetY: p.homePos.y + Math.sin(ctx.time * 0.05 + p.homePos.x) * 10 + arrivalBonus,
     };
 }
 
@@ -309,8 +316,8 @@ function tickAttacker(p: PlayerPuck, ctx: EngineContext): { targetX: number; tar
     if (isST) {
         if (ballInOwnHalf) {
             return {
-                targetX: (p as any).homePos.x - (p.team === 'home' ? 8 : -8),
-                targetY: (p as any).homePos.y,
+                targetX: p.homePos.x - (p.team === 'home' ? 8 : -8),
+                targetY: p.homePos.y,
             };
         }
         // In attack - stay high, only drop if isolated
@@ -320,7 +327,7 @@ function tickAttacker(p: PlayerPuck, ctx: EngineContext): { targetX: number; tar
         const shouldCheckShort = distToNearestTeammate > (profile.checkShortThreshold ?? 20);
         return {
             targetX: p.team === 'home' ? 85 + Math.sin(ctx.time * 0.04) * 5 : 15 - Math.sin(ctx.time * 0.04) * 5,
-            targetY: shouldCheckShort ? (p as any).homePos.y - 10 : (p as any).homePos.y,
+            targetY: shouldCheckShort ? p.homePos.y - 10 : p.homePos.y,
         };
     }
 
@@ -328,36 +335,36 @@ function tickAttacker(p: PlayerPuck, ctx: EngineContext): { targetX: number; tar
     if (isWinger) {
         if (ballInOwnHalf) {
             return {
-                targetX: (p as any).homePos.x - (p.team === 'home' ? 10 : -10),
-                targetY: (p as any).homePos.y,
+                targetX: p.homePos.x - (p.team === 'home' ? 10 : -10),
+                targetY: p.homePos.y,
             };
         }
         const inFinalThird = (p.team === 'home' && ctx.ball.x > (profile.touchlineThreshold ?? 65)) ||
                             (p.team === 'away' && ctx.ball.x < 100 - (profile.touchlineThreshold ?? 65));
         
         // Hold touchline until final third
-        const runPhase = Math.sin(ctx.time * 0.04 + (p as any).homePos.y * 0.1);
+        const runPhase = Math.sin(ctx.time * 0.04 + p.homePos.y * 0.1);
         return {
             targetX: p.team === 'home' 
                 ? (inFinalThird ? 70 + runPhase * 15 : 55 + runPhase * 5)
                 : (inFinalThird ? 30 - runPhase * 15 : 45 - runPhase * 5),
             targetY: inFinalThird 
-                ? (p as any).homePos.y + runPhase * 20 
-                : (p as any).homePos.y, // Stay wide
+                ? p.homePos.y + runPhase * 20 
+                : p.homePos.y, // Stay wide
         };
     }
 
     // Default attacker behavior
     if (ballInOwnHalf) {
         return {
-            targetX: (p as any).homePos.x - (p.team === 'home' ? 10 : -10),
-            targetY: (p as any).homePos.y,
+            targetX: p.homePos.x - (p.team === 'home' ? 10 : -10),
+            targetY: p.homePos.y,
         };
     }
-    const runPhase = Math.sin(ctx.time * 0.04 + (p as any).homePos.y * 0.1);
+    const runPhase = Math.sin(ctx.time * 0.04 + p.homePos.y * 0.1);
     return {
         targetX: p.team === 'home' ? 70 + runPhase * 15 : 30 - runPhase * 15,
-        targetY: (p as any).homePos.y + runPhase * 20,
+        targetY: p.homePos.y + runPhase * 20,
     };
 }
 
@@ -367,7 +374,7 @@ function tickPlayer(p: PlayerPuck, ctx: EngineContext): { targetX: number; targe
         case 'CB': case 'LB': case 'RB': case 'DEF': return tickDefender(p, ctx);
         case 'CM': case 'DM': case 'AM': case 'MID': return tickMidfielder(p, ctx);
         case 'ST': case 'LW': case 'RW': case 'ATT': return tickAttacker(p, ctx);
-        default: return { targetX: (p as any).homePos.x, targetY: (p as any).homePos.y };
+        default: return { targetX: p.homePos.x, targetY: p.homePos.y };
     }
 }
 
@@ -432,7 +439,7 @@ function distanceBetween(ax: number, ay: number, bx: number, by: number) {
 }
 
 /** Compute off-ball support options for ball carrier - maintains outlets */
-function computeSupportOptions(carrier: PlayerPuck, teammates: PlayerPuck[], opponents: PlayerPuck[]) {
+function computeSupportOptions(carrier: PlayerPuck, teammates: PlayerPuck[]) {
     const options = {
         short: { player: null as PlayerPuck | null, distance: Infinity },
         wide: { player: null as PlayerPuck | null, distance: Infinity },
@@ -467,30 +474,21 @@ function computeSupportOptions(carrier: PlayerPuck, teammates: PlayerPuck[], opp
     return options;
 }
 
-/** Determine ball state based on physics and events */
+/** Determine ball state based on physics and last action */
 function determineBallState(
-    ball: { vx: number; vy: number; ownerId: string | null },
-    wasInFlight: boolean,
-    lastOwnerId: string | null
+    ownerId: string | null,
+    vx: number,
+    vy: number,
+    isPass: boolean
 ): BallState {
-    const speed = Math.hypot(ball.vx, ball.vy);
-    
-    // If ball has owner, it's controlled
-    if (ball.ownerId) {
-        return 'controlled';
-    }
-    
-    // If ball is moving fast, it's in flight
-    if (speed > 0.8) {
-        return wasInFlight ? 'pass_flight' : 'shot_flight';
-    }
-    
-    // Otherwise it's loose
+    if (ownerId) return 'controlled';
+    const speed = Math.hypot(vx, vy);
+    if (speed > SIM_PARAMS.flightSpeedThreshold) return isPass ? 'pass_flight' : 'shot_flight';
     return 'loose';
 }
 
-/** Updated pass selection using PASS_WEIGHTS - fixes central-stickiness */
-function selectPassTarget(owner: PlayerPuck, teammates: PlayerPuck[], opponents: PlayerPuck[]) {
+/** Updated pass selection using PASS_WEIGHTS - fixes central-stickiness, biases toward support outlets */
+function selectPassTarget(owner: PlayerPuck, teammates: PlayerPuck[], opponents: PlayerPuck[], support?: SupportOptions) {
     const targets = teammates.filter((teammate) => teammate.id !== owner.id && teammate.role !== 'GK');
     if (targets.length === 0) {
         return null;
@@ -536,11 +534,17 @@ function selectPassTarget(owner: PlayerPuck, teammates: PlayerPuck[], opponents:
             const distancePenalty = distance * PASS_WEIGHTS.distancePenalty;
 
             // Calculate final score with all weights
+            const supportBonus =
+                (support?.short?.player?.id === target.id ? 6 : 0) +
+                (support?.wide?.player?.id === target.id ? 5 : 0) +
+                (support?.advanced?.player?.id === target.id ? 7 : 0);
+
             const score = 
                 forwardProgress * 1.6 +          // Forward progress
                 spacing * 0.5 +                   // Spacing
                 laneFit +                          // Lane fit bonus
-                directionBonus -                  // Direction preference
+                directionBonus +                  // Direction preference
+                supportBonus +                    // Support outlet bonus
                 pressure * PASS_WEIGHTS.pressurePenalty -  // Opponent pressure
                 centralCrowding -                 // Central crowding penalty
                 distancePenalty +                  // Distance penalty
@@ -576,16 +580,13 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
     const [latestEvent, setLatestEvent] = useState<string>('');
     const ownerCarryTicks = useRef(0);
     const passFlightRef = useRef<{ startX: number; startY: number; endX: number; endY: number; startTime: number } | null>(null);
+    const isPassRef = useRef(false);
     
     // Track last event per player for rate limiting
     const lastPlayerEvent = useRef<Map<string, { type: string; tick: number }>>(new Map());
     
     // Off-ball support options - maintain short outlet, wide outlet, advanced outlet for carrier
-    const supportOptionsRef = useRef<{
-        short: { player: PlayerPuck | null; distance: number };
-        wide: { player: PlayerPuck | null; distance: number };
-        advanced: { player: PlayerPuck | null; distance: number };
-    }>({ short: { player: null, distance: Infinity }, wide: { player: null, distance: Infinity }, advanced: { player: null, distance: Infinity } });
+    const supportOptionsRef = useRef<SupportOptions>({ short: { player: null, distance: Infinity }, wide: { player: null, distance: Infinity }, advanced: { player: null, distance: Infinity } });
 
     const { isGuest } = useWallet();
     const env = useEnvironment();
@@ -926,6 +927,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                         nextBallVy = (sdy / sd) * power;
                         currentOwnerId = null;
                         shotFired = true;
+                        isPassRef.current = false;
                         addEvent(`${player.name} shoots!`, 'shot', player.team);
                     }
                 } else if (roll < shootScore + passScore) {
@@ -940,7 +942,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                 const carryLimit = 18 + Math.floor(Math.random() * 12);
                 if (ownerCarryTicks.current > carryLimit) {
                     const teammatePool = players.filter((candidate) => candidate.team === player.team && candidate.id !== player.id && candidate.role !== 'GK');
-                    const target = selectPassTarget(player, teammatePool, opponents);
+                    const target = selectPassTarget(player, teammatePool, opponents, supportOptionsRef.current);
                     if (target) {
                         const pdx = target.x - player.x;
                         const pdy = target.y - player.y;
@@ -949,6 +951,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                         nextBallVx = (pdx / pd) * passSpeed;
                         nextBallVy = (pdy / pd) * passSpeed;
                         currentOwnerId = null;
+                        isPassRef.current = true;
                         ownerCarryTicks.current = 0;
                         addEvent(`${player.name} finds ${target.name} with the pass.`, 'pass', player.team);
                     }
@@ -1074,29 +1077,20 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             }
         }
 
-        // Update ball state based on current conditions
-        const speed = Math.hypot(nextBallVx, nextBallVy);
-        let nextBallState: BallState = 'controlled';
+        // Update ball state using determineBallState
+        const nextBallState = determineBallState(currentOwnerId, nextBallVx, nextBallVy, isPassRef.current);
         
-        if (!currentOwnerId) {
-            if (speed > 0.8) {
-                // Ball in flight - prevent instant ownership until reception
-                nextBallState = passFlightRef.current ? 'pass_flight' : 'shot_flight';
-                if (!passFlightRef.current) {
-                    passFlightRef.current = {
-                        startX: ball.x, startY: ball.y,
-                        endX: nextBallX, endY: nextBallY,
-                        startTime: time
-                    };
-                }
-            } else {
-                // Ball is loose
-                nextBallState = 'loose';
-                passFlightRef.current = null;
+        if (!currentOwnerId && Math.hypot(nextBallVx, nextBallVy) > SIM_PARAMS.flightSpeedThreshold) {
+            if (!passFlightRef.current) {
+                passFlightRef.current = {
+                    startX: ball.x, startY: ball.y,
+                    endX: nextBallX, endY: nextBallY,
+                    startTime: time
+                };
             }
         } else {
-            nextBallState = 'controlled';
             passFlightRef.current = null;
+            isPassRef.current = false;
         }
         
         // Update support options if there's a ball carrier
@@ -1104,8 +1098,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             const carrier = cooledPlayers.find((p) => p.id === currentOwnerId);
             if (carrier) {
                 const teammates = carrier.team === 'home' ? homePlayers : awayPlayers;
-                const opponents = carrier.team === 'home' ? awayPlayers : homePlayers;
-                supportOptionsRef.current = computeSupportOptions(carrier, teammates, opponents);
+                supportOptionsRef.current = computeSupportOptions(carrier, teammates);
             }
         }
         
@@ -1369,7 +1362,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                 <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                     <div className="col-span-2 p-3 bg-black/70 h-28 overflow-hidden rounded-xl border border-white/10 order-1">
                         <div className="space-y-1.5">
-                            {commentary.slice().reverse().map((c) => (
+                            {commentary.map((c) => (
                                 <motion.div
                                     key={c.id}
                                     initial={{ opacity: 0, x: -10 }}
