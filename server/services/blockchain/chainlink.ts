@@ -56,7 +56,7 @@ export class ChainlinkService {
       try {
         await this.initializeOracles();
       } catch (e) {
-        console.warn('Failed to initialize real Chainlink oracles, using simulation mode:', e instanceof Error ? e.message : String(e));
+        console.warn('Failed to initialize Chainlink legacy oracles:', e instanceof Error ? e.message : String(e));
         this.initialized = true; // Mark as initialized anyway to prevent repeated attempts
       }
     }
@@ -74,20 +74,17 @@ export class ChainlinkService {
     temperature?: number;
     conditions?: string;
     requestId?: string;
-    simulated?: boolean;
+    source?: string;
   }> {
     try {
       await this.ensureInitialized();
 
       if (!this.weatherOracleContract || !process.env.WEB3_PRIVATE_KEY) {
-        // Simulation mode for development
-        console.info('Using simulated weather verification');
         return {
-          verified: true,
-          temperature: 18.5,
-          conditions: 'Partly Cloudy',
-          requestId: `sim_weather_${Date.now()}`,
-          simulated: true
+          verified: false,
+          temperature: 0,
+          conditions: 'Unavailable',
+          source: 'Legacy Chainlink weather oracle unavailable',
         };
       }
 
@@ -129,13 +126,19 @@ export class ChainlinkService {
           temperature: Number(weatherData.temperature) / 100,
           conditions: this.decodeWeatherConditions(Number(weatherData.conditions)),
           requestId,
+          source: 'Legacy Chainlink weather oracle',
         };
       }
 
-      return { verified: false, requestId };
+      return { verified: false, requestId, conditions: 'Unavailable', source: 'Legacy Chainlink weather oracle unavailable' };
     } catch (error) {
       console.error('Weather verification error:', error);
-      return { verified: false };
+      return {
+        verified: false,
+        temperature: 0,
+        conditions: 'Unavailable',
+        source: 'Legacy Chainlink weather oracle unavailable',
+      };
     }
   }
 
@@ -150,19 +153,17 @@ export class ChainlinkService {
     region?: string;
     isValid?: boolean;
     requestId?: string;
-    simulated?: boolean;
+    source?: string;
   }> {
     try {
       await this.ensureInitialized();
 
       if (!this.locationOracleContract || !process.env.WEB3_PRIVATE_KEY) {
-        console.info('Using simulated location verification');
         return {
-          verified: true,
-          isValid: true,
-          region: 'Greater Manchester',
-          requestId: `sim_location_${Date.now()}`,
-          simulated: true
+          verified: false,
+          isValid: false,
+          region: 'Unavailable',
+          source: 'Legacy Chainlink location oracle unavailable',
         };
       }
 
@@ -198,13 +199,19 @@ export class ChainlinkService {
           isValid: locationData.isValid,
           region: locationData.region,
           requestId,
+          source: 'Legacy Chainlink location oracle',
         };
       }
 
-      return { verified: false, requestId };
+      return { verified: false, isValid: false, region: 'Unavailable', requestId, source: 'Legacy Chainlink location oracle unavailable' };
     } catch (error) {
       console.error('Location verification error:', error);
-      return { verified: false };
+      return {
+        verified: false,
+        isValid: false,
+        region: 'Unavailable',
+        source: 'Legacy Chainlink location oracle unavailable',
+      };
     }
   }
 
@@ -237,8 +244,12 @@ export class ChainlinkService {
         awayTeam: matchData.awayTeam,
       });
 
-      // If CRE workflow succeeded in getting real data, return it
-      if (creResult.confidence > 0) {
+      // If CRE workflow produced any real verification signal, return it
+      if (
+        creResult.confidence > 0 ||
+        creResult.weather.verified ||
+        creResult.location.verified
+      ) {
         return {
           verified: creResult.verified,
           confidence: creResult.confidence,
@@ -248,10 +259,10 @@ export class ChainlinkService {
         };
       }
     } catch (creError) {
-      console.warn('[ChainlinkService] CRE Workflow failed, falling back to legacy oracles:', creError);
+      console.warn('[ChainlinkService] CRE workflow failed, checking legacy Chainlink oracles:', creError);
     }
 
-    // 2. Fallback to Legacy Chainlink Oracles / Simulation
+    // 2. Fall back to legacy Chainlink oracles when configured.
     const [weatherResult, locationResult] = await Promise.all([
       this.verifyWeather(matchData.latitude, matchData.longitude, matchData.timestamp),
       this.verifyLocation(matchData.latitude, matchData.longitude),
@@ -275,6 +286,7 @@ export class ChainlinkService {
       details: {
         weather: weatherResult,
         location: locationResult,
+        source: 'legacy_chainlink',
       },
     };
   }

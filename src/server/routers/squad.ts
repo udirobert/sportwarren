@@ -109,14 +109,12 @@ async function expireTransferOffers(prisma: any, squadId?: string) {
   const expiredOffers = await prisma.transferOffer.findMany({ where });
 
   for (const offer of expiredOffers) {
-    const settlement = offer.yellowSessionId
-      ? await yellowService.settleTransferEscrow({
-          sessionId: offer.yellowSessionId,
-          offerId: offer.id,
-          amount: offer.amount,
-          recipient: 'buyer',
-        })
-      : null;
+    if (offer.yellowSessionId) {
+      console.warn(
+        `Transfer offer ${offer.id} expired with an unsettled Yellow session; leaving it pending until a signed settlement is supplied.`,
+      );
+      continue;
+    }
 
     await prisma.transferOffer.update({
       where: { id: offer.id },
@@ -130,7 +128,7 @@ async function expireTransferOffers(prisma: any, squadId?: string) {
       type: 'income',
       category: 'transfer_in',
       description: `Escrow refunded after offer expiry for player ${offer.playerId}`,
-      txHash: settlement?.settlementId ?? null,
+      txHash: null,
     });
   }
 }
@@ -642,14 +640,9 @@ export const squadRouter = createTRPCRouter({
         const treasury = await ensureSquadTreasury(ctx.prisma, squadId);
         const settlement = yellowSettlement
           ? yellowService.recordClientSettlement(yellowSettlement)
-          : await yellowService.depositToTreasury({
-              existingSessionId: treasury.yellowSessionId,
-              squadId,
-              walletAddress: ctx.walletAddress!,
-              amount,
-            });
+          : null;
 
-        if (settlement.sessionId && settlement.sessionId !== treasury.yellowSessionId) {
+        if (settlement?.sessionId && settlement.sessionId !== treasury.yellowSessionId) {
           await ctx.prisma.squadTreasury.update({
             where: { id: treasury.id },
             data: { yellowSessionId: settlement.sessionId },
@@ -662,8 +655,8 @@ export const squadRouter = createTRPCRouter({
           amountDelta: amount,
           type: 'income',
           category: 'deposit',
-          description: description || 'Treasury deposit via Yellow',
-          txHash: settlement.settlementId,
+          description: description || 'Treasury deposit',
+          txHash: settlement?.settlementId ?? null,
         });
       } catch (error) {
         if (error instanceof TreasuryBalanceError) {
@@ -732,14 +725,9 @@ export const squadRouter = createTRPCRouter({
 
         const settlement = yellowSettlement
           ? yellowService.recordClientSettlement(yellowSettlement)
-          : await yellowService.withdrawFromTreasury({
-              existingSessionId: treasury.yellowSessionId,
-              squadId,
-              walletAddress: ctx.walletAddress!,
-              amount,
-            });
+          : null;
 
-        if (settlement.sessionId && settlement.sessionId !== treasury.yellowSessionId) {
+        if (settlement?.sessionId && settlement.sessionId !== treasury.yellowSessionId) {
           await ctx.prisma.squadTreasury.update({
             where: { id: treasury.id },
             data: { yellowSessionId: settlement.sessionId },
@@ -753,7 +741,7 @@ export const squadRouter = createTRPCRouter({
           type: 'expense',
           category,
           description: reason,
-          txHash: settlement.settlementId,
+          txHash: settlement?.settlementId ?? null,
         });
       } catch (error) {
         if (error instanceof TreasuryBalanceError) {
@@ -909,14 +897,9 @@ export const squadRouter = createTRPCRouter({
 
         const escrow = yellowSettlement
           ? yellowService.recordClientSettlement(yellowSettlement)
-          : await yellowService.createTransferEscrow({
-              offerId: offer.id,
-              buyerAddress: ctx.walletAddress!,
-              sellerAddress: await getSquadLeaderWallet(ctx.prisma, toSquadId),
-              amount: input.amount,
-            });
+          : null;
 
-        if (escrow.sessionId) {
+        if (escrow?.sessionId) {
           offer = await ctx.prisma.transferOffer.update({
             where: { id: offer.id },
             data: { yellowSessionId: escrow.sessionId },
@@ -934,7 +917,7 @@ export const squadRouter = createTRPCRouter({
           type: 'expense',
           category: 'transfer_out',
           description: `Escrow locked for ${input.offerType} offer on player ${input.playerId}`,
-          txHash: escrow.settlementId,
+          txHash: escrow?.settlementId ?? null,
         });
 
         return offer;
@@ -1002,16 +985,16 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
+        if (offer.yellowSessionId && !yellowSettlement) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'This offer uses Yellow escrow. Submit a signed Yellow settlement before responding.',
+          });
+        }
+
         const settlement = yellowSettlement
           ? yellowService.recordClientSettlement(yellowSettlement)
-          : offer.yellowSessionId
-            ? await yellowService.settleTransferEscrow({
-                sessionId: offer.yellowSessionId,
-                offerId,
-                amount: offer.amount,
-                recipient: accept ? 'seller' : 'buyer',
-              })
-            : null;
+          : null;
 
         const updatedOffer = await ctx.prisma.transferOffer.update({
           where: { id: offerId },
@@ -1105,16 +1088,16 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
+        if (offer.yellowSessionId && !yellowSettlement) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'This offer uses Yellow escrow. Submit a signed Yellow settlement before cancelling it.',
+          });
+        }
+
         const settlement = yellowSettlement
           ? yellowService.recordClientSettlement(yellowSettlement)
-          : offer.yellowSessionId
-            ? await yellowService.settleTransferEscrow({
-                sessionId: offer.yellowSessionId,
-                offerId,
-                amount: offer.amount,
-                recipient: 'buyer',
-              })
-            : null;
+          : null;
 
         await ctx.prisma.transferOffer.update({
           where: { id: offerId },
@@ -1154,9 +1137,6 @@ export const squadRouter = createTRPCRouter({
       try {
         const { latitude, longitude, radiusKm, limit } = input;
 
-        // Fetch squads that have recent matches with coordinates
-        // In a production app, squads would have a primary homeGround location
-        // For now, we'll derive it from their recent matches or mock it
         const squads = await ctx.prisma.squad.findMany({
           include: {
             matchesHome: {
@@ -1170,10 +1150,14 @@ export const squadRouter = createTRPCRouter({
         });
 
         const nearbySquads = squads
-          .map(squad => {
-            // Use match location or fallback to a slightly offset location for demo variety
-            const squadLat = squad.matchesHome[0]?.latitude || latitude + (Math.random() - 0.5) * 0.1;
-            const squadLon = squad.matchesHome[0]?.longitude || longitude + (Math.random() - 0.5) * 0.1;
+          .map((squad) => {
+            const latestHomeMatch = squad.matchesHome[0];
+            const squadLat = latestHomeMatch?.latitude;
+            const squadLon = latestHomeMatch?.longitude;
+
+            if (typeof squadLat !== 'number' || typeof squadLon !== 'number') {
+              return null;
+            }
 
             // Haversine formula for distance
             const R = 6371; // Earth radius in km
@@ -1192,10 +1176,11 @@ export const squadRouter = createTRPCRouter({
               shortName: squad.shortName,
               memberCount: squad._count.members,
               distance: Math.round(distance * 10) / 10,
-              location: squad.homeGround || 'Local Field',
+              location: squad.homeGround || 'Recorded home venue',
             };
           })
-          .filter(squad => squad.distance <= radiusKm)
+          .filter((squad): squad is NonNullable<typeof squad> => Boolean(squad))
+          .filter((squad) => squad.distance <= radiusKm)
           .sort((a, b) => a.distance - b.distance)
           .slice(0, limit);
 

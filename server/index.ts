@@ -23,7 +23,7 @@ import { CommunicationBridge } from './services/communication/bridge.js';
 import { VoiceProcessingService } from './services/ai/voice.js';
 import { ComputerVisionService } from './services/ai/vision.js';
 import { AlgorandService } from './services/blockchain/algorand.js';
-import { LensService } from './services/communication/lens.js';
+import { LensService, LensServiceUnavailableError } from './services/communication/lens.js';
 import { EventStreamService } from './services/events/kafka.js';
 
 dotenv.config();
@@ -36,6 +36,16 @@ const PORT = process.env.PORT || 4000;
 function isEnabled(value: string | undefined): boolean {
   if (!value) return false;
   return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
+}
+
+function sendLensError(res: express.Response, error: unknown, fallbackMessage: string) {
+  if (error instanceof LensServiceUnavailableError) {
+    res.status(503).json({ error: error.message });
+    return;
+  }
+
+  console.error('Lens service error:', error);
+  res.status(500).json({ error: fallbackMessage });
 }
 
 async function startServer() {
@@ -394,7 +404,7 @@ async function startServer() {
       const text = await lensService.generateChallenge(address);
       res.json({ text });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to generate Lens challenge' });
+      sendLensError(res, error, 'Failed to generate Lens challenge');
     }
   });
 
@@ -404,6 +414,11 @@ async function startServer() {
       const result = await lensService.authenticate(address, signature, message);
       res.json(result);
     } catch (error) {
+      if (error instanceof LensServiceUnavailableError) {
+        sendLensError(res, error, 'Lens authentication failed');
+        return;
+      }
+
       res.status(401).json({ error: 'Lens authentication failed' });
     }
   });
@@ -414,29 +429,20 @@ async function startServer() {
       const pubId = await lensService.createPost(profileId, content, imageUrl);
       res.json({ pubId });
     } catch (error) {
-      res.status(500).json({ error: 'Failed to post to Lens' });
+      sendLensError(res, error, 'Failed to post to Lens');
     }
   });
 
   app.post('/api/lens/connect-wallet', async (_req, res) => {
-    try {
-      // In a real app, this would involve wallet interaction
-      // Simulated connection for demo
-      res.json({ address: '0x1234567890abcdef1234567890abcdef12345678' });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to connect Lens wallet' });
-    }
+    res.status(410).json({
+      error: 'Lens wallet connection happens client-side. The server-side connect-wallet stub has been removed.',
+    });
   });
 
-  app.get('/api/lens/balance', async (req, res) => {
-    try {
-      const { address: _address } = req.query;
-      // Real balance check on Lens Chain would go here
-      // For now, simulated Lens balance (GHO)
-      res.json({ balance: 0.42 });
-    } catch (error) {
-      res.status(500).json({ error: 'Failed to get Lens balance' });
-    }
+  app.get('/api/lens/balance', async (_req, res) => {
+    res.status(503).json({
+      error: 'Lens balance lookups are not enabled on this deployment.',
+    });
   });
 
   // Health check endpoint

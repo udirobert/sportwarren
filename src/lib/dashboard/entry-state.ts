@@ -64,11 +64,11 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       id: 'guest_preview',
       eyebrow: 'Guest Preview',
       headline: 'Explore the platform before you commit',
-      description: 'You are in a live preview. Log a result, inspect the flow, then start your own season when you are ready to save real progress.',
+      description: 'You are in an interactive preview. Log a result, inspect the flow, then start your own season when you are ready to save real progress.',
       primaryAction: { intent: 'open_wallet', label: 'Start your own season', href: '/?connect=1' },
       secondaryAction: { intent: 'log_match', label: 'Try the match flow', href: '/match?mode=capture' },
       surfaceLabel: 'Preview',
-      queueLabel: 'Demo queue ready',
+      queueLabel: 'Preview queue ready',
       identityLabel: 'Guest mode',
       squadLabel: 'Preview roster',
     };

@@ -11,7 +11,7 @@ interface CreateSquadFlowProps {
 }
 
 const SQUAD_ARCHETYPES = [
-    { id: 'street', emoji: '🏙️', label: 'Street Kings', description: 'Fast, physical, built for the Hackney Marshes grind.' },
+    { id: 'street', emoji: '🏙️', label: 'Street Kings', description: 'Fast, physical, built for hard weekly matches.' },
     { id: 'technical', emoji: '🎯', label: 'Technical XI', description: 'Possession-based. Outthink the opposition.' },
     { id: 'community', emoji: '🤝', label: 'Community Club', description: 'Reputation-first. Grow your Lens following.' },
 ];
@@ -66,12 +66,12 @@ export const CreateSquadFlow: React.FC<CreateSquadFlowProps> = ({ onCreated }) =
                         <motion.div key="step1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                             <div className="mb-2 text-[10px] font-black text-blue-400 uppercase tracking-[0.2em]">Step 1 of 3</div>
                             <h1 className="text-4xl font-black text-white italic uppercase tracking-tighter mb-2">Name Your Squad</h1>
-                            <p className="text-gray-400 text-sm mb-8">This is how you'll be known across Hackney and beyond.</p>
+                            <p className="text-gray-400 text-sm mb-8">This is how your club will be known across the league.</p>
                             <input
                                 type="text"
                                 value={squadName}
                                 onChange={e => { setSquadName(e.target.value); setError(''); }}
-                                placeholder="e.g. Hackney Wolves FC"
+                                placeholder="e.g. Marshside Wolves FC"
                                 maxLength={40}
                                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-lg font-bold placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
                             />

@@ -3,7 +3,7 @@ import { TRPCError } from '@trpc/server';
 import algosdk from 'algosdk';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { chainlinkService } from '../../../server/services/blockchain/chainlink';
-import { yellowService, type MatchSettlementResult } from '../../../server/services/blockchain/yellow';
+import { yellowService } from '../../../server/services/blockchain/yellow';
 import { postTreasuryLedgerEntry, distributeMatchRewards } from '../../../server/services/economy/treasury-ledger';
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
 import { getMatchFeeDistribution } from '../../lib/yellow/match-fees';
@@ -37,17 +37,12 @@ async function settleMatchFee(
     return null;
   }
 
+  if (!clientSettlement) {
+    return null;
+  }
+
   const distribution = getMatchFeeDistribution(match, status, yellowService.getMatchFeeAmount());
-  const settlement = clientSettlement
-    ? yellowService.recordClientSettlement(clientSettlement)
-    : await yellowService.settleMatchFeeSession({
-        sessionId: match.yellowFeeSessionId,
-        matchId: match.id,
-        result: distribution.result as MatchSettlementResult,
-        homeAmount: distribution.homeAmount,
-        awayAmount: distribution.awayAmount,
-        platformAmount: distribution.platformAmount,
-      });
+  const settlement = yellowService.recordClientSettlement(clientSettlement);
 
   if (distribution.homeAmount > 0) {
     await postTreasuryLedgerEntry({
@@ -188,7 +183,7 @@ export const matchRouter = createTRPCRouter({
         });
 
         const matchFeeAmount = yellowService.getMatchFeeAmount();
-        if (yellowService.isEnabled() && matchFeeAmount > 0) {
+        if (yellowService.isEnabled() && matchFeeAmount > 0 && input.yellowSettlement) {
           try {
             const [homeTreasury, awayTreasury] = await Promise.all([
               ctx.prisma.squadTreasury.findUnique({ where: { squadId: input.homeSquadId } }),
@@ -199,14 +194,7 @@ export const matchRouter = createTRPCRouter({
             const awayHasFunds = (awayTreasury?.balance ?? 0) >= matchFeeAmount;
 
             if (homeHasFunds && awayHasFunds) {
-              const feeSession = input.yellowSettlement
-                ? yellowService.recordClientSettlement(input.yellowSettlement)
-                : await yellowService.createMatchFeeSession({
-                    matchId: match.id,
-                    homeSquadId: input.homeSquadId,
-                    awaySquadId: input.awaySquadId,
-                    feeAmount: matchFeeAmount,
-                  });
+              const feeSession = yellowService.recordClientSettlement(input.yellowSettlement);
 
               if (feeSession.sessionId) {
                 await ctx.prisma.match.update({
@@ -399,14 +387,13 @@ export const matchRouter = createTRPCRouter({
             },
           });
 
-          if (newStatus === 'verified' || newStatus === 'disputed') {
-            try {
-              const railStatus = yellowService.getRailStatus();
-              if (yellowSettlement) {
-                await settleMatchFee(ctx.prisma, updatedMatch, newStatus, yellowSettlement);
-              } else if (railStatus.mode !== 'nitrolite') {
-                await settleMatchFee(ctx.prisma, updatedMatch, newStatus);
-              }
+        if (newStatus === 'verified' || newStatus === 'disputed') {
+          try {
+            if (yellowSettlement) {
+              await settleMatchFee(ctx.prisma, updatedMatch, newStatus, yellowSettlement);
+            } else if (updatedMatch.yellowFeeSessionId && !updatedMatch.yellowFeeSettledAt) {
+              console.warn('Yellow fee session remains unsettled until the client submits a signed settlement.');
+            }
 
               // AUTOMATED DAO REWARDS: Trigger prize and bonus payouts for both squads
               if (newStatus === 'verified') {
@@ -446,8 +433,7 @@ export const matchRouter = createTRPCRouter({
           requiresYellowSettlement:
             (newStatus === 'verified' || newStatus === 'disputed') &&
             Boolean(updatedMatch.yellowFeeSessionId) &&
-            !updatedMatch.yellowFeeSettledAt &&
-            yellowService.getRailStatus().mode === 'nitrolite',
+            !updatedMatch.yellowFeeSettledAt,
         };
       } catch (error) {
         if (error instanceof TRPCError) throw error;

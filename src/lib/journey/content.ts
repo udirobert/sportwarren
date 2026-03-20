@@ -212,8 +212,8 @@ export function getJourneyContent(
       return {
         hero: {
           primaryCtaLabel: 'Start Your Own Season',
-          stageLine: 'This is a live preview. Explore the flow, then create your own account when you want real progress to stick.',
-          previewLinkLabel: 'or continue the live preview',
+          stageLine: 'This is an interactive preview. Explore the flow, then create your own account when you want real progress to stick.',
+          previewLinkLabel: 'or continue the preview',
           highlights: [
             'See the full match flow before committing',
             'Understand how verification makes results stick',
@@ -517,7 +517,7 @@ export function getJourneyContent(
         hero: {
           primaryCtaLabel: 'Start Your Season',
           stageLine: 'Start free, log one real match, and feel how verified progression changes the way a Sunday team stays organized.',
-          previewLinkLabel: 'or explore the live preview',
+          previewLinkLabel: 'or explore the preview',
           highlights: [
             'Log your first match in under a minute',
             'Send one verification link to the other captain',

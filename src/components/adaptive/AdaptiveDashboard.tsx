@@ -66,7 +66,6 @@ export const AdaptiveDashboard: React.FC = () => {
   const [isTourActive, setIsTourActive] = React.useState(false);
   const [forcedSquadId, setForcedSquadId] = React.useState<string | null>(null);
   const [showCreateSquadFlow, setShowCreateSquadFlow] = React.useState(false);
-  const userAddress = hasAccount ? address || undefined : undefined;
   const isVerified = !isGuest && authStatus.state === 'valid';
 
   const handleVerify = React.useCallback(async () => {
@@ -86,15 +85,25 @@ export const AdaptiveDashboard: React.FC = () => {
     }
   }, [addToast, refreshAuthSignature]);
 
-  const { data: stats, loading, dataState } = useDashboardData({ isGuest, userAddress });
-  const router = useRouter();
   const { memberships, refresh: refreshSquads } = useMySquads();
-  const { completeChecklistItem, allChecklistDone, completedCount, totalCount } = useOnboarding();
-
   const primaryMembership = memberships?.[0];
   const primarySquadId = forcedSquadId || primaryMembership?.squad.id;
   const primarySquadName = primaryMembership?.squad?.name || null;
-  const hasSquad = memberships.length > 0;
+  const hasOperationalSquad = Boolean(primarySquadId);
+  const { data: stats, loading, dataState } = useDashboardData({
+    isGuest,
+    hasAccount,
+    isVerified,
+    squadId: primarySquadId,
+  });
+  const router = useRouter();
+  const { data: currentProfile } = trpc.player.getCurrentProfile.useQuery(undefined, {
+    enabled: isVerified,
+    retry: false,
+    staleTime: 30 * 1000,
+  });
+  const { completeChecklistItem, allChecklistDone, completedCount, totalCount } = useOnboarding();
+  const currentUserId = currentProfile?.userId;
 
   // Ticker data queries
   const { data: matchData } = trpc.match.list.useQuery(
@@ -267,7 +276,7 @@ export const AdaptiveDashboard: React.FC = () => {
       requiredLevel: 'basic',
       category: 'stats',
       component: (
-        <StaffFeed userId={userAddress || 'demo-user'} onOpenStaffRoom={handleOpenOffice} />
+        <StaffFeed userId={currentUserId} squadId={primarySquadId} onOpenStaffRoom={handleOpenOffice} />
       ),
       },
       {
@@ -275,7 +284,7 @@ export const AdaptiveDashboard: React.FC = () => {
       priority: 82,
       requiredLevel: 'basic',
       category: 'social',
-      component: <SquadGovernance squadId={primarySquadId || 'guest'} />,
+      component: primarySquadId ? <SquadGovernance squadId={primarySquadId} /> : null,
       },
       {
       id: 'lens-social',
@@ -296,14 +305,14 @@ export const AdaptiveDashboard: React.FC = () => {
       priority: 80,
       requiredLevel: 'advanced',
       category: 'social',
-      component: <TerritoryControl squadId={primarySquadId || 'guest'} />,
+      component: primarySquadId ? <TerritoryControl squadId={primarySquadId} /> : null,
       },
       {
       id: 'training',
       priority: 88,
       requiredLevel: 'basic',
       category: 'stats',
-      component: <TrainingCenter userId={userAddress || 'demo-user'} />,
+      component: <TrainingCenter userId={currentUserId} />,
       },
       {
       id: 'recent-matches',
@@ -492,30 +501,30 @@ export const AdaptiveDashboard: React.FC = () => {
         </ProgressiveDisclosure>
       ),
       },
-      {
-      id: 'match-engine',
-      priority: 160,
-      requiredLevel: 'basic',
-      category: 'matches',
-      component: (
-        <div onClick={() => completeChecklistItem('view_match_engine')}>
-          <MatchEnginePreview squadId={primarySquadId} />
-        </div>
-      ),
-      },
+      ...(isGuest ? [{
+        id: 'match-engine',
+        priority: 160,
+        requiredLevel: 'basic' as const,
+        category: 'matches' as const,
+        component: (
+          <div onClick={() => completeChecklistItem('view_match_engine')}>
+            <MatchEnginePreview squadId={primarySquadId} />
+          </div>
+        ),
+      }] : []),
       {
       id: 'squad-dynamics',
       priority: 89,
       requiredLevel: 'basic',
       category: 'stats',
-      component: <SquadDynamics squadId={primarySquadId || 'guest'} />,
+      component: <SquadDynamics squadId={primarySquadId} />,
       },
       {
       id: 'scouting-report',
       priority: 87,
       requiredLevel: 'basic',
       category: 'social',
-      component: <ScoutingReport />,
+      component: <ScoutingReport squadId={primarySquadId} />,
       },
       {
       id: 'upcoming-fixtures',
@@ -550,7 +559,7 @@ export const AdaptiveDashboard: React.FC = () => {
     );
 
     return widgets;
-  }, [allChecklistDone, completeChecklistItem, dataState, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, stats, trackFeatureUsage, userAddress]);
+  }, [allChecklistDone, completeChecklistItem, currentUserId, dataState, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, stats, trackFeatureUsage]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {
@@ -564,19 +573,22 @@ export const AdaptiveDashboard: React.FC = () => {
       'governance',
       'squad-dynamics',
       'territory',
-      'match-engine',
     ]);
+    const previewOnlyWidgets = new Set(['match-engine']);
     
     // For new users, show only essential widgets
     const isNewUser = preferences.featureDiscoveryLevel < 10 && preferences.dashboardLayout === 'minimal';
-    const essentialWidgets = ['onboarding-checklist', 'quick-stats', 'recent-matches'];
+    const essentialWidgets = isGuest
+      ? ['onboarding-checklist', 'quick-stats', 'recent-matches', 'staff-feed', 'lens-social', 'match-engine']
+      : ['onboarding-checklist', 'quick-stats', 'recent-matches'];
 
     return allWidgets
       .filter(widget => {
         // Hide widgets user has explicitly hidden
         if (hiddenWidgets.includes(widget.id)) return false;
 
-        if (!isGuest && !hasSquad && squadScopedWidgets.has(widget.id)) return false;
+        if (!hasOperationalSquad && squadScopedWidgets.has(widget.id)) return false;
+        if (!isGuest && previewOnlyWidgets.has(widget.id)) return false;
         
         // For new users, only show essential widgets
         if (isNewUser && !essentialWidgets.includes(widget.id)) return false;
@@ -622,7 +634,7 @@ export const AdaptiveDashboard: React.FC = () => {
         
         return b.priority - a.priority;
       });
-  }, [allWidgets, hasSquad, isGuest, preferences]);
+  }, [allWidgets, hasOperationalSquad, isGuest, preferences]);
 
   if (showCreateSquadFlow) {
     return (

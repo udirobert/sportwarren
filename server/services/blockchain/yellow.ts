@@ -1,6 +1,4 @@
-import { randomUUID } from 'node:crypto';
-
-export type YellowMode = 'disabled' | 'simulated' | 'nitrolite';
+export type YellowMode = 'disabled' | 'unconfigured' | 'nitrolite';
 export type TransferSettlementTarget = 'buyer' | 'seller';
 export type MatchSettlementResult = 'home' | 'away' | 'draw' | 'disputed';
 
@@ -11,6 +9,7 @@ export interface YellowRailStatus {
   clearnodeUrl: string;
   matchFeeAmount: number;
   appId?: string;
+  reason?: string;
 }
 
 export interface YellowClientSettlement {
@@ -24,7 +23,7 @@ function readBooleanEnv(value: string | undefined, fallback = false) {
     return fallback;
   }
 
-  return value.toLowerCase() === 'true';
+  return value.toLowerCase() === 'true' || value === '1';
 }
 
 function readNumberEnv(value: string | undefined, fallback: number) {
@@ -32,34 +31,32 @@ function readNumberEnv(value: string | undefined, fallback: number) {
   return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function createSessionId(scope: string) {
-  return `${scope}_${randomUUID().replace(/-/g, '')}`;
-}
-
-function createReference(scope: string) {
-  return `${scope}_ref_${randomUUID().replace(/-/g, '')}`;
-}
-
 class YellowService {
-  getRailStatus(): YellowRailStatus {
-    const enabled = readBooleanEnv(
+  private getRequestedStatus() {
+    return readBooleanEnv(
       process.env.YELLOW_ENABLED ?? process.env.NEXT_PUBLIC_YELLOW_ENABLED,
       false,
     );
+  }
+
+  private getAppId() {
+    return process.env.YELLOW_APP_ID ?? process.env.NEXT_PUBLIC_YELLOW_APP_ID;
+  }
+
+  getRailStatus(): YellowRailStatus {
+    const requested = this.getRequestedStatus();
+    const appId = this.getAppId();
+    const enabled = requested && Boolean(appId);
 
     return {
       enabled,
-      mode:
-        enabled && process.env.YELLOW_APP_ID
-          ? 'nitrolite'
-          : enabled
-            ? 'simulated'
-            : 'disabled',
+      mode: !requested ? 'disabled' : enabled ? 'nitrolite' : 'unconfigured',
       assetSymbol: process.env.YELLOW_ASSET_SYMBOL ?? process.env.NEXT_PUBLIC_YELLOW_ASSET_SYMBOL ?? 'USDC',
       clearnodeUrl:
         process.env.YELLOW_CLEARNODE_URL ?? 'wss://clearnet-sandbox.yellow.com/ws',
       matchFeeAmount: readNumberEnv(process.env.YELLOW_MATCH_FEE_AMOUNT, 1),
-      appId: process.env.YELLOW_APP_ID,
+      appId: appId || undefined,
+      reason: requested && !enabled ? 'Yellow is enabled but YELLOW_APP_ID is not configured.' : undefined,
     };
   }
 
@@ -76,10 +73,12 @@ class YellowService {
 
     return {
       ...status,
-      sessionId: params.sessionId,
+      sessionId: status.enabled ? params.sessionId : null,
       version: params.version,
       settlementId:
-        params.settlementId ?? `${params.sessionId}:v${params.version}`,
+        status.enabled
+          ? (params.settlementId ?? `${params.sessionId}:v${params.version}`)
+          : null,
     };
   }
 
@@ -87,7 +86,7 @@ class YellowService {
     const status = this.getRailStatus();
     return {
       ...status,
-      sessionId: status.enabled ? existingSessionId ?? createSessionId(`treasury_${squadId}`) : existingSessionId ?? null,
+      sessionId: status.enabled ? existingSessionId ?? null : null,
     };
   }
 
@@ -103,7 +102,7 @@ class YellowService {
       ...session,
       counterparty: params.walletAddress,
       amount: params.amount,
-      settlementId: session.enabled ? createReference(`treasury_deposit_${params.squadId}`) : null,
+      settlementId: null,
     };
   }
 
@@ -119,7 +118,7 @@ class YellowService {
       ...session,
       counterparty: params.walletAddress,
       amount: params.amount,
-      settlementId: session.enabled ? createReference(`treasury_withdraw_${params.squadId}`) : null,
+      settlementId: null,
     };
   }
 
@@ -132,11 +131,11 @@ class YellowService {
     const status = this.getRailStatus();
     return {
       ...status,
-      sessionId: status.enabled ? createSessionId(`transfer_${params.offerId}`) : null,
+      sessionId: null,
       amount: params.amount,
       buyerAddress: params.buyerAddress,
       sellerAddress: params.sellerAddress ?? null,
-      settlementId: status.enabled ? createReference(`transfer_lock_${params.offerId}`) : null,
+      settlementId: null,
     };
   }
 
@@ -149,10 +148,10 @@ class YellowService {
     const status = this.getRailStatus();
     return {
       ...status,
-      sessionId: params.sessionId,
+      sessionId: status.enabled ? params.sessionId : null,
       amount: params.amount,
       recipient: params.recipient,
-      settlementId: status.enabled ? createReference(`transfer_settle_${params.offerId}`) : null,
+      settlementId: null,
     };
   }
 
@@ -165,11 +164,11 @@ class YellowService {
     const status = this.getRailStatus();
     return {
       ...status,
-      sessionId: status.enabled ? createSessionId(`match_${params.matchId}`) : null,
+      sessionId: null,
       feeAmount: params.feeAmount,
       homeSquadId: params.homeSquadId,
       awaySquadId: params.awaySquadId,
-      settlementId: status.enabled ? createReference(`match_lock_${params.matchId}`) : null,
+      settlementId: null,
     };
   }
 
@@ -184,14 +183,14 @@ class YellowService {
     const status = this.getRailStatus();
     return {
       ...status,
-      sessionId: params.sessionId,
+      sessionId: status.enabled ? params.sessionId : null,
       result: params.result,
       payouts: {
         home: params.homeAmount,
         away: params.awayAmount,
         platform: params.platformAmount,
       },
-      settlementId: status.enabled ? createReference(`match_settle_${params.matchId}`) : null,
+      settlementId: null,
     };
   }
 }
