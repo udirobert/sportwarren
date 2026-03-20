@@ -9,6 +9,170 @@ import { useSquadDetails } from '@/hooks/squad/useSquad';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// EXPLICIT TUNING PARAMETERS - Make iteration faster and cleaner
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/** Role profile interface with all optional properties for type safety */
+interface RoleProfile {
+    narrowness: number;
+    lineHeight: number;
+    stepOutThreshold: number;
+    maxDrift: number;
+    chaseAggression: number;
+    supportWidth: number;
+    overlapThreshold?: number;
+    screenPosition?: boolean;
+    arriveLate?: boolean;
+    holdTouchline?: boolean;
+    touchlineThreshold?: number;
+    pinLastLine?: boolean;
+    checkShortThreshold?: number;
+}
+
+/** Role-specific movement profiles - biggest realism win */
+const ROLE_PROFILES: Record<string, RoleProfile> = {
+    // DEFENDERS - Stay narrow, low line, only step out if ball enters zone
+    CB: {
+        narrowness: 0.85,      // Hold narrow (1.0 = very narrow)
+        lineHeight: 0.15,       // Low defensive line
+        stepOutThreshold: 15,   // Only step out if ball within this distance
+        maxDrift: 8,           // Max horizontal drift from home
+        chaseAggression: 0.3,  // Low - only nearest chases
+        supportWidth: 0.2,     // Minimal width
+    },
+    FB: {
+        narrowness: 0.4,       // Hold width
+        lineHeight: 0.25,
+        stepOutThreshold: 20,
+        maxDrift: 15,
+        chaseAggression: 0.5,  // Moderate - overlap when possession secure
+        supportWidth: 0.8,     // Good width support
+        overlapThreshold: 0.7, // Only overlap if team has secure possession
+    },
+    // MIDFIELDERS - Central screen, rarely chase wide
+    DM: {
+        narrowness: 0.7,
+        lineHeight: 0.45,
+        stepOutThreshold: 12,
+        maxDrift: 10,
+        chaseAggression: 0.4,
+        supportWidth: 0.5,
+        screenPosition: true,   // Central screening behavior
+    },
+    CM: {
+        narrowness: 0.5,
+        lineHeight: 0.5,
+        stepOutThreshold: 18,
+        maxDrift: 20,
+        chaseAggression: 0.55,
+        supportWidth: 0.6,
+        arriveLate: true,      // Arrive late into box
+    },
+    AM: {
+        narrowness: 0.4,
+        lineHeight: 0.7,
+        stepOutThreshold: 22,
+        maxDrift: 25,
+        chaseAggression: 0.6,
+        supportWidth: 0.7,
+        arriveLate: true,
+    },
+    // ATTACKERS - Hold touchline until final third
+    LW: {
+        narrowness: 0.1,
+        lineHeight: 0.75,
+        stepOutThreshold: 30,
+        maxDrift: 30,
+        chaseAggression: 0.65,
+        supportWidth: 0.9,
+        holdTouchline: true,    // Stay wide until final third
+        touchlineThreshold: 65,
+    },
+    RW: {
+        narrowness: 0.1,
+        lineHeight: 0.75,
+        stepOutThreshold: 30,
+        maxDrift: 30,
+        chaseAggression: 0.65,
+        supportWidth: 0.9,
+        holdTouchline: true,
+        touchlineThreshold: 65,
+    },
+    ST: {
+        narrowness: 0.6,
+        lineHeight: 0.85,
+        stepOutThreshold: 10,
+        maxDrift: 12,
+        chaseAggression: 0.35,
+        supportWidth: 0.3,
+        pinLastLine: true,     // Pin last line
+        checkShortThreshold: 20, // Only check short when isolated
+    },
+    GK: {
+        narrowness: 1.0,
+        lineHeight: 0.05,
+        stepOutThreshold: 8,
+        maxDrift: 5,
+        chaseAggression: 0.0,
+        supportWidth: 0.0,
+    },
+    DEF: { narrowness: 0.7, lineHeight: 0.2, stepOutThreshold: 15, maxDrift: 10, chaseAggression: 0.4, supportWidth: 0.3 },
+    MID: { narrowness: 0.5, lineHeight: 0.5, stepOutThreshold: 18, maxDrift: 18, chaseAggression: 0.5, supportWidth: 0.5 },
+    ATT: { narrowness: 0.3, lineHeight: 0.8, stepOutThreshold: 25, maxDrift: 25, chaseAggression: 0.6, supportWidth: 0.7 },
+};
+
+/** Simulation parameters - tackle radius, recovery, cooldowns */
+const SIM_PARAMS = {
+    // Ball recovery
+    looseBallRecoveryRadius: 2.2,     // Range: 2.0-2.4
+    looseBallRecoveryCooldown: 3,      // Ticks before same player can recover again
+
+    // Tackle mechanics
+    liveTackleRadius: 1.4,              // Range: 1.2-1.6 - stops swarm behavior
+    tackleCooldownMin: 5,              // Range: 4-8 ticks after winning ball
+    tackleCooldownMax: 8,
+
+    // Aggressive chase limits - CRITICAL: only 1 nearest defender + 1 nearest midfielder
+    maxChasingDefenders: 1,
+    maxChasingMidfielders: 1,
+    chaseDistanceThreshold: 25,         // Don't chase if ball too far
+
+    // Player collision
+    minPlayerDistance: 3.5,
+
+    // Ball physics
+    friction: 0.98,
+    drag: 0.92,
+};
+
+/** Pass distribution weights - fixes central-stickiness */
+const PASS_WEIGHTS = {
+    safeRecycle: 0.40,      // 40% - maintain possession
+    progressiveForward: 0.40, // 40% - advance play
+    wideSwitch: 0.20,      // 20% - switch play to wings
+
+    // Penalties
+    centralCrowdingPenalty: 12,  // Penalize passes into crowded central zones
+    distancePenalty: 0.15,     // Per 10 units of distance
+    pressurePenalty: 8,        // Per opponent within recovery radius
+    laneFitBonus: {            // Bonus for passes fitting role lane
+        ST: 8, LW: 6, RW: 6, AM: 5,
+        CM: 4, DM: 3, MID: 3,
+        CB: 2, FB: 2, LB: 2, RB: 2,
+        GK: 0,
+    },
+};
+
+type BallState = 'controlled' | 'loose' | 'pass_flight' | 'shot_flight';
+
+/** Commentary rate limiting */
+const COMMENTARY_PARAMS = {
+    maxEvents: 6,                  // Visible events in log
+    repeatPlayerCooldown: 10,      // Ticks before same player can trigger same event type
+    repeatEventTypes: ['recovers the ball', 'takes on the defender', 'wins the tackle'],
+};
+
 type ReputationTier = 'bronze' | 'silver' | 'gold' | 'platinum';
 
 // ── Engine types ────────────────────────────────────────────────────────────
@@ -55,44 +219,135 @@ interface MatchCommentary {
 }
 
 // ── Role-dispatch tick functions ─────────────────────────────────────────────
+function getRoleProfile(role: string): RoleProfile {
+    const cleanRole = role.replace(/^(LB|RB)$/, 'FB');
+    return ROLE_PROFILES[cleanRole] || ROLE_PROFILES.DEF;
+}
+
 function tickGoalkeeper(p: PlayerPuck, ctx: EngineContext): { targetX: number; targetY: number } {
     const goalX = p.team === 'home' ? 5 : 95;
     return { targetX: goalX, targetY: 30 + (ctx.ball.y / 100) * 40 };
 }
 
+/** Updated defender tick using ROLE_PROFILES - stay narrow, low line */
 function tickDefender(p: PlayerPuck, ctx: EngineContext): { targetX: number; targetY: number } {
+    const profile = getRoleProfile(p.role);
+    const isFB = ['FB', 'LB', 'RB'].includes(p.role);
+    const isCB = p.role === 'CB';
+
     const ballInOwnHalf = (p.team === 'home' && ctx.ball.x < 50) || (p.team === 'away' && ctx.ball.x > 50);
     const distToBall = Math.sqrt((p.x - ctx.ball.x) ** 2 + (p.y - ctx.ball.y) ** 2);
-    if (ballInOwnHalf && distToBall < 18) {
+    const ballInZone = distToBall < profile.stepOutThreshold;
+
+    // Only step out if ball enters zone - use profile threshold
+    if (ballInOwnHalf && ballInZone) {
         return {
             targetX: ctx.ball.x + (p.team === 'home' ? -3 : 3),
             targetY: ctx.ball.y,
         };
     }
+
+    // Hold defensive shape - stay narrow (CB) or hold width (FB)
+    const baseY = (p as any).homePos.y;
+    const narrowFactor = isCB ? profile.narrowness : isFB ? 1 - profile.narrowness : 0.5;
+    const targetY = baseY + (ctx.ball.y - 50) * narrowFactor * 0.3;
+
+    // Low line - use lineHeight from profile
+    const defensiveLineX = 50 - (profile.lineHeight * 100);
+
     return {
-        targetX: (p as any).homePos.x,
-        targetY: (p as any).homePos.y + (ctx.ball.y - 50) * 0.25,
+        targetX: Math.max((p as any).homePos.x - profile.maxDrift, 
+                         Math.min((p as any).homePos.x + profile.maxDrift, 
+                                 p.team === 'home' ? defensiveLineX : 100 - defensiveLineX)),
+        targetY,
     };
 }
 
+/** Updated midfielder tick using ROLE_PROFILES - central screen, limited chase */
 function tickMidfielder(p: PlayerPuck, ctx: EngineContext): { targetX: number; targetY: number } {
+    const profile = getRoleProfile(p.role);
     const distToBall = Math.sqrt((p.x - ctx.ball.x) ** 2 + (p.y - ctx.ball.y) ** 2);
-    const allMids = [...ctx.teammates, p].filter(t => ['CM', 'DM', 'AM'].includes(t.role));
-    const isClosest = !allMids.some(other =>
+
+    // Find nearest midfielder of same team to determine who should chase
+    const allMids = [...ctx.teammates, p].filter(t => ['CM', 'DM', 'AM', 'MID'].includes(t.role));
+    const isClosestMid = !allMids.some(other =>
         other.id !== p.id &&
         Math.sqrt((other.x - ctx.ball.x) ** 2 + (other.y - ctx.ball.y) ** 2) < distToBall
     );
-    if (isClosest && distToBall < 20) {
+
+    // Only chase if closest mid and within reasonable distance
+    if (isClosestMid && distToBall < profile.stepOutThreshold && distToBall < SIM_PARAMS.chaseDistanceThreshold) {
         return { targetX: ctx.ball.x, targetY: ctx.ball.y };
     }
+
+    // DM: central screen, rarely chase wide
+    if (p.role === 'DM' || p.role === 'MID') {
+        const screenY = 50; // Stay central
+        return {
+            targetX: (p as any).homePos.x + (ctx.ball.x - 50) * 0.2,
+            targetY: screenY + (ctx.ball.y - 50) * (1 - profile.narrowness) * 0.3,
+        };
+    }
+
+    // CM/AM: support carrier, arrive late
+    const arrivalBonus = profile.arriveLate ? Math.sin(ctx.time * 0.03) * 8 : 0;
     return {
         targetX: (p as any).homePos.x + (ctx.ball.x - 50) * 0.3,
-        targetY: (p as any).homePos.y + Math.sin(ctx.time * 0.05 + (p as any).homePos.x) * 10,
+        targetY: (p as any).homePos.y + Math.sin(ctx.time * 0.05 + (p as any).homePos.x) * 10 + arrivalBonus,
     };
 }
 
+/** Updated attacker tick using ROLE_PROFILES - hold touchline until final third */
 function tickAttacker(p: PlayerPuck, ctx: EngineContext): { targetX: number; targetY: number } {
+    const profile = getRoleProfile(p.role);
+    const isWinger = ['LW', 'RW'].includes(p.role);
+    const isST = p.role === 'ST';
+
     const ballInOwnHalf = (p.team === 'home' && ctx.ball.x < 50) || (p.team === 'away' && ctx.ball.x > 50);
+
+    // ST: pin last line, check short only when isolated
+    if (isST) {
+        if (ballInOwnHalf) {
+            return {
+                targetX: (p as any).homePos.x - (p.team === 'home' ? 8 : -8),
+                targetY: (p as any).homePos.y,
+            };
+        }
+        // In attack - stay high, only drop if isolated
+        const distToNearestTeammate = Math.min(...ctx.teammates.map(t => 
+            Math.sqrt((t.x - p.x) ** 2 + (t.y - p.y) ** 2)
+        ));
+        const shouldCheckShort = distToNearestTeammate > (profile.checkShortThreshold ?? 20);
+        return {
+            targetX: p.team === 'home' ? 85 + Math.sin(ctx.time * 0.04) * 5 : 15 - Math.sin(ctx.time * 0.04) * 5,
+            targetY: shouldCheckShort ? (p as any).homePos.y - 10 : (p as any).homePos.y,
+        };
+    }
+
+    // LW/RW: hold touchline until final third
+    if (isWinger) {
+        if (ballInOwnHalf) {
+            return {
+                targetX: (p as any).homePos.x - (p.team === 'home' ? 10 : -10),
+                targetY: (p as any).homePos.y,
+            };
+        }
+        const inFinalThird = (p.team === 'home' && ctx.ball.x > (profile.touchlineThreshold ?? 65)) ||
+                            (p.team === 'away' && ctx.ball.x < 100 - (profile.touchlineThreshold ?? 65));
+        
+        // Hold touchline until final third
+        const runPhase = Math.sin(ctx.time * 0.04 + (p as any).homePos.y * 0.1);
+        return {
+            targetX: p.team === 'home' 
+                ? (inFinalThird ? 70 + runPhase * 15 : 55 + runPhase * 5)
+                : (inFinalThird ? 30 - runPhase * 15 : 45 - runPhase * 5),
+            targetY: inFinalThird 
+                ? (p as any).homePos.y + runPhase * 20 
+                : (p as any).homePos.y, // Stay wide
+        };
+    }
+
+    // Default attacker behavior
     if (ballInOwnHalf) {
         return {
             targetX: (p as any).homePos.x - (p.team === 'home' ? 10 : -10),
@@ -118,7 +373,7 @@ function tickPlayer(p: PlayerPuck, ctx: EngineContext): { targetX: number; targe
 
 // Circle-circle collision push-apart (modifies array in place)
 function resolveCollisions(ps: any[]): void {
-    const MIN_DIST = 3.5;
+    const MIN_DIST = SIM_PARAMS.minPlayerDistance;
     for (let i = 0; i < ps.length; i++) {
         for (let j = i + 1; j < ps.length; j++) {
             const dx = ps[j].x - ps[i].x;
@@ -176,34 +431,140 @@ function distanceBetween(ax: number, ay: number, bx: number, by: number) {
     return Math.hypot(ax - bx, ay - by);
 }
 
+/** Compute off-ball support options for ball carrier - maintains outlets */
+function computeSupportOptions(carrier: PlayerPuck, teammates: PlayerPuck[], opponents: PlayerPuck[]) {
+    const options = {
+        short: { player: null as PlayerPuck | null, distance: Infinity },
+        wide: { player: null as PlayerPuck | null, distance: Infinity },
+        advanced: { player: null as PlayerPuck | null, distance: Infinity },
+    };
+    
+    const carrierTeam = carrier.team;
+    const attackDirection = carrierTeam === 'home' ? 1 : -1;
+    
+    for (const teammate of teammates) {
+        if (teammate.id === carrier.id || teammate.role === 'GK') continue;
+        
+        const dist = distanceBetween(carrier.x, carrier.y, teammate.x, teammate.y);
+        
+        // Short outlet: closer, backwards or sideways
+        const relativeX = (teammate.x - carrier.x) * attackDirection;
+        if (relativeX <= 5 && dist < options.short.distance) {
+            options.short = { player: teammate, distance: dist };
+        }
+        
+        // Wide outlet: near touchlines (y < 20 or y > 80)
+        if ((teammate.y < 20 || teammate.y > 80) && dist < options.wide.distance) {
+            options.wide = { player: teammate, distance: dist };
+        }
+        
+        // Advanced outlet: ahead of carrier in attack direction
+        if (relativeX > 10 && dist < options.advanced.distance) {
+            options.advanced = { player: teammate, distance: dist };
+        }
+    }
+    
+    return options;
+}
+
+/** Determine ball state based on physics and events */
+function determineBallState(
+    ball: { vx: number; vy: number; ownerId: string | null },
+    wasInFlight: boolean,
+    lastOwnerId: string | null
+): BallState {
+    const speed = Math.hypot(ball.vx, ball.vy);
+    
+    // If ball has owner, it's controlled
+    if (ball.ownerId) {
+        return 'controlled';
+    }
+    
+    // If ball is moving fast, it's in flight
+    if (speed > 0.8) {
+        return wasInFlight ? 'pass_flight' : 'shot_flight';
+    }
+    
+    // Otherwise it's loose
+    return 'loose';
+}
+
+/** Updated pass selection using PASS_WEIGHTS - fixes central-stickiness */
 function selectPassTarget(owner: PlayerPuck, teammates: PlayerPuck[], opponents: PlayerPuck[]) {
     const targets = teammates.filter((teammate) => teammate.id !== owner.id && teammate.role !== 'GK');
     if (targets.length === 0) {
         return null;
     }
 
+    const passTypeRoll = Math.random();
+    let preferredDirection: 'back' | 'side' | 'forward' | 'wide' = 'forward';
+    
+    // Determine pass type distribution from PASS_WEIGHTS
+    if (passTypeRoll < PASS_WEIGHTS.safeRecycle) {
+        preferredDirection = 'back';
+    } else if (passTypeRoll < PASS_WEIGHTS.safeRecycle + PASS_WEIGHTS.progressiveForward) {
+        preferredDirection = 'forward';
+    } else {
+        preferredDirection = 'wide';
+    }
+
     return targets
         .map((target) => {
             const forwardProgress = owner.team === 'home' ? target.x - owner.x : owner.x - target.x;
-            const spacing = Math.min(24, distanceBetween(owner.x, owner.y, target.x, target.y));
-            const pressure = opponents.filter((opponent) => distanceBetween(opponent.x, opponent.y, target.x, target.y) < 12).length;
-            const laneBonus = ['ST', 'LW', 'RW', 'ATT', 'AM'].includes(target.role)
-                ? 8
-                : ['CM', 'DM', 'MID'].includes(target.role)
-                    ? 5
-                    : 2;
+            const distance = distanceBetween(owner.x, owner.y, target.x, target.y);
+            const spacing = Math.min(24, distance);
+            
+            // Pressure around receiver - use PASS_WEIGHTS penalty
+            const pressure = opponents.filter((opponent) => 
+                distanceBetween(opponent.x, opponent.y, target.x, target.y) < 12
+            ).length;
+
+            // Lane fit bonus from PASS_WEIGHTS
+            const laneFit = PASS_WEIGHTS.laneFitBonus[target.role as keyof typeof PASS_WEIGHTS.laneFitBonus] || 3;
+
+            // Central crowding penalty - penalize passes into crowded central zones
+            const isCentralZone = target.y > 30 && target.y < 70 && target.x > 30 && target.x < 70;
+            const centralCrowding = isCentralZone ? PASS_WEIGHTS.centralCrowdingPenalty : 0;
+
+            // Direction bonus based on preferred pass type
+            let directionBonus = 0;
+            if (preferredDirection === 'back' && forwardProgress < -5) directionBonus = 15;
+            else if (preferredDirection === 'forward' && forwardProgress > 5) directionBonus = 12;
+            else if (preferredDirection === 'wide' && (target.y < 25 || target.y > 75)) directionBonus = 15;
+
+            // Distance penalty from PASS_WEIGHTS
+            const distancePenalty = distance * PASS_WEIGHTS.distancePenalty;
+
+            // Calculate final score with all weights
+            const score = 
+                forwardProgress * 1.6 +          // Forward progress
+                spacing * 0.5 +                   // Spacing
+                laneFit +                          // Lane fit bonus
+                directionBonus -                  // Direction preference
+                pressure * PASS_WEIGHTS.pressurePenalty -  // Opponent pressure
+                centralCrowding -                 // Central crowding penalty
+                distancePenalty +                  // Distance penalty
+                Math.random() * 4;                 // Random factor
 
             return {
                 target,
-                score: forwardProgress * 1.6 + spacing + laneBonus - pressure * 8 + Math.random() * 4,
+                score,
+                forwardProgress,
+                isWide: target.y < 25 || target.y > 75,
             };
         })
-        .sort((left, right) => right.score - left.score)[0]?.target ?? null;
+        // Sort by score but bias toward wingers and fullbacks when available
+        .sort((left, right) => {
+            const leftScore = left.score + (left.isWide ? 2 : 0);
+            const rightScore = right.score + (right.isWide ? 2 : 0);
+            return rightScore - leftScore;
+        })[0]?.target ?? null;
 }
 
 export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: number; hasKeeper?: boolean }> = ({ squadId, playersPerSide = 11, hasKeeper = true }) => {
     const [isPlaying, setIsPlaying] = useState(false);
     const [ball, setBall] = useState({ x: 50, y: 50, vx: 0, vy: 0, ownerId: null as string | null });
+    const [ballState, setBallState] = useState<BallState>('controlled');
     const [players, setPlayers] = useState<any[]>([]);
     const [commentary, setCommentary] = useState<MatchCommentary[]>([]);
     const [time, setTime] = useState(0);
@@ -214,9 +575,31 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
     const [showIntent, setShowIntent] = useState(true);
     const [latestEvent, setLatestEvent] = useState<string>('');
     const ownerCarryTicks = useRef(0);
+    const passFlightRef = useRef<{ startX: number; startY: number; endX: number; endY: number; startTime: number } | null>(null);
+    
+    // Track last event per player for rate limiting
+    const lastPlayerEvent = useRef<Map<string, { type: string; tick: number }>>(new Map());
+    
+    // Off-ball support options - maintain short outlet, wide outlet, advanced outlet for carrier
+    const supportOptionsRef = useRef<{
+        short: { player: PlayerPuck | null; distance: number };
+        wide: { player: PlayerPuck | null; distance: number };
+        advanced: { player: PlayerPuck | null; distance: number };
+    }>({ short: { player: null, distance: Infinity }, wide: { player: null, distance: Infinity }, advanced: { player: null, distance: Infinity } });
 
     const { isGuest } = useWallet();
     const env = useEnvironment();
+    const playersInitialised = useRef(false);
+
+    const reset = useCallback(() => {
+        setIsPlaying(false);
+        setBall({ x: 50, y: 50, vx: 0, vy: 0, ownerId: null });
+        setTime(0);
+        setScore({ home: 0, away: 0 });
+        setTempo(1);
+        setCommentary([{ id: 'init-0', time: '0:00', text: `Preview canvas ready for ${env.venue}.`, type: 'incident' }]);
+        playersInitialised.current = false;
+    }, [env.venue]);
 
     // Performance adaptation
     const [lowPowerMode, setLowPowerMode] = useState(false);
@@ -291,7 +674,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         };
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, []);
+    }, [reset]);
 
     // Initialize players with real data or high-fidelity fallback
     useEffect(() => {
@@ -300,7 +683,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             const timer = setTimeout(() => setIsPlaying(true), 2500);
             return () => clearTimeout(timer);
         }
-    }, [isGuest, prefersReducedMotion, lowPowerMode]); // Run once for guests, skip reduced motion / low power
+    }, [isGuest, prefersReducedMotion, lowPowerMode, isPlaying, players.length, time]); // Run once for guests, skip reduced motion / low power
 
     // Fetch real team members
     const { members, loading: membersLoading } = useSquadDetails(squadId);
@@ -312,7 +695,6 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
     ];
 
     // Initialize players with Physics-enabled agents (runs once after members load)
-    const playersInitialised = useRef(false);
     useEffect(() => {
         // Guard: only initialise once to prevent the match from "restarting"
         // every time a dependency reference changes.
@@ -381,11 +763,28 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         playersInitialised.current = true;
     }, [members, membersLoading, playersPerSide, hasKeeper]);
 
-    const addEvent = useCallback((text: string, evtType: MatchEvent['type'], team?: 'home' | 'away') => {
+    /** Add event with rate limiting - prevents repeat events from same player */
+    const addEvent = useCallback((text: string, evtType: MatchEvent['type'], _team?: 'home' | 'away') => {
+        // Extract player name from text for rate limiting
+        const playerNameMatch = text.match(/^([A-Z][a-z]+)/);
+        const playerName = playerNameMatch?.[1];
+        
+        // Check if this is a repeat event type that should be rate limited
+        if (playerName && COMMENTARY_PARAMS.repeatEventTypes.some(type => text.toLowerCase().includes(type))) {
+            const lastEvent = lastPlayerEvent.current.get(playerName);
+            if (lastEvent && (time - lastEvent.tick) < COMMENTARY_PARAMS.repeatPlayerCooldown) {
+                // Skip this event - rate limited
+                return;
+            }
+            // Record this event
+            lastPlayerEvent.current.set(playerName, { type: evtType, tick: time });
+        }
+
         const minute = Math.floor(time / 20);
         const timeStr = `${minute}:00`;
         const commentaryType: MatchCommentary['type'] = evtType === 'goal' ? 'goal' : evtType === 'dao' ? 'dao' : evtType === 'incident' ? 'incident' : 'action';
-        setCommentary(prev => [{ id: `${time}-${Math.random().toString(36).slice(2)}`, time: timeStr, text, type: commentaryType }, ...prev].slice(0, 5));
+        // Keep commentary in chronological order and trim to the visible window.
+        setCommentary(prev => [...prev, { id: `${time}-${Math.random().toString(36).slice(2)}`, time: timeStr, text, type: commentaryType }].slice(-COMMENTARY_PARAMS.maxEvents));
         setLatestEvent(text);
     }, [time]);
 
@@ -401,14 +800,14 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         addCommentary(`Sample instruction: ${cmd}.`, 'dao');
         if (cmd.toLowerCase().includes("tempo")) setTempo(1.5);
         setTimeout(() => setDaoAlert(null), 3000);
-    }, [time]);
+    }, [addCommentary]);
 
     const tempoOptions = useMemo(() => [0.75, 1, 1.25, 1.5, 2], []);
 
     const movePlayers = useCallback(() => {
         let currentOwnerId = ball.ownerId;
-        const friction = 0.98;
-        const drag = 0.92;
+        const friction = SIM_PARAMS.friction;
+        const drag = SIM_PARAMS.drag;
 
         let nextBallX = ball.x + ball.vx;
         let nextBallY = ball.y + ball.vy;
@@ -578,42 +977,90 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             : null;
 
         if (!activeOwner) {
+            // Loose ball recovery - use SIM_PARAMS
             const recoveryCandidate = [...updatedPlayers]
                 .filter((player) => (player.cooldownUntil ?? 0) <= time)
                 .map((player) => ({
                     player,
                     distance: distanceBetween(player.x, player.y, nextBallX, nextBallY),
                 }))
-                .filter(({ distance }) => distance < 2.4)
+                .filter(({ distance }) => distance < SIM_PARAMS.looseBallRecoveryRadius)
                 .sort((left, right) => left.distance - right.distance)[0];
 
             if (recoveryCandidate) {
                 currentOwnerId = recoveryCandidate.player.id;
                 ownerCarryTicks.current = 0;
+                // Apply tackle cooldown after winning ball (4-8 ticks from SIM_PARAMS)
+                const cooldownTicks = SIM_PARAMS.tackleCooldownMin + 
+                    Math.floor(Math.random() * (SIM_PARAMS.tackleCooldownMax - SIM_PARAMS.tackleCooldownMin));
+                recoveryCandidate.player.cooldownUntil = time + cooldownTicks;
                 addEvent(`${recoveryCandidate.player.name} gathers the loose ball.`, 'tackle', recoveryCandidate.player.team);
             }
         } else {
-            const pressure = [...updatedPlayers]
-                .filter((player) => player.team !== activeOwner.team && (player.cooldownUntil ?? 0) <= time)
+            // Live tackle - use SIM_PARAMS.liveTackleRadius
+            // CRITICAL: Only allow tackle if defender is:
+            // 1. On the opposing team
+            // 2. The nearest pressure player (stop swarm behavior)
+            
+            const opponents = updatedPlayers.filter(p => p.team !== activeOwner.team && (p.cooldownUntil ?? 0) <= time);
+            
+            // Find nearest defender and nearest midfielder separately
+            const defenderRoles = ['CB', 'LB', 'RB', 'DEF', 'FB'];
+            const midRoles = ['CM', 'DM', 'AM', 'MID'];
+            
+            let nearestDefender: typeof opponents[0] | null = null;
+            let nearestMidfielder: typeof opponents[0] | null = null;
+            let nearestDefenderDist = Infinity;
+            let nearestMidDist = Infinity;
+
+            for (const opp of opponents) {
+                const dist = distanceBetween(opp.x, opp.y, activeOwner.x, activeOwner.y);
+                if (defenderRoles.includes(opp.role) && dist < nearestDefenderDist) {
+                    nearestDefenderDist = dist;
+                    nearestDefender = opp;
+                }
+                if (midRoles.includes(opp.role) && dist < nearestMidDist) {
+                    nearestMidDist = dist;
+                    nearestMidfielder = opp;
+                }
+            }
+
+            // Only the nearest defender + nearest midfielder can attempt tackle
+            const eligibleChasers: typeof opponents = [];
+            if (nearestDefender && nearestDefenderDist < SIM_PARAMS.chaseDistanceThreshold) {
+                eligibleChasers.push(nearestDefender);
+            }
+            if (nearestMidfielder && nearestMidDist < SIM_PARAMS.chaseDistanceThreshold) {
+                eligibleChasers.push(nearestMidfielder);
+            }
+
+            // Find the nearest among eligible chasers
+            const pressure = eligibleChasers
                 .map((player) => ({
                     player,
                     distance: distanceBetween(player.x, player.y, activeOwner.x, activeOwner.y),
                 }))
                 .sort((left, right) => left.distance - right.distance)[0];
 
-            if (pressure && pressure.distance < 1.8) {
+            // Use live tackle radius from SIM_PARAMS
+            if (pressure && pressure.distance < SIM_PARAMS.liveTackleRadius) {
                 const tackleProb = ((pressure.player.stats.strength + pressure.player.stats.agility) / 200) * 0.18;
                 if (Math.random() < tackleProb) {
                     currentOwnerId = pressure.player.id;
                     ownerCarryTicks.current = 0;
+                    // Apply tackle cooldown after winning ball
+                    const cooldownTicks = SIM_PARAMS.tackleCooldownMin + 
+                        Math.floor(Math.random() * (SIM_PARAMS.tackleCooldownMax - SIM_PARAMS.tackleCooldownMin));
+                    pressure.player.cooldownUntil = time + cooldownTicks;
                     addEvent(`${pressure.player.name} wins the tackle and turns play over.`, 'tackle', pressure.player.team);
                 }
             }
         }
 
+        // Apply cooldown to ball owner after interaction
         const cooledPlayers = updatedPlayers.map((player) => (
             player.id === currentOwnerId
-                ? { ...player, cooldownUntil: Math.max(player.cooldownUntil ?? 0, time + 2) }
+                ? { ...player, cooldownUntil: Math.max(player.cooldownUntil ?? 0, time + SIM_PARAMS.looseBallRecoveryCooldown) }
                 : player
         ));
 
@@ -627,8 +1074,43 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             }
         }
 
-        setPlayers(cooledPlayers);
+        // Update ball state based on current conditions
+        const speed = Math.hypot(nextBallVx, nextBallVy);
+        let nextBallState: BallState = 'controlled';
+        
+        if (!currentOwnerId) {
+            if (speed > 0.8) {
+                // Ball in flight - prevent instant ownership until reception
+                nextBallState = passFlightRef.current ? 'pass_flight' : 'shot_flight';
+                if (!passFlightRef.current) {
+                    passFlightRef.current = {
+                        startX: ball.x, startY: ball.y,
+                        endX: nextBallX, endY: nextBallY,
+                        startTime: time
+                    };
+                }
+            } else {
+                // Ball is loose
+                nextBallState = 'loose';
+                passFlightRef.current = null;
+            }
+        } else {
+            nextBallState = 'controlled';
+            passFlightRef.current = null;
+        }
+        
+        // Update support options if there's a ball carrier
+        if (currentOwnerId) {
+            const carrier = cooledPlayers.find((p) => p.id === currentOwnerId);
+            if (carrier) {
+                const teammates = carrier.team === 'home' ? homePlayers : awayPlayers;
+                const opponents = carrier.team === 'home' ? awayPlayers : homePlayers;
+                supportOptionsRef.current = computeSupportOptions(carrier, teammates, opponents);
+            }
+        }
+        
         setBall({ x: nextBallX, y: nextBallY, vx: nextBallVx, vy: nextBallVy, ownerId: currentOwnerId });
+        setBallState(nextBallState);
         setTime((previous) => previous + 1);
 
         if (time > 0 && time % 150 === 0 && Math.random() > 0.7) triggerDaoCommand();
@@ -653,16 +1135,6 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         ranked.forEach((p) => ids.add(p.id));
         return ids;
     }, [players, ball]);
-
-    const reset = () => {
-        setIsPlaying(false);
-        setBall({ x: 50, y: 50, vx: 0, vy: 0, ownerId: null });
-        setTime(0);
-        setScore({ home: 0, away: 0 });
-        setTempo(1);
-        setCommentary([{ id: 'init-0', time: '0:00', text: `Preview canvas ready for ${env.venue}.`, type: 'incident' }]);
-        playersInitialised.current = false;
-    };
 
     return (
         <Card className="bg-gray-900 border-gray-800 overflow-hidden">
@@ -897,7 +1369,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                 <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
                     <div className="col-span-2 p-3 bg-black/70 h-28 overflow-hidden rounded-xl border border-white/10 order-1">
                         <div className="space-y-1.5">
-                            {commentary.map((c) => (
+                            {commentary.slice().reverse().map((c) => (
                                 <motion.div
                                     key={c.id}
                                     initial={{ opacity: 0, x: -10 }}

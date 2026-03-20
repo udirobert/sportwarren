@@ -54,50 +54,64 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
         }
     }, [journeyContent.assistant.welcome, messages.length]);
 
+    // Tour step contextual prompts
+    const TOUR_STEP_PROMPTS: Record<string, string> = {
+        'welcome': `Quickly welcome the user to the SportWarren preview at ${venue}. Mention they're exploring a live football management experience. Keep it brief (2 sentences).`,
+        'match-engine': `The user is viewing the Match Engine - the tactical visualization canvas. Briefly explain how it tracks momentum, possession, and key moments. Mention it previews what they'll see after logging real match results.`,
+        'match-verification': `The user is looking at Match Verification - the system that confirms results through distributed validation. Explain that each logged result becomes verifiable data that powers squad operations.`,
+        'staff-room': journeyContent.assistant.tourPrompt || `Give a quick tactical read on ${rivals.away}, then explain the fastest next step is logging a real result.`,
+        'lens-social-step': `The user is viewing the Social layer - Lens-powered identity that connects their on-chain reputation with their manager profile. Explain how verified results build their legacy.`,
+        'rpg-stats': `The user is exploring the RPG Stats system. Explain how each result contributes to their manager profile - XP, achievements, and career progression.`,
+        'claim-identity': `The user is at the identity claim step. Explain that connecting their wallet creates their manager identity that persists across seasons.`,
+    };
+
     // Listen for Tour Steps
     useEffect(() => {
         const handleTourStep = (e: any) => {
             const stepId = e.detail?.id;
-            if (stepId === 'staff-room' && !tourStepProcessed.current.has(stepId)) {
-                tourStepProcessed.current.add(stepId);
-                setIsOpen(true);
-                setIsTyping(true);
+            if (!stepId || tourStepProcessed.current.has(stepId)) return;
+            
+            // Only process steps that have contextual prompts
+            if (!TOUR_STEP_PROMPTS[stepId]) return;
+            
+            tourStepProcessed.current.add(stepId);
+            setIsOpen(true);
+            setIsTyping(true);
 
-                const fetchAnalysis = async () => {
-                    try {
-                        const res = await fetch('/api/ai/chat', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({
-                                message: journeyContent.assistant.tourPrompt,
-                                city,
-                                venue,
-                                history: [],
-                                userId: address || undefined
-                            })
-                        });
-                        const data = await res.json();
-                        setMessages(prev => [...prev, {
-                            id: `tour-${Date.now()}`,
-                            role: 'agent',
-                            content: data.response,
-                            timestamp: new Date(),
-                            agentType: 'concierge'
-                        }]);
-                    } catch (err) {
-                        console.error("Tour analysis failed:", err);
-                    } finally {
-                        setIsTyping(false);
-                    }
-                };
+            const fetchAnalysis = async () => {
+                try {
+                    const res = await fetch('/api/ai/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: TOUR_STEP_PROMPTS[stepId],
+                            city,
+                            venue,
+                            history: [],
+                            userId: address || undefined
+                        })
+                    });
+                    const data = await res.json();
+                    setMessages(prev => [...prev, {
+                        id: `tour-${Date.now()}`,
+                        role: 'agent',
+                        content: data.response,
+                        timestamp: new Date(),
+                        agentType: 'concierge'
+                    }]);
+                } catch (err) {
+                    console.error("Tour analysis failed:", err);
+                } finally {
+                    setIsTyping(false);
+                }
+            };
 
-                // Wait 1s for the UI to settle before firing
-                setTimeout(fetchAnalysis, 1000);
-            }
+            // Wait 1s for the UI to settle before firing
+            setTimeout(fetchAnalysis, 1000);
         };
         window.addEventListener('sw-tour-step', handleTourStep);
         return () => window.removeEventListener('sw-tour-step', handleTourStep);
-    }, [address, city, journeyContent.assistant.tourPrompt, rivals, venue]);
+    }, [address, city, rivals, venue, journeyContent]);
 
     useEffect(() => {
         if (scrollRef.current) {
