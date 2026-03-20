@@ -253,7 +253,7 @@ export interface Treasury {
   };
   paymentRail?: {
     enabled: boolean;
-    mode: 'disabled' | 'simulated' | 'nitrolite';
+    mode: 'disabled' | 'unconfigured' | 'nitrolite';
     assetSymbol: string;
     sessionId?: string | null;
     settledBalance: number;
@@ -491,6 +491,8 @@ export interface LensConnectionState {
   isConnected: boolean;
   profile: LensProfile | null;
   accessToken: string | null;
+  isAvailable: boolean;
+  error: string | null;
 }
 
 // ============================================================================

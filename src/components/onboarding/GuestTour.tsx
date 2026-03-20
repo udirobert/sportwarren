@@ -36,8 +36,8 @@ const TOUR_STEPS: TourStep[] = [
     {
         id: 'welcome',
         targetId: 'dashboard-header',
-        title: "Welcome to the Marshes",
-        content: "You're currently in Preview Mode. This is a live preview of the Hackney Marshes Sunday League. Let's see how the squads are doing.",
+        title: "Welcome to the Preview",
+        content: "You're currently in Preview Mode. This guided walkthrough shows how SportWarren moves from one logged result into verification, squad operations, and season momentum.",
         emoji: '🏟️',
         icon: Sparkles,
         position: 'bottom',
@@ -45,8 +45,8 @@ const TOUR_STEPS: TourStep[] = [
     {
         id: 'match-engine',
         targetId: 'match-engine',
-        title: "The Match Engine",
-        content: "This isn't just a video; it's a live simulation using real player stats. Every move is determined by reputation and on-chain performance records.",
+        title: "The Match Canvas",
+        content: "This is an illustrative match canvas. It shows how the product can visualize tempo, momentum, and tactical context before you submit a real result.",
         emoji: '🎮',
         icon: Cpu,
         position: 'left',
@@ -55,7 +55,7 @@ const TOUR_STEPS: TourStep[] = [
         id: 'match-verification',
         targetId: 'recent-matches',
         title: "Match Verification",
-        content: "Matches played on real pitches are verified here. We check GPS and weather data to ensure every goal is earned fairly.",
+        content: "Real match verification happens after an actual submission. When supported data is available, weather and location signals help strengthen the trust score for that result.",
         emoji: '✅',
         icon: Shield,
         position: 'top',
@@ -73,7 +73,7 @@ const TOUR_STEPS: TourStep[] = [
         id: 'lens-social-step',
         targetId: 'lens-social',
         title: "The Social Graph",
-        content: "This is where your reputation goes global. Connect your social profile to share match results and compete in the World Grassroots Rankings.",
+        content: "This is where share-ready results can be published once a real match is settled and the social integration is available for your account.",
         emoji: '🌿',
         icon: Share2,
         position: 'top',
@@ -108,8 +108,10 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
         if (step.id === 'welcome') {
             return {
                 ...step,
-                title: `Welcome to ${venue.split(' ')[0]}`,
-                content: `You're currently in Preview Mode. This is a live preview at ${venue}. Let's see how the local squads are doing.`
+                title: venue === 'your next ground' ? 'Welcome to the Preview' : `Preview at ${venue}`,
+                content: venue === 'your next ground'
+                    ? "You're currently in Preview Mode. This guided walkthrough shows how SportWarren moves from one logged result into verification, squad operations, and season momentum."
+                    : `You're currently in Preview Mode. This guided walkthrough uses ${venue} as sample context so you can inspect the flow before you start your own season.`
             };
         }
         return step;

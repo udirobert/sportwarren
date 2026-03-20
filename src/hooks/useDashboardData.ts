@@ -1,6 +1,8 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useMemo } from 'react';
 import type { AsyncState } from './types';
-import { createLoadingState, createSuccessState } from './types';
+import { createSuccessState } from './types';
+import { isSettledMatchStatus, describeMatchForSquad } from '@/lib/match/summary';
+import { trpc } from '@/lib/trpc-client';
 
 interface DashboardStats {
   goals: number;
@@ -21,7 +23,9 @@ interface UseDashboardDataReturn extends AsyncState<DashboardStats> {
 
 interface UseDashboardDataOptions {
   isGuest: boolean;
-  userAddress?: string;
+  hasAccount: boolean;
+  isVerified: boolean;
+  squadId?: string;
 }
 
 const PREVIEW_STATS: DashboardStats = {
@@ -44,68 +48,138 @@ const EMPTY_STATS: DashboardStats = {
   recentMatches: [],
 };
 
-export function useDashboardData({ isGuest, userAddress }: UseDashboardDataOptions): UseDashboardDataReturn {
-  const [state, setState] = useState<AsyncState<DashboardStats>>({
-    data: null,
-    loading: true,
-    error: null,
+function formatRelativeDate(value?: string | Date | null) {
+  if (!value) {
+    return 'Recently';
+  }
+
+  const parsed = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return 'Recently';
+  }
+
+  const diffMs = Date.now() - parsed.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffDays <= 0) {
+    return 'Today';
+  }
+
+  if (diffDays === 1) {
+    return '1 day ago';
+  }
+
+  if (diffDays < 7) {
+    return `${diffDays} days ago`;
+  }
+
+  const diffWeeks = Math.floor(diffDays / 7);
+  if (diffWeeks === 1) {
+    return '1 week ago';
+  }
+
+  if (diffWeeks < 5) {
+    return `${diffWeeks} weeks ago`;
+  }
+
+  return parsed.toLocaleDateString();
+}
+
+function formatRecentMatches(matches: any[], squadId?: string) {
+  return matches
+    .filter((match) => isSettledMatchStatus(match.status))
+    .slice(0, 5)
+    .map((match) => {
+      const summary = describeMatchForSquad(match, squadId);
+      return {
+        opponent: summary.opponent,
+        result: `${summary.result} ${summary.goalsFor}-${summary.goalsAgainst}`,
+        date: formatRelativeDate(match.matchDate),
+      };
+    });
+}
+
+function formatRating(formHistory: Array<{ rating?: number | null }> | undefined) {
+  const ratings = (formHistory ?? [])
+    .map((entry) => entry.rating)
+    .filter((entry): entry is number => typeof entry === 'number' && Number.isFinite(entry));
+
+  if (ratings.length === 0) {
+    return '0.0';
+  }
+
+  const average = ratings.reduce((sum, rating) => sum + rating, 0) / ratings.length;
+  return average.toFixed(1);
+}
+
+export function useDashboardData({
+  isGuest,
+  hasAccount,
+  isVerified,
+  squadId,
+}: UseDashboardDataOptions): UseDashboardDataReturn {
+  const profileQuery = trpc.player.getCurrentProfile.useQuery(undefined, {
+    enabled: hasAccount && isVerified,
+    retry: false,
+    staleTime: 30 * 1000,
   });
-  const [dataState, setDataState] = useState<'preview' | 'empty' | 'live'>('empty');
+  const matchesQuery = trpc.match.list.useQuery(
+    { squadId, limit: 5 },
+    { enabled: !!squadId, staleTime: 30 * 1000 }
+  );
 
-  const fetchData = useCallback(async () => {
+  const dataState = useMemo<'preview' | 'empty' | 'live'>(() => {
     if (isGuest) {
-      setDataState('preview');
-      setState(createSuccessState(PREVIEW_STATS));
-      return;
+      return 'preview';
     }
 
-    if (!userAddress) {
-      setDataState('empty');
-      setState(createSuccessState(EMPTY_STATS));
-      return;
+    if (!hasAccount || !isVerified || !profileQuery.data) {
+      return 'empty';
     }
 
-    try {
-      setState(createLoadingState());
+    return 'live';
+  }, [hasAccount, isGuest, isVerified, profileQuery.data]);
 
-      // If we are in the 'Dev/Guest' phase, we skip the real fetch to avoid 404s
-      // until the backend routes are actually implemented.
-      const IS_BACKEND_READY = false; // Toggle this once API is live
-
-      if (!IS_BACKEND_READY) {
-        await new Promise(resolve => setTimeout(resolve, 300));
-        setDataState('empty');
-        setState(createSuccessState(EMPTY_STATS));
-        return;
-      }
-
-      // Fetch from API
-      const response = await fetch(`/api/player/${userAddress}/dashboard`);
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch dashboard data');
-      }
-
-      const data = await response.json();
-      setDataState('live');
-      setState(createSuccessState(data));
-    } catch {
-      if (userAddress && !isGuest) {
-        console.warn('Dashboard API not found. Reverting to an empty state for real users.');
-      }
-
-      setDataState(isGuest ? 'preview' : 'empty');
-      setState(createSuccessState(isGuest ? PREVIEW_STATS : EMPTY_STATS));
+  const data = useMemo<DashboardStats>(() => {
+    if (isGuest) {
+      return PREVIEW_STATS;
     }
-  }, [isGuest, userAddress]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    if (!hasAccount || !isVerified || !profileQuery.data) {
+      return EMPTY_STATS;
+    }
+
+    return {
+      goals: profileQuery.data.totalGoals ?? 0,
+      assists: profileQuery.data.totalAssists ?? 0,
+      matches: profileQuery.data.totalMatches ?? 0,
+      rating: formatRating(profileQuery.data.formHistory),
+      recentMatches: formatRecentMatches(matchesQuery.data?.matches ?? [], squadId),
+    };
+  }, [
+    hasAccount,
+    isGuest,
+    isVerified,
+    matchesQuery.data?.matches,
+    profileQuery.data,
+    squadId,
+  ]);
+
+  const loading = !isGuest && hasAccount && isVerified && (
+    profileQuery.isLoading || (!!squadId && matchesQuery.isLoading)
+  );
+  const error = profileQuery.error?.message || matchesQuery.error?.message || null;
 
   return {
-    ...state,
+    ...createSuccessState(data),
+    loading,
+    error,
     dataState,
-    refetch: fetchData,
+    refetch: async () => {
+      await profileQuery.refetch();
+      if (squadId) {
+        await matchesQuery.refetch();
+      }
+    },
   };
 }

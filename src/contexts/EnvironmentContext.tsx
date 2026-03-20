@@ -18,85 +18,79 @@ interface EnvironmentState {
 
 const EnvironmentContext = createContext<EnvironmentState | undefined>(undefined);
 
+const DEFAULT_ENVIRONMENT_STATE: EnvironmentState = {
+    city: 'your local chapter',
+    country: 'Unknown',
+    venue: 'your next ground',
+    weather: 'Unavailable',
+    temp: '--',
+    proximity: 'Location not shared',
+    isNight: false,
+    greeting: 'Welcome back',
+    rivals: { home: 'Home Squad', away: 'Away Squad' },
+    localMission: {
+        title: 'Log your next verified match',
+        landmark: 'your next fixture',
+        bonus: 'Proof unlocks progression',
+    },
+    loading: true,
+};
+
+function formatCityFromTimeZone(timeZone?: string) {
+    if (!timeZone || !timeZone.includes('/')) {
+        return DEFAULT_ENVIRONMENT_STATE.city;
+    }
+
+    const city = timeZone.split('/').pop()?.replace(/_/g, ' ').trim();
+    return city || DEFAULT_ENVIRONMENT_STATE.city;
+}
+
+function formatCountryFromLocale(locale?: string) {
+    const region = locale?.split('-')[1];
+    if (!region) {
+        return DEFAULT_ENVIRONMENT_STATE.country;
+    }
+
+    try {
+        return new Intl.DisplayNames([locale], { type: 'region' }).of(region) || region;
+    } catch {
+        return region;
+    }
+}
+
 export const EnvironmentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [state, setState] = useState<EnvironmentState>({
-        city: 'Hackney',
-        country: 'UK',
-        venue: 'Hackney Marshes',
-        weather: 'Cloudy',
-        temp: '8°C',
-        proximity: '2.4km from Center Circle',
-        isNight: false,
-        greeting: 'Good Day',
-        rivals: { home: 'Hackney Hammers', away: 'Marshes Marauders' },
-        localMission: { title: 'Center Circle Check-in', landmark: 'Hackney Marshes', bonus: '1.5x XP' },
-        loading: true,
-    });
+    const [state, setState] = useState<EnvironmentState>(DEFAULT_ENVIRONMENT_STATE);
 
     useEffect(() => {
-        const fetchLocation = async () => {
-            try {
-                // 1. IP Geolocation
-                const res = await fetch('https://ipapi.co/json/');
-                const data = await res.json();
+        try {
+            const now = new Date();
+            const hour = now.getHours();
+            const isNight = hour >= 19 || hour < 6;
+            const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const locale = typeof navigator !== 'undefined'
+                ? navigator.language
+                : Intl.DateTimeFormat().resolvedOptions().locale;
+            const city = formatCityFromTimeZone(timeZone);
+            const country = formatCountryFromLocale(locale);
 
-                if (data.city) {
-                    const city = data.city;
-                    const country = data.country_name;
-
-                    // Time detection
-                    const hour = new Date().getHours();
-                    const isNight = hour > 18 || hour < 6;
-                    const greeting = hour < 12 ? 'Good Morning' : hour < 18 ? 'Good Afternoon' : 'Good Evening';
-
-                    let venue = `${city} Central Field`;
-                    let rival1 = `${city} Navigators`;
-                    let rival2 = `${city} Raiders`;
-                    let missionLandmark = `${city} Park`;
-
-                    if (city.toLowerCase().includes('nairobi')) {
-                        venue = 'Nairobi City Ground';
-                        rival1 = 'Nairobi Navigators';
-                        rival2 = 'Mombasa Mariners';
-                        missionLandmark = 'Uhuru Park';
-                    }
-                    if (city.toLowerCase().includes('london')) {
-                        venue = 'Hackney Marshes';
-                        rival1 = 'Hackney Hammers';
-                        rival2 = 'Marshes Marauders';
-                        missionLandmark = 'Hackney Marshes';
-                    }
-
-                    // 2. Mock Weather based on region (could be actual API later)
-                    // (OpenWeather would be better, but this gets the POC running fast)
-                    const temp = country === 'Kenya' ? '24°C' : '8°C';
-                    const weather = country === 'Kenya' ? 'Sunny' : 'Light Rain';
-
-                    setState({
-                        city,
-                        country,
-                        venue,
-                        weather,
-                        temp,
-                        proximity: `Verified: ${city} Core Active`,
-                        isNight,
-                        greeting,
-                        rivals: { home: rival1, away: rival2 },
-                        localMission: {
-                            title: 'Home Ground Activation',
-                            landmark: missionLandmark,
-                            bonus: '1.5x XP Multiplier'
-                        },
-                        loading: false
-                    });
-                }
-            } catch (err) {
-                console.error("Environment detection failed:", err);
-                setState(prev => ({ ...prev, loading: false }));
-            }
-        };
-
-        fetchLocation();
+            setState({
+                city,
+                country,
+                venue: DEFAULT_ENVIRONMENT_STATE.venue,
+                weather: DEFAULT_ENVIRONMENT_STATE.weather,
+                temp: DEFAULT_ENVIRONMENT_STATE.temp,
+                proximity: DEFAULT_ENVIRONMENT_STATE.proximity,
+                isNight,
+                greeting,
+                rivals: DEFAULT_ENVIRONMENT_STATE.rivals,
+                localMission: DEFAULT_ENVIRONMENT_STATE.localMission,
+                loading: false,
+            });
+        } catch (err) {
+            console.error('Environment detection failed:', err);
+            setState((prev) => ({ ...prev, loading: false }));
+        }
     }, []);
 
     return (

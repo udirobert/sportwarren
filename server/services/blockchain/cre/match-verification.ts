@@ -40,9 +40,6 @@ export interface MatchVerificationResult {
 class MatchVerificationWorkflow {
     private readonly OWE_API_KEY = process.env.OPENWEATHER_API_KEY;
     private readonly GEO_API_KEY = process.env.GEO_VERIFICATION_API_KEY;
-    private get isTestMode(): boolean {
-        return process.env.NODE_ENV === 'test' || process.env.CRE_SIMULATION === 'true';
-    }
 
     /**
      * Orchestrates the verification workflow using real-world data sources.
@@ -102,10 +99,6 @@ class MatchVerificationWorkflow {
      * Supports both Current and Historical (One Call API)
      */
     private async fetchWeatherAction(input: MatchVerificationInput) {
-        if (this.isTestMode && !this.OWE_API_KEY) {
-            return { temperature: 14, conditions: 'Cloudy', verified: true, source: 'simulator' };
-        }
-
         // 1. Try Open-Meteo (Zero-Key, Sovereign Default)
         try {
             const date = new Date(input.timestamp * 1000);
@@ -197,17 +190,18 @@ class MatchVerificationWorkflow {
             }
         }
 
-        return { temperature: 0, conditions: 'unknown', verified: false, source: 'none' };
+        return {
+            temperature: 0,
+            conditions: 'Unavailable',
+            verified: false,
+            source: 'Unavailable'
+        };
     }
 
     /**
      * ACTION: Verify Location via Reverse Geocoding and Place Type analysis
      */
     private async fetchLocationAction(input: MatchVerificationInput) {
-        if (this.isTestMode && !this.GEO_API_KEY) {
-            return { region: 'Stamford Bridge', isPitch: true, verified: true, placeType: 'stadium' };
-        }
-
         // 1. Try Google Maps / LocationIQ (Legacy/Key-Based)
         if (this.GEO_API_KEY) {
             try {
@@ -273,7 +267,12 @@ class MatchVerificationWorkflow {
             console.error('[CRE] Fallback Location Action (OSM) failed:', error instanceof Error ? error.message : error);
         }
 
-        return { region: 'Unknown', isPitch: false, verified: false, placeType: 'none' };
+        return {
+            region: 'Unavailable',
+            isPitch: false,
+            verified: false,
+            placeType: 'unavailable'
+        };
     }
 }
 

@@ -19,7 +19,13 @@ interface WalletConnectModalProps {
 export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, onClose, onConnected }) => {
   const { connect, hasWallet, refreshAuthSignature, authStatus } = useWallet();
   const { login: privyLogin, authenticated, ready } = usePrivy();
-  const { login, isConnected: lensConnected, profile: lensProfile } = useLens();
+  const {
+    login,
+    isAvailable: lensAvailable,
+    isConnected: lensConnected,
+    profile: lensProfile,
+    error: lensError,
+  } = useLens();
   const { addToast } = useToast();
   const [selectedChain, setSelectedChain] = useState<'algorand' | 'avalanche' | 'lens' | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
@@ -60,9 +66,15 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
   };
 
   const handleLensLogin = async () => {
+    if (!lensAvailable) {
+      setError(lensError || 'Lens publishing is not enabled on this deployment.');
+      return;
+    }
+
     setIsConnecting(true);
     try {
       await login();
+      setError(null);
       onClose();
     } catch (err: any) {
       setError(err.message || 'Lens login failed');
@@ -203,19 +215,34 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h4 className="text-sm font-bold text-gray-900">Link Lens Profile (Optional)</h4>
-                  <p className="text-xs text-gray-500">Connect once to post highlights and match proofs.</p>
-                  {lensConnected && lensProfile?.handle && (
+                  <p className="text-xs text-gray-500">
+                    {lensAvailable
+                      ? 'Connect once to post highlights and match proofs.'
+                      : 'Lens publishing is currently disabled on this deployment.'}
+                  </p>
+                  {lensAvailable && lensConnected && lensProfile?.handle && (
                     <p className="text-[11px] text-gray-400 mt-1">Connected as @{lensProfile.handle}</p>
                   )}
+                  {!lensAvailable && (
+                    <p className="text-[11px] text-amber-600 mt-1">
+                      {lensError || 'The app is keeping social publishing honest until the real Lens integration is wired.'}
+                    </p>
+                  )}
                 </div>
-                <Button
-                  size="sm"
-                  onClick={handleLensLogin}
-                  disabled={!hasWallet || lensConnected || isConnecting}
-                  className="h-9 text-xs font-black uppercase tracking-widest"
-                >
-                  {lensConnected ? 'Linked' : 'Link Lens'}
-                </Button>
+                {lensAvailable ? (
+                  <Button
+                    size="sm"
+                    onClick={handleLensLogin}
+                    disabled={!hasWallet || lensConnected || isConnecting}
+                    className="h-9 text-xs font-black uppercase tracking-widest"
+                  >
+                    {lensConnected ? 'Linked' : 'Link Lens'}
+                  </Button>
+                ) : (
+                  <span className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                    Unavailable
+                  </span>
+                )}
               </div>
             </div>
           </div>

@@ -114,6 +114,7 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
       limit: 20,
     },
     {
+      enabled: !!squadId,
       staleTime: 5 * 1000, // 5 seconds
     }
   );
@@ -136,7 +137,7 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
     },
   });
 
-  const matches = data?.matches.map(transformMatch) || [];
+  const matches = squadId ? (data?.matches.map(transformMatch) || []) : [];
   const pendingMatches = useMemo(
     () => matches.filter((match) => match.status === 'pending'),
     [matches],

@@ -1,82 +1,44 @@
-import { ethers } from 'ethers';
+export class LensServiceUnavailableError extends Error {
+  constructor(message = 'Lens social publishing is not enabled on this deployment.') {
+    super(message);
+    this.name = 'LensServiceUnavailableError';
+  }
+}
 
 /**
- * Lens Protocol v3 Service
- * Handles authentication, profiles, and social engagement
+ * Lens Protocol service placeholder.
+ * The previous implementation fabricated profiles, balances, and post IDs.
+ * Until a real Lens SDK / chain integration exists, these methods must fail
+ * honestly so the UI can present an unavailable state instead of fake success.
  */
 export class LensService {
-
-
-  constructor() {
-  }
-
-  /**
-   * Generate a SIWL challenge message
-   */
-  async generateChallenge(address: string): Promise<string> {
-    const timestamp = Date.now();
-    return `Sign this message to authenticate with Lens v3. 
-    Address: ${address}
-    Timestamp: ${timestamp}`;
-  }
-
-  /**
-   * Verify SIWL signature and return session info
-   */
-  async authenticate(address: string, signature: string, message: string): Promise<any> {
-    try {
-      // 1. Recover address from signature
-      const recoveredAddress = ethers.verifyMessage(message, signature);
-
-      if (recoveredAddress.toLowerCase() !== address.toLowerCase()) {
-        throw new Error('Signature verification failed');
-      }
-
-      // 2. Fetch/Create Lens v3 Profile (Simulated for Demo)
-      // In production, this would call Lens API or Lens Chain
-      const profile = {
-        id: `lens_v3_${address.slice(0, 10)}`,
-        handle: `player_${address.slice(2, 8)}.lens`,
-        name: `SportWarren Player`,
-        bio: `Phygital Athlete on SportWarren`,
-        avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${address}`,
-        ownedBy: address,
-        stats: {
-          totalFollowers: 42,
-          totalFollowing: 12,
-          totalPosts: 5,
-        }
-      };
-
-      return {
-        profile,
-        accessToken: `lens_jwt_${Buffer.from(address).toString('base64')}`,
-      };
-    } catch (error) {
-      console.error('Lens authentication service failed:', error);
-      throw error;
+  isEnabled(): boolean {
+    const value = process.env.ENABLE_LENS_SOCIAL ?? process.env.NEXT_PUBLIC_LENS_SOCIAL_ENABLED;
+    if (!value) {
+      return false;
     }
+
+    return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
   }
 
-  /**
-   * Create a post on Lens (e.g. Match Highlight)
-   */
-  async createPost(profileId: string, content: string, _imageUrl?: string): Promise<string> {
-    console.info(`Posting to Lens Profile ${profileId}: ${content}`);
-
-    // Simulate successful on-chain publication
-    const pubId = `pub_${Math.random().toString(36).substring(7)}`;
-
-    // In production, this would use the Lens SDK / Gasless relay
-    return pubId;
+  private assertAvailable(): never {
+    throw new LensServiceUnavailableError();
   }
 
-  /**
-   * Check if an address has a Lens Profile
-   */
+  async generateChallenge(_address: string): Promise<string> {
+    this.assertAvailable();
+  }
+
+  async authenticate(_address: string, _signature: string, _message: string): Promise<never> {
+    this.assertAvailable();
+  }
+
+  async createPost(_profileId: string, _content: string, _imageUrl?: string): Promise<never> {
+    this.assertAvailable();
+  }
+
   async hasProfile(_address: string): Promise<boolean> {
-    // Simulated check
-    return true;
+    return false;
   }
 }
 

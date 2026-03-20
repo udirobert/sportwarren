@@ -21,6 +21,7 @@ import { useWallet } from '@/contexts/WalletContext';
 
 type YellowConnectionStatus =
   | 'disabled'
+  | 'unconfigured'
   | 'idle'
   | 'unsupported'
   | 'connecting'
@@ -91,11 +92,24 @@ const DEFAULT_STATE: YellowSessionState = {
 };
 
 function readBooleanEnv(value: string | undefined) {
-  return value === 'true';
+  return value === 'true' || value === '1';
 }
 
 function isEvmChain(chain: string | null) {
   return chain === 'avalanche' || chain === 'lens';
+}
+
+function getYellowClientConfig() {
+  const requested = readBooleanEnv(process.env.NEXT_PUBLIC_YELLOW_ENABLED);
+  const application = process.env.NEXT_PUBLIC_YELLOW_APP_ID;
+  const configured = requested && Boolean(application);
+
+  return {
+    requested,
+    configured,
+    application,
+    assetSymbol: process.env.NEXT_PUBLIC_YELLOW_ASSET_SYMBOL || 'USDC',
+  };
 }
 
 function getRequestIdFromMessage(raw: string) {
@@ -115,12 +129,23 @@ function createPendingError(message: string) {
 
 export function useYellowSession(sessionId?: string | null) {
   const { address, chain, hasWallet } = useWallet();
+  const {
+    requested,
+    configured,
+    application,
+    assetSymbol,
+  } = getYellowClientConfig();
   const [state, setState] = useState<YellowSessionState>(() => ({
     ...DEFAULT_STATE,
-    enabled: readBooleanEnv(process.env.NEXT_PUBLIC_YELLOW_ENABLED),
-    assetSymbol: process.env.NEXT_PUBLIC_YELLOW_ASSET_SYMBOL || 'USDC',
+    enabled: configured,
+    assetSymbol,
     sessionId: sessionId ?? null,
-    status: readBooleanEnv(process.env.NEXT_PUBLIC_YELLOW_ENABLED) ? 'idle' : 'disabled',
+    status: requested
+      ? (configured ? 'idle' : 'unconfigured')
+      : 'disabled',
+    error: requested && !configured
+      ? 'NEXT_PUBLIC_YELLOW_APP_ID is not configured.'
+      : null,
   }));
 
   const websocketRef = useRef<WebSocket | null>(null);
@@ -207,19 +232,26 @@ export function useYellowSession(sessionId?: string | null) {
   useEffect(() => {
     setState((current) => ({
       ...current,
-      enabled: readBooleanEnv(process.env.NEXT_PUBLIC_YELLOW_ENABLED),
-      assetSymbol: process.env.NEXT_PUBLIC_YELLOW_ASSET_SYMBOL || 'USDC',
+      enabled: configured,
+      assetSymbol,
       sessionId: sessionId ?? null,
-      status: readBooleanEnv(process.env.NEXT_PUBLIC_YELLOW_ENABLED)
-        ? current.status === 'disabled' ? 'idle' : current.status
+      status: requested
+        ? (
+            configured
+              ? (current.status === 'disabled' || current.status === 'unconfigured' ? 'idle' : current.status)
+              : 'unconfigured'
+          )
         : 'disabled',
+      error: requested && !configured
+        ? 'NEXT_PUBLIC_YELLOW_APP_ID is not configured.'
+        : current.status === 'unconfigured'
+          ? null
+          : current.error,
     }));
-  }, [sessionId]);
+  }, [assetSymbol, configured, requested, sessionId]);
 
   useEffect(() => {
-    const enabled = readBooleanEnv(process.env.NEXT_PUBLIC_YELLOW_ENABLED);
-
-    if (!enabled) {
+    if (!requested) {
       authenticatedRef.current = false;
       sessionSignerRef.current = null;
       setState((current) => ({
@@ -227,6 +259,18 @@ export function useYellowSession(sessionId?: string | null) {
         enabled: false,
         status: 'disabled',
         error: null,
+      }));
+      return;
+    }
+
+    if (!configured) {
+      authenticatedRef.current = false;
+      sessionSignerRef.current = null;
+      setState((current) => ({
+        ...current,
+        enabled: false,
+        status: 'unconfigured',
+        error: 'NEXT_PUBLIC_YELLOW_APP_ID is not configured.',
       }));
       return;
     }
@@ -274,28 +318,14 @@ export function useYellowSession(sessionId?: string | null) {
 
     const clearnodeUrl =
       process.env.NEXT_PUBLIC_YELLOW_CLEARNODE_URL || 'wss://clearnet-sandbox.yellow.com/ws';
-    const application = process.env.NEXT_PUBLIC_YELLOW_APP_ID;
     const scope = process.env.NEXT_PUBLIC_YELLOW_SCOPE || 'sportwarren';
     const domainName =
       process.env.NEXT_PUBLIC_YELLOW_EIP712_DOMAIN_NAME || 'Yellow Network';
     const allowanceAmount =
       process.env.NEXT_PUBLIC_YELLOW_ALLOWANCE_AMOUNT || '1000000000';
 
-    if (!application) {
-      authenticatedRef.current = false;
-      sessionSignerRef.current = null;
-      setState((current) => ({
-        ...current,
-        enabled: true,
-        status: 'error',
-        accountAddress: address,
-        error: 'NEXT_PUBLIC_YELLOW_APP_ID is not configured.',
-      }));
-      return;
-    }
-
     let cancelled = false;
-    const appId = application;
+    const appId = application as string;
 
     async function authenticate() {
       setState((current) => ({
@@ -323,7 +353,7 @@ export function useYellowSession(sessionId?: string | null) {
             expires_at: BigInt(Math.floor(Date.now() / 1000) + 60 * 60),
             allowances: [
               {
-                asset: (process.env.NEXT_PUBLIC_YELLOW_ASSET_SYMBOL || 'USDC').toLowerCase(),
+                asset: assetSymbol.toLowerCase(),
                 amount: allowanceAmount,
               },
             ],
@@ -370,7 +400,7 @@ export function useYellowSession(sessionId?: string | null) {
           application: appId,
           allowances: [
             {
-              asset: (process.env.NEXT_PUBLIC_YELLOW_ASSET_SYMBOL || 'USDC').toLowerCase(),
+              asset: assetSymbol.toLowerCase(),
               amount: allowanceAmount,
             },
           ],
@@ -438,7 +468,7 @@ export function useYellowSession(sessionId?: string | null) {
       websocketRef.current = null;
       pendingRef.current.clear();
     };
-  }, [address, chain, hasWallet, sendRawMessage]);
+  }, [address, application, assetSymbol, chain, configured, hasWallet, requested, sendRawMessage]);
 
   return {
     ...state,

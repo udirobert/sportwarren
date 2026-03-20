@@ -51,7 +51,7 @@ const STAFF_MEMBERS: StaffMember[] = [
         role: 'Contract Negotiator',
         avatar: '🎩',
         mood: 'focused',
-        biography: 'Specializes in reputation-based valuations. Always looking for the next Hackney superstar.'
+        biography: 'Specializes in reputation-based valuations. Always looking for the next player who can change a season.'
     },
     {
         id: 'scout-1',
@@ -59,7 +59,7 @@ const STAFF_MEMBERS: StaffMember[] = [
         role: 'Talent Identification',
         avatar: '🔭',
         mood: 'busy',
-        biography: 'Spends 18 hours a day at Hackney Marshes monitoring baseline agility and spatial awareness.'
+        biography: 'Tracks emerging prospects, squad gaps, and match load to spot the next useful addition.'
     },
     {
         id: 'coach-1',
@@ -752,7 +752,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                     )}
                                     <div className="flex gap-2 mt-3">
                                         <button
-                                            onClick={() => {
+                                            onClick={async () => {
                                                 const action = agentCtx.pendingOnChainAction!;
                                                 if (action.type === 'yellow_payment') {
                                                     // Initiate Yellow state channel session
@@ -762,8 +762,23 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                                         setChatHistory(prev => [...prev, { sender: '⛓️ Yellow Network', text: `⚠️ Yellow session not active (status: ${yellowSession.status}). Connect an eligible EVM wallet to authorise payments through Yellow Network.` }]);
                                                     }
                                                 } else if (action.type === 'lens_post') {
-                                                    lensPost.mutate({ text: action.postText || action.description, tags: ['SportWarren', 'Phygital'] });
-                                                    setChatHistory(prev => [...prev, { sender: '📡 Lens Protocol', text: `✅ Post queued for Lens. Once the Lens SDK is fully integrated, this will publish to your Lens profile automatically.` }]);
+                                                    try {
+                                                        const result = await lensPost.mutateAsync({
+                                                            text: action.postText || action.description,
+                                                            tags: ['SportWarren', 'Phygital'],
+                                                        });
+                                                        setChatHistory(prev => [...prev, {
+                                                            sender: '📡 Lens Protocol',
+                                                            text: result.success
+                                                                ? '✅ Lens post submitted.'
+                                                                : `⚠️ ${result.message}`,
+                                                        }]);
+                                                    } catch (error) {
+                                                        setChatHistory(prev => [...prev, {
+                                                            sender: '📡 Lens Protocol',
+                                                            text: '⚠️ Lens publishing is unavailable right now.',
+                                                        }]);
+                                                    }
                                                 }
                                                 agentDispatch({ type: 'CLEAR_ONCHAIN_ACTION' });
                                             }}

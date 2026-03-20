@@ -19,6 +19,17 @@ export const PaymentRailNotice: React.FC<PaymentRailNoticeProps> = ({
   mode,
   body,
 }) => {
+  const badgeLabel = enabled
+    ? `${mode || 'live'} rail`
+    : mode === 'unconfigured'
+      ? 'unconfigured'
+      : 'manual ledger';
+  const footer = enabled
+    ? `${assetSymbol} is reserved and settled through Yellow when both sides can complete the session.`
+    : mode === 'unconfigured'
+      ? 'Yellow is turned on in product logic but the deployment is missing required configuration, so settlement stays on the in-app ledger.'
+      : 'The app will continue with the standard in-app ledger when the Yellow rail is unavailable.';
+
   return (
     <Card className={enabled ? 'border-blue-200 bg-blue-50/70' : 'border-gray-200 bg-gray-50/80'}>
       <div className="flex items-start gap-3">
@@ -31,15 +42,11 @@ export const PaymentRailNotice: React.FC<PaymentRailNoticeProps> = ({
             <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${
               enabled ? 'bg-blue-100 text-blue-700' : 'bg-gray-200 text-gray-700'
             }`}>
-              {enabled ? `${mode || 'live'} rail` : 'manual fallback'}
+              {badgeLabel}
             </span>
           </div>
           <p className="mt-1 text-sm text-gray-600">{body}</p>
-          <p className="mt-2 text-xs text-gray-500">
-            {enabled
-              ? `${assetSymbol} is reserved and settled through Yellow when both sides can complete the session.`
-              : 'The app will continue with the standard in-app ledger when the Yellow rail is unavailable.'}
-          </p>
+          <p className="mt-2 text-xs text-gray-500">{footer}</p>
         </div>
       </div>
     </Card>

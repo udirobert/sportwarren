@@ -208,7 +208,13 @@ export function useTreasury(squadId?: string): UseTreasuryReturn {
         })),
         paymentRail: {
           enabled: rawData.paymentRail?.enabled ?? yellowSession.enabled,
-          mode: rawData.paymentRail?.mode || (yellowSession.enabled ? 'simulated' : 'disabled'),
+          mode: rawData.paymentRail?.mode || (
+            yellowSession.enabled
+              ? 'nitrolite'
+              : yellowSession.status === 'unconfigured'
+                ? 'unconfigured'
+                : 'disabled'
+          ),
           assetSymbol: rawData.paymentRail?.assetSymbol || yellowSession.assetSymbol,
           sessionId: rawData.paymentRail?.sessionId || yellowSession.sessionId,
           settledBalance: rawData.paymentRail?.settledBalance ?? rawData.balance ?? 0,
