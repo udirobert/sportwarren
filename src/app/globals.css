@@ -9,6 +9,9 @@
     --nav-height-mobile: 3.5rem;
     --nav-height-desktop: 4rem;
     --bottom-nav-height: 3.25rem;
+    --bottom-nav-padding: 0.5rem;
+    --fab-size: 3.5rem;
+    --fab-margin: 1.5rem;
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-top: env(safe-area-inset-top, 0px);
   }
@@ -16,6 +19,9 @@
   html {
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
+    /* Use dvh on mobile to account for browser chrome */
+    min-height: 100vh;
+    min-height: 100dvh;
   }
   
   body {
@@ -47,12 +53,12 @@
   }
   
   .nav-spacer-bottom {
-    padding-bottom: calc(var(--bottom-nav-height) + var(--safe-area-bottom) + 0.5rem);
+    padding-bottom: calc(var(--bottom-nav-height) + var(--bottom-nav-padding) + var(--safe-area-bottom) + 1rem);
   }
   
   @screen md {
     .nav-spacer-bottom {
-      padding-bottom: 0;
+      padding-bottom: 1.5rem;
     }
   }
   
@@ -69,6 +75,11 @@
   .smooth-scroll {
     -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
+  }
+
+  /* Prevent horizontal scroll from bubbling to page */
+  .scroll-lock-x {
+    overscroll-behavior-x: contain;
   }
   
   /* Better focus states for accessibility */

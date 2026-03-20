@@ -337,7 +337,7 @@ export default function SquadPage() {
 
   if (squadWorkspaceGate.status === "blocked") {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6 pb-24 md:pb-6 text-gray-900 dark:text-gray-100">
+      <div className="max-w-4xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom text-gray-900 dark:text-gray-100">
         <JourneyGateCard
           icon={Shield}
           eyebrow={squadWorkspaceGate.eyebrow}
@@ -352,7 +352,7 @@ export default function SquadPage() {
   }
 
   return (
-    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="max-w-6xl mx-auto px-4 py-4 md:py-6 pb-24 md:pb-6 space-y-4 md:space-y-6 text-gray-900 dark:text-gray-100">
+    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="max-w-6xl mx-auto px-4 py-4 md:py-6 nav-spacer-top nav-spacer-bottom space-y-4 md:space-y-6 text-gray-900 dark:text-gray-100">
       <VerificationBanner />
       {/* Header — compact on mobile */}
       <div className="flex items-center gap-3 md:block md:text-center">
