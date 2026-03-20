@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X,
@@ -18,6 +18,10 @@ import {
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { useOnboarding, type ChecklistId } from '@/hooks/useOnboarding';
+
+// Constants for tour persistence and behavior
+const TOUR_STORAGE_KEY = 'sw_tour_current_step';
+const TOUR_COMPLETED_KEY = 'sw_guest_tour_seen';
 
 interface TourStep {
     id: string;
@@ -110,6 +114,10 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
     const [activeStep, setActiveStep] = useState(-1);
     const [coords, setCoords] = useState({ top: 0, left: 0, width: 0, height: 0 });
     const [targetResolved, setTargetResolved] = useState(false);
+    const [showConfetti, setShowConfetti] = useState(false);
+    
+    // Track if tour was completed this session for confetti
+    const hasTriggeredConfetti = useRef(false);
 
     const localizedSteps = useMemo(() => TOUR_STEPS.map(step => {
         if (step.id === 'welcome') {
@@ -124,18 +132,46 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
         return step;
     }), [venue]);
 
+    // Initialize tour - restore from localStorage or start fresh
     useEffect(() => {
-        const seen = localStorage.getItem('sw_guest_tour_seen');
+        const seen = localStorage.getItem(TOUR_COMPLETED_KEY);
+        const savedStep = localStorage.getItem(TOUR_STORAGE_KEY);
+        
         if (isGuest && !seen) {
-            // Delay start for better experience
-            const timer = setTimeout(() => setActiveStep(0), 1000);
+            // Restore saved progress or start fresh
+            const initialStep = savedStep ? parseInt(savedStep, 10) : 0;
+            const timer = setTimeout(() => setActiveStep(initialStep), 1000);
             return () => clearTimeout(timer);
         }
     }, [isGuest]);
 
+    // Persist step changes to localStorage
+    useEffect(() => {
+        if (activeStep >= 0) {
+            localStorage.setItem(TOUR_STORAGE_KEY, String(activeStep));
+            
+            // Trigger confetti on final step (only once)
+            const isFinalStep = activeStep === TOUR_STEPS.length - 1;
+            if (isFinalStep && !hasTriggeredConfetti.current) {
+                hasTriggeredConfetti.current = true;
+                setShowConfetti(true);
+                setTimeout(() => setShowConfetti(false), 3000);
+            }
+        }
+    }, [activeStep]);
+
+    // Handle tour completion
+    const handleComplete = useCallback(() => {
+        localStorage.setItem(TOUR_COMPLETED_KEY, 'true');
+        localStorage.removeItem(TOUR_STORAGE_KEY);
+        setActiveStep(-1);
+    }, []);
+
     useEffect(() => {
         const handleTourRestart = () => {
-            localStorage.removeItem('sw_guest_tour_seen');
+            localStorage.removeItem(TOUR_COMPLETED_KEY);
+            localStorage.removeItem(TOUR_STORAGE_KEY);
+            hasTriggeredConfetti.current = false;
             if (isGuest) {
                 setActiveStep(0);
             }
@@ -227,6 +263,20 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
         };
     }, [updateCoords]);
 
+    const handleNext = useCallback(() => {
+        if (activeStep < localizedSteps.length - 1) {
+            setActiveStep(prev => prev + 1);
+        } else {
+            handleComplete();
+        }
+    }, [activeStep, handleComplete, localizedSteps.length]);
+
+    const handleBack = useCallback(() => {
+        if (activeStep > 0) {
+            setActiveStep(prev => prev - 1);
+        }
+    }, [activeStep]);
+
     // Keyboard Navigation
     useEffect(() => {
         if (activeStep < 0) return;
@@ -239,7 +289,7 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [activeStep]);
+    }, [activeStep, handleBack, handleComplete, handleNext]);
 
     // Dispatch event to sync other components (MatchEngine, Concierge) + Link Progress
     useEffect(() => {
@@ -256,32 +306,60 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
         }
     }, [activeStep, localizedSteps, completeChecklistItem]);
 
-    const handleNext = () => {
-        if (activeStep < localizedSteps.length - 1) {
-            setActiveStep(prev => prev + 1);
-        } else {
-            handleComplete();
-        }
-    };
-
-    const handleBack = () => {
-        if (activeStep > 0) {
-            setActiveStep(prev => prev - 1);
-        }
-    };
-
-    const handleComplete = () => {
-        setActiveStep(-1);
-        localStorage.setItem('sw_guest_tour_seen', 'true');
-    };
-
     if (activeStep < 0 || !isGuest) return null;
 
     const step = localizedSteps[activeStep];
     const Icon = step.icon;
 
+    // Confetti celebration on final step
+    const ConfettiOverlay = () => {
+        if (!showConfetti) return null;
+        
+        const colors = ['#22c55e', '#3b82f6', '#eab308', '#ef4444', '#8b5cf6', '#ec4899'];
+        const particles = Array.from({ length: 50 }, (_, i) => ({
+            id: i,
+            x: Math.random() * 100,
+            delay: Math.random() * 0.5,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            size: 6 + Math.random() * 6,
+            duration: 2 + Math.random() * 2,
+        }));
+
+        return (
+            <div className="fixed inset-0 pointer-events-none z-[400] overflow-hidden">
+                {particles.map((p) => (
+                    <motion.div
+                        key={p.id}
+                        initial={{ 
+                            x: `${p.x}vw`, 
+                            y: -20,
+                            rotate: 0,
+                            opacity: 1 
+                        }}
+                        animate={{ 
+                            y: '110vh',
+                            rotate: 720,
+                            opacity: [1, 1, 0]
+                        }}
+                        transition={{ 
+                            duration: p.duration, 
+                            delay: p.delay,
+                            ease: 'easeIn'
+                        }}
+                        className="absolute rounded-sm"
+                        style={{
+                            width: p.size,
+                            height: p.size * 0.6,
+                            backgroundColor: p.color,
+                        }}
+                    />
+                ))}
+            </div>
+        );
+    };
+
     // Smart positioning logic
-    const getPopupStyle = () => {
+    const getPopupStyle = (): React.CSSProperties => {
         if (step.position === 'center' || !targetResolved) {
             return { top: '40%', left: '50%', transform: 'translate(-50%, -40%)' };
         }
@@ -292,6 +370,17 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
 
         let top = coords.top + coords.height + margin;
         let left = coords.left + (coords.width / 2) - (popupWidth / 2);
+
+        // Mobile: center-docked tooltips at bottom
+        if (window.innerWidth < 640) {
+            return { 
+                top: 'auto', 
+                bottom: 20, 
+                left: 16, 
+                right: 16,
+                transform: 'none' 
+            };
+        }
 
         // Adjust based on step preference
         if (step.position === 'top') {
@@ -313,6 +402,8 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
 
     return (
         <div className="fixed inset-0 z-[300] pointer-events-none">
+            <ConfettiOverlay />
+            
             {/* Backdrop with hole */}
             <motion.div
                 initial={{ opacity: 0 }}
