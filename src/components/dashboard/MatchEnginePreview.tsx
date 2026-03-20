@@ -35,12 +35,16 @@ interface PlayerPuck {
     name: string;
     x: number;
     y: number;
+    vx: number;
+    vy: number;
     team: 'home' | 'away';
     role: string;
-    stats: { pace: number; agility: number; strength: number; passing: number };
+    stats: { level: number; pace: number; agility: number; strength: number; passing: number; shooting?: number };
     reputationTier: ReputationTier;
+    homePos: { x: number; y: number };
     history: Array<{ x: number, y: number }>;
     intent?: { x: number; y: number };
+    cooldownUntil?: number;
 }
 
 interface MatchCommentary {
@@ -59,7 +63,7 @@ function tickGoalkeeper(p: PlayerPuck, ctx: EngineContext): { targetX: number; t
 function tickDefender(p: PlayerPuck, ctx: EngineContext): { targetX: number; targetY: number } {
     const ballInOwnHalf = (p.team === 'home' && ctx.ball.x < 50) || (p.team === 'away' && ctx.ball.x > 50);
     const distToBall = Math.sqrt((p.x - ctx.ball.x) ** 2 + (p.y - ctx.ball.y) ** 2);
-    if (ballInOwnHalf && distToBall < 35) {
+    if (ballInOwnHalf && distToBall < 18) {
         return {
             targetX: ctx.ball.x + (p.team === 'home' ? -3 : 3),
             targetY: ctx.ball.y,
@@ -78,7 +82,7 @@ function tickMidfielder(p: PlayerPuck, ctx: EngineContext): { targetX: number; t
         other.id !== p.id &&
         Math.sqrt((other.x - ctx.ball.x) ** 2 + (other.y - ctx.ball.y) ** 2) < distToBall
     );
-    if (isClosest && distToBall < 40) {
+    if (isClosest && distToBall < 20) {
         return { targetX: ctx.ball.x, targetY: ctx.ball.y };
     }
     return {
@@ -166,6 +170,35 @@ function buildFormation(n: number, hasKeeper: boolean): Array<[number, number, s
         }
     }
     return positions;
+}
+
+function distanceBetween(ax: number, ay: number, bx: number, by: number) {
+    return Math.hypot(ax - bx, ay - by);
+}
+
+function selectPassTarget(owner: PlayerPuck, teammates: PlayerPuck[], opponents: PlayerPuck[]) {
+    const targets = teammates.filter((teammate) => teammate.id !== owner.id && teammate.role !== 'GK');
+    if (targets.length === 0) {
+        return null;
+    }
+
+    return targets
+        .map((target) => {
+            const forwardProgress = owner.team === 'home' ? target.x - owner.x : owner.x - target.x;
+            const spacing = Math.min(24, distanceBetween(owner.x, owner.y, target.x, target.y));
+            const pressure = opponents.filter((opponent) => distanceBetween(opponent.x, opponent.y, target.x, target.y) < 12).length;
+            const laneBonus = ['ST', 'LW', 'RW', 'ATT', 'AM'].includes(target.role)
+                ? 8
+                : ['CM', 'DM', 'MID'].includes(target.role)
+                    ? 5
+                    : 2;
+
+            return {
+                target,
+                score: forwardProgress * 1.6 + spacing + laneBonus - pressure * 8 + Math.random() * 4,
+            };
+        })
+        .sort((left, right) => right.score - left.score)[0]?.target ?? null;
 }
 
 export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: number; hasKeeper?: boolean }> = ({ squadId, playersPerSide = 11, hasKeeper = true }) => {
@@ -288,11 +321,12 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
 
         // Moved to end of effect
 
-        const createPlayer = (id: string, name: string, x: number, y: number, team: 'home' | 'away', role: string, stats: any): any => ({
+        const createPlayer = (id: string, name: string, x: number, y: number, team: 'home' | 'away', role: string, stats: any): PlayerPuck => ({
             id, name, x, y, vx: 0, vy: 0, team, role, stats,
             homePos: { x, y },
             reputationTier: stats.level > 15 ? 'platinum' : stats.level > 8 ? 'gold' : 'silver',
-            history: []
+            history: [],
+            cooldownUntil: 0,
         });
 
         // Dynamic formation based on playersPerSide + hasKeeper props
@@ -303,6 +337,8 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         const awayNames = ['GK', 'Rival', 'Stone', 'Park', 'Cruz', 'Osei', 'Nkosi', 'Levi', 'Dani', 'Ramos', 'Finn', 'Musa', 'Sven', 'Ito', 'Bale', 'Zara'].slice(0, playersPerSide);
         const home433 = homeFormation;
         const away433 = awayFormation;
+
+        let seededPlayers: PlayerPuck[] = [];
 
         if (members && members.length > 0) {
             const homePlayers = home433.map(([x, y, role], i) => {
@@ -319,7 +355,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                 createPlayer(`a${i}`, awayNames[i], x, y, 'away', role,
                     { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20), passing: 65 + Math.floor(Math.random() * 20) })
             );
-            setPlayers([...homePlayers, ...awayPlayers]);
+            seededPlayers = [...homePlayers, ...awayPlayers];
         } else {
             const homePlayers = home433.map(([x, y, role], i) =>
                 createPlayer(`h${i}`, homeNames[i], x, y, 'home', role,
@@ -329,7 +365,17 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
                 createPlayer(`a${i}`, awayNames[i], x, y, 'away', role,
                     { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20), passing: 65 + Math.floor(Math.random() * 20) })
             );
-            setPlayers([...homePlayers, ...awayPlayers2]);
+            seededPlayers = [...homePlayers, ...awayPlayers2];
+        }
+
+        const kickoffCandidates = seededPlayers.filter((player) => player.role !== 'GK');
+        const kickoffStarter = kickoffCandidates[Math.floor(Math.random() * kickoffCandidates.length)] ?? seededPlayers[0];
+
+        setPlayers(seededPlayers);
+        if (kickoffStarter) {
+            setBall({ x: kickoffStarter.x, y: kickoffStarter.y, vx: 0, vy: 0, ownerId: kickoffStarter.id });
+            setCommentary([{ id: 'init-0', time: '0:00', text: `${kickoffStarter.name} takes the kickoff.`, type: 'action' }]);
+            setLatestEvent(`${kickoffStarter.name} takes the kickoff.`);
         }
         // Mark as initialized ONLY after players have been created
         playersInitialised.current = true;
@@ -364,7 +410,6 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         const friction = 0.98;
         const drag = 0.92;
 
-        // 1. Ball physics
         let nextBallX = ball.x + ball.vx;
         let nextBallY = ball.y + ball.vy;
         let nextBallVx = ball.vx * friction;
@@ -376,35 +421,32 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
         if (nextBallY < 2) { nextBallVy = Math.abs(nextBallVy) * 0.5; nextBallY = 2; }
         if (nextBallY > 98) { nextBallVy = -Math.abs(nextBallVy) * 0.5; nextBallY = 98; }
 
-        // Goal detection
         const inGoalMouth = nextBallY > 38 && nextBallY < 62;
         if (!currentOwnerId && nextBallX <= 2 && inGoalMouth) {
             addEvent('⚽ GOAL! Away team scores!', 'goal', 'away');
-            setScore(s => ({ ...s, away: s.away + 1 }));
+            setScore((previous) => ({ ...previous, away: previous.away + 1 }));
             nextBallX = 50; nextBallY = 50; nextBallVx = 0.8; nextBallVy = 0;
-            currentOwnerId = null; ownerCarryTicks.current = 0;
+            ownerCarryTicks.current = 0;
         } else if (!currentOwnerId && nextBallX >= 98 && inGoalMouth) {
             addEvent('⚽ GOAL! Home team scores!', 'goal', 'home');
-            setScore(s => ({ ...s, home: s.home + 1 }));
+            setScore((previous) => ({ ...previous, home: previous.home + 1 }));
             nextBallX = 50; nextBallY = 50; nextBallVx = -0.8; nextBallVy = 0;
-            currentOwnerId = null; ownerCarryTicks.current = 0;
+            ownerCarryTicks.current = 0;
         }
 
-        // 2. Build EngineContext for role-dispatch
-        const homePlayers = players.filter(p => p.team === 'home');
-        const awayPlayers = players.filter(p => p.team === 'away');
+        const homePlayers = players.filter((player) => player.team === 'home');
+        const awayPlayers = players.filter((player) => player.team === 'away');
 
-        // 3. Update player steering via role-dispatch
-        const updatedPlayers: any[] = players.map(p => {
-            const isOwner = p.id === currentOwnerId;
-            const teammates = p.team === 'home' ? homePlayers : awayPlayers;
-            const opponents = p.team === 'home' ? awayPlayers : homePlayers;
+        const updatedPlayers: PlayerPuck[] = players.map((player) => {
+            const isOwner = player.id === currentOwnerId;
+            const teammates = player.team === 'home' ? homePlayers : awayPlayers;
+            const opponents = player.team === 'home' ? awayPlayers : homePlayers;
             const ctx: EngineContext = {
                 ball,
-                teammates: teammates.filter(t => t.id !== p.id),
+                teammates: teammates.filter((teammate) => teammate.id !== player.id),
                 opponents,
-                ownGoal: { x: p.team === 'home' ? 0 : 100, y: 50 },
-                oppGoal: { x: p.team === 'home' ? 100 : 0, y: 50 },
+                ownGoal: { x: player.team === 'home' ? 0 : 100, y: 50 },
+                oppGoal: { x: player.team === 'home' ? 100 : 0, y: 50 },
                 time,
                 tempo,
             };
@@ -413,143 +455,170 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             let targetY: number;
 
             if (isOwner) {
-                // Ball carrier: drive toward goal with jink
-                targetX = p.team === 'home' ? 92 : 8;
-                targetY = 50 + Math.sin(time * 0.08 + p.homePos.y) * 18;
-                const nearDefender = opponents.find(d => Math.sqrt((d.x - p.x) ** 2 + (d.y - p.y) ** 2) < 12);
-                if (nearDefender) targetY = p.y > 50 ? p.y - 20 : p.y + 20;
+                targetX = player.team === 'home' ? 92 : 8;
+                targetY = 50 + Math.sin(time * 0.08 + player.homePos.y) * 18;
+                const nearDefender = opponents.find((opponent) => distanceBetween(opponent.x, opponent.y, player.x, player.y) < 10);
+                if (nearDefender) {
+                    targetY = player.y > 50 ? player.y - 16 : player.y + 16;
+                }
             } else {
-                const t = tickPlayer(p, ctx);
-                targetX = t.targetX;
-                targetY = t.targetY;
+                const steering = tickPlayer(player, ctx);
+                targetX = steering.targetX;
+                targetY = steering.targetY;
             }
 
             const intent = { x: targetX, y: targetY };
-
-            const dx = targetX - p.x;
-            const dy = targetY - p.y;
+            const dx = targetX - player.x;
+            const dy = targetY - player.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
-            const reputationBonus = p.stats.level / 20;
-            const maxSpeed = (p.stats.pace / 100) * (isOwner ? 0.35 : 0.6) * tempo * (1 + reputationBonus * 0.2);
+            const reputationBonus = player.stats.level / 20;
+            const maxSpeed = (player.stats.pace / 100) * (isOwner ? 0.32 : 0.52) * tempo * (1 + reputationBonus * 0.2);
             const dvx = dist > 0 ? (dx / dist) * maxSpeed : 0;
             const dvy = dist > 0 ? (dy / dist) * maxSpeed : 0;
-            const agilityBase = p.stats.agility / 1000;
-            const ax = (dvx - p.vx) * agilityBase * (1 + reputationBonus * 0.1);
-            const ay = (dvy - p.vy) * agilityBase * (1 + reputationBonus * 0.1);
+            const agilityBase = player.stats.agility / 1000;
+            const ax = (dvx - player.vx) * agilityBase * (1 + reputationBonus * 0.1);
+            const ay = (dvy - player.vy) * agilityBase * (1 + reputationBonus * 0.1);
 
-            const nextPx = p.x + p.vx;
-            const nextPy = p.y + p.vy;
-            const nextPvx = (p.vx + ax) * drag;
-            const nextPvy = (p.vy + ay) * drag;
+            const nextPx = Math.max(2, Math.min(98, player.x + player.vx));
+            const nextPy = Math.max(2, Math.min(98, player.y + player.vy));
+            const nextPvx = (player.vx + ax) * drag;
+            const nextPvy = (player.vy + ay) * drag;
 
-            // Ball possession (proximity)
-            const distToBall = Math.sqrt((p.x - ball.x) ** 2 + (p.y - ball.y) ** 2);
-            if (!isOwner && distToBall < 1.5) {
-                if (!currentOwnerId) {
-                    currentOwnerId = p.id;
-                    addEvent(`${p.name} recovers the ball.`, 'tackle', p.team);
-                } else {
-                    const owner = players.find(pl => pl.id === currentOwnerId);
-                    if (owner && owner.team !== p.team) {
-                        const tackleProb = (p.stats.strength + p.stats.agility) / 200;
-                        if (Math.random() < tackleProb * 0.4) {
-                            currentOwnerId = p.id;
-                            addEvent(`${p.name} wins a crucial tackle!`, 'tackle', p.team);
-                        }
-                    }
-                }
-            }
-
-            // Scored decision table: pass / shoot / dribble / hold
             if (isOwner && !shotFired) {
-                const inShootingRange = (p.team === 'home' && p.x > 75 && Math.abs(p.y - 50) < 25)
-                    || (p.team === 'away' && p.x < 25 && Math.abs(p.y - 50) < 25);
-                const distToGoal = p.team === 'home' ? 100 - p.x : p.x;
-                const nearOpponent = opponents.find(d => Math.sqrt((d.x - p.x) ** 2 + (d.y - p.y) ** 2) < 10);
+                const inShootingRange = (player.team === 'home' && player.x > 75 && Math.abs(player.y - 50) < 25)
+                    || (player.team === 'away' && player.x < 25 && Math.abs(player.y - 50) < 25);
+                const distToGoal = player.team === 'home' ? 100 - player.x : player.x;
+                const nearOpponent = opponents.find((opponent) => distanceBetween(opponent.x, opponent.y, player.x, player.y) < 10);
 
-                // Offside check: attacker is beyond last defender when ball is played
-                const isAttackerRole = ['ST', 'LW', 'RW', 'ATT'].includes(p.role);
+                const isAttackerRole = ['ST', 'LW', 'RW', 'ATT'].includes(player.role);
                 const lastDefenderX = opponents
-                    .filter(d => ['CB', 'LB', 'RB', 'DEF'].includes(d.role))
-                    .reduce((acc, d) => {
-                        const defX = p.team === 'home' ? d.x : 100 - d.x;
-                        return Math.max(acc, defX);
+                    .filter((opponent) => ['CB', 'LB', 'RB', 'DEF'].includes(opponent.role))
+                    .reduce((acc, opponent) => {
+                        const defenderX = player.team === 'home' ? opponent.x : 100 - opponent.x;
+                        return Math.max(acc, defenderX);
                     }, 0);
-                const attackerAdvX = p.team === 'home' ? p.x : 100 - p.x;
+                const attackerAdvX = player.team === 'home' ? player.x : 100 - player.x;
                 const isOffside = isAttackerRole && attackerAdvX > lastDefenderX + 2 && attackerAdvX > 50;
 
-                // Weighted decision scores based on player stats
                 const shootScore = inShootingRange && !isOffside
-                    ? ((p.stats as any).shooting || 70) / 100 * (1 - distToGoal / 50) * (nearOpponent ? 0.6 : 1.0)
+                    ? ((player.stats as any).shooting || 70) / 100 * (1 - distToGoal / 50) * (nearOpponent ? 0.6 : 1.0)
                     : 0;
                 const passScore = nearOpponent
-                    ? (p.stats.passing / 100) * 0.8
-                    : (p.stats.passing / 100) * 0.3;
+                    ? (player.stats.passing / 100) * 0.8
+                    : (player.stats.passing / 100) * 0.3;
                 const dribbleScore = nearOpponent
-                    ? (p.stats.agility / 100) * 0.5
+                    ? (player.stats.agility / 100) * 0.5
                     : 0.1;
                 const holdScore = 0.15;
-
                 const total = shootScore + passScore + dribbleScore + holdScore;
                 const roll = Math.random() * total;
 
-                if (roll < shootScore && Math.random() < 0.06) {
+                if (roll < shootScore && ownerCarryTicks.current > 8 && Math.random() < 0.06) {
                     if (isOffside) {
-                        addEvent(`🚩 Offside! ${p.name} caught in advanced position.`, 'incident', p.team);
+                        addEvent(`🚩 Offside! ${player.name} caught in advanced position.`, 'incident', player.team);
                     } else {
-                        const gx = p.team === 'home' ? 99 : 1;
+                        const gx = player.team === 'home' ? 99 : 1;
                         const gy = 50 + (Math.random() - 0.5) * 20;
-                        const sdx = gx - p.x; const sdy = gy - p.y;
+                        const sdx = gx - player.x;
+                        const sdy = gy - player.y;
                         const sd = Math.sqrt(sdx * sdx + sdy * sdy);
                         const power = 3.5 + Math.random() * 1.5;
                         nextBallVx = (sdx / sd) * power;
                         nextBallVy = (sdy / sd) * power;
-                        currentOwnerId = null; shotFired = true;
-                        addEvent(`${p.name} shoots!`, 'shot', p.team);
+                        currentOwnerId = null;
+                        shotFired = true;
+                        addEvent(`${player.name} shoots!`, 'shot', player.team);
                     }
                 } else if (roll < shootScore + passScore) {
-                    // Trigger pass early (handled below in passing block)
                     ownerCarryTicks.current = 999;
-                } else if (roll < shootScore + passScore + dribbleScore) {
-                    addEvent(`${p.name} takes on the defender!`, 'pass', p.team);
+                } else if (roll < shootScore + passScore + dribbleScore && ownerCarryTicks.current > 10) {
+                    addEvent(`${player.name} drives at the defender.`, 'pass', player.team);
                 }
-                // else: hold — do nothing
             }
 
-            // Passing
             if (isOwner && !shotFired) {
                 if (ownerCarryTicks.current < 999) ownerCarryTicks.current += 1;
                 const carryLimit = 18 + Math.floor(Math.random() * 12);
                 if (ownerCarryTicks.current > carryLimit) {
-                    const tms = players.filter(t => t.team === p.team && t.id !== p.id && t.role !== 'GK');
-                    const fwd = tms.filter(t => p.team === 'home' ? t.x > p.x - 5 : t.x < p.x + 5);
-                    const targets = fwd.length > 0 ? fwd : tms;
-                    if (targets.length > 0) {
-                        const target = targets[Math.floor(Math.random() * targets.length)];
-                        const pdx = target.x - p.x; const pdy = target.y - p.y;
+                    const teammatePool = players.filter((candidate) => candidate.team === player.team && candidate.id !== player.id && candidate.role !== 'GK');
+                    const target = selectPassTarget(player, teammatePool, opponents);
+                    if (target) {
+                        const pdx = target.x - player.x;
+                        const pdy = target.y - player.y;
                         const pd = Math.sqrt(pdx * pdx + pdy * pdy);
-                        const passSpeed = 2.2 + (p.stats.passing || 70) / 50;
+                        const passSpeed = 2.2 + (player.stats.passing || 70) / 50;
                         nextBallVx = (pdx / pd) * passSpeed;
                         nextBallVy = (pdy / pd) * passSpeed;
-                        currentOwnerId = null; ownerCarryTicks.current = 0;
-                        addEvent(`${p.name} plays it to ${target.name}.`, 'pass', p.team);
+                        currentOwnerId = null;
+                        ownerCarryTicks.current = 0;
+                        addEvent(`${player.name} finds ${target.name} with the pass.`, 'pass', player.team);
                     }
                 }
             }
 
-            const newHistory = (p.reputationTier === 'platinum' && !lowPowerMode)
-                ? [{ x: p.x, y: p.y }, ...p.history].slice(0, 5)
+            const newHistory = (player.reputationTier === 'platinum' && !lowPowerMode)
+                ? [{ x: player.x, y: player.y }, ...player.history].slice(0, 5)
                 : [];
 
-            return { ...p, x: nextPx, y: nextPy, vx: nextPvx, vy: nextPvy, history: newHistory, intent };
+            return {
+                ...player,
+                x: nextPx,
+                y: nextPy,
+                vx: nextPvx,
+                vy: nextPvy,
+                history: newHistory,
+                intent,
+            };
         });
 
-        // 4. Circle-circle collision resolution
         resolveCollisions(updatedPlayers);
 
-        // 5. Sync ball to owner
+        const activeOwner = currentOwnerId
+            ? updatedPlayers.find((player) => player.id === currentOwnerId) ?? null
+            : null;
+
+        if (!activeOwner) {
+            const recoveryCandidate = [...updatedPlayers]
+                .filter((player) => (player.cooldownUntil ?? 0) <= time)
+                .map((player) => ({
+                    player,
+                    distance: distanceBetween(player.x, player.y, nextBallX, nextBallY),
+                }))
+                .filter(({ distance }) => distance < 2.4)
+                .sort((left, right) => left.distance - right.distance)[0];
+
+            if (recoveryCandidate) {
+                currentOwnerId = recoveryCandidate.player.id;
+                ownerCarryTicks.current = 0;
+                addEvent(`${recoveryCandidate.player.name} gathers the loose ball.`, 'tackle', recoveryCandidate.player.team);
+            }
+        } else {
+            const pressure = [...updatedPlayers]
+                .filter((player) => player.team !== activeOwner.team && (player.cooldownUntil ?? 0) <= time)
+                .map((player) => ({
+                    player,
+                    distance: distanceBetween(player.x, player.y, activeOwner.x, activeOwner.y),
+                }))
+                .sort((left, right) => left.distance - right.distance)[0];
+
+            if (pressure && pressure.distance < 1.8) {
+                const tackleProb = ((pressure.player.stats.strength + pressure.player.stats.agility) / 200) * 0.18;
+                if (Math.random() < tackleProb) {
+                    currentOwnerId = pressure.player.id;
+                    ownerCarryTicks.current = 0;
+                    addEvent(`${pressure.player.name} wins the tackle and turns play over.`, 'tackle', pressure.player.team);
+                }
+            }
+        }
+
+        const cooledPlayers = updatedPlayers.map((player) => (
+            player.id === currentOwnerId
+                ? { ...player, cooldownUntil: Math.max(player.cooldownUntil ?? 0, time + 2) }
+                : player
+        ));
+
         if (currentOwnerId && !shotFired) {
-            const owner = updatedPlayers.find(p => p.id === currentOwnerId);
+            const owner = cooledPlayers.find((player) => player.id === currentOwnerId);
             if (owner) {
                 nextBallX = owner.x + owner.vx * 1.5;
                 nextBallY = owner.y + owner.vy * 1.5;
@@ -558,11 +627,11 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; playersPerSide?: n
             }
         }
 
-        setPlayers(updatedPlayers);
+        setPlayers(cooledPlayers);
         setBall({ x: nextBallX, y: nextBallY, vx: nextBallVx, vy: nextBallVy, ownerId: currentOwnerId });
-        setTime(prev => prev + 1);
+        setTime((previous) => previous + 1);
 
-        if (time % 150 === 0 && Math.random() > 0.7) triggerDaoCommand();
+        if (time > 0 && time % 150 === 0 && Math.random() > 0.7) triggerDaoCommand();
     }, [ball, players, time, tempo, triggerDaoCommand, addEvent, lowPowerMode]);
 
     useEffect(() => {
