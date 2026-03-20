@@ -55,6 +55,24 @@ export interface YellowRecoveryReport {
   errors: YellowRecoveryReportItem[];
 }
 
+function isMissingSchemaObjectError(error: unknown, modelName?: string) {
+  if (!error || typeof error !== 'object' || !('code' in error)) {
+    return false;
+  }
+
+  const code = (error as { code?: string }).code;
+  if (code !== 'P2021' && code !== 'P2022') {
+    return false;
+  }
+
+  if (!modelName || !('meta' in error)) {
+    return true;
+  }
+
+  const meta = (error as { meta?: { modelName?: string } }).meta;
+  return !meta?.modelName || meta.modelName === modelName;
+}
+
 async function getSquadLeaderWallets(prisma: PrismaClient, squadId: string) {
   const members = await prisma.squadMember.findMany({
     where: {
@@ -242,6 +260,66 @@ export async function finalizeTransferOfferOutcome(
   return { alreadyApplied: false };
 }
 
+async function findRecoverableMatches(prisma: PrismaClient) {
+  try {
+    return await prisma.match.findMany({
+      where: {
+        yellowFeeSessionId: { not: null },
+        yellowFeeSettledAt: null,
+        status: { in: ['verified', 'disputed'] },
+      },
+      select: {
+        id: true,
+        homeSquadId: true,
+        awaySquadId: true,
+        homeScore: true,
+        awayScore: true,
+        status: true,
+        yellowFeeSessionId: true,
+        yellowFeeSettledAt: true,
+        updatedAt: true,
+      },
+    });
+  } catch (error) {
+    if (isMissingSchemaObjectError(error, 'Match')) {
+      console.warn('Yellow recovery: match recovery schema is missing; skipping match recovery.');
+      return [];
+    }
+
+    throw error;
+  }
+}
+
+async function findRecoverableTransferOffers(prisma: PrismaClient) {
+  try {
+    return await prisma.transferOffer.findMany({
+      where: {
+        yellowSessionId: { not: null },
+        status: 'pending',
+      },
+      select: {
+        id: true,
+        fromSquadId: true,
+        toSquadId: true,
+        playerId: true,
+        amount: true,
+        status: true,
+        offerType: true,
+        yellowSessionId: true,
+        expiresAt: true,
+        updatedAt: true,
+      },
+    });
+  } catch (error) {
+    if (isMissingSchemaObjectError(error, 'TransferOffer')) {
+      console.warn('Yellow recovery: transfer recovery schema is missing; skipping transfer recovery.');
+      return [];
+    }
+
+    throw error;
+  }
+}
+
 export async function runYellowRecovery(
   prisma: PrismaClient,
   options?: { staleAfterMs?: number },
@@ -265,42 +343,8 @@ export async function runYellowRecovery(
   const now = Date.now();
 
   const [matches, offers] = await Promise.all([
-    prisma.match.findMany({
-      where: {
-        yellowFeeSessionId: { not: null },
-        yellowFeeSettledAt: null,
-        status: { in: ['verified', 'disputed'] },
-      },
-      select: {
-        id: true,
-        homeSquadId: true,
-        awaySquadId: true,
-        homeScore: true,
-        awayScore: true,
-        status: true,
-        yellowFeeSessionId: true,
-        yellowFeeSettledAt: true,
-        updatedAt: true,
-      },
-    }),
-    prisma.transferOffer.findMany({
-      where: {
-        yellowSessionId: { not: null },
-        status: 'pending',
-      },
-      select: {
-        id: true,
-        fromSquadId: true,
-        toSquadId: true,
-        playerId: true,
-        amount: true,
-        status: true,
-        offerType: true,
-        yellowSessionId: true,
-        expiresAt: true,
-        updatedAt: true,
-      },
-    }),
+    findRecoverableMatches(prisma),
+    findRecoverableTransferOffers(prisma),
   ]);
 
   for (const match of matches) {
