@@ -148,6 +148,7 @@ export default function PublicMatchPage() {
                 {/* Match Visualization */}
                 <MatchEnginePreview
                     squadId={match.homeSquadId}
+                    awaySquadId={match.awaySquadId}
                     playersPerSide={match.playersPerSide ?? 11}
                     hasKeeper={match.hasKeeper ?? true}
                 />
