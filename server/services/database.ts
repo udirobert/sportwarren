@@ -10,14 +10,32 @@ export class DatabaseService {
     });
   }
 
+  private shouldBootstrapLegacySchema(): boolean {
+    const value = process.env.LEGACY_DB_BOOTSTRAP;
+    if (!value) {
+      return false;
+    }
+
+    return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
+  }
+
   async connect(): Promise<void> {
+    let client;
     try {
-      await this.pool.connect();
+      client = await this.pool.connect();
       console.log('✅ Connected to PostgreSQL database');
-      await this.initializeTables();
+
+      if (this.shouldBootstrapLegacySchema()) {
+        console.warn('⚠️ LEGACY_DB_BOOTSTRAP is enabled. Initializing legacy GraphQL tables.');
+        await this.initializeTables();
+      } else {
+        console.log('ℹ️ Skipping legacy GraphQL schema bootstrap; use Prisma migrations for the app database.');
+      }
     } catch (error) {
       console.error('❌ Failed to connect to database:', error);
       throw error;
+    } finally {
+      client?.release();
     }
   }
 
