@@ -148,7 +148,7 @@ export default function SettingsPage() {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Settings</h1>
-          <p className="text-sm text-gray-500">Manage your account, connections, and preferences</p>
+          <p className="text-sm text-gray-600 dark:text-gray-300">Manage your account, connections, and preferences</p>
         </div>
       </div>
 
@@ -181,7 +181,7 @@ export default function SettingsPage() {
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Account</h2>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
                   Identity, wallet access, and protected actions all start here.
                 </p>
               </div>
@@ -200,26 +200,26 @@ export default function SettingsPage() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Account Reference</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 uppercase tracking-wide">Account Reference</p>
                 <p className={`${hasWallet ? 'font-mono' : 'font-medium'} text-sm text-gray-900 dark:text-white`}>
                   {accountReference}
                 </p>
               </div>
 
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Network</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 uppercase tracking-wide">Network</p>
                 <p className="font-medium text-gray-900 dark:text-white capitalize">{networkLabel}</p>
               </div>
 
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Verification</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 uppercase tracking-wide">Verification</p>
                 <p className={`font-medium ${needsVerification ? 'text-amber-600' : 'text-gray-900 dark:text-white'}`}>
                   {verificationLabel}
                 </p>
               </div>
 
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Yellow Rail</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 uppercase tracking-wide">Yellow Rail</p>
                 <p className={`font-medium ${hasYellowEligibleWallet && !needsVerification ? 'text-green-600' : 'text-gray-900 dark:text-white'}`}>
                   {yellowRailLabel}
                 </p>
@@ -228,7 +228,7 @@ export default function SettingsPage() {
 
             {hasWallet && balance > 0 && (
               <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-xs text-gray-500 uppercase tracking-wide">Balance</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 uppercase tracking-wide">Balance</p>
                 <p className="font-medium text-gray-900 dark:text-white">{balance.toLocaleString()}</p>
               </div>
             )}
@@ -270,12 +270,12 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <p className="font-semibold text-gray-900 dark:text-white">{primarySquad.name}</p>
-                    <p className="text-xs text-gray-500 capitalize">{memberships?.[0]?.role || 'Player'}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-300 capitalize">{memberships?.[0]?.role || 'Player'}</p>
                   </div>
                 </div>
               </div>
             ) : (
-              <p className="text-gray-500 text-sm">Not a member of any squad yet</p>
+              <p className="text-gray-600 dark:text-gray-300 text-sm">Not a member of any squad yet</p>
             )}
           </Card>
 
@@ -286,22 +286,22 @@ export default function SettingsPage() {
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <Trophy className="w-5 h-5 mx-auto mb-1 text-yellow-500" />
                 <p className="text-xl font-bold text-gray-900 dark:text-white">0</p>
-                <p className="text-xs text-gray-500">Matches</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">Matches</p>
               </div>
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <Target className="w-5 h-5 mx-auto mb-1 text-green-500" />
                 <p className="text-xl font-bold text-gray-900 dark:text-white">0</p>
-                <p className="text-xs text-gray-500">Goals</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">Goals</p>
               </div>
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <MessageCircle className="w-5 h-5 mx-auto mb-1 text-blue-500" />
                 <p className="text-xl font-bold text-gray-900 dark:text-white">0</p>
-                <p className="text-xs text-gray-500">Assists</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">Assists</p>
               </div>
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <Star className="w-5 h-5 mx-auto mb-1 text-purple-500" />
                 <p className="text-xl font-bold text-gray-900 dark:text-white">-</p>
-                <p className="text-xs text-gray-500">Rating</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">Rating</p>
               </div>
             </div>
           </Card>
@@ -319,7 +319,7 @@ export default function SettingsPage() {
           )}
 
           {isGuest && (
-            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-4 text-sm text-blue-900">
+            <div className="rounded-xl border border-blue-300 bg-blue-100 px-4 py-4 text-sm text-blue-900">
               Guest sessions are temporary. Create an account or connect a wallet when you want to save progress, unlock squad actions, and use payment rails.
             </div>
           )}
@@ -332,7 +332,7 @@ export default function SettingsPage() {
           <Card>
             <div className="mb-4">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">Connect Your Squad's Chat</h2>
-              <p className="text-sm text-gray-500">Link messaging platforms to share match updates with your squad automatically</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Link messaging platforms to share match updates with your squad automatically</p>
             </div>
             <div className="space-y-3">
               {(Object.keys(PLATFORM_CONFIG) as PlatformType[]).map(platform => {
@@ -352,7 +352,7 @@ export default function SettingsPage() {
                         </div>
                         <div>
                           <p className="font-bold text-gray-900 dark:text-white">{info.name}</p>
-                          <p className="text-sm text-gray-600 dark:text-gray-400">{info.description}</p>
+                          <p className="text-sm text-gray-700 dark:text-gray-300">{info.description}</p>
                         </div>
                       </div>
                       {isConnected ? (
@@ -386,8 +386,8 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-            <p className="text-sm text-blue-800 dark:text-blue-200">
+          <div className="p-4 bg-blue-100 dark:bg-blue-900/30 rounded-xl border border-blue-300 dark:border-blue-700">
+            <p className="text-sm text-blue-900 dark:text-blue-100">
               <strong>How it works:</strong> Once connected, match results and achievements will automatically be shared to your squad's chat. Only verified match data is shared — your personal messages stay private.
             </p>
           </div>
@@ -399,7 +399,7 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <Card>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">What to notify</h2>
-            <div className="space-y-3">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">Choose which notifications you want to receive</p>
               {[
                 { key: 'matchReminders', label: 'Match reminders', desc: 'Get notified before your scheduled matches' },
                 { key: 'verificationRequests', label: 'Verification requests', desc: 'When an opponent submits a match for you to verify' },
@@ -410,7 +410,7 @@ export default function SettingsPage() {
                 <label key={key} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg cursor-pointer">
                   <div>
                     <p className="font-medium text-gray-900 dark:text-white">{label}</p>
-                    <p className="text-xs text-gray-500">{desc}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-300">{desc}</p>
                   </div>
                   <input
                     type="checkbox"
@@ -425,7 +425,7 @@ export default function SettingsPage() {
 
           <Card>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Where to notify</h2>
-            <p className="text-sm text-gray-500 mb-3">Choose which channels receive your notifications</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">Choose which channels receive your notifications</p>
             <div className="flex flex-wrap gap-2">
               {[
                 { key: 'inApp', label: 'In-app' },
@@ -472,7 +472,7 @@ export default function SettingsPage() {
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Wallet Access</h2>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
                   Wallets are optional until you need protected actions. Yellow settlement requires a verified Avalanche or Lens wallet.
                 </p>
               </div>
@@ -491,9 +491,9 @@ export default function SettingsPage() {
 
             <div className="grid gap-3 md:grid-cols-2">
               <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
-                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Current State</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-600 dark:text-gray-300">Current State</div>
                 <div className="mt-2 text-sm font-bold text-gray-900 dark:text-white">{accountStatusLabel}</div>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">
                   {hasWallet
                     ? `Connected on ${chain}. ${needsVerification ? 'Approve a signature to unlock protected actions.' : 'Protected actions are available.'}`
                     : isGuest
@@ -505,9 +505,9 @@ export default function SettingsPage() {
               </div>
 
               <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
-                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">Yellow Rail</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-600 dark:text-gray-300">Yellow Rail</div>
                 <div className="mt-2 text-sm font-bold text-gray-900 dark:text-white">{yellowRailLabel}</div>
-                <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">
                   Treasury settlements, match fee locks, and transfer escrow only activate when the connected wallet can authorize Yellow on a supported EVM chain.
                 </p>
               </div>
@@ -530,7 +530,7 @@ export default function SettingsPage() {
           </Card>
 
           {hasWallet && !hasYellowEligibleWallet && (
-            <Card className="border-blue-200 bg-blue-50">
+            <Card className="border-blue-300 bg-blue-100">
               <p className="text-sm text-blue-900">
                 Algorand wallets can still unlock SportWarren identity and protected data, but Yellow settlement currently requires Avalanche or Lens because the rail is EVM-based.
               </p>
