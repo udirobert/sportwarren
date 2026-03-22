@@ -9,6 +9,7 @@ import { getJourneyNavigationSubtitle } from '@/lib/journey/content';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useJourneyState } from '@/hooks/useJourneyState';
 import { ContextualHelp } from './ContextualHelp';
+import { AccountStatusControl } from '@/components/common/AccountStatusControl';
 
 const BOTTOM_NAV_MAX = 5;
 
@@ -172,6 +173,10 @@ export const SmartNavigation: React.FC = () => {
     return () => { document.body.style.overflow = ''; };
   }, [isMoreOpen]);
 
+  const handleNavClick = useCallback((path: string) => {
+    trackFeatureUsage(path.slice(1) || 'dashboard');
+  }, [trackFeatureUsage]);
+
   // Keyboard navigation for desktop (Cmd/Ctrl + key)
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     // Only on desktop, with modifier key, and not in input fields
@@ -189,16 +194,12 @@ export const SmartNavigation: React.FC = () => {
         window.location.href = path;
       }
     }
-  }, [visibleNavItems]);
+  }, [handleNavClick, visibleNavItems]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
-
-  const handleNavClick = (path: string) => {
-    trackFeatureUsage(path.slice(1) || 'dashboard');
-  };
 
   const helpTips = [
     {
@@ -273,6 +274,8 @@ export const SmartNavigation: React.FC = () => {
                 >
                   {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
+
+                <AccountStatusControl />
               </div>
             </ContextualHelp>
           </div>
@@ -290,24 +293,27 @@ export const SmartNavigation: React.FC = () => {
             </div>
           </Link>
           <span className="flex-1 text-base font-semibold text-gray-900 dark:text-white truncate">{activeLabel}</span>
-          {preferences.primaryRole === 'organizer' ? (
-            <Link
-              href="/match?mode=capture"
-              onClick={() => handleNavClick('/match')}
-              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold touch-manipulation active:bg-green-700 transition-colors shrink-0"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              Log
-            </Link>
-          ) : (
-            <button
-              onClick={toggleTheme}
-              aria-label="Toggle dark mode"
-              className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-manipulation shrink-0"
-            >
-              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {preferences.primaryRole === 'organizer' ? (
+              <Link
+                href="/match?mode=capture"
+                onClick={() => handleNavClick('/match')}
+                className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-semibold touch-manipulation active:bg-green-700 transition-colors shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Log
+              </Link>
+            ) : (
+              <button
+                onClick={toggleTheme}
+                aria-label="Toggle dark mode"
+                className="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors touch-manipulation shrink-0"
+              >
+                {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </button>
+            )}
+            <AccountStatusControl compact />
+          </div>
         </div>
       </nav>
 
