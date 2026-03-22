@@ -59,12 +59,12 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
               <span className={`px-2 py-0.5 rounded text-xs font-medium ${POSITION_COLORS[position]}`}>
                 {position}
               </span>
-              <span className="text-gray-500">OVR {overall}</span>
+              <span className="text-gray-600 dark:text-gray-300">OVR {overall}</span>
             </div>
           </div>
           <div className="text-right">
             <div className="text-lg font-bold text-blue-600">{player.xp.level}</div>
-            <div className="text-xs text-gray-500">Lvl</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300">Lvl</div>
           </div>
         </div>
       </Card>
@@ -102,7 +102,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             <div className={`text-3xl font-bold ${getOverallColor(overall)}`}>
               {overall}
             </div>
-            <div className="text-xs text-gray-500">OVR</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300">OVR</div>
           </div>
         </div>
 
@@ -110,19 +110,19 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         <div className="grid grid-cols-4 gap-2">
           <div className="text-center p-2 bg-gray-50 rounded-lg">
             <div className="text-lg font-bold text-gray-900">{player.totalMatches}</div>
-            <div className="text-xs text-gray-500">Matches</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300">Matches</div>
           </div>
           <div className="text-center p-2 bg-gray-50 rounded-lg">
             <div className="text-lg font-bold text-green-600">{player.totalGoals}</div>
-            <div className="text-xs text-gray-500">Goals</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300">Goals</div>
           </div>
           <div className="text-center p-2 bg-gray-50 rounded-lg">
             <div className="text-lg font-bold text-blue-600">{player.totalAssists}</div>
-            <div className="text-xs text-gray-500">Assists</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300">Assists</div>
           </div>
           <div className="text-center p-2 bg-gray-50 rounded-lg">
             <div className="text-lg font-bold text-purple-600">{player.xp.level}</div>
-            <div className="text-xs text-gray-500">Level</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300">Level</div>
           </div>
         </div>
 
@@ -150,12 +150,12 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         <div className="pt-3 border-t border-gray-200">
           <div className="flex items-center justify-between mb-1">
             <span className="text-sm text-gray-600">Level {player.xp.level}</span>
-            <span className="text-sm text-gray-500">
+            <span className="text-sm text-gray-600 dark:text-gray-300">
               {player.xp.totalXP.toLocaleString()} / {player.xp.nextLevelXP.toLocaleString()} XP
             </span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div 
+            <div
               className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full"
               style={{ width: `${(player.xp.totalXP / player.xp.nextLevelXP) * 100}%` }}
             />
@@ -215,7 +215,7 @@ export const PlayerSquadList: React.FC<PlayerSquadListProps> = ({
             <h3 className="text-lg font-semibold text-gray-900 mb-3 flex items-center">
               <span className={`w-3 h-3 rounded-full mr-2 ${POSITION_COLORS[position].split(' ')[0].replace('bg-', 'bg-').replace('100', '500')}`} />
               {POSITION_NAMES[position]}s
-              <span className="ml-2 text-sm font-normal text-gray-500">({positionPlayers.length})</span>
+              <span className="ml-2 text-sm font-normal text-gray-600 dark:text-gray-300">({positionPlayers.length})</span>
             </h3>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-3">
               {positionPlayers.map(player => (
