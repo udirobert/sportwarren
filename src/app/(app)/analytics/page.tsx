@@ -166,15 +166,15 @@ function AnalyticsPageInner() {
 
         <div className="mt-4 grid gap-3 md:grid-cols-3">
           <div className="rounded-xl border border-emerald-200 bg-white px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Tracked Sessions</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600 dark:text-gray-300">Tracked Sessions</p>
             <p className="text-2xl font-black text-gray-900 mt-1">{trackedSessions}</p>
           </div>
           <div className="rounded-xl border border-emerald-200 bg-white px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Core Growth Events</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600 dark:text-gray-300">Core Growth Events</p>
             <p className="text-2xl font-black text-gray-900 mt-1">{growthRecords.length}</p>
           </div>
           <div className="rounded-xl border border-emerald-200 bg-white px-4 py-3">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500">Latest Event</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600 dark:text-gray-300">Latest Event</p>
             <p className="text-sm font-semibold text-gray-900 mt-1">
               {latestEventTimestamp > 0 ? new Date(latestEventTimestamp).toLocaleString() : "No events yet"}
             </p>
@@ -195,15 +195,15 @@ function AnalyticsPageInner() {
               </div>
               <div className="mt-3 grid grid-cols-3 gap-2">
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500">From Prev</p>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-600 dark:text-gray-300">From Prev</p>
                   <p className="text-sm font-bold text-gray-900">{formatPercent(row.conversionFromPrevious)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500">From Start</p>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-600 dark:text-gray-300">From Start</p>
                   <p className="text-sm font-bold text-gray-900">{formatPercent(row.conversionFromStart)}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] uppercase tracking-wider text-gray-500">Drop-off</p>
+                  <p className="text-[10px] uppercase tracking-wider text-gray-600 dark:text-gray-300">Drop-off</p>
                   <p className="text-sm font-bold text-rose-600">{row.dropoffFromPrevious}</p>
                 </div>
               </div>
@@ -212,7 +212,7 @@ function AnalyticsPageInner() {
         </div>
 
         <div className="mt-4 rounded-xl border border-emerald-200 bg-white px-4 py-3">
-          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2">Recent Growth Events</p>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-gray-600 dark:text-gray-300 mb-2">Recent Growth Events</p>
           {recentGrowthRecords.length === 0 ? (
             <p className="text-sm text-gray-600">
               No growth events captured yet. Start with <Link href="/match?mode=capture" className="text-emerald-700 font-semibold">Submit a Match</Link>.
@@ -223,9 +223,9 @@ function AnalyticsPageInner() {
                 <div key={`${record.sessionId}-${record.timestamp}-${index}`} className="flex flex-col gap-1 rounded-lg border border-gray-100 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-xs font-semibold text-gray-900">{record.event}</p>
-                    <p className="text-[11px] text-gray-500">{record.stage} • source: {String(record.properties.source ?? "unknown")}</p>
+                    <p className="text-[11px] text-gray-600 dark:text-gray-300">{record.stage} • source: {String(record.properties.source ?? "unknown")}</p>
                   </div>
-                  <p className="text-[11px] text-gray-500">{new Date(record.timestamp).toLocaleString()}</p>
+                  <p className="text-[11px] text-gray-600 dark:text-gray-300">{new Date(record.timestamp).toLocaleString()}</p>
                 </div>
               ))}
             </div>
@@ -262,7 +262,7 @@ function AnalyticsPageInner() {
                     }`}>{entry.rating}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-700 truncate">{entry.notes ?? 'Match performance'}</p>
-                      <p className="text-xs text-gray-400">{new Date(entry.createdAt).toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300">{new Date(entry.createdAt).toLocaleDateString()}</p>
                     </div>
                     {entry.rating >= 7 ? <TrendingUp className="w-4 h-4 text-green-500 shrink-0" /> :
                      entry.rating >= 5 ? <Minus className="w-4 h-4 text-yellow-500 shrink-0" /> :
@@ -271,9 +271,9 @@ function AnalyticsPageInner() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-gray-600 dark:text-gray-300">
                 <p className="text-sm font-medium text-gray-700">No form data yet.</p>
-                <p className="text-xs text-gray-500 mt-1">Play your first match to start tracking your form and rating trend.</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">Play your first match to start tracking your form and rating trend.</p>
                 <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Log Your First Match</Button></Link>
               </div>
             )}
@@ -299,9 +299,9 @@ function AnalyticsPageInner() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500">
+              <div className="text-center py-8 text-gray-600 dark:text-gray-300">
                 <p className="text-sm font-medium text-gray-700">No attributes yet.</p>
-                <p className="text-xs text-gray-500 mt-1">Verified matches unlock skill ratings — goals, assists, and clean sheets each improve different attributes.</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">Verified matches unlock skill ratings — goals, assists, and clean sheets each improve different attributes.</p>
                 <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Submit a Match</Button></Link>
               </div>
             )}
@@ -320,7 +320,7 @@ function AnalyticsPageInner() {
                     <span className="text-lg font-black text-gray-300">#{i + 1}</span>
                     <div>
                       <p className="text-sm font-semibold text-gray-900">{player.name ?? 'Anonymous'}</p>
-                      <p className="text-xs text-gray-500">{player.totalMatches} matches</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300">{player.totalMatches} matches</p>
                     </div>
                   </div>
                 ))}
@@ -328,7 +328,7 @@ function AnalyticsPageInner() {
             ) : (
               <div className="text-center py-6">
                 <p className="text-sm font-medium text-gray-700">No active players yet.</p>
-                <p className="text-xs text-gray-500 mt-1">Submit a verified match result — your squad will appear here.</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">Submit a verified match result — your squad will appear here.</p>
                 <Link href="/match?mode=capture"><Button size="sm" className="mt-3">Be the First</Button></Link>
               </div>
             )}

@@ -40,7 +40,7 @@ export const AttributeProgress: React.FC<AttributeProgressProps> = ({
           <span className={`text-lg font-bold ${getAttributeTextColor(skill.rating)}`}>
             {skill.rating}
           </span>
-          <span className="text-sm text-gray-400">/ {skill.maxRating}</span>
+          <span className="text-sm text-gray-600 dark:text-gray-300">/ {skill.maxRating}</span>
         </div>
       </div>
 
@@ -52,9 +52,9 @@ export const AttributeProgress: React.FC<AttributeProgressProps> = ({
             style={{ width: `${Math.min(100, percentage)}%` }}
           />
         </div>
-        
+
         {/* XP Label */}
-        <div className="flex justify-between text-xs text-gray-500 mt-1">
+        <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300 mt-1">
           <span>{skill.xp.toLocaleString()} XP</span>
           <span>{skill.xpToNextLevel.toLocaleString()} XP</span>
         </div>
@@ -85,7 +85,7 @@ export const AttributeProgress: React.FC<AttributeProgressProps> = ({
               </div>
             ))}
           </div>
-          <p className="text-xs text-gray-500 mt-1">Last 5 match ratings</p>
+          <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">Last 5 match ratings</p>
         </div>
       )}
     </div>
@@ -156,7 +156,7 @@ export const AttributesSummary: React.FC<AttributesSummaryProps> = ({
             <div className={`text-3xl font-bold ${getAttributeTextColor(overall)}`}>
               {overall}
             </div>
-            <div className="text-xs text-gray-500">Overall</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300">Overall</div>
           </div>
         </div>
 

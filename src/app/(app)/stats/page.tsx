@@ -108,7 +108,7 @@ export default function StatsPage() {
       <Card className="border-gray-100 bg-gray-50">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">
+            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.16em] text-gray-600 dark:text-gray-300">
               <BarChart3 className="h-4 w-4" />
               Season Stats
             </div>
@@ -193,7 +193,7 @@ export default function StatsPage() {
         <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-base font-black uppercase tracking-wide text-gray-700">XP Progress</h2>
-            <span className="text-xs text-gray-500">Level {attributes.xp.level} → {attributes.xp.level + 1}</span>
+            <span className="text-xs text-gray-600 dark:text-gray-300">Level {attributes.xp.level} → {attributes.xp.level + 1}</span>
           </div>
           <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
             <div
@@ -201,23 +201,23 @@ export default function StatsPage() {
               style={{ width: `${seasonProgress}%` }}
             />
           </div>
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-gray-600 dark:text-gray-300">
             {attributes.xp.seasonXP.toLocaleString()} / {attributes.xp.nextLevelXP.toLocaleString()} season XP
           </p>
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Verified Record</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-600 dark:text-gray-300">Verified Record</div>
               <div className="mt-2 text-lg font-bold text-gray-900">
                 {seasonRecord.wins}-{seasonRecord.draws}-{seasonRecord.losses}
               </div>
             </div>
             <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Pending Queue</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-600 dark:text-gray-300">Pending Queue</div>
               <div className="mt-2 text-lg font-bold text-gray-900">{pendingMatchesCount}</div>
             </div>
             <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
-              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Highlights</div>
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-600 dark:text-gray-300">Highlights</div>
               <div className="mt-2 text-lg font-bold text-gray-900">{attributes.careerHighlights.length}</div>
             </div>
           </div>
@@ -226,7 +226,7 @@ export default function StatsPage() {
         <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-base font-black uppercase tracking-wide text-gray-700">Recent Momentum</h2>
-            <Link href="/match?mode=history" className="text-xs font-semibold text-gray-500 hover:text-gray-700">
+            <Link href="/match?mode=history" className="text-xs font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white">
               Full history
             </Link>
           </div>
@@ -254,7 +254,7 @@ export default function StatsPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-semibold text-gray-900 truncate">vs {summary.opponent}</div>
-                      <div className="text-xs text-gray-500">
+                      <div className="text-xs text-gray-600 dark:text-gray-300">
                         {summary.goalsFor}-{summary.goalsAgainst} · {new Date(match.matchDate).toLocaleDateString()}
                       </div>
                     </div>
