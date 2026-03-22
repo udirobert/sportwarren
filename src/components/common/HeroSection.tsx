@@ -93,8 +93,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                 <Target className="h-5 w-5" />
               </div>
               <div>
-                <div className="text-sm font-black uppercase tracking-[0.22em] text-white/70">SportWarren</div>
-                <div className="text-xs text-white/50">Sunday league, with visible identity</div>
+                <div className="text-sm font-black uppercase tracking-[0.22em] text-white/80">SportWarren</div>
+                <div className="text-xs text-white/60">Sunday league, with visible identity</div>
               </div>
             </Link>
 

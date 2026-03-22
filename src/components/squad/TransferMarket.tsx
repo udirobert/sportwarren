@@ -82,7 +82,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
               <div className="text-sm text-gray-600">Squad Balance</div>
               <div className="text-xl font-bold text-green-600">{squadBalance.toLocaleString()} {currencyLabel}</div>
               {paymentRailEnabled && (
-                <div className="text-xs text-gray-500">Shared off-chain escrow via Yellow</div>
+                <div className="text-xs text-gray-600 dark:text-gray-300">Shared off-chain escrow via Yellow</div>
               )}
             </div>
           </div>
@@ -181,9 +181,9 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                             {getReputationBadge(player.reputationTier)}
                           </div>
                           <div className="flex items-center space-x-2 text-xs mt-0.5">
-                            <span className="px-1.5 py-0.5 bg-gray-100 rounded font-mono text-gray-600">{player.position}</span>
+                            <span className="px-1.5 py-0.5 bg-gray-100 rounded font-mono text-gray-600 dark:text-gray-300">{player.position}</span>
                             {typeof player.age === 'number' && (
-                              <span className="text-gray-400">AGE {player.age}</span>
+                              <span className="text-gray-500 dark:text-gray-400">AGE {player.age}</span>
                             )}
                           </div>
                         </div>
@@ -198,21 +198,21 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
 
                     <div className="mt-4 grid grid-cols-2 gap-2">
                       <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
-                        <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Market Valuation</div>
+                        <div className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Market Valuation</div>
                         <div className="text-sm font-bold text-gray-900 flex items-center space-x-1">
                           <span>{player.marketValuation.toLocaleString()}</span>
-                          <TrendingUp className={`w-3 h-3 ${player.marketValuation > player.askingPrice ? 'text-green-500' : 'text-gray-400'}`} />
+                          <TrendingUp className={`w-3 h-3 ${player.marketValuation > player.askingPrice ? 'text-green-500' : 'text-gray-500 dark:text-gray-400'}`} />
                         </div>
                       </div>
                       <div className="bg-gray-50 p-2 rounded-lg border border-gray-100">
-                        <div className="text-xs font-black text-gray-400 uppercase tracking-widest">Suggested Opening Offer</div>
+                        <div className="text-xs font-black text-gray-500 dark:text-gray-400 uppercase tracking-widest">Suggested Opening Offer</div>
                         <div className="text-sm font-bold text-blue-600">{player.askingPrice.toLocaleString()} {currencyLabel}</div>
                       </div>
                     </div>
 
                     <div className="mt-3 flex items-center justify-between text-xs">
-                      <div className="text-gray-500 italic">Reputation: {player.reputationScore} pts</div>
-                      <div className="font-mono text-gray-400 uppercase">{player.ownerSquadName || player.currentClub}</div>
+                      <div className="text-gray-600 dark:text-gray-300 italic">Reputation: {player.reputationScore} pts</div>
+                      <div className="font-mono text-gray-500 dark:text-gray-400 uppercase">{player.ownerSquadName || player.currentClub}</div>
                     </div>
                   </Card>
                 ))}
@@ -272,7 +272,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                     Offer Amount ({currencyLabel})
                   </label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
                     <input
                       type="number"
                       value={offerAmount}
@@ -281,7 +281,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
                     />
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
+                  <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                     Suggested opening offer: {selectedPlayer.askingPrice.toLocaleString()} {currencyLabel}
                   </p>
                   {!selectedPlayer.ownerSquadId && (
@@ -331,7 +331,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                             <DollarSign className="w-4 h-4 mr-1" />
                             {offer.offerAmount.toLocaleString()} {currencyLabel}
                           </span>
-                          <span className="flex items-center text-gray-500">
+                          <span className="flex items-center text-gray-600 dark:text-gray-300">
                             <Clock className="w-4 h-4 mr-1" />
                             Expires: {offer.expiry?.toLocaleDateString() || 'N/A'}
                           </span>
@@ -392,7 +392,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                             <DollarSign className="w-4 h-4 mr-1" />
                             {offer.offerAmount.toLocaleString()} {currencyLabel}
                           </span>
-                          <span className="flex items-center text-gray-500">
+                          <span className="flex items-center text-gray-600 dark:text-gray-300">
                             <Clock className="w-4 h-4 mr-1" />
                             Expires: {offer.expiry?.toLocaleDateString() || 'N/A'}
                           </span>
@@ -422,7 +422,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
 
           {draftProspects.length > 0 && (
             <div>
-              <h3 className="text-sm font-black uppercase tracking-widest text-gray-500 mb-4 px-1">Live Free Agents</h3>
+              <h3 className="text-sm font-black uppercase tracking-widest text-gray-600 dark:text-gray-300 mb-4 px-1">Live Free Agents</h3>
               <div className="grid md:grid-cols-2 gap-4">
                 {draftProspects.map((player) => (
                   <Card key={player.id} className="border-l-4 border-l-blue-500 hover:shadow-lg transition-all cursor-pointer group">
@@ -438,7 +438,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                               {typeof player.age === 'number' && player.age <= 21 ? 'U21' : 'Free Agent'}
                             </span>
                           </div>
-                          <p className="text-[10px] text-gray-500 uppercase tracking-widest font-mono">LIVE SCOUTING SIGNAL</p>
+                          <p className="text-[10px] text-gray-600 dark:text-gray-300 uppercase tracking-widest font-mono">LIVE SCOUTING SIGNAL</p>
                         </div>
                       </div>
                       <div className="text-right">

@@ -47,7 +47,7 @@ function ReputationPageInner() {
       {/* Contextual nav */}
       <Card className="border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-700 dark:text-gray-200">
             {reputationContext}
           </p>
           <div className="flex gap-2 shrink-0">
@@ -72,36 +72,36 @@ function ReputationPageInner() {
           <Card>
             <div className="grid gap-3 md:grid-cols-4">
               <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Player</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-600 dark:text-gray-300">Player</div>
                 <div className="mt-2 font-semibold text-gray-900">{attributes?.playerName || 'No player profile yet'}</div>
-                <div className="mt-1 text-sm text-gray-600">{attributes?.position || 'Position not set'}</div>
+                <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">{attributes?.position || 'Position not set'}</div>
               </div>
               <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Squad</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-600 dark:text-gray-300">Squad</div>
                 <div className="mt-2 flex items-center gap-2 font-semibold text-gray-900">
                   <Shield className="h-4 w-4 text-blue-500" />
                   {primarySquad?.name || 'No squad yet'}
                 </div>
-                <div className="mt-1 text-sm text-gray-600">
+                <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                   {primarySquad ? `${settledMatchesCount} verified result${settledMatchesCount === 1 ? '' : 's'}` : 'Create or join a squad'}
                 </div>
               </div>
               <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Reputation</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-600 dark:text-gray-300">Reputation</div>
                 <div className="mt-2 flex items-center gap-2 font-semibold text-gray-900">
                   <Star className="h-4 w-4 text-yellow-500" />
                   {attributes?.reputationScore?.toLocaleString() || 0}
                 </div>
-                <div className="mt-1 text-sm text-gray-600">
+                <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                   {pendingMatchesCount > 0 ? `${pendingMatchesCount} pending review` : 'No pending review queue'}
                 </div>
               </div>
               <div className="rounded-2xl border border-gray-200 bg-white px-4 py-3">
-                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-500">Latest Result</div>
+                <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-600 dark:text-gray-300">Latest Result</div>
                 <div className="mt-2 font-semibold text-gray-900">
                   {latestSummary ? `${latestSummary.result} ${latestSummary.goalsFor}-${latestSummary.goalsAgainst}` : 'No verified result yet'}
                 </div>
-                <div className="mt-1 text-sm text-gray-600">
+                <div className="mt-1 text-sm text-gray-600 dark:text-gray-300">
                   {latestSummary ? `vs ${latestSummary.opponent}` : 'Play and verify the first match'}
                 </div>
               </div>
@@ -160,7 +160,7 @@ function ReputationPageInner() {
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">vs {summary.opponent}</p>
-                          <p className="text-xs text-gray-500">{summary.goalsFor} – {summary.goalsAgainst} · {new Date(match.matchDate).toLocaleDateString()}</p>
+                          <p className="text-xs text-gray-600 dark:text-gray-300">{summary.goalsFor} – {summary.goalsAgainst} · {new Date(match.matchDate).toLocaleDateString()}</p>
                         </div>
                         {settled ? (
                           <span className="flex items-center gap-1 text-xs text-green-600 shrink-0">

@@ -55,7 +55,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                         <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
                             <div className="h-full bg-green-500 rounded-full" style={{ width: `${progress}%` }} />
                         </div>
-                        <ChevronRight className="w-4 h-4 text-gray-400" />
+                        <ChevronRight className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                     </div>
                 </button>
 
@@ -78,7 +78,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                             </div>
                             <div className="text-right">
                                 <div className="text-2xl font-black text-white">{completedCount}/{totalCount}</div>
-                                <div className="text-xs text-gray-500 uppercase font-bold">Complete</div>
+                                <div className="text-xs text-gray-600 dark:text-gray-300 uppercase font-bold">Complete</div>
                             </div>
                         </div>
 
@@ -101,7 +101,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                                             {item.completed ? (
                                                 <CheckCircle2 className="w-5 h-5 text-green-400" />
                                             ) : (
-                                                <Circle className="w-5 h-5 text-gray-600 group-hover:text-gray-400 transition-colors" />
+                                                <Circle className="w-5 h-5 text-gray-700 dark:text-gray-500 group-hover:text-gray-500 dark:group-hover:text-gray-400 transition-colors" />
                                             )}
                                         </div>
                                         <div className="text-xl flex-shrink-0">{item.emoji}</div>
@@ -109,7 +109,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                                             <div className={`text-sm font-black uppercase tracking-tight leading-tight ${item.completed ? 'text-green-300 line-through decoration-green-500/50' : 'text-white'}`}>
                                                 {item.label}
                                             </div>
-                                            <div className="text-xs text-gray-500 mt-0.5">{item.description}</div>
+                                            <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{item.description}</div>
                                             {!item.completed && (
                                                 <div className="mt-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
                                                     {item.actionLabel}
@@ -117,7 +117,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                                             )}
                                         </div>
                                         {!item.completed && (
-                                            <ChevronRight className="w-4 h-4 text-gray-600 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+                                            <ChevronRight className="w-4 h-4 text-gray-700 dark:text-gray-500 group-hover:text-white group-hover:translate-x-0.5 transition-all flex-shrink-0" />
                                         )}
                                     </>
                                 );
@@ -150,20 +150,20 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
 
                         {/* Footer */}
                         <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between">
-                            <p className="text-[10px] text-gray-600 font-mono uppercase">
+                            <p className="text-[10px] text-gray-700 dark:text-gray-400 font-mono uppercase">
                                 {journeyContent.checklist.footer}
                             </p>
                             <div className="flex items-center gap-3">
                                 <button
                                     onClick={handleRestartTour}
-                                    className="text-xs text-gray-700 hover:text-gray-400 flex items-center space-x-1 transition-colors uppercase font-bold"
+                                    className="text-xs text-gray-600 dark:text-gray-400 hover:text-gray-400 dark:hover:text-gray-300 flex items-center space-x-1 transition-colors uppercase font-bold"
                                 >
                                     <RotateCcw className="w-2.5 h-2.5" />
                                     <span>Restart Tour</span>
                                 </button>
                                 <button
                                     onClick={() => setExpanded(false)}
-                                    className="md:hidden text-xs text-gray-700 hover:text-gray-400 uppercase font-bold transition-colors"
+                                    className="md:hidden text-xs text-gray-600 dark:text-gray-400 hover:text-gray-400 dark:hover:text-gray-300 uppercase font-bold transition-colors"
                                 >
                                     Collapse
                                 </button>

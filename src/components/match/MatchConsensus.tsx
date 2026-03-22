@@ -147,7 +147,7 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
       case 'warning': return 'text-yellow-400';
       case 'error': return 'text-red-400';
       case 'data': return 'text-blue-400';
-      default: return 'text-gray-300';
+      default: return 'text-gray-400';
     }
   };
 
@@ -180,9 +180,9 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
               </a>
             )}
             {isLogCollapsed ? (
-              <ChevronDown className="w-4 h-4 text-gray-400" />
+              <ChevronDown className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             ) : (
-              <ChevronUp className="w-4 h-4 text-gray-400" />
+              <ChevronUp className="w-4 h-4 text-gray-500 dark:text-gray-400" />
             )}
           </div>
         </button>
@@ -230,9 +230,9 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
               <span>CRE Verification Data</span>
             </span>
             {showRawData ? (
-              <ChevronUp className="w-4 h-4 text-gray-500" />
+              <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-300" />
             ) : (
-              <ChevronDown className="w-4 h-4 text-gray-500" />
+              <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-300" />
             )}
           </button>
 
@@ -247,7 +247,7 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
                 <div className="p-4 bg-white space-y-3">
                   {/* Workflow ID */}
                   <div className="flex items-center space-x-2 text-xs">
-                    <span className="text-gray-500 font-semibold">Workflow ID:</span>
+                    <span className="text-gray-600 dark:text-gray-300 font-semibold">Workflow ID:</span>
                     <code className="bg-gray-100 px-2 py-1 rounded text-blue-600 font-mono">
                       {match.creResult.workflowId}
                     </code>
@@ -256,19 +256,19 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
                   {/* Weather Data */}
                   <div className="grid grid-cols-3 gap-3 p-3 bg-blue-50 rounded-lg">
                     <div className="text-center">
-                      <div className="text-xs text-gray-500 mb-1">Temperature</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-300 mb-1">Temperature</div>
                       <div className="text-lg font-bold text-blue-600">
                         {match.creResult.weather.temperature}°C
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xs text-gray-500 mb-1">Conditions</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-300 mb-1">Conditions</div>
                       <div className="text-sm font-semibold text-blue-600">
                         {match.creResult.weather.conditions}
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xs text-gray-500 mb-1">Source</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-300 mb-1">Source</div>
                       <div className="text-xs font-semibold text-blue-600">
                         {match.creResult.weather.source}
                       </div>
@@ -278,13 +278,13 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
                   {/* Location Data */}
                   <div className="grid grid-cols-3 gap-3 p-3 bg-green-50 rounded-lg">
                     <div className="col-span-2 text-center">
-                      <div className="text-xs text-gray-500 mb-1">Location</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-300 mb-1">Location</div>
                       <div className="text-sm font-semibold text-green-600 truncate">
                         {match.creResult.location.region?.split(',').slice(0, 2).join(', ')}
                       </div>
                     </div>
                     <div className="text-center">
-                      <div className="text-xs text-gray-500 mb-1">Type</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-300 mb-1">Type</div>
                       <div className={`text-xs font-bold px-2 py-1 rounded inline-block ${
                         match.creResult.location.isPitch
                           ? 'bg-green-200 text-green-700'
@@ -317,7 +317,7 @@ const TechnicalCommentary: React.FC<{ match: MatchResult }> = ({ match }) => {
                         }`}
                       />
                     </div>
-                    <div className="mt-2 text-xs text-gray-400">
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400">
                       Weather: {match.creResult.weather.verified ? '✓' : '✗'} ({match.creResult.weather.verified ? 40 : 0}%)
                       {' • '}
                       Location: {match.creResult.location.isPitch ? '✓ Stadium' : match.creResult.location.verified ? '✓ Verified' : '✗'} ({match.creResult.location.isPitch ? 60 : match.creResult.location.verified ? 30 : 0}%)
@@ -491,17 +491,17 @@ export const MatchConsensusPanel: React.FC<MatchConsensusProps> = ({ match }) =>
                 INTENT: {match.agentInsights.decision}
               </span>
               <span>•</span>
-              <span className="text-gray-500">Processed at {new Date(match.agentInsights.timestamp).toLocaleTimeString()}</span>
+              <span className="text-[10px] text-gray-600 dark:text-gray-300">Processed at {new Date(match.agentInsights.timestamp).toLocaleTimeString()}</span>
             </div>
           </div>
         )}
 
         {/* Verification List */}
         <div>
-          <h4 className="text-sm font-medium text-gray-700 mb-2">Verifications</h4>
+          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">Verifications</h4>
           <div className="space-y-2">
             {match.verifications.length === 0 ? (
-              <p className="text-sm text-gray-500 italic">No verifications yet</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300 italic">No verifications yet</p>
             ) : (
               match.verifications.map((v: Verification, idx: number) => (
                 <div
@@ -519,7 +519,7 @@ export const MatchConsensusPanel: React.FC<MatchConsensusProps> = ({ match }) =>
                       {getTrustTierIcon(v.trustTier)} {v.trustTier}
                     </span>
                   </div>
-                  <span className="text-xs text-gray-500 capitalize">{v.role}</span>
+                  <span className="text-xs text-gray-600 dark:text-gray-300 capitalize">{v.role}</span>
                 </div>
               ))
             )}
@@ -529,7 +529,7 @@ export const MatchConsensusPanel: React.FC<MatchConsensusProps> = ({ match }) =>
         {/* Trust Score */}
         <div className="pt-3 border-t border-gray-200">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">Overall Trust Score</span>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">Overall Trust Score</span>
             <span className="text-lg font-bold text-blue-600">{match.trustScore || 0}/100</span>
           </div>
           <div className="mt-2 bg-gray-200 rounded-full h-2">
@@ -538,7 +538,7 @@ export const MatchConsensusPanel: React.FC<MatchConsensusProps> = ({ match }) =>
               style={{ width: `${match.trustScore || 0}%` }}
             />
           </div>
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
             {match.creResult?.verified
               ? `CRE Verified via ${match.creResult.weather.source} & Geofencing`
               : match.trustScore && match.trustScore >= 75

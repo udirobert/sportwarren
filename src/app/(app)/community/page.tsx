@@ -40,7 +40,7 @@ function CommunityPageInner() {
       {/* Contextual nav */}
       <Card className="border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-700 dark:text-gray-200">
             {communityContext}
           </p>
           <div className="flex gap-2 shrink-0">
@@ -96,9 +96,9 @@ function CommunityPageInner() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{player.name ?? 'Anonymous'}</p>
-                    <p className="text-xs text-gray-500">{player.totalMatches} matches · Lv {player.level}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-300">{player.totalMatches} matches · Lv {player.level}</p>
                   </div>
-                  <div className="flex items-center gap-1 text-xs text-gray-500">
+                  <div className="flex items-center gap-1 text-xs text-gray-600 dark:text-gray-300">
                     <Star className="w-3 h-3 text-yellow-400" />
                     {player.averageRating ?? 0}
                   </div>
@@ -144,7 +144,7 @@ function CommunityPageInner() {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-gray-500">{squad.shortName} · {squad._count?.members ?? 0} members</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-300">{squad.shortName} · {squad._count?.members ?? 0} members</p>
                   </div>
                   {squad.id === primarySquadId ? (
                     <Link href="/squad" className="shrink-0 ml-2">

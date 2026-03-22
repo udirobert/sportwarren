@@ -138,7 +138,7 @@ export const MatchVerification: React.FC<MatchVerificationProps> = ({ squadId })
           <Shield className="w-8 h-8 text-white" />
         </div>
         <h1 className="text-3xl font-bold text-gray-900 mb-2">Match Verification</h1>
-        <p className="text-gray-600">
+        <p className="text-gray-700 dark:text-gray-200">
           Review the live queue for {activeSquad?.name || 'your squad'} and turn submitted scorelines into settled results.
         </p>
       </div>
@@ -218,14 +218,14 @@ export const MatchVerification: React.FC<MatchVerificationProps> = ({ squadId })
                         </div>
 
                         <div className="flex items-center space-x-2">
-                          <StatusIcon className="w-5 h-5 text-gray-500" />
+                          <StatusIcon className="w-5 h-5 text-gray-600 dark:text-gray-300" />
                           <span className={`text-xs font-medium px-2 py-1 rounded-full ${getStatusColor(match.status)}`}>
                             {getMatchStatusLabel(match.status)}
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 mb-3">
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-gray-700 dark:text-gray-200 mb-3">
                         <span>Submitted by {match.submitter}</span>
                         <span>{match.timestamp.toLocaleString()}</span>
                         <span>{verifiedCount} verified • {disputedCount} disputed</span>
@@ -238,7 +238,7 @@ export const MatchVerification: React.FC<MatchVerificationProps> = ({ squadId })
                             style={{ width: `${(verifiedCount / match.requiredVerifications) * 100}%` }}
                           />
                         </div>
-                        <span className="text-xs text-gray-600">
+                        <span className="text-xs text-gray-700 dark:text-gray-200">
                           {verifiedCount}/{match.requiredVerifications} confirmations
                         </span>
                       </div>
@@ -265,7 +265,7 @@ export const MatchVerification: React.FC<MatchVerificationProps> = ({ squadId })
                           </button>
                         </>
                       ) : match.status === 'pending' ? (
-                        <div className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-600">
+                        <div className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700 dark:text-gray-200">
                           Awaiting another captain response or your prior review is already logged.
                         </div>
                       ) : null}
@@ -297,13 +297,13 @@ export const MatchVerification: React.FC<MatchVerificationProps> = ({ squadId })
                                   {verification.role}
                                 </span>
                               </div>
-                              <span className="text-sm text-gray-600">
+                              <span className="text-sm text-gray-700 dark:text-gray-200">
                                 {verification.timestamp.toLocaleString()}
                               </span>
                             </div>
                           ))
                         ) : (
-                          <div className="rounded-lg border border-dashed border-gray-200 px-4 py-5 text-center text-sm text-gray-600">
+                          <div className="rounded-lg border border-dashed border-gray-200 px-4 py-5 text-center text-sm text-gray-700 dark:text-gray-200">
                             No captain responses logged yet.
                           </div>
                         )}
