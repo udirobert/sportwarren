@@ -2,9 +2,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Trophy, Zap, Users, Target, TrendingUp, Sparkles, ArrowRight, Play, AlertCircle, CheckCircle2, Cpu } from 'lucide-react';
+import Link from 'next/link';
 import { useWallet } from '@/contexts/WalletContext';
 import { getJourneyContent } from '@/lib/journey/content';
 import { getJourneyStage } from '@/lib/journey/stage';
+import { AccountStatusControl } from '@/components/common/AccountStatusControl';
 
 interface HeroSectionProps {
   onGetStarted?: () => void;
@@ -23,7 +25,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
     totalMatches: 0,
     totalAgents: 0,
   });
-  const { loginAsGuest, hasAccount, hasWallet, isGuest, authStatus } = useWallet();
+  const { address, chain, loginAsGuest, hasAccount, hasWallet, isGuest, authStatus } = useWallet();
   const [scrollY, setScrollY] = useState(0);
   const parallaxRef = useRef<HTMLDivElement>(null);
   const problemRef = useRef<HTMLDivElement>(null);
@@ -69,11 +71,46 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
     authState: authStatus.state,
   });
   const journeyContent = getJourneyContent(journeyStage);
+  const hasEmbeddedWalletAddress = Boolean(address && /^0x[a-fA-F0-9]{8,}$/.test(address));
+  const heroSessionLine = isGuest
+    ? 'Guest preview is active. Claim your season when you are ready for progress that sticks.'
+    : hasWallet && address
+      ? `Signed in with ${address.slice(0, 6)}…${address.slice(-4)} on ${chain || 'your wallet network'}.`
+      : hasEmbeddedWalletAddress && address
+        ? `Signed in with embedded wallet ${address.slice(0, 6)}…${address.slice(-4)}. Add a chain wallet later for protected actions.`
+      : hasAccount
+        ? 'Signed in successfully. Add a wallet later when you need protected actions.'
+        : null;
 
   return (
     <div className="relative bg-gray-900 overflow-hidden">
       {/* Hero Section */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+        <div className="absolute inset-x-0 top-0 z-20">
+          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
+            <Link href={hasAccount || isGuest ? '/dashboard' : '/'} className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur-sm">
+                <Target className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="text-sm font-black uppercase tracking-[0.22em] text-white/70">SportWarren</div>
+                <div className="text-xs text-white/50">Sunday league, with visible identity</div>
+              </div>
+            </Link>
+
+            {hasAccount || isGuest ? (
+              <AccountStatusControl variant="hero" />
+            ) : (
+              <button
+                onClick={onGetStarted}
+                className="inline-flex items-center justify-center rounded-2xl border border-white/15 bg-black/25 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-sm transition-all hover:bg-black/35"
+              >
+                Sign In
+              </button>
+            )}
+          </div>
+        </div>
+
         {/* Animated Background */}
         <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-green-900 to-gray-900">
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
@@ -131,6 +168,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             <p className="mb-6 text-sm font-bold uppercase tracking-[0.16em] text-green-300">
               {journeyContent.hero.stageLine}
             </p>
+          )}
+
+          {heroSessionLine && (
+            <div className="mb-6 flex items-center justify-center">
+              <div className="inline-flex max-w-2xl items-center gap-2 rounded-full border border-green-400/25 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-100 backdrop-blur-sm">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>{heroSessionLine}</span>
+              </div>
+            </div>
           )}
 
           <div className="mb-8 flex flex-wrap items-center justify-center gap-2">

@@ -13,11 +13,20 @@ import { Suspense } from 'react';
 import { AnalyticsTracker } from '@/components/common/AnalyticsTracker';
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  const configuredPrivyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID?.trim();
+  const fallbackPrivyAppId = 'clov6v7p000l8m801469e38z6';
+
+  if (!configuredPrivyAppId && typeof window !== 'undefined') {
+    console.warn(
+      'NEXT_PUBLIC_PRIVY_APP_ID is not set. Falling back to a demo Privy app ID, so social login methods may not match your Privy dashboard configuration.'
+    );
+  }
+
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <PrivyProvider
-          appId={process.env.NEXT_PUBLIC_PRIVY_APP_ID || 'clov6v7p000l8m801469e38z6'} // Fallback for dev/demo if not set
+          appId={configuredPrivyAppId || fallbackPrivyAppId}
           config={{
             loginMethods: ['google', 'discord', 'email', 'apple'],
             appearance: {

@@ -38,14 +38,28 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
 
   if (!isOpen) return null;
 
+  const normalizePrivyError = (err: unknown) => {
+    const message = err instanceof Error ? err.message : String(err || 'Sign in failed');
+
+    if (/login with google not allowed/i.test(message)) {
+      return 'Google sign-in is disabled for the current Privy app. Check the deployed NEXT_PUBLIC_PRIVY_APP_ID and the enabled login methods in Privy.';
+    }
+
+    if (/not allowed/i.test(message)) {
+      return 'This Privy login method is not allowed for the current app configuration. Check the app ID, enabled login methods, and allowed domains in Privy.';
+    }
+
+    return message;
+  };
+
   const handlePrivyLogin = async () => {
     setError(null);
     try {
       await privyLogin();
       onConnected?.();
       onClose();
-    } catch (err: any) {
-      setError(err.message || 'Sign in failed');
+    } catch (err) {
+      setError(normalizePrivyError(err));
     }
   };
 
