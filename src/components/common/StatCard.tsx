@@ -76,7 +76,7 @@ export const StatCard: React.FC<StatCardProps> = ({
               <span className="font-medium">
                 {trend.positive ? '+' : ''}{trend.value}%
               </span>
-              <span className="ml-1 text-gray-500 hidden sm:inline">vs last month</span>
+              <span className="ml-1 text-gray-600 dark:text-gray-300 hidden sm:inline">vs last month</span>
             </div>
           )}
           {loading && trend && (

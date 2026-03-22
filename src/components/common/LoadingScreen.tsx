@@ -42,19 +42,19 @@ export const LoadingScreen: React.FC<LoadingScreenProps> = ({
         </p>
 
         {/* Loading message */}
-        <p className="text-sm text-gray-500 animate-pulse">{message}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-300 animate-pulse">{message}</p>
 
         {/* Loading bar */}
         <div className="w-64 h-1 bg-gray-200 rounded-full mx-auto mt-4 overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-green-500 to-blue-500 rounded-full animate-shimmer" 
-               style={{ 
+          <div className="h-full bg-gradient-to-r from-green-500 to-blue-500 rounded-full animate-shimmer"
+               style={{
                  backgroundSize: '200% 100%',
                  width: '50%'
                }}></div>
         </div>
 
         {/* Feature hints */}
-        <div className="mt-8 space-y-2 text-xs text-gray-500 animate-fade-in">
+        <div className="mt-8 space-y-2 text-xs text-gray-600 dark:text-gray-300 animate-fade-in">
           <p>✨ Smart match tracking with AI</p>
           <p>🏆 Community-powered achievements</p>
           <p>⚡ Blockchain-verified reputation</p>
