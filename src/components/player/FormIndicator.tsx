@@ -46,7 +46,7 @@ export const FormIndicator: React.FC<FormIndicatorProps> = ({
             <div className="text-2xl font-bold text-gray-900">
               {averageRating > 0 ? averageRating : '-'}
             </div>
-            <div className="text-xs text-gray-500">Avg Rating</div>
+            <div className="text-xs text-gray-600 dark:text-gray-300">Avg Rating</div>
           </div>
         </div>
 
@@ -66,7 +66,7 @@ export const FormIndicator: React.FC<FormIndicatorProps> = ({
           )}
           {form.trend === 'stable' && (
             <>
-              <Minus className="w-4 h-4 text-gray-500" />
+              <Minus className="w-4 h-4 text-gray-600 dark:text-gray-400" />
               <span className="text-sm text-gray-600">Stable</span>
             </>
           )}
@@ -75,7 +75,7 @@ export const FormIndicator: React.FC<FormIndicatorProps> = ({
         {/* Recent Ratings */}
         {recentRatings.length > 0 && (
           <div className="pt-3 border-t border-gray-200">
-            <p className="text-xs text-gray-500 mb-2">Last {recentRatings.length} Matches:</p>
+            <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">Last {recentRatings.length} Matches:</p>
             <div className="flex items-center space-x-2">
               {recentRatings.map((rating, idx) => (
                 <div
@@ -98,7 +98,7 @@ export const FormIndicator: React.FC<FormIndicatorProps> = ({
         {/* Form History Chart */}
         {showChart && formHistory.length > 0 && (
           <div className="pt-3 border-t border-gray-200">
-            <p className="text-xs text-gray-500 mb-2">Form Trend:</p>
+            <p className="text-xs text-gray-600 dark:text-gray-300 mb-2">Form Trend:</p>
             <div className="h-16 flex items-end space-x-1">
               {formHistory.map((entry, idx) => {
                 const height = Math.max(10, (entry.rating / 10) * 100);
@@ -121,7 +121,7 @@ export const FormIndicator: React.FC<FormIndicatorProps> = ({
                 );
               })}
             </div>
-            <div className="flex justify-between text-xs text-gray-400 mt-1">
+            <div className="flex justify-between text-xs text-gray-600 dark:text-gray-300 mt-1">
               <span>Older</span>
               <span>Recent</span>
             </div>
@@ -136,7 +136,7 @@ export const FormIndicator: React.FC<FormIndicatorProps> = ({
                 <div className={`text-lg ${getFormColor(formValue)}`}>
                   {FORM_ARROWS[formValue] || '→'}
                 </div>
-                <div className="text-xs text-gray-400">{formValue > 0 ? `+${formValue}` : formValue}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-300">{formValue > 0 ? `+${formValue}` : formValue}</div>
               </div>
             ))}
           </div>

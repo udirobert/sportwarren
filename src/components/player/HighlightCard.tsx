@@ -142,15 +142,15 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
                 <div className="grid grid-cols-3 gap-4">
                   <div className="text-center">
                     <div className="text-xl font-black text-green-500">{matchStats.goals}</div>
-                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Goals</div>
+                    <div className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tighter">Goals</div>
                   </div>
                   <div className="text-center border-x border-white/10">
                     <div className="text-xl font-black text-blue-500">{matchStats.assists}</div>
-                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Assists</div>
+                    <div className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tighter">Assists</div>
                   </div>
                   <div className="text-center">
                     <div className="text-xl font-black text-white">{matchStats.rating.toFixed(1)}</div>
-                    <div className="text-[10px] font-bold text-gray-500 uppercase tracking-tighter">Rating</div>
+                    <div className="text-[10px] font-bold text-gray-600 dark:text-gray-300 uppercase tracking-tighter">Rating</div>
                   </div>
                 </div>
               </div>
@@ -159,13 +159,13 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
             {/* Attribute Progression */}
             {attributeGains && attributeGains.length > 0 && (
               <div className="space-y-3">
-                <h3 className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Evolution</h3>
+                <h3 className="text-[10px] font-black text-gray-600 dark:text-gray-300 uppercase tracking-widest">Evolution</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {attributeGains.map((gain, idx) => (
                     <div key={idx} className="flex items-center justify-between bg-white/5 px-3 py-2 rounded-xl border border-white/10">
                       <span className="text-xs font-bold text-gray-300 capitalize">{gain.attribute}</span>
                       <div className="flex items-center space-x-1.5">
-                        <span className="text-xs text-gray-500">{gain.oldRating}</span>
+                        <span className="text-xs text-gray-600 dark:text-gray-400">{gain.oldRating}</span>
                         <Zap className="w-2.5 h-2.5 text-orange-500 fill-orange-500" />
                         <span className={`text-xs font-black ${getAttributeTextColor(gain.newRating)}`}>{gain.newRating}</span>
                       </div>
@@ -185,11 +185,11 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
                     </div>
                   ))}
                 </div>
-                <span className="text-[10px] font-bold text-gray-500">Squad Chemistry 88%</span>
+                <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">Squad Chemistry 88%</span>
               </div>
               <div className="text-right">
                 <span className="text-[8px] font-black text-white uppercase tracking-[0.2em]">Build Your Legend</span>
-                <div className="text-[6px] text-gray-500 uppercase tracking-widest">sportwarren.app</div>
+                <div className="text-[6px] text-gray-600 dark:text-gray-400 uppercase tracking-widest">sportwarren.app</div>
               </div>
             </div>
           </div>

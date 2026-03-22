@@ -83,7 +83,7 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
           <div className="flex items-center space-x-4 bg-gray-50 p-4 rounded-xl">
             <div className="text-center">
               <div className="text-3xl font-bold text-blue-600">{attributes.xp.level}</div>
-              <div className="text-xs text-gray-500">Level</div>
+              <div className="text-xs text-gray-600 dark:text-gray-300">Level</div>
             </div>
             <div className="w-px h-10 bg-gray-300" />
             <div>
@@ -91,12 +91,12 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
                 <span className="text-sm font-medium text-gray-700">{attributes.xp.totalXP.toLocaleString()} total XP</span>
               </div>
               <div className="w-32 bg-gray-200 rounded-full h-2">
-                <div 
+                <div
                   className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full"
                   style={{ width: `${seasonProgress}%` }}
                 />
               </div>
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
                 Season: {attributes.xp.seasonXP.toLocaleString()} / {attributes.xp.nextLevelXP.toLocaleString()} XP
               </div>
             </div>
@@ -171,7 +171,7 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
                         {highlight.verified && <CheckCircle className="w-4 h-4 text-green-600" />}
                       </div>
                       <p className="text-sm text-gray-600">{highlight.description}</p>
-                      <p className="text-xs text-gray-500 mt-1">{highlight.date.toLocaleDateString()}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">{highlight.date.toLocaleDateString()}</p>
                     </div>
                   </div>
                 ))}
@@ -246,7 +246,7 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
                     </div>
                   </div>
                   <p className="text-sm text-gray-600 mb-2">{achievement.description}</p>
-                  <p className="text-xs text-gray-500">Earned: {achievement.dateEarned?.toLocaleDateString() || 'Not yet earned'}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">Earned: {achievement.dateEarned?.toLocaleDateString() || 'Not yet earned'}</p>
                 </div>
               ))}
             </div>
@@ -281,7 +281,7 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
                     </div>
                   </div>
                   <p className="text-gray-700 mb-2">&ldquo;{endorsement.comment}&rdquo;</p>
-                  <p className="text-xs text-gray-500">{endorsement.date.toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">{endorsement.date.toLocaleDateString()}</p>
                 </div>
               ))}
             </div>
@@ -315,7 +315,7 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
                     </span>
                   </div>
                   <p className="text-gray-700 mb-2">&ldquo;{interest.notes}&rdquo;</p>
-                  <p className="text-xs text-gray-500">{interest.date.toLocaleDateString()}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">{interest.date.toLocaleDateString()}</p>
                 </div>
               ))}
             </div>
