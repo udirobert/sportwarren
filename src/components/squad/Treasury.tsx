@@ -250,7 +250,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
                 placeholder="Enter amount"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg"
               />
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
                 Available: {treasury.balance.toLocaleString()} {treasury.currency}
               </p>
             </div>
@@ -314,7 +314,7 @@ const TransactionRow: React.FC<TransactionRowProps> = ({ transaction, currency }
         </div>
         <div>
           <p className="font-medium text-gray-900">{transaction.description}</p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             {categoryLabels[transaction.category] || transaction.category} • {transaction.timestamp.toLocaleDateString()}
           </p>
         </div>

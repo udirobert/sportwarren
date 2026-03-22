@@ -93,12 +93,12 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
       <Card className="py-8 px-4 space-y-6 bg-gradient-to-br from-white to-emerald-50/70 border-emerald-200">
         <div className="rounded-2xl border border-emerald-200/70 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <div className="section-title text-gray-500">Home</div>
+            <div className="section-title text-gray-600 dark:text-gray-300">Home</div>
             <div className="text-sm font-bold text-gray-900 truncate">{homeTeam}</div>
           </div>
           <div className="text-xs font-black uppercase tracking-[0.2em] text-emerald-600">VS</div>
           <div className="min-w-0 text-right">
-            <div className="section-title text-gray-500">Away</div>
+            <div className="section-title text-gray-600 dark:text-gray-300">Away</div>
             <div className="text-sm font-bold text-gray-900 truncate">{awayTeam}</div>
           </div>
         </div>
@@ -108,7 +108,7 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
             <Play className="w-8 h-8 text-white" />
           </div>
           <h2 className="text-xl font-bold text-gray-900 mb-1">Set Up Match</h2>
-          <p className="text-sm text-gray-500">Configure your format before kick-off</p>
+          <p className="text-sm text-gray-700 dark:text-gray-200">Configure your format before kick-off</p>
         </div>
 
         {/* Format presets */}
@@ -131,7 +131,7 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
           </div>
           {/* Custom slider for non-standard sizes */}
           <div className="mt-3 flex items-center gap-3">
-            <span className="text-xs text-gray-500 w-20">Custom: {playersPerSide}v{playersPerSide}</span>
+            <span className="text-xs text-gray-600 dark:text-gray-300 w-20">Custom: {playersPerSide}v{playersPerSide}</span>
             <input
               type="range" min={3} max={15} value={playersPerSide}
               onChange={e => setPlayersPerSide(Number(e.target.value))}
@@ -144,8 +144,8 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
         <div className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3">
           <div className="flex items-center gap-2">
             <Shield className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-semibold text-gray-700">Goalkeeper</span>
-            <span className="text-xs text-gray-400">(can rotate each week)</span>
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Goalkeeper</span>
+            <span className="text-xs text-gray-500 dark:text-gray-400">(can rotate each week)</span>
           </div>
           <button
             onClick={() => setHasKeeper(v => !v)}
@@ -159,7 +159,7 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
           </button>
         </div>
 
-        <div className="text-center text-xs text-gray-500 font-semibold uppercase tracking-widest">
+        <div className="text-center text-xs text-gray-600 dark:text-gray-300 font-semibold uppercase tracking-widest">
           {matchFormat} • {hasKeeper ? 'With goalkeeper' : 'No goalkeeper / rotating keeper'}
         </div>
 
@@ -188,7 +188,7 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
               <h3 className="text-lg font-semibold text-gray-900 mb-2">{homeTeam}</h3>
               <div className="text-5xl font-bold text-green-600">{matchState.homeScore}</div>
             </div>
-            <div className="text-2xl font-bold text-gray-400">VS</div>
+            <div className="text-2xl font-bold text-gray-600 dark:text-gray-300">VS</div>
             <div className="text-center flex-1">
               <h3 className="text-lg font-semibold text-gray-900 mb-2">{awayTeam}</h3>
               <div className="text-5xl font-bold text-red-600">{matchState.awayScore}</div>
@@ -306,12 +306,12 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
       <Card>
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-gray-900">Match Events</h3>
-          <span className="text-sm text-gray-500">{matchState.events.length} events</span>
+          <span className="text-sm text-gray-600 dark:text-gray-300">{matchState.events.length} events</span>
         </div>
         <div className="space-y-2 max-h-64 overflow-y-auto">
           {matchState.events.length === 0 ? (
-            <div className="text-center py-6 text-gray-500">
-              <FileText className="w-10 h-10 mx-auto mb-2 text-gray-300" />
+            <div className="text-center py-6 text-gray-600 dark:text-gray-300">
+              <FileText className="w-10 h-10 mx-auto mb-2 text-gray-400 dark:text-gray-500" />
               <p className="text-sm">No events yet</p>
             </div>
           ) : (
@@ -324,14 +324,14 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
                       {event.type}
                     </span>
                     {event.minute && (
-                      <span className="text-xs text-gray-500">{event.minute}&apos;</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-300">{event.minute}&apos;</span>
                     )}
                   </div>
                   {event.player && (
                     <p className="text-sm text-gray-700">{event.player}</p>
                   )}
                   {event.details && (
-                    <p className="text-xs text-gray-500 mt-0.5">{event.details}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">{event.details}</p>
                   )}
                 </div>
               </div>
@@ -360,9 +360,9 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
             <p className="text-gray-600 mb-4">
               You are submitting: <strong>{homeTeam} {matchState.homeScore} - {matchState.awayScore} {awayTeam}</strong>
               <br />
-              <span className="text-xs text-gray-500">{matchFormat} • {hasKeeper ? 'With goalkeeper' : 'No goalkeeper'}</span>
+              <span className="text-xs text-gray-600 dark:text-gray-300">{matchFormat} • {hasKeeper ? 'With goalkeeper' : 'No goalkeeper'}</span>
             </p>
-            <p className="text-sm text-gray-500 mb-6">
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
               This result will be sent to the opposing team for confirmation. 
               Both teams must agree for the result to be verified on-chain.
             </p>

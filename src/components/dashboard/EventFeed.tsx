@@ -43,7 +43,7 @@ const CATEGORY_DOT: Record<FeedEvent['category'], string> = {
     scouting:   'bg-purple-500',
     tactical:   'bg-orange-500',
     commercial: 'bg-yellow-500',
-    system:     'bg-gray-400',
+    system:     'bg-gray-500 dark:bg-gray-400',
 };
 
 interface EventFeedProps {
@@ -147,7 +147,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                 {unreadCount > 0 && (
                     <button
                         onClick={markAllRead}
-                        className="section-title text-gray-500 hover:text-gray-300 transition-colors"
+                        className="section-title text-gray-600 dark:text-gray-300 hover:text-gray-400 dark:hover:text-gray-200 transition-colors"
                     >
                         Mark all read
                     </button>
@@ -163,7 +163,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                         className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest whitespace-nowrap transition-all ${
                             filter === f.key
                                 ? 'bg-gray-900 text-white'
-                                : 'bg-gray-100 text-gray-500 hover:text-gray-700'
+                                : 'bg-gray-100 text-gray-600 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-200'
                         }`}
                     >
                         {f.label}
@@ -204,7 +204,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
             <div className="divide-y divide-gray-100 max-h-80 overflow-y-auto scrollbar-none">
                 <AnimatePresence initial={false}>
                     {filtered.length === 0 ? (
-                        <div className="px-5 py-8 text-center section-title text-gray-400">
+                        <div className="px-5 py-8 text-center section-title text-gray-500 dark:text-gray-400">
                             {dataReady ? 'No alerts — squad is in good shape.' : 'Loading squad data...'}
                         </div>
                     ) : (
@@ -225,10 +225,10 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                                 <div className="flex-1 min-w-0">
                                     <div className="flex items-start justify-between gap-2 mb-1">
                                         <div className="flex items-center gap-2">
-                                            <span className="section-title text-gray-500">
+                                            <span className="section-title text-gray-600 dark:text-gray-300">
                                                 {event.staffEmoji} {event.sender}
                                             </span>
-                                            <span className="text-xs text-gray-400">
+                                            <span className="text-xs text-gray-500 dark:text-gray-400">
                                                 {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                             </span>
                                         </div>
@@ -239,7 +239,7 @@ export const EventFeed: React.FC<EventFeedProps> = ({ squadId }) => {
                                                     e.stopPropagation();
                                                     markRead(event.id);
                                                 }}
-                                                className="section-title text-gray-400 hover:text-gray-600"
+                                                className="section-title text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                                             >
                                                 Mark read
                                             </button>

@@ -168,7 +168,7 @@ export const SquadDAO: React.FC = () => {
           <div>
             <div className="flex items-center space-x-2 mb-1">
               <span className={`w-2 h-2 rounded-full ${isAvalanche ? 'bg-red-500' : 'bg-blue-500'} animate-pulse`} />
-              <p className="text-gray-400 text-xs font-bold uppercase tracking-widest">
+              <p className="text-gray-300 dark:text-gray-400 text-xs font-bold uppercase tracking-widest">
                 {isAvalanche ? 'Avalanche Fuji' : 'Algorand Testnet'} Governance
               </p>
             </div>
@@ -178,10 +178,10 @@ export const SquadDAO: React.FC = () => {
             </h2>
           </div>
           <div className="text-right">
-            <p className="text-gray-400 text-xs uppercase font-bold tracking-wider">Voting Power</p>
+            <p className="text-gray-300 dark:text-gray-400 text-xs uppercase font-bold tracking-wider">Voting Power</p>
             <p className="text-2xl font-bold">
               {isAvalanche ? fujiGov.votingPower : userTokens.toLocaleString()}
-              <span className="text-sm font-normal text-gray-400 ml-1">{isAvalanche ? 'SQT' : 'DAO'}</span>
+              <span className="text-sm font-normal text-gray-400 dark:text-gray-500 ml-1">{isAvalanche ? 'SQT' : 'DAO'}</span>
             </p>
           </div>
         </div>
@@ -204,23 +204,23 @@ export const SquadDAO: React.FC = () => {
           <div className="text-2xl font-bold text-blue-600">
             {isAvalanche ? fujiGov.proposals.length : algoProposals.length}
           </div>
-          <div className="text-xs text-gray-500 font-medium uppercase tracking-wider mt-1">Total Proposals</div>
+          <div className="text-xs text-gray-600 dark:text-gray-300 font-medium uppercase tracking-wider mt-1">Total Proposals</div>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-green-600">
-            {isAvalanche 
-              ? fujiGov.proposals.filter(p => p.status === 'Succeeded' || p.status === 'Executed').length 
+            {isAvalanche
+              ? fujiGov.proposals.filter(p => p.status === 'Succeeded' || p.status === 'Executed').length
               : algoProposals.filter(p => p.status === 'passed').length}
           </div>
-          <div className="text-xs text-gray-500 font-medium uppercase tracking-wider mt-1">Passed</div>
+          <div className="text-xs text-gray-600 dark:text-gray-300 font-medium uppercase tracking-wider mt-1">Passed</div>
         </Card>
         <Card className="p-4 text-center">
           <div className="text-2xl font-bold text-red-600">
-            {isAvalanche 
-              ? fujiGov.proposals.filter(p => p.status === 'Defeated' || p.status === 'Canceled').length 
+            {isAvalanche
+              ? fujiGov.proposals.filter(p => p.status === 'Defeated' || p.status === 'Canceled').length
               : algoProposals.filter(p => p.status === 'rejected').length}
           </div>
-          <div className="text-xs text-gray-500 font-medium uppercase tracking-wider mt-1">Rejected</div>
+          <div className="text-xs text-gray-600 dark:text-gray-300 font-medium uppercase tracking-wider mt-1">Rejected</div>
         </Card>
         <button 
           onClick={() => setShowCreateProposal(true)}
@@ -249,7 +249,7 @@ export const SquadDAO: React.FC = () => {
               <Vote className="w-8 h-8 text-gray-300" />
             </div>
             <h4 className="text-lg font-semibold text-gray-900">No proposals yet</h4>
-            <p className="text-gray-500 text-sm mt-2">Start a new proposal to influence the squad's direction.</p>
+            <p className="text-gray-600 dark:text-gray-300 text-sm mt-2">Start a new proposal to influence the squad's direction.</p>
           </Card>
         ) : (
           (isAvalanche ? fujiGov.proposals : algoProposals).map((proposal) => (
@@ -257,8 +257,8 @@ export const SquadDAO: React.FC = () => {
               <div className="flex justify-between items-start mb-3">
                 <div className="min-w-0 pr-4">
                   <div className="flex items-center space-x-2 mb-1">
-                    <span className="text-[10px] font-bold text-gray-400 font-mono uppercase">ID: {proposal.id.toString().slice(0, 10)}...</span>
-                    <span className="text-[10px] text-gray-400">•</span>
+                    <span className="text-[10px] font-bold text-gray-500 dark:text-gray-400 font-mono uppercase">ID: {proposal.id.toString().slice(0, 10)}...</span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400">•</span>
                     <span className="text-[10px] font-bold text-blue-600/70 uppercase">PROPOSER: {proposal.proposer.slice(0, 6)}...{proposal.proposer.slice(-4)}</span>
                   </div>
                   <h4 className="text-base font-bold text-gray-900 truncate">
@@ -313,7 +313,7 @@ export const SquadDAO: React.FC = () => {
                 </div>
               )}
 
-              <div className="mt-4 flex items-center justify-between text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+              <div className="mt-4 flex items-center justify-between text-[10px] text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">
                 <div className="flex items-center space-x-4">
                   <span>FOR: {proposal.votesFor}</span>
                   <span>AGAINST: {proposal.votesAgainst}</span>

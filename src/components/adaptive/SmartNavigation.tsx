@@ -228,7 +228,7 @@ export const SmartNavigation: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">SportWarren</h1>
-                <p className="text-xs text-gray-600 dark:text-gray-400">{getJourneyNavigationSubtitle(journeyStage)}</p>
+                <p className="text-xs text-gray-700 dark:text-gray-300">{getJourneyNavigationSubtitle(journeyStage)}</p>
               </div>
             </Link>
 
@@ -331,7 +331,7 @@ export const SmartNavigation: React.FC = () => {
               href={path}
               onClick={() => handleNavClick(path)}
               className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-colors touch-manipulation min-h-[3.25rem] ${
-                isActive(path) ? 'text-green-600 bg-green-50 dark:bg-green-900/30' : 'text-gray-500 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800'
+                isActive(path) ? 'text-green-600 bg-green-50 dark:bg-green-900/30' : 'text-gray-600 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-800'
               }`}
             >
               <div className="relative">
@@ -350,7 +350,7 @@ export const SmartNavigation: React.FC = () => {
             <button
               onClick={() => setIsMoreOpen(true)}
               className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl transition-colors touch-manipulation min-h-[3.25rem] ${
-                overflowItems.some(i => isActive(i.path)) ? 'text-green-600 bg-green-50 dark:bg-green-900/30' : 'text-gray-500 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800'
+                overflowItems.some(i => isActive(i.path)) ? 'text-green-600 bg-green-50 dark:bg-green-900/30' : 'text-gray-600 dark:text-gray-300 active:bg-gray-100 dark:active:bg-gray-800'
               }`}
             >
               <MoreHorizontal className="w-5 h-5 mb-0.5" />

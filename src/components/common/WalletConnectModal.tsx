@@ -135,11 +135,11 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
               <ArrowRight className="w-4 h-4" />
             </button>
 
-            <p className="text-center text-xs text-gray-400 mt-4">
+            <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-4">
               Continue with Google, Email, Discord, or Apple
             </p>
 
-            <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-center gap-4 text-xs text-gray-400">
+            <div className="mt-6 pt-4 border-t border-gray-100 flex items-center justify-center gap-4 text-xs text-gray-500 dark:text-gray-400">
               <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> Secure</span>
               <span>•</span>
               <span>Free to start</span>
@@ -229,13 +229,13 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h4 className="text-sm font-bold text-gray-900">Link Lens Profile (Optional)</h4>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-600 dark:text-gray-300">
                     {lensAvailable
                       ? 'Connect once to post highlights and match proofs.'
                       : 'Lens publishing is currently disabled on this deployment.'}
                   </p>
                   {lensAvailable && lensConnected && lensProfile?.handle && (
-                    <p className="text-[11px] text-gray-400 mt-1">Connected as @{lensProfile.handle}</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Connected as @{lensProfile.handle}</p>
                   )}
                   {!lensAvailable && (
                     <p className="text-[11px] text-amber-600 mt-1">
@@ -253,7 +253,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                     {lensConnected ? 'Linked' : 'Link Lens'}
                   </Button>
                 ) : (
-                  <span className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                  <span className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-300">
                     Unavailable
                   </span>
                 )}
@@ -314,7 +314,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
 
               <button
                 onClick={() => setShowWalletOptions(true)}
-                className="w-full py-3 text-sm font-semibold text-gray-600 hover:text-gray-900 transition-colors"
+                className="w-full py-3 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors"
               >
                 {accountReadyContent.authModal.secondaryActionLabel} →
               </button>
@@ -329,7 +329,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                 <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center font-bold text-white text-sm">A</div>
                 <div className="text-left flex-1">
                   <h3 className="font-bold text-gray-900 text-sm leading-tight">Algorand</h3>
-                  <p className="text-xs text-gray-500">Player profile, XP & reputation</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">Player profile, XP & reputation</p>
                 </div>
                 {selectedChain === 'algorand' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-blue-600" />}
               </button>
@@ -342,7 +342,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                 <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center font-bold text-white text-xs">AVAX</div>
                 <div className="text-left flex-1">
                   <h3 className="font-bold text-gray-900 text-sm leading-tight">Avalanche</h3>
-                  <p className="text-xs text-gray-500">Squad governance & treasury</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">Squad governance & treasury</p>
                 </div>
                 {selectedChain === 'avalanche' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-red-600" />}
               </button>
@@ -355,14 +355,14 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                 <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center font-bold text-white italic text-sm">L</div>
                 <div className="text-left flex-1">
                   <h3 className="font-bold text-gray-900 text-sm leading-tight">Lens</h3>
-                  <p className="text-xs text-gray-500">Social layer & highlights</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">Social layer & highlights</p>
                 </div>
                 {selectedChain === 'lens' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-green-600" />}
               </button>
 
               <button
                 onClick={() => setShowWalletOptions(false)}
-                className="w-full py-2 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+                className="w-full py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 ← Skip for now
               </button>
