@@ -8,6 +8,11 @@ export class DatabaseService {
       connectionString: process.env.DATABASE_URL || 'postgresql://localhost:5432/sportwarren',
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
     });
+
+    // Prevent unhandled 'error' events on idle clients from crashing the process
+    this.pool.on('error', (err) => {
+      console.error('⚠️ Unexpected error on idle PostgreSQL client:', err.message);
+    });
   }
 
   private shouldBootstrapLegacySchema(): boolean {
