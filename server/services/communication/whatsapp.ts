@@ -37,14 +37,19 @@ export class WhatsAppService {
       console.log('❌ WhatsApp client disconnected:', reason);
       this.isReady = false;
     });
+
+    this.client.on('auth_failure', (msg) => {
+      console.error('❌ WhatsApp authentication failure:', msg);
+      this.isReady = false;
+    });
   }
 
   async initialize(): Promise<void> {
     try {
       await this.client.initialize();
     } catch (error) {
-      console.error('Failed to initialize WhatsApp client:', error);
-      throw error;
+      console.error('⚠️ WhatsApp client initialization failed (non-fatal):', error);
+      // Don't throw — WhatsApp is not critical for the API to run
     }
   }
 
