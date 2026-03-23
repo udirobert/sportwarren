@@ -31,6 +31,7 @@ model User {
   // Relations
   playerProfile    PlayerProfile?
   squads           SquadMember[]
+  platformConnections PlatformConnection[]
   matchesSubmitted Match[]             @relation("MatchSubmitter")
   verifications    MatchVerification[]
   aiMemory         AiMemory?
@@ -163,6 +164,7 @@ model Squad {
 
   // Relations
   members            SquadMember[]
+  platformConnections PlatformConnection[]
   matchesHome        Match[]          @relation("MatchHomeSquad")
   matchesAway        Match[]          @relation("MatchAwaySquad")
   tactics            SquadTactics?
@@ -193,6 +195,32 @@ model SquadMember {
 
   @@unique([squadId, userId])
   @@map("squad_members")
+}
+
+model PlatformConnection {
+  id String @id @default(cuid())
+
+  platform String
+  status   String   @default("pending") // pending, connected
+
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  squadId String? @map("squad_id")
+  squad   Squad?  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  username       String?
+  chatId         String?   @map("chat_id")
+  platformUserId String?   @map("platform_user_id")
+  groupAddress   String?   @map("group_address")
+  linkToken      String?   @unique @map("link_token")
+  linkedAt       DateTime? @map("linked_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([platform, squadId])
+  @@map("platform_connections")
 }
 
 // ============================================================================

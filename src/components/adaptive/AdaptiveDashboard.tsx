@@ -200,7 +200,7 @@ export const AdaptiveDashboard: React.FC = () => {
       requiredLevel: 'basic',
       category: 'squad',
       component: (
-        <CommunicationHub connections={preferences.connections} />
+        <CommunicationHub squadId={primarySquadId} />
       ),
       },
       {

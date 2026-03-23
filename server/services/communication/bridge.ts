@@ -45,12 +45,12 @@ export interface MatchReminderData {
 export class CommunicationBridge {
   private xmtp: XMTPBotService;
   private whatsapp: WhatsAppService;
-  private telegram: TelegramService;
+  private telegram: TelegramService | null;
 
   constructor() {
     this.xmtp = new XMTPBotService();
     this.whatsapp = new WhatsAppService();
-    this.telegram = new TelegramService();
+    this.telegram = process.env.TELEGRAM_BOT_TOKEN ? new TelegramService() : null;
   }
 
   async initialize(): Promise<void> {
@@ -71,6 +71,10 @@ export class CommunicationBridge {
     }).catch((err: Error) => {
       console.warn('⚠️ XMTP message stream not available:', err.message);
     });
+
+    if (!this.telegram) {
+      console.log('ℹ️ Telegram bot disabled (set TELEGRAM_BOT_TOKEN to enable)');
+    }
 
     console.log('✅ Communication bridge initialized (some services may be degraded)');
   }
@@ -108,7 +112,7 @@ export class CommunicationBridge {
       promises.push(this.whatsapp.sendMatchUpdate(targets.whatsapp.chatId, whatsappData));
     }
 
-    if (targets.telegram) {
+    if (targets.telegram && this.telegram) {
       promises.push(this.telegram.sendMatchNotification(targets.telegram.chatId, this.formatMessageForTelegram(telegramText)));
     }
 
