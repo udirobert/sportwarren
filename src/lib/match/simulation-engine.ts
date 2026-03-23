@@ -4,7 +4,6 @@
  */
 
 import { 
-  Squad, 
   Tactics, 
   PlayerAttributes, 
   AttributeType, 
@@ -94,7 +93,7 @@ function calculateTeamPower(
 export function simulateMatch(
   homeSquad: { players: PlayerAttributes[]; tactics: Tactics },
   awaySquad: { players: PlayerAttributes[]; tactics: Tactics },
-  iterations: number = 1 // Can run multiple to get probabilities
+  _iterations: number = 1 // Reserved for future Monte Carlo runs
 ): SimulationResult {
   const homePower = calculateTeamPower(homeSquad.players, homeSquad.tactics);
   const awayPower = calculateTeamPower(awaySquad.players, awaySquad.tactics);

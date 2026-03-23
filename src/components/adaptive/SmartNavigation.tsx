@@ -7,7 +7,9 @@ import { Home, Target, BarChart3, Users, MessageCircle, X, Plus, Activity, Setti
 import { useTheme } from '@/contexts/ThemeContext';
 import { getJourneyNavigationSubtitle } from '@/lib/journey/content';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { usePlatformConnections } from '@/hooks/usePlatformConnections';
 import { useJourneyState } from '@/hooks/useJourneyState';
+import { SELF_SERVE_PLATFORM_LIST } from '@/types';
 import { ContextualHelp } from './ContextualHelp';
 import { AccountStatusControl } from '@/components/common/AccountStatusControl';
 
@@ -25,42 +27,17 @@ const NAV_SHORTCUTS: Record<string, string> = {
 export const SmartNavigation: React.FC = () => {
   const pathname = usePathname();
   const { preferences, trackFeatureUsage } = useUserPreferences();
-  const { journeyStage, nextAction } = useJourneyState();
+  const { journeyStage, nextAction, memberships, isVerified } = useJourneyState();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [hasUnconnectedPlatforms, setHasUnconnectedPlatforms] = useState(false);
   const needsJourneySetup = journeyStage !== 'returning_manager';
-
-  // Check for unconnected platforms to show badge on Settings
-  useEffect(() => {
-    const checkConnections = () => {
-      try {
-        const stored = localStorage.getItem('sw_preferences');
-        if (stored) {
-          const prefs = JSON.parse(stored);
-          const connections = prefs.connections || {};
-          const platforms = ['telegram', 'xmtp', 'whatsapp'];
-          const unconnected = platforms.filter(p => !connections[p]?.connected);
-          setHasUnconnectedPlatforms(unconnected.length > 0);
-        } else {
-          // No preferences stored yet = all platforms unconnected
-          setHasUnconnectedPlatforms(true);
-        }
-      } catch {
-        setHasUnconnectedPlatforms(true);
-      }
-    };
-    checkConnections();
-    // Re-check on storage changes (e.g., from settings page)
-    window.addEventListener('storage', checkConnections);
-    // Also listen for custom event from settings page updates
-    const handlePrefsUpdate = () => checkConnections();
-    window.addEventListener('preferences-updated', handlePrefsUpdate);
-    return () => {
-      window.removeEventListener('storage', checkConnections);
-      window.removeEventListener('preferences-updated', handlePrefsUpdate);
-    };
-  }, []);
+  const primarySquadId = memberships[0]?.squad.id;
+  const { connections } = usePlatformConnections({ squadId: primarySquadId });
+  const hasUnconnectedPlatforms = Boolean(
+    isVerified &&
+    primarySquadId &&
+    SELF_SERVE_PLATFORM_LIST.some((platform) => !connections[platform]?.connected)
+  );
 
   // Define all navigation items with their unlock conditions
   const allNavItems = [

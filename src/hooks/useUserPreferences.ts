@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { UserPreferences, PlatformType } from '@/types';
+import { UserPreferences } from '@/types';
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   theme: 'system',
@@ -208,26 +208,6 @@ export function useUserPreferences() {
     });
   }, [savePreferences]);
 
-  // Platform connection management
-  const updateConnection = useCallback((platform: PlatformType, username?: string) => {
-    savePreferences({
-      connections: {
-        ...preferences.connections,
-        [platform]: {
-          connected: true,
-          connectedAt: new Date().toISOString(),
-          username,
-        },
-      },
-    });
-  }, [preferences, savePreferences]);
-
-  const disconnectPlatform = useCallback((platform: PlatformType) => {
-    const updated = { ...preferences.connections };
-    delete updated[platform];
-    savePreferences({ connections: updated });
-  }, [preferences, savePreferences]);
-
   return {
     preferences,
     isLoading,
@@ -243,8 +223,5 @@ export function useUserPreferences() {
     unpinWidget,
     reorderWidgets,
     resetDashboard,
-    // Platform connections
-    updateConnection,
-    disconnectPlatform,
   };
 }

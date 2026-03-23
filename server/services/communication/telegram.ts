@@ -1,7 +1,29 @@
+import { randomBytes } from 'crypto';
 import TelegramBot from 'node-telegram-bot-api';
+import { prisma } from '@/lib/db';
+import { getSquadMembership, isSquadLeader } from '@/server/services/permissions';
+import { createPendingMatchSubmission } from '../match-submission.js';
+import {
+  connectTelegramChatByToken,
+  extractTelegramConnectToken,
+  findTelegramConnectionByChatId,
+  isTelegramConnectToken,
+} from './platform-connections.js';
+import { parseTelegramMatchResult, type ParsedTelegramMatchResult } from './telegram-match-parser.js';
+
+interface PendingMatchDraft extends ParsedTelegramMatchResult {
+  id: string;
+  chatId: number;
+  squadId: string;
+  submittedBy: string;
+  createdAt: number;
+}
+
+const MATCH_DRAFT_TTL_MS = 15 * 60 * 1000;
 
 export class TelegramService {
   private bot: TelegramBot;
+  private pendingMatchDrafts = new Map<string, PendingMatchDraft>();
 
   constructor() {
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -11,7 +33,6 @@ export class TelegramService {
 
     this.bot = new TelegramBot(token, { polling: true });
 
-    // Suppress polling error spam (e.g. when another bot instance is running)
     this.bot.on('polling_error', (error: Error) => {
       if (!error.message.includes('409 Conflict')) {
         console.error('Telegram polling error:', error.message);
@@ -23,200 +44,423 @@ export class TelegramService {
   }
 
   private setupCommands(): void {
-    // Set bot commands for better UX
     this.bot.setMyCommands([
-      { command: 'start', description: 'Start using SportWarren bot' },
-      { command: 'log', description: 'Log a match result' },
-      { command: 'score', description: 'Update live score' },
-      { command: 'lineup', description: 'Set team lineup' },
-      { command: 'motm', description: 'Vote for Man of the Match' },
-      { command: 'stats', description: 'Get player/team statistics' },
-      { command: 'fixtures', description: 'View upcoming matches' },
-      { command: 'help', description: 'Show available commands' },
-    ]);
+      { command: 'start', description: 'Link Telegram to your SportWarren squad' },
+      { command: 'log', description: 'Submit a match result for verification' },
+      { command: 'stats', description: 'View real player or squad stats' },
+      { command: 'fixtures', description: 'View scheduled squad fixtures' },
+      { command: 'help', description: 'Show Telegram commands and linking help' },
+    ]).catch((error: Error) => {
+      console.warn('Failed to register Telegram commands:', error.message);
+    });
   }
 
   private setupEventHandlers(): void {
-    // Handle /start command
-    this.bot.onText(/\/start/, async (msg) => {
+    this.bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
       const chatId = msg.chat.id;
-      const welcomeMessage = `🏆 Welcome to SportWarren!\n\n` +
-        `Track your grassroots football with zero hassle.\n\n` +
-        `Available commands:\n` +
-        `⚽ /log - Log match results\n` +
-        `📊 /stats - View statistics\n` +
-        `📅 /fixtures - Upcoming matches\n` +
-        `🏆 /motm - Vote for MOTM\n` +
-        `❓ /help - Show all commands`;
+      const startParam = match?.[1]?.trim();
 
-      await this.bot.sendMessage(chatId, welcomeMessage);
-    });
-
-    // Handle /log command
-    this.bot.onText(/\/log (.+)/, async (msg, match) => {
-      const chatId = msg.chat.id;
-      const matchText = match?.[1];
-
-      if (matchText) {
-        await this.handleMatchLog(chatId, matchText, msg.from);
-      } else {
-        await this.bot.sendMessage(chatId, '❌ Please provide match details. Example: /log 4-2 win vs Red Lions');
+      if (startParam && isTelegramConnectToken(startParam)) {
+        await this.handleConnectStart(chatId, extractTelegramConnectToken(startParam), msg.from);
+        return;
       }
+
+      await this.bot.sendMessage(chatId, this.buildHelpMessage());
     });
 
-    // Handle /score command for live updates
-    this.bot.onText(/\/score (.+)/, async (msg, match) => {
+    this.bot.onText(/\/help/, async (msg) => {
+      await this.bot.sendMessage(msg.chat.id, this.buildHelpMessage());
+    });
+
+    this.bot.onText(/\/log(?:\s+(.+))?/, async (msg, match) => {
       const chatId = msg.chat.id;
-      const scoreUpdate = match?.[1];
+      const matchText = match?.[1]?.trim();
 
-      if (scoreUpdate) {
-        await this.handleScoreUpdate(chatId, scoreUpdate);
+      if (!matchText) {
+        await this.bot.sendMessage(
+          chatId,
+          'Please include the result. Example: /log 4-2 win vs Red Lions'
+        );
+        return;
       }
+
+      await this.handleMatchLog(chatId, matchText);
     });
 
-    // Handle /motm command
-    this.bot.onText(/\/motm/, async (msg) => {
-      await this.handleMotmVoting(msg.chat.id, msg.from);
-    });
-
-    // Handle /stats command
     this.bot.onText(/\/stats(?:\s+(.+))?/, async (msg, match) => {
-      const chatId = msg.chat.id;
-      const playerName = match?.[1];
-      await this.handleStatsRequest(chatId, playerName, msg.from);
+      await this.handleStatsRequest(msg.chat.id, match?.[1]?.trim());
     });
 
-    // Handle /fixtures command
     this.bot.onText(/\/fixtures/, async (msg) => {
-      await this.handleFixturesRequest(msg.chat.id, msg.from);
+      await this.handleFixturesRequest(msg.chat.id);
     });
 
-    // Handle inline queries for quick actions
     this.bot.on('inline_query', async (query) => {
       await this.handleInlineQuery(query);
     });
 
-    // Handle callback queries from inline keyboards
     this.bot.on('callback_query', async (query) => {
       await this.handleCallbackQuery(query);
     });
   }
 
-  private async handleMatchLog(chatId: number, matchText: string, _user: any): Promise<void> {
-    try {
-      const matchData = this.parseMatchResult(matchText);
+  private buildHelpMessage(): string {
+    return [
+      'SportWarren Telegram',
+      '',
+      'Use Telegram as a real squad operations surface once you link it from Settings in the app.',
+      '',
+      'Commands:',
+      '/log 4-2 win vs Red Lions',
+      '/stats',
+      '/stats Marcus',
+      '/fixtures',
+      '/help',
+      '',
+      'Linking:',
+      'Open SportWarren Settings > Connections > Telegram and use the generated link.',
+    ].join('\n');
+  }
 
-      if (matchData) {
-        // Create inline keyboard for confirmation
-        const keyboard = {
-          inline_keyboard: [
-            [
-              { text: '✅ Confirm', callback_data: `confirm_match_${JSON.stringify(matchData)}` },
-              { text: '❌ Cancel', callback_data: 'cancel_match' },
-            ],
-            [
-              { text: '✏️ Edit Details', callback_data: `edit_match_${JSON.stringify(matchData)}` },
-            ],
-          ],
-        };
-
-        const message = `📝 **Match Log Confirmation**\n\n` +
-          `⚽ Result: ${matchData.homeScore}-${matchData.awayScore}\n` +
-          `🏆 Outcome: ${matchData.result}\n` +
-          `⚔️ Opponent: ${matchData.opponent}\n` +
-          `🏠 Home: ${matchData.isHome ? 'Yes' : 'No'}\n\n` +
-          `Confirm to save this match?`;
-
-        await this.bot.sendMessage(chatId, message, { reply_markup: keyboard });
-      } else {
-        await this.bot.sendMessage(chatId,
-          '❌ Could not parse match details.\n\n' +
-          'Try formats like:\n' +
-          '• "4-2 win vs Red Lions"\n' +
-          '• "lost 1-3 to Sunday Legends"\n' +
-          '• "drew 2-2 with Park Rangers"'
-        );
+  private pruneExpiredDrafts(): void {
+    const cutoff = Date.now() - MATCH_DRAFT_TTL_MS;
+    for (const [draftId, draft] of this.pendingMatchDrafts.entries()) {
+      if (draft.createdAt < cutoff) {
+        this.pendingMatchDrafts.delete(draftId);
       }
-    } catch (error) {
-      console.error('Error handling match log:', error);
-      await this.bot.sendMessage(chatId, '❌ Error processing match log. Please try again.');
     }
   }
 
-  private async handleScoreUpdate(chatId: number, scoreUpdate: string): Promise<void> {
-    // Parse score updates like "+1 home", "-1 away", "2-1"
-    const patterns = [
-      /([+-]\d+)\s+(home|away)/i,
-      /(\d+)-(\d+)/,
-    ];
+  private createDraftId(): string {
+    return randomBytes(6).toString('hex');
+  }
 
-    for (const pattern of patterns) {
-      const match = scoreUpdate.match(pattern);
-      if (match) {
-        // Process score update
-        await this.bot.sendMessage(chatId, `⚽ Score updated: ${scoreUpdate}`);
+  private async requireLinkedChat(chatId: number) {
+    return findTelegramConnectionByChatId(prisma, String(chatId));
+  }
+
+  private async handleConnectStart(chatId: number, token: string, user: TelegramBot.User | undefined): Promise<void> {
+    if (!user) {
+      await this.bot.sendMessage(chatId, 'We could not read your Telegram account. Please try again from the Telegram app.');
+      return;
+    }
+
+    const result = await connectTelegramChatByToken(prisma, token, {
+      chatId: String(chatId),
+      platformUserId: String(user.id),
+      username: user.username,
+    });
+
+    if (!result) {
+      await this.bot.sendMessage(
+        chatId,
+        'That link is no longer valid. Generate a fresh Telegram link from SportWarren Settings and try again.'
+      );
+      return;
+    }
+
+    await this.bot.sendMessage(
+      chatId,
+      'Telegram is now linked to your SportWarren squad. You can return to the app, or start with /log, /stats, or /fixtures.'
+    );
+  }
+
+  private async handleMatchLog(chatId: number, matchText: string): Promise<void> {
+    try {
+      this.pruneExpiredDrafts();
+
+      const linkedChat = await this.requireLinkedChat(chatId);
+      if (!linkedChat?.squadId) {
+        await this.bot.sendMessage(
+          chatId,
+          'This chat is not linked to a SportWarren squad yet. Link Telegram from Settings before logging matches.'
+        );
         return;
       }
-    }
 
-    await this.bot.sendMessage(chatId, '❌ Invalid score format. Try "+1 home" or "2-1"');
-  }
+      const parsed = parseTelegramMatchResult(matchText);
+      if (!parsed) {
+        await this.bot.sendMessage(
+          chatId,
+          [
+            'Could not parse that result.',
+            '',
+            'Try one of these formats:',
+            '4-2 win vs Red Lions',
+            'lost 1-3 to Sunday Legends',
+            'drew 2-2 with Park Rangers',
+          ].join('\n')
+        );
+        return;
+      }
 
-  private async handleMotmVoting(chatId: number, _user: any): Promise<void> {
-    // Create poll for MOTM voting
-    const pollOptions = [
-      'Marcus Johnson',
-      'Sarah Martinez',
-      'Jamie Thompson',
-      'Emma Wilson',
-      'Ryan Murphy',
-    ];
-
-    try {
-      await this.bot.sendPoll(
+      const draftId = this.createDraftId();
+      const draft: PendingMatchDraft = {
+        id: draftId,
         chatId,
-        '🏆 Vote for Man of the Match',
-        pollOptions,
-        {
-          is_anonymous: false,
-          allows_multiple_answers: false,
-        }
-      );
+        squadId: linkedChat.squadId,
+        submittedBy: linkedChat.userId,
+        createdAt: Date.now(),
+        ...parsed,
+      };
+
+      this.pendingMatchDrafts.set(draftId, draft);
+
+      const keyboard = {
+        inline_keyboard: [[
+          { text: 'Confirm', callback_data: `confirm_match:${draftId}` },
+          { text: 'Cancel', callback_data: `cancel_match:${draftId}` },
+        ]],
+      };
+
+      const squadLabel = linkedChat.squad?.name || 'Your squad';
+      const message = [
+        'Match log draft',
+        '',
+        `${squadLabel} ${draft.teamScore} - ${draft.opponentScore} ${draft.opponent}`,
+        `Outcome: ${draft.outcome}`,
+        '',
+        'Submit this result to the verification queue?',
+      ].join('\n');
+
+      await this.bot.sendMessage(chatId, message, { reply_markup: keyboard });
     } catch (error) {
-      console.error('Error creating MOTM poll:', error);
-      await this.bot.sendMessage(chatId, '❌ Error creating poll. Please try again.');
+      console.error('Error handling Telegram match log:', error);
+      await this.bot.sendMessage(chatId, 'We could not prepare that match log. Please try again.');
     }
   }
 
-  private async handleStatsRequest(chatId: number, playerName?: string, _user?: any): Promise<void> {
-    // Mock stats data - in real app, fetch from database
-    const statsMessage = playerName
-      ? `📊 **${playerName} Stats**\n\n⚽ Goals: 18\n🎯 Assists: 11\n⭐ Rating: 8.2\n🏆 Matches: 24`
-      : `📊 **Team Stats**\n\n⚽ Total Goals: 45\n🎯 Total Assists: 38\n📈 Win Rate: 67%\n🏆 Matches: 24`;
+  private async resolveOpponentSquad(squadId: string, opponentName: string) {
+    const exactMatch = await prisma.squad.findFirst({
+      where: {
+        id: { not: squadId },
+        OR: [
+          { name: { equals: opponentName, mode: 'insensitive' } },
+          { shortName: { equals: opponentName, mode: 'insensitive' } },
+        ],
+      },
+    });
 
-    await this.bot.sendMessage(chatId, statsMessage);
+    if (exactMatch) {
+      return exactMatch;
+    }
+
+    const closeMatches = await prisma.squad.findMany({
+      where: {
+        id: { not: squadId },
+        OR: [
+          { name: { contains: opponentName, mode: 'insensitive' } },
+          { shortName: { contains: opponentName, mode: 'insensitive' } },
+        ],
+      },
+      take: 2,
+      orderBy: { createdAt: 'asc' },
+    });
+
+    if (closeMatches.length === 1) {
+      return closeMatches[0];
+    }
+
+    return null;
   }
 
-  private async handleFixturesRequest(chatId: number, _user?: any): Promise<void> {
-    const fixturesMessage = `📅 **Upcoming Fixtures**\n\n` +
-      `🗓️ Jan 20, 2:00 PM\n⚔️ vs Grass Roots United\n🏟️ Regent's Park\n\n` +
-      `🗓️ Jan 27, 3:30 PM\n⚔️ vs Borough Rovers\n🏟️ Hampstead Heath`;
+  private async processMatchLog(draft: PendingMatchDraft): Promise<{ id: string; shareSlug: string | null; opponentName: string }> {
+    const membership = await getSquadMembership(prisma, draft.squadId, draft.submittedBy);
+    if (!membership || !isSquadLeader(membership.role)) {
+      throw new Error('Only current squad captains can submit Telegram match logs.');
+    }
 
-    await this.bot.sendMessage(chatId, fixturesMessage);
+    const squad = await prisma.squad.findUnique({
+      where: { id: draft.squadId },
+    });
+
+    if (!squad) {
+      throw new Error('The linked SportWarren squad no longer exists.');
+    }
+
+    const opponent = await this.resolveOpponentSquad(draft.squadId, draft.opponent);
+    if (!opponent) {
+      throw new Error(`We could not find a squad named "${draft.opponent}". Use the exact SportWarren squad name and try again.`);
+    }
+
+    const match = await createPendingMatchSubmission({
+      prisma,
+      homeSquadId: squad.id,
+      awaySquadId: opponent.id,
+      homeScore: draft.teamScore,
+      awayScore: draft.opponentScore,
+      submittedBy: draft.submittedBy,
+      matchDate: new Date(),
+    });
+
+    this.pendingMatchDrafts.delete(draft.id);
+
+    return {
+      id: match.id,
+      shareSlug: match.shareSlug ?? null,
+      opponentName: opponent.name,
+    };
   }
 
-  private async handleInlineQuery(query: any): Promise<void> {
+  private async handleStatsRequest(chatId: number, playerName?: string): Promise<void> {
+    const linkedChat = await this.requireLinkedChat(chatId);
+    if (!linkedChat?.squadId) {
+      await this.bot.sendMessage(chatId, 'Link this chat from SportWarren Settings before requesting live stats.');
+      return;
+    }
+
+    if (playerName) {
+      const profile = await prisma.playerProfile.findFirst({
+        where: {
+          user: {
+            squads: {
+              some: { squadId: linkedChat.squadId },
+            },
+            name: {
+              contains: playerName,
+              mode: 'insensitive',
+            },
+          },
+        },
+        include: {
+          user: {
+            select: { name: true },
+          },
+        },
+      });
+
+      if (!profile) {
+        await this.bot.sendMessage(chatId, `No player named "${playerName}" was found in the linked squad.`);
+        return;
+      }
+
+      await this.bot.sendMessage(
+        chatId,
+        [
+          `${profile.user.name || 'Player'} stats`,
+          '',
+          `Matches: ${profile.totalMatches}`,
+          `Goals: ${profile.totalGoals}`,
+          `Assists: ${profile.totalAssists}`,
+          `Reputation: ${profile.reputationScore}`,
+          `Season XP: ${profile.seasonXP}`,
+        ].join('\n')
+      );
+      return;
+    }
+
+    const squad = await prisma.squad.findUnique({
+      where: { id: linkedChat.squadId },
+      select: { name: true },
+    });
+
+    const matches = await prisma.match.findMany({
+      where: {
+        status: { in: ['verified', 'finalized'] },
+        OR: [
+          { homeSquadId: linkedChat.squadId },
+          { awaySquadId: linkedChat.squadId },
+        ],
+      },
+      select: {
+        homeSquadId: true,
+        awaySquadId: true,
+        homeScore: true,
+        awayScore: true,
+      },
+    });
+
+    const totals = matches.reduce(
+      (summary, match) => {
+        const isHome = match.homeSquadId === linkedChat.squadId;
+        const goalsFor = isHome ? match.homeScore ?? 0 : match.awayScore ?? 0;
+        const goalsAgainst = isHome ? match.awayScore ?? 0 : match.homeScore ?? 0;
+
+        summary.goalsFor += goalsFor;
+        summary.goalsAgainst += goalsAgainst;
+
+        if (goalsFor > goalsAgainst) summary.wins += 1;
+        else if (goalsFor < goalsAgainst) summary.losses += 1;
+        else summary.draws += 1;
+
+        return summary;
+      },
+      { wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 }
+    );
+
+    const winRate = matches.length > 0 ? Math.round((totals.wins / matches.length) * 100) : 0;
+
+    await this.bot.sendMessage(
+      chatId,
+      [
+        `${squad?.name || 'Squad'} stats`,
+        '',
+        `Verified matches: ${matches.length}`,
+        `Record: ${totals.wins}-${totals.draws}-${totals.losses}`,
+        `Goals scored: ${totals.goalsFor}`,
+        `Goals conceded: ${totals.goalsAgainst}`,
+        `Win rate: ${winRate}%`,
+      ].join('\n')
+    );
+  }
+
+  private async handleFixturesRequest(chatId: number): Promise<void> {
+    const linkedChat = await this.requireLinkedChat(chatId);
+    if (!linkedChat?.squadId) {
+      await this.bot.sendMessage(chatId, 'Link this chat from SportWarren Settings before requesting fixtures.');
+      return;
+    }
+
+    const challenges = await prisma.matchChallenge.findMany({
+      where: {
+        proposedDate: { gte: new Date() },
+        OR: [
+          { fromSquadId: linkedChat.squadId },
+          { toSquadId: linkedChat.squadId },
+        ],
+        status: { in: ['pending', 'accepted'] },
+      },
+      include: {
+        fromSquad: { select: { name: true } },
+        toSquad: { select: { name: true } },
+        pitch: { select: { name: true, location: true } },
+      },
+      orderBy: { proposedDate: 'asc' },
+      take: 3,
+    });
+
+    if (challenges.length === 0) {
+      await this.bot.sendMessage(chatId, 'No scheduled fixtures are currently stored for this squad.');
+      return;
+    }
+
+    const message = challenges.map((challenge) => {
+      const isHome = challenge.fromSquadId === linkedChat.squadId;
+      const opponent = isHome ? challenge.toSquad.name : challenge.fromSquad.name;
+      const pitch = challenge.pitch?.name || challenge.pitch?.location || 'Pitch TBD';
+
+      return [
+        challenge.proposedDate.toLocaleString(),
+        `vs ${opponent}`,
+        pitch,
+      ].join('\n');
+    }).join('\n\n');
+
+    await this.bot.sendMessage(chatId, `Upcoming fixtures\n\n${message}`);
+  }
+
+  private async handleInlineQuery(query: TelegramBot.InlineQuery): Promise<void> {
     const queryText = query.query.toLowerCase();
-    const results = [];
+    const results: TelegramBot.InlineQueryResultArticle[] = [];
 
     if (queryText.includes('log') || queryText.includes('match')) {
       results.push({
         type: 'article',
-        id: '1',
-        title: 'Log Match Result',
-        description: 'Quickly log a match result',
+        id: 'log-match',
+        title: 'Log match result',
+        description: 'Insert a SportWarren match log command',
         input_message_content: {
-          message_text: '/log ',
+          message_text: '/log 4-2 win vs Red Lions',
         },
       });
     }
@@ -224,84 +468,103 @@ export class TelegramService {
     if (queryText.includes('stats')) {
       results.push({
         type: 'article',
-        id: '2',
-        title: 'View Stats',
-        description: 'Check player or team statistics',
+        id: 'view-stats',
+        title: 'View squad stats',
+        description: 'Insert the SportWarren stats command',
         input_message_content: {
           message_text: '/stats',
         },
       });
     }
 
-    await this.bot.answerInlineQuery(query.id, results as any[]);
+    await this.bot.answerInlineQuery(query.id, results);
   }
 
-  private async handleCallbackQuery(query: any): Promise<void> {
+  private async handleCallbackQuery(query: TelegramBot.CallbackQuery): Promise<void> {
     const data = query.data;
     const chatId = query.message?.chat.id;
+    const messageId = query.message?.message_id;
 
-    if (!chatId) return;
-
-    if (data.startsWith('confirm_match_')) {
-      const matchData = JSON.parse(data.replace('confirm_match_', ''));
-      await this.processMatchLog(matchData, chatId, query.from);
-      await this.bot.editMessageText('✅ Match logged successfully!', {
-        chat_id: chatId,
-        message_id: query.message?.message_id,
-      });
-    } else if (data === 'cancel_match') {
-      await this.bot.editMessageText('❌ Match logging cancelled.', {
-        chat_id: chatId,
-        message_id: query.message?.message_id,
-      });
-    }
-
-    await this.bot.answerCallbackQuery(query.id);
-  }
-
-  private parseMatchResult(text: string): any | null {
-    // Same parsing logic as WhatsApp service
-    const patterns = [
-      /(\d+)-(\d+)\s+(win|won)\s+(?:vs|against)\s+(.+)/i,
-      /(?:lost|lose)\s+(\d+)-(\d+)\s+(?:to|vs|against)\s+(.+)/i,
-      /(?:drew|draw)\s+(\d+)-(\d+)\s+(?:with|vs|against)\s+(.+)/i,
-    ];
-
-    for (const pattern of patterns) {
-      const match = text.match(pattern);
-      if (match) {
-        const [, score1, score2, result, opponent] = match;
-        return {
-          homeScore: parseInt(score1),
-          awayScore: parseInt(score2),
-          result: result.toLowerCase(),
-          opponent: opponent.trim(),
-          isHome: !result.toLowerCase().includes('lost'),
-        };
+    if (!data || !chatId || !messageId) {
+      if (query.id) {
+        await this.bot.answerCallbackQuery(query.id);
       }
+      return;
     }
 
-    return null;
-  }
+    this.pruneExpiredDrafts();
 
-  private async processMatchLog(matchData: any, chatId: number, _user: any): Promise<void> {
-    // Send to main application system
-    console.log('Processing match log from Telegram:', { matchData, chatId, user: _user });
+    const [action, draftId] = data.split(':');
+    const draft = draftId ? this.pendingMatchDrafts.get(draftId) : undefined;
+
+    if (!draft || draft.chatId !== chatId) {
+      await this.bot.answerCallbackQuery(query.id, {
+        text: 'That draft expired. Send /log again.',
+        show_alert: false,
+      });
+      return;
+    }
+
+    if (action === 'cancel_match') {
+      this.pendingMatchDrafts.delete(draft.id);
+      await this.bot.editMessageText('Match logging cancelled.', {
+        chat_id: chatId,
+        message_id: messageId,
+      });
+      await this.bot.answerCallbackQuery(query.id);
+      return;
+    }
+
+    if (action !== 'confirm_match') {
+      await this.bot.answerCallbackQuery(query.id);
+      return;
+    }
+
+    try {
+      const match = await this.processMatchLog(draft);
+      await this.bot.editMessageText(
+        `Match submitted successfully.\n\nMatch ID: ${match.id}\nOpponent: ${match.opponentName}\nStatus: pending verification`,
+        {
+          chat_id: chatId,
+          message_id: messageId,
+        }
+      );
+      await this.bot.answerCallbackQuery(query.id, { text: 'Match submitted' });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'We could not submit that match.';
+      await this.bot.editMessageText(`Telegram match logging failed.\n\n${message}`, {
+        chat_id: chatId,
+        message_id: messageId,
+      });
+      await this.bot.answerCallbackQuery(query.id, {
+        text: 'Submission failed',
+        show_alert: false,
+      });
+    }
   }
 
   async sendMatchNotification(chatId: string, message: string): Promise<void> {
+    const numericChatId = Number.parseInt(chatId, 10);
+    if (Number.isNaN(numericChatId)) {
+      console.warn('Invalid Telegram chat ID:', chatId);
+      return;
+    }
+
     try {
-      await this.bot.sendMessage(parseInt(chatId), message);
+      await this.bot.sendMessage(numericChatId, message);
     } catch (error) {
       console.error('Failed to send Telegram notification:', error);
     }
   }
 
   async sendMatchUpdate(chatId: string, update: any): Promise<void> {
-    const message = `⚽ **Live Update**\n\n` +
-      `${update.homeTeam} ${update.homeScore} - ${update.awayScore} ${update.awayTeam}\n` +
-      `${update.event}\n` +
-      `⏱️ ${update.minute}'`;
+    const message = [
+      'Live update',
+      '',
+      `${update.homeTeam} ${update.homeScore} - ${update.awayScore} ${update.awayTeam}`,
+      update.event || 'No event details provided.',
+      update.minute ? `${update.minute}'` : 'Minute unavailable',
+    ].join('\n');
 
     await this.sendMatchNotification(chatId, message);
   }

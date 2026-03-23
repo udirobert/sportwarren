@@ -3,7 +3,7 @@
  * Calculates market value based on attributes, form, and potential
  */
 
-import { PlayerAttributes, FormRating } from '@/types';
+import { PlayerAttributes } from '@/types';
 import { MARKET_CONSTANTS } from '../match/constants';
 import { calculateForm, getFormArrow } from '../match/xp-calculator';
 
