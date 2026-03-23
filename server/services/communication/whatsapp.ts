@@ -3,10 +3,21 @@ const { Client, LocalAuth } = pkg;
 import type { Client as ClientType, Message } from 'whatsapp-web.js';
 
 export class WhatsAppService {
-  private client: ClientType;
+  private client: ClientType | null = null;
   private isReady = false;
 
-  constructor() {
+  private isEnabled(): boolean {
+    const value = process.env.ENABLE_WHATSAPP;
+    if (!value) return false;
+    return ['1', 'true', 'yes', 'on'].includes(value.trim().toLowerCase());
+  }
+
+  async initialize(): Promise<void> {
+    if (!this.isEnabled()) {
+      console.log('ℹ️ WhatsApp disabled (set ENABLE_WHATSAPP=true to enable)');
+      return;
+    }
+
     this.client = new Client({
       authStrategy: new LocalAuth(),
       puppeteer: {
@@ -16,12 +27,20 @@ export class WhatsAppService {
     });
 
     this.setupEventHandlers();
+
+    try {
+      await this.client.initialize();
+    } catch (error) {
+      console.error('⚠️ WhatsApp client initialization failed (non-fatal):', error);
+      this.client = null;
+    }
   }
 
   private setupEventHandlers(): void {
+    if (!this.client) return;
+
     this.client.on('qr', (_qr) => {
       console.log('📱 WhatsApp QR Code generated. Scan with your phone.');
-      // In production, you'd display this QR code for admin to scan
     });
 
     this.client.on('ready', () => {
@@ -44,24 +63,13 @@ export class WhatsAppService {
     });
   }
 
-  async initialize(): Promise<void> {
-    try {
-      await this.client.initialize();
-    } catch (error) {
-      console.error('⚠️ WhatsApp client initialization failed (non-fatal):', error);
-      // Don't throw — WhatsApp is not critical for the API to run
-    }
-  }
-
   private async handleIncomingMessage(message: Message): Promise<void> {
     const chat = await message.getChat();
     const contact = await message.getContact();
 
-    // Parse commands
     if (message.body.startsWith('/')) {
       await this.handleCommand(message, chat, contact);
     } else {
-      // Parse natural language for match updates
       await this.parseMatchUpdate(message, chat);
     }
   }
@@ -89,12 +97,10 @@ export class WhatsAppService {
 
   private async handleLogCommand(args: string[], chat: any, contact: any): Promise<void> {
     try {
-      // Parse: /log match 4-2 win vs Red Lions
       const matchText = args.join(' ');
       const matchData = this.parseMatchResult(matchText);
 
       if (matchData) {
-        // Send to main system for processing
         await this.processMatchLog(matchData, chat.id._serialized, contact.number);
         await chat.sendMessage(`✅ Match logged: ${matchData.result} vs ${matchData.opponent}`);
       } else {
@@ -107,7 +113,6 @@ export class WhatsAppService {
   }
 
   private async handleScoreCommand(args: string[], chat: any): Promise<void> {
-    // /score +1 home or /score +1 away
     const [action, team] = args;
 
     if (action && (action.startsWith('+') || action.startsWith('-'))) {
@@ -118,21 +123,14 @@ export class WhatsAppService {
   }
 
   private async handleLineupCommand(_args: string[], chat: any): Promise<void> {
-    // Placeholder for lineup logic
     await chat.sendMessage('📋 Lineup management logic would go here');
   }
 
   private async handleMotmCommand(_args: string[], chat: any): Promise<void> {
-    // Placeholder for MOTM logic
     await chat.sendMessage('🏆 MOTM voting would go here');
   }
 
   private parseMatchResult(text: string): any | null {
-    // Parse various formats:
-    // "4-2 win vs Red Lions"
-    // "lost 1-3 to Sunday Legends"
-    // "drew 2-2 with Park Rangers"
-
     const patterns = [
       /(\d+)-(\d+)\s+(win|won)\s+(?:vs|against)\s+(.+)/i,
       /(?:lost|lose)\s+(\d+)-(\d+)\s+(?:to|vs|against)\s+(.+)/i,
@@ -157,7 +155,7 @@ export class WhatsAppService {
   }
 
   async sendMatchReminder(chatId: string, matchDetails: any): Promise<void> {
-    if (!this.isReady) return;
+    if (!this.isReady || !this.client) return;
 
     const message = `🏆 **Match Reminder**\n\n` +
       `📅 ${matchDetails.date} at ${matchDetails.time}\n` +
@@ -176,7 +174,7 @@ export class WhatsAppService {
   }
 
   async sendMatchUpdate(chatId: string, update: any): Promise<void> {
-    if (!this.isReady) return;
+    if (!this.isReady || !this.client) return;
 
     const message = `⚽ **Live Update**\n\n` +
       `${update.homeTeam} ${update.homeScore} - ${update.awayScore} ${update.awayTeam}\n` +
@@ -191,18 +189,14 @@ export class WhatsAppService {
   }
 
   private async processMatchLog(matchData: any, chatId: string, userPhone: string): Promise<void> {
-    // Send to main application via event system
-    // This would integrate with your main GraphQL/Socket system
     console.log('Processing match log from WhatsApp:', { matchData, chatId, userPhone });
   }
 
   private async updateLiveScore(chatId: string, team: string, change: number): Promise<void> {
-    // Update live score in main system
     console.log('Updating live score:', { chatId, team, change });
   }
 
   private async parseMatchUpdate(message: Message, chat: any): Promise<void> {
-    // Basic natural language parsing for match updates (e.g., "Goal for home team!")
     const body = message.body.toLowerCase();
     if (body.includes('goal') || body.includes('scored')) {
       await chat.sendMessage('🏆 Event detected: Goal! Please confirm details.');
