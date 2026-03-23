@@ -185,7 +185,9 @@ export function TelegramTreasuryMiniApp() {
       setSuccessMessage(
         data.duplicate
           ? 'That TON top-up was already recorded in SportWarren.'
-          : 'TON top-up submitted. It is now visible as pending treasury reconciliation.'
+          : data.transaction?.verified
+            ? 'TON top-up confirmed on-chain and applied to the squad treasury.'
+            : 'TON top-up submitted. It is now visible as pending treasury reconciliation.'
       );
 
       const contextResponse = await fetch(`/api/telegram/mini-app/context?token=${encodeURIComponent(token)}`, {

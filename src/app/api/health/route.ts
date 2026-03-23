@@ -28,6 +28,7 @@ export async function GET() {
     'NEXT_PUBLIC_YELLOW_PLATFORM_WALLET', // Match fee payment rail
     'TELEGRAM_BOT_USERNAME', // Telegram deep links + Mini App launch
     'TON_TREASURY_WALLET_ADDRESS', // TON treasury top-ups
+    'TONCENTER_API_KEY', // TON on-chain verification for Mini App top-ups
     'KITE_API_KEY',
   ];
 
