@@ -189,7 +189,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
               </div>
               <div className="text-right">
                 <span className="text-[8px] font-black text-white uppercase tracking-[0.2em]">Build Your Legend</span>
-                <div className="text-[6px] text-gray-600 dark:text-gray-400 uppercase tracking-widest">sportwarren.app</div>
+                <div className="text-[6px] text-gray-600 dark:text-gray-400 uppercase tracking-widest">sportwarren.com</div>
               </div>
             </div>
           </div>
