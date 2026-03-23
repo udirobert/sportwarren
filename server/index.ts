@@ -66,7 +66,11 @@ async function startServer() {
   const eventStreamService = new EventStreamService();
 
   // Initialize advanced services (each independently so one failure doesn't block others)
-  await communicationBridge.initialize();
+  try {
+    await communicationBridge.initialize();
+  } catch (error) {
+    console.warn('⚠️ Communication bridge initialization failed (non-fatal):', (error as Error).message);
+  }
 
   if (isEnabled(process.env.ENABLE_EVENT_STREAMING)) {
     try {
