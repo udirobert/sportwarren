@@ -1,12 +1,12 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { randomBytes } from 'crypto';
 import algosdk from 'algosdk';
 import { isAddress, type Address } from 'viem';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { chainlinkService } from '../../../server/services/blockchain/chainlink';
 import { yellowService } from '../../../server/services/blockchain/yellow';
 import { finalizeMatchFeeSettlement } from '../../../server/services/blockchain/yellow-recovery';
+import { createPendingMatchSubmission } from '../../../server/services/match-submission';
 import { postTreasuryLedgerEntryOnce, distributeMatchRewards } from '../../../server/services/economy/treasury-ledger';
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
 import { simulateMatch, calculateWinProbabilities } from '../../lib/match/simulation-engine';
@@ -161,41 +161,20 @@ export const matchRouter = createTRPCRouter({
           }
         }
 
-        const shareSlug = randomBytes(4).toString('base64url');
-
-        const match = await ctx.prisma.match.create({
-          data: {
-            homeSquadId: input.homeSquadId,
-            awaySquadId: input.awaySquadId,
-            homeScore: input.homeScore,
-            awayScore: input.awayScore,
-            matchDate: input.matchDate,
-            submittedBy: ctx.userId!,
-            status: 'pending',
-            shareSlug,
-            latitude: input.latitude,
-            longitude: input.longitude,
-            weatherVerified,
-            locationVerified,
-            verificationDetails: (input as any).verificationDetails || null,
-            agentInsights: (input as any).agentInsights || null,
-          } as any,
-          include: {
-            homeSquad: true,
-            awaySquad: true,
-          },
-        });
-
-        // Auto-verify the submitter's own result
-        await ctx.prisma.matchVerification.create({
-          data: {
-            matchId: match.id,
-            verifierId: ctx.userId!,
-            verified: true,
-            homeScore: input.homeScore,
-            awayScore: input.awayScore,
-            trustTier: 'gold',
-          },
+        const match = await createPendingMatchSubmission({
+          prisma: ctx.prisma,
+          homeSquadId: input.homeSquadId,
+          awaySquadId: input.awaySquadId,
+          homeScore: input.homeScore,
+          awayScore: input.awayScore,
+          matchDate: input.matchDate,
+          submittedBy: ctx.userId!,
+          latitude: input.latitude,
+          longitude: input.longitude,
+          weatherVerified,
+          locationVerified,
+          verificationDetails: (input as any).verificationDetails || null,
+          agentInsights: (input as any).agentInsights || null,
         });
 
         const matchFeeAmount = yellowService.getMatchFeeAmount();
@@ -263,7 +242,6 @@ export const matchRouter = createTRPCRouter({
         // Return with CRE result if we have it
         return {
           ...match,
-          shareSlug,
           creResult: (match as any).verificationDetails,
         };
       } catch (error) {

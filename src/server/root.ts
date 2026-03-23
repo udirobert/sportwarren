@@ -7,6 +7,7 @@ import { authRouter } from './routers/auth';
 import { agentRouter } from './routers/agent';
 import { memoryRouter } from './routers/memory';
 import { lensRouter } from './routers/lens';
+import { communicationRouter } from './routers/communication';
 
 export const appRouter = createTRPCRouter({
   match: matchRouter,
@@ -17,6 +18,7 @@ export const appRouter = createTRPCRouter({
   agent: agentRouter,
   memory: memoryRouter,
   lens: lensRouter,
+  communication: communicationRouter,
 });
 
 export type AppRouter = typeof appRouter;
