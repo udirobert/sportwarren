@@ -5,6 +5,7 @@ import { getSquadMembership, isSquadLeader } from '@/server/services/permissions
 import { createPendingMatchSubmission } from '../match-submission.js';
 import {
   connectTelegramChatByToken,
+  createTelegramMiniAppSession,
   extractTelegramConnectToken,
   findTelegramConnectionByChatId,
   isTelegramConnectToken,
@@ -49,6 +50,7 @@ export class TelegramService {
       { command: 'log', description: 'Submit a match result for verification' },
       { command: 'stats', description: 'View real player or squad stats' },
       { command: 'fixtures', description: 'View scheduled squad fixtures' },
+      { command: 'treasury', description: 'Open the Telegram Mini App for TON treasury top-ups' },
       { command: 'help', description: 'Show Telegram commands and linking help' },
     ]).catch((error: Error) => {
       console.warn('Failed to register Telegram commands:', error.message);
@@ -95,6 +97,10 @@ export class TelegramService {
       await this.handleFixturesRequest(msg.chat.id);
     });
 
+    this.bot.onText(/\/treasury/, async (msg) => {
+      await this.handleTreasuryMiniAppRequest(msg.chat.id);
+    });
+
     this.bot.on('inline_query', async (query) => {
       await this.handleInlineQuery(query);
     });
@@ -115,11 +121,46 @@ export class TelegramService {
       '/stats',
       '/stats Marcus',
       '/fixtures',
+      '/treasury',
       '/help',
       '',
       'Linking:',
       'Open SportWarren Settings > Connections > Telegram and use the generated link.',
     ].join('\n');
+  }
+
+  private async handleTreasuryMiniAppRequest(chatId: number): Promise<void> {
+    const linkedChat = await this.requireLinkedChat(chatId);
+    if (!linkedChat?.squadId) {
+      await this.bot.sendMessage(chatId, 'This chat is not linked to a SportWarren squad yet. Link Telegram from Settings before opening the treasury Mini App.');
+      return;
+    }
+
+    try {
+      const session = await createTelegramMiniAppSession(prisma, linkedChat.id);
+      const keyboard = {
+        inline_keyboard: [[
+          {
+            text: 'Open Treasury Mini App',
+            web_app: { url: session.url },
+          },
+        ]],
+      };
+
+      await this.bot.sendMessage(
+        chatId,
+        [
+          `${linkedChat.squad?.name || 'Squad'} treasury`,
+          '',
+          'Open the Telegram Mini App to connect a TON wallet and submit a squad treasury top-up.',
+          'Top-ups are recorded as pending until they are reconciled on-chain.',
+        ].join('\n'),
+        { reply_markup: keyboard }
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'The Telegram Mini App is not configured on this deployment.';
+      await this.bot.sendMessage(chatId, message);
+    }
   }
 
   private pruneExpiredDrafts(): void {

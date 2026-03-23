@@ -258,6 +258,11 @@ export interface Treasury {
     sessionId?: string | null;
     settledBalance: number;
   };
+  tonRail?: {
+    enabled: boolean;
+    walletAddress?: string | null;
+    pendingTopUps: number;
+  };
 }
 
 export interface TreasuryTransaction {
@@ -265,6 +270,7 @@ export interface TreasuryTransaction {
   type: 'income' | 'expense';
   category:
     | 'deposit'
+    | 'deposit_pending'
     | 'match_fee'
     | 'other'
     | 'sponsor'
@@ -280,6 +286,7 @@ export interface TreasuryTransaction {
   timestamp: Date;
   verified: boolean;
   txHash?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface Tactics {

@@ -22,6 +22,7 @@ interface PostTreasuryLedgerEntryInput {
   description?: string | null;
   verified?: boolean;
   txHash?: string | null;
+  metadata?: unknown;
 }
 
 interface PostTreasuryLedgerEntryResult {
@@ -33,9 +34,9 @@ interface PostTreasuryLedgerEntryResult {
     category: string;
     amount: number;
     description: string | null;
-    txHash: string | null;
-    verified: boolean;
-    createdAt: Date;
+  txHash: string | null;
+  verified: boolean;
+  createdAt: Date;
   };
   duplicate?: boolean;
 }
@@ -72,6 +73,7 @@ export async function postTreasuryLedgerEntry({
   description,
   verified = true,
   txHash,
+  metadata,
 }: PostTreasuryLedgerEntryInput) {
   const treasury = await ensureSquadTreasury(prisma, squadId);
 
@@ -97,6 +99,7 @@ export async function postTreasuryLedgerEntry({
         description: description ?? undefined,
         verified,
         txHash: txHash ?? undefined,
+        metadata: metadata ?? undefined,
       },
     }),
   ]);
@@ -135,6 +138,69 @@ export async function postTreasuryLedgerEntryOnce(
   }
 
   return postTreasuryLedgerEntry(input);
+}
+
+interface RecordPendingTreasuryActivityInput {
+  prisma: PrismaClient;
+  squadId: string;
+  type: 'income' | 'expense';
+  category: string;
+  amount: number;
+  description?: string | null;
+  txHash?: string | null;
+  metadata?: unknown;
+}
+
+export async function recordPendingTreasuryActivity({
+  prisma,
+  squadId,
+  type,
+  category,
+  amount,
+  description,
+  txHash,
+  metadata,
+}: RecordPendingTreasuryActivityInput) {
+  const treasury = await ensureSquadTreasury(prisma, squadId);
+
+  const existing = txHash
+    ? await prisma.treasuryTransaction.findFirst({
+        where: {
+          treasuryId: treasury.id,
+          txHash,
+          category,
+          type,
+          amount,
+        },
+      })
+    : null;
+
+  if (existing) {
+    return {
+      treasury,
+      transaction: existing,
+      duplicate: true,
+    };
+  }
+
+  const transaction = await prisma.treasuryTransaction.create({
+    data: {
+      treasuryId: treasury.id,
+      type,
+      category,
+      amount,
+      description: description ?? undefined,
+      txHash: txHash ?? undefined,
+      verified: false,
+      metadata: metadata ?? undefined,
+    },
+  });
+
+  return {
+    treasury,
+    transaction,
+    duplicate: false,
+  };
 }
 
 /**

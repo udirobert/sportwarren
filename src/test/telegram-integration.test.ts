@@ -2,19 +2,28 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { parseTelegramMatchResult } from '../../server/services/communication/telegram-match-parser';
 import {
   buildTelegramDeepLink,
+  buildTelegramMiniAppUrl,
   extractTelegramConnectToken,
   isTelegramConnectToken,
 } from '../../server/services/communication/platform-connections';
+import { buildTonCommentPayload, toTonNanoString } from '../lib/ton/payload';
 
 const originalTelegramBotUsername = process.env.TELEGRAM_BOT_USERNAME;
+const originalClientUrl = process.env.NEXT_PUBLIC_CLIENT_URL;
 
 afterEach(() => {
   if (originalTelegramBotUsername === undefined) {
     delete process.env.TELEGRAM_BOT_USERNAME;
+  } else {
+    process.env.TELEGRAM_BOT_USERNAME = originalTelegramBotUsername;
+  }
+
+  if (originalClientUrl === undefined) {
+    delete process.env.NEXT_PUBLIC_CLIENT_URL;
     return;
   }
 
-  process.env.TELEGRAM_BOT_USERNAME = originalTelegramBotUsername;
+  process.env.NEXT_PUBLIC_CLIENT_URL = originalClientUrl;
 });
 
 describe('telegram match parsing', () => {
@@ -57,5 +66,21 @@ describe('telegram connection deep links', () => {
     expect(isTelegramConnectToken('connect_deadbeef')).toBe(true);
     expect(extractTelegramConnectToken('connect_deadbeef')).toBe('deadbeef');
     expect(isTelegramConnectToken('deadbeef')).toBe(false);
+  });
+
+  it('builds a Telegram mini app url from the configured client url', () => {
+    process.env.NEXT_PUBLIC_CLIENT_URL = 'https://sportwarren.app';
+
+    expect(buildTelegramMiniAppUrl('launch123')).toBe('https://sportwarren.app/telegram/mini-app?token=launch123');
+  });
+});
+
+describe('ton payload helpers', () => {
+  it('encodes a text comment payload to base64 boc', () => {
+    expect(buildTonCommentPayload('SportWarren top-up')).toMatch(/^[A-Za-z0-9+/=]+$/);
+  });
+
+  it('converts whole TON values into nanotons', () => {
+    expect(toTonNanoString(2)).toBe('2000000000');
   });
 });

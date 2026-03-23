@@ -128,6 +128,26 @@ export const Treasury: React.FC<TreasuryProps> = ({
         />
       )}
 
+      {treasury.tonRail?.enabled && (
+        <Card>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
+            <Wallet className="w-5 h-5 mr-2 text-cyan-600" />
+            TON Vault
+          </h3>
+          <p className="text-sm text-gray-700 break-all">
+            {treasury.tonRail.walletAddress}
+          </p>
+          <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
+            Telegram Mini App top-ups land here first and appear in the ledger as pending until treasury reconciliation.
+          </p>
+          {treasury.tonRail.pendingTopUps > 0 && (
+            <p className="text-xs font-semibold text-amber-600 mt-2">
+              {treasury.tonRail.pendingTopUps} TON top-up{treasury.tonRail.pendingTopUps === 1 ? '' : 's'} pending review
+            </p>
+          )}
+        </Card>
+      )}
+
       {/* Budget Allowances */}
       <Card>
         <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
@@ -291,6 +311,7 @@ const TransactionRow: React.FC<TransactionRowProps> = ({ transaction, currency }
   const isIncome = transaction.type === 'income';
   
   const categoryLabels: Record<string, string> = {
+    deposit_pending: 'TON Top-Up Pending',
     match_fee: 'Match Fee',
     sponsor: 'Sponsorship',
     prize: 'Prize Money',
@@ -323,9 +344,9 @@ const TransactionRow: React.FC<TransactionRowProps> = ({ transaction, currency }
         <p className={`font-bold ${isIncome ? 'text-green-600' : 'text-red-600'}`}>
           {isIncome ? '+' : '-'}{transaction.amount.toLocaleString()} {currency}
         </p>
-        {transaction.verified && (
-          <p className="text-xs text-green-600">✓ Verified</p>
-        )}
+        <p className={`text-xs ${transaction.verified ? 'text-green-600' : 'text-amber-600'}`}>
+          {transaction.verified ? '✓ Verified' : 'Pending'}
+        </p>
       </div>
     </div>
   );

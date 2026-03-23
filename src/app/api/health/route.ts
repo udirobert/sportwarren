@@ -26,6 +26,8 @@ export async function GET() {
     'YELLOW_APP_ID',       // Match fee payment rail
     'YELLOW_API_KEY',      // Match fee payment rail
     'NEXT_PUBLIC_YELLOW_PLATFORM_WALLET', // Match fee payment rail
+    'TELEGRAM_BOT_USERNAME', // Telegram deep links + Mini App launch
+    'TON_TREASURY_WALLET_ADDRESS', // TON treasury top-ups
     'KITE_API_KEY',
   ];
 
@@ -68,4 +70,3 @@ export async function GET() {
     checks,
   }, { status: httpStatus });
 }
-
