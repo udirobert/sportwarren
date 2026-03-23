@@ -23,6 +23,8 @@ interface UseTreasuryReturn {
   loading: boolean;
   deposit: (amount: number, description?: string) => Promise<void>;
   withdraw: (amount: number, reason: string, category: 'wages' | 'transfers' | 'facilities' | 'other') => Promise<void>;
+  setTonWalletAddress: (walletAddress: string | null) => Promise<void>;
+  reconcilePendingTopUp: (transactionId: string, settledTxHash?: string) => Promise<void>;
   refreshTreasury: () => Promise<void>;
 }
 
@@ -55,6 +57,22 @@ export function useTreasury(squadId?: string): UseTreasuryReturn {
   });
 
   const withdrawMutation = trpc.squad.withdrawFromTreasury.useMutation({
+    onSuccess: () => {
+      if (squadId) {
+        utils.squad.getTreasury.invalidate({ squadId });
+      }
+    },
+  });
+
+  const setTonWalletAddressMutation = trpc.squad.setTonTreasuryWalletAddress.useMutation({
+    onSuccess: () => {
+      if (squadId) {
+        utils.squad.getTreasury.invalidate({ squadId });
+      }
+    },
+  });
+
+  const reconcilePendingTopUpMutation = trpc.squad.reconcileTonTopUp.useMutation({
     onSuccess: () => {
       if (squadId) {
         utils.squad.getTreasury.invalidate({ squadId });
@@ -187,6 +205,25 @@ export function useTreasury(squadId?: string): UseTreasuryReturn {
     }
   }, [squadId, utils]);
 
+  const setTonWalletAddress = useCallback(async (walletAddress: string | null) => {
+    if (!squadId) return;
+
+    await setTonWalletAddressMutation.mutateAsync({
+      squadId,
+      walletAddress,
+    });
+  }, [setTonWalletAddressMutation, squadId]);
+
+  const reconcilePendingTopUp = useCallback(async (transactionId: string, settledTxHash?: string) => {
+    if (!squadId) return;
+
+    await reconcilePendingTopUpMutation.mutateAsync({
+      squadId,
+      transactionId,
+      settledTxHash,
+    });
+  }, [reconcilePendingTopUpMutation, squadId]);
+
   const treasury: Treasury | null = rawData
     ? {
         balance: rawData.balance || 0,
@@ -234,9 +271,13 @@ export function useTreasury(squadId?: string): UseTreasuryReturn {
       isLoading ||
       depositMutation.isPending ||
       withdrawMutation.isPending ||
+      setTonWalletAddressMutation.isPending ||
+      reconcilePendingTopUpMutation.isPending ||
       yellowSession.status === 'connecting',
     deposit,
     withdraw,
+    setTonWalletAddress,
+    reconcilePendingTopUp,
     refreshTreasury,
   };
 }

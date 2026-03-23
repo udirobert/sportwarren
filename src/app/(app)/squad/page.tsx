@@ -634,6 +634,8 @@ export default function SquadPage() {
           treasury={treasuryState.treasury ?? undefined}
           onDeposit={handleDeposit}
           onWithdraw={handleWithdraw}
+          onSetTonWalletAddress={treasuryState.setTonWalletAddress}
+          onReconcilePendingTopUp={treasuryState.reconcilePendingTopUp}
         />
       )}
 
