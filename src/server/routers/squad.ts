@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import { Address as TonAddress } from '@ton/core';
 import { isAddress, type Address } from 'viem';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { yellowService } from '../../../server/services/blockchain/yellow';
@@ -9,6 +10,8 @@ import {
   postTreasuryLedgerEntry,
   postTreasuryLedgerEntryOnce,
   TreasuryBalanceError,
+  TreasuryReconciliationError,
+  reconcilePendingTreasuryTransaction,
 } from '../../../server/services/economy/treasury-ledger';
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
 
@@ -38,6 +41,17 @@ const yellowTreasurySettlementSchema = z.object({
 function getDefaultTonTreasuryAddress(): string | null {
   const value = process.env.TON_TREASURY_WALLET_ADDRESS?.trim();
   return value || null;
+}
+
+function normalizeTonWalletAddress(value: string): string {
+  try {
+    return TonAddress.parse(value.trim()).toString({ urlSafe: true, bounceable: false });
+  } catch {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Enter a valid TON wallet address.',
+    });
+  }
 }
 
 async function getSquadLeaderWallets(prisma: any, squadId: string) {
@@ -628,6 +642,107 @@ export const squadRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to fetch treasury',
+          cause: error,
+        });
+      }
+    }),
+
+  setTonTreasuryWalletAddress: protectedProcedure
+    .input(z.object({
+      squadId: z.string().min(1, 'Squad ID is required'),
+      walletAddress: z.string().trim().min(1, 'TON wallet address is required').nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const member = await ctx.prisma.squadMember.findUnique({
+          where: {
+            squadId_userId: {
+              squadId: input.squadId,
+              userId: ctx.userId!,
+            },
+          },
+        });
+
+        if (!member || !isSquadLeader(member.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only captain or vice-captain can update the squad TON vault.',
+          });
+        }
+
+        const treasury = await ensureSquadTreasury(ctx.prisma, input.squadId);
+        const normalizedAddress = input.walletAddress
+          ? normalizeTonWalletAddress(input.walletAddress)
+          : null;
+
+        const updatedTreasury = await ctx.prisma.squadTreasury.update({
+          where: { id: treasury.id },
+          data: {
+            tonWalletAddress: normalizedAddress,
+          },
+        });
+
+        return {
+          walletAddress: updatedTreasury.tonWalletAddress,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update the squad TON vault.',
+          cause: error,
+        });
+      }
+    }),
+
+  reconcileTonTopUp: protectedProcedure
+    .input(z.object({
+      squadId: z.string().min(1, 'Squad ID is required'),
+      transactionId: z.string().min(1, 'Transaction ID is required'),
+      settledTxHash: z.string().trim().min(1).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const member = await ctx.prisma.squadMember.findUnique({
+          where: {
+            squadId_userId: {
+              squadId: input.squadId,
+              userId: ctx.userId!,
+            },
+          },
+        });
+
+        if (!member || !isSquadLeader(member.role)) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only captain or vice-captain can reconcile TON top-ups.',
+          });
+        }
+
+        return await reconcilePendingTreasuryTransaction({
+          prisma: ctx.prisma,
+          squadId: input.squadId,
+          transactionId: input.transactionId,
+          reconciledByUserId: ctx.userId!,
+          settledTxHash: input.settledTxHash,
+        });
+      } catch (error) {
+        if (error instanceof TreasuryReconciliationError) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: error.message,
+          });
+        }
+        if (error instanceof TRPCError) {
+          throw error;
+        }
+
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to reconcile the TON top-up.',
           cause: error,
         });
       }

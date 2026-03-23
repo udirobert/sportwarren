@@ -13,6 +13,13 @@ export class TreasuryBalanceError extends Error {
   }
 }
 
+export class TreasuryReconciliationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'TreasuryReconciliationError';
+  }
+}
+
 interface PostTreasuryLedgerEntryInput {
   prisma: PrismaClient;
   squadId: string;
@@ -34,11 +41,19 @@ interface PostTreasuryLedgerEntryResult {
     category: string;
     amount: number;
     description: string | null;
-  txHash: string | null;
-  verified: boolean;
-  createdAt: Date;
+    txHash: string | null;
+    verified: boolean;
+    createdAt: Date;
   };
   duplicate?: boolean;
+}
+
+function toMetadataRecord(metadata: unknown): Record<string, unknown> {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return {};
+  }
+
+  return metadata as Record<string, unknown>;
 }
 
 export async function ensureSquadTreasury(prisma: PrismaClient, squadId: string) {
@@ -199,6 +214,87 @@ export async function recordPendingTreasuryActivity({
   return {
     treasury,
     transaction,
+    duplicate: false,
+  };
+}
+
+interface ReconcilePendingTreasuryTransactionInput {
+  prisma: PrismaClient;
+  squadId: string;
+  transactionId: string;
+  reconciledByUserId: string;
+  settledTxHash?: string | null;
+}
+
+export async function reconcilePendingTreasuryTransaction({
+  prisma,
+  squadId,
+  transactionId,
+  reconciledByUserId,
+  settledTxHash,
+}: ReconcilePendingTreasuryTransactionInput) {
+  const pendingTransaction = await prisma.treasuryTransaction.findFirst({
+    where: {
+      id: transactionId,
+      treasury: {
+        squadId,
+      },
+    },
+    include: {
+      treasury: true,
+    },
+  });
+
+  if (!pendingTransaction) {
+    throw new TreasuryReconciliationError('Pending treasury transaction not found for this squad.');
+  }
+
+  if (pendingTransaction.type !== 'income' || pendingTransaction.category !== 'deposit_pending') {
+    throw new TreasuryReconciliationError('Only pending TON top-ups can be reconciled through this flow.');
+  }
+
+  if (pendingTransaction.verified) {
+    return {
+      treasury: pendingTransaction.treasury,
+      transaction: pendingTransaction,
+      duplicate: true,
+    };
+  }
+
+  const nextTxHash = settledTxHash?.trim() || pendingTransaction.txHash || undefined;
+  const nextMetadata = {
+    ...toMetadataRecord(pendingTransaction.metadata),
+    reconciledAt: new Date().toISOString(),
+    reconciledByUserId,
+    settledTxHash: nextTxHash ?? null,
+  };
+
+  const [updatedTreasury, , updatedTransaction] = await prisma.$transaction([
+    prisma.squadTreasury.update({
+      where: { id: pendingTransaction.treasuryId },
+      data: {
+        balance: { increment: pendingTransaction.amount },
+      },
+    }),
+    prisma.squad.update({
+      where: { id: squadId },
+      data: {
+        treasuryBalance: { increment: pendingTransaction.amount },
+      },
+    }),
+    prisma.treasuryTransaction.update({
+      where: { id: pendingTransaction.id },
+      data: {
+        verified: true,
+        txHash: nextTxHash,
+        metadata: nextMetadata,
+      },
+    }),
+  ]);
+
+  return {
+    treasury: updatedTreasury,
+    transaction: updatedTransaction,
     duplicate: false,
   };
 }
