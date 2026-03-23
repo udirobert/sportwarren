@@ -214,6 +214,8 @@ model PlatformConnection {
   platformUserId String?   @map("platform_user_id")
   groupAddress   String?   @map("group_address")
   linkToken      String?   @unique @map("link_token")
+  miniAppToken   String?   @unique @map("mini_app_token")
+  miniAppTokenExpiresAt DateTime? @map("mini_app_token_expires_at")
   linkedAt       DateTime? @map("linked_at")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -268,6 +270,7 @@ model SquadTreasury {
   // Balance in smallest unit (e.g., microALGO)
   balance Int @default(0)
   yellowSessionId String? @map("yellow_session_id")
+  tonWalletAddress String? @map("ton_wallet_address")
 
   // Budgets (JSON)
   budgets Json? // { wages, transfers, facilities }
@@ -302,6 +305,7 @@ model TreasuryTransaction {
   // Verification (blockchain tx hash)
   txHash   String? @map("tx_hash")
   verified Boolean @default(false)
+  metadata Json?
 
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")

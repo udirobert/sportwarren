@@ -1,9 +1,10 @@
 import { randomBytes } from 'crypto';
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 import type { PlatformConnection, PlatformConnections, PlatformType } from '@/types';
 
 const TELEGRAM_PLATFORM: PlatformType = 'telegram';
 const TELEGRAM_CONNECT_PREFIX = 'connect_';
+const TELEGRAM_MINI_APP_TTL_MS = 30 * 60 * 1000;
 
 interface PersistedPlatformConnection {
   platform: string;
@@ -13,11 +14,12 @@ interface PersistedPlatformConnection {
   chatId: string | null;
   groupAddress: string | null;
   linkToken: string | null;
+  miniAppToken: string | null;
   squadId: string | null;
   userId: string;
 }
 
-type PlatformStore = Pick<PrismaClient, 'platformConnection'>;
+type PlatformStore = PrismaClient | Prisma.TransactionClient;
 
 interface TelegramLinkContext {
   chatId: string;
@@ -32,6 +34,22 @@ function getTelegramBotUsername(): string | null {
   }
 
   return username.startsWith('@') ? username.slice(1) : username;
+}
+
+function getAppBaseUrl(): string | null {
+  const candidates = [
+    process.env.NEXT_PUBLIC_CLIENT_URL,
+    process.env.CLIENT_URL,
+  ];
+
+  for (const candidate of candidates) {
+    const trimmed = candidate?.trim();
+    if (trimmed) {
+      return trimmed.replace(/\/$/, '');
+    }
+  }
+
+  return null;
 }
 
 function toConnectionStatus(status: string): 'pending' | 'connected' {
@@ -65,6 +83,15 @@ export function buildTelegramDeepLink(token: string): string | null {
   }
 
   return `https://t.me/${botUsername}?start=${TELEGRAM_CONNECT_PREFIX}${token}`;
+}
+
+export function buildTelegramMiniAppUrl(token: string): string | null {
+  const baseUrl = getAppBaseUrl();
+  if (!baseUrl) {
+    return null;
+  }
+
+  return `${baseUrl}/telegram/mini-app?token=${encodeURIComponent(token)}`;
 }
 
 export function isTelegramConnectToken(value: string | undefined): value is string {
@@ -119,6 +146,8 @@ export async function createTelegramLinkSession(
       groupAddress: null,
       linkedAt: null,
       linkToken: token,
+      miniAppToken: null,
+      miniAppTokenExpiresAt: null,
     },
     create: {
       platform: TELEGRAM_PLATFORM,
@@ -157,6 +186,8 @@ export async function connectTelegramChatByToken(
       username: context.username ?? null,
       linkedAt: new Date(),
       linkToken: null,
+      miniAppToken: null,
+      miniAppTokenExpiresAt: null,
     },
   });
 
@@ -184,6 +215,59 @@ export async function disconnectPlatformConnection(
     if (prismaError.code !== 'P2025') {
       throw error;
     }
+  });
+}
+
+export async function createTelegramMiniAppSession(
+  prisma: PlatformStore,
+  connectionId: string
+): Promise<{ token: string; url: string }> {
+  const token = randomBytes(12).toString('hex');
+  const url = buildTelegramMiniAppUrl(token);
+
+  if (!url) {
+    throw new Error('NEXT_PUBLIC_CLIENT_URL or CLIENT_URL must be configured to launch the Telegram Mini App');
+  }
+
+  await prisma.platformConnection.update({
+    where: { id: connectionId },
+    data: {
+      miniAppToken: token,
+      miniAppTokenExpiresAt: new Date(Date.now() + TELEGRAM_MINI_APP_TTL_MS),
+    },
+  });
+
+  return { token, url };
+}
+
+export async function findTelegramMiniAppConnectionByToken(
+  prisma: PlatformStore,
+  token: string
+) {
+  return prisma.platformConnection.findFirst({
+    where: {
+      platform: TELEGRAM_PLATFORM,
+      status: 'connected',
+      miniAppToken: token,
+      miniAppTokenExpiresAt: {
+        gt: new Date(),
+      },
+    },
+    include: {
+      squad: {
+        include: {
+          treasury: {
+            include: {
+              transactions: {
+                orderBy: { createdAt: 'desc' },
+                take: 10,
+              },
+            },
+          },
+        },
+      },
+      user: true,
+    },
   });
 }
 
