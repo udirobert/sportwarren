@@ -35,6 +35,11 @@ const yellowTreasurySettlementSchema = z.object({
   settlementId: z.string().min(1).optional(),
 });
 
+function getDefaultTonTreasuryAddress(): string | null {
+  const value = process.env.TON_TREASURY_WALLET_ADDRESS?.trim();
+  return value || null;
+}
+
 async function getSquadLeaderWallets(prisma: any, squadId: string) {
   const leaders = await prisma.squadMember.findMany({
     where: {
@@ -610,6 +615,13 @@ export const squadRouter = createTRPCRouter({
             assetSymbol: yellowStatus.assetSymbol,
             sessionId: treasury?.yellowSessionId ?? null,
             settledBalance: treasury?.balance ?? 0,
+          },
+          tonRail: {
+            enabled: Boolean(treasury?.tonWalletAddress ?? getDefaultTonTreasuryAddress()),
+            walletAddress: treasury?.tonWalletAddress ?? getDefaultTonTreasuryAddress(),
+            pendingTopUps: (treasury?.transactions ?? []).filter(
+              (transaction) => transaction.category === 'deposit_pending' && !transaction.verified
+            ).length,
           },
         };
       } catch (error) {
