@@ -1,6 +1,10 @@
-import { createHash } from 'crypto';
 import type { PrismaClient } from '@prisma/client';
-import { ensureSquadTreasury, recordPendingTreasuryActivity } from '../economy/treasury-ledger';
+import {
+  ensureSquadTreasury,
+  recordPendingTreasuryActivity,
+  reconcilePendingTreasuryTransaction,
+} from '../economy/treasury-ledger';
+import { computeTonMessageHashFromBoc, verifyTonTopUpTransfer } from '../blockchain/ton';
 import { findTelegramMiniAppConnectionByToken } from './platform-connections';
 
 const TON_TOP_UP_PRESETS = [1, 2, 5, 10];
@@ -113,15 +117,15 @@ export async function recordTelegramTonTopUp(
     throw new Error('TON treasury top-ups are not configured for this squad yet.');
   }
 
-  const txHash = createHash('sha256').update(input.boc).digest('hex');
-  return recordPendingTreasuryActivity({
+  const messageHash = computeTonMessageHashFromBoc(input.boc);
+  const pendingResult = await recordPendingTreasuryActivity({
     prisma,
     squadId: connection.squadId,
     type: 'income',
     category: 'deposit_pending',
     amount: Math.round(input.amountTon),
     description: `TON top-up submitted via Telegram Mini App from ${formatWalletLabel(input.senderAddress)}`,
-    txHash,
+    txHash: messageHash,
     metadata: {
       source: 'telegram-mini-app',
       senderAddress: input.senderAddress,
@@ -129,8 +133,33 @@ export async function recordTelegramTonTopUp(
       amountTon: input.amountTon,
       comment: input.comment,
       boc: input.boc,
+      messageHash,
       linkedChatId: connection.chatId,
       platformConnectionId: connection.id,
     },
   });
+
+  try {
+    const verification = await verifyTonTopUpTransfer({
+      boc: input.boc,
+      expectedDestinationAddress: tonWalletAddress,
+      expectedAmountTon: input.amountTon,
+      expectedSenderAddress: input.senderAddress,
+    });
+
+    if (!verification.confirmed) {
+      return pendingResult;
+    }
+
+    return reconcilePendingTreasuryTransaction({
+      prisma,
+      squadId: connection.squadId,
+      transactionId: pendingResult.transaction.id,
+      reconciledByUserId: 'system:ton-verifier',
+      settledTxHash: verification.transactionHash ?? messageHash,
+    });
+  } catch (error) {
+    console.warn('TON top-up verification deferred:', error instanceof Error ? error.message : error);
+    return pendingResult;
+  }
 }
