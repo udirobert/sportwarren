@@ -324,7 +324,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
                               ...current,
                               [transaction.id]: event.target.value,
                             }))}
-                            placeholder="Optional on-chain tx hash"
+                            placeholder="Optional recipient transaction hash"
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                           />
                           <Button
@@ -511,8 +511,8 @@ function getTransactionMetadataString(transaction: TreasuryTransaction, key: str
 
 const TransactionRow: React.FC<TransactionRowProps> = ({ transaction, currency }) => {
   const isIncome = transaction.type === 'income';
-  
   const categoryLabels: Record<string, string> = {
+    deposit: 'Treasury Deposit',
     deposit_pending: 'TON Top-Up Pending',
     match_fee: 'Match Fee',
     sponsor: 'Sponsorship',
@@ -522,6 +522,10 @@ const TransactionRow: React.FC<TransactionRowProps> = ({ transaction, currency }
     transfer_out: 'Player Purchase',
     facility: 'Facility Cost',
   };
+  const categoryLabel =
+    transaction.category === 'deposit_pending' && transaction.verified
+      ? 'TON Top-Up'
+      : categoryLabels[transaction.category] || transaction.category;
 
   return (
     <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -538,7 +542,7 @@ const TransactionRow: React.FC<TransactionRowProps> = ({ transaction, currency }
         <div>
           <p className="font-medium text-gray-900">{transaction.description}</p>
           <p className="text-sm text-gray-600 dark:text-gray-300">
-            {categoryLabels[transaction.category] || transaction.category} • {transaction.timestamp.toLocaleDateString()}
+            {categoryLabel} • {transaction.timestamp.toLocaleDateString()}
           </p>
         </div>
       </div>

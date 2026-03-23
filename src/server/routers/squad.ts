@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { Address as TonAddress } from '@ton/core';
 import { isAddress, type Address } from 'viem';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
+import { verifyTonTopUpTransfer } from '../../../server/services/blockchain/ton';
 import { yellowService } from '../../../server/services/blockchain/yellow';
 import { managerInsightService } from '../../../server/services/ai/manager-insights';
 import {
@@ -52,6 +53,24 @@ function normalizeTonWalletAddress(value: string): string {
       message: 'Enter a valid TON wallet address.',
     });
   }
+}
+
+function getRecordValue(record: unknown, key: string): string | undefined {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    return undefined;
+  }
+
+  const value = (record as Record<string, unknown>)[key];
+  return typeof value === 'string' && value.trim() ? value : undefined;
+}
+
+function getRecordNumber(record: unknown, key: string): number | undefined {
+  if (!record || typeof record !== 'object' || Array.isArray(record)) {
+    return undefined;
+  }
+
+  const value = (record as Record<string, unknown>)[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
 async function getSquadLeaderWallets(prisma: any, squadId: string) {
@@ -722,12 +741,53 @@ export const squadRouter = createTRPCRouter({
           });
         }
 
+        const pendingTransaction = await ctx.prisma.treasuryTransaction.findFirst({
+          where: {
+            id: input.transactionId,
+            treasury: {
+              squadId: input.squadId,
+            },
+          },
+        });
+
+        if (!pendingTransaction) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Pending TON top-up not found for this squad.',
+          });
+        }
+
+        const metadata = pendingTransaction.metadata;
+        const depositAddress = getRecordValue(metadata, 'depositAddress') || getDefaultTonTreasuryAddress();
+        if (!depositAddress) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'This pending TON top-up is missing a squad TON vault address.',
+          });
+        }
+
+        const verification = await verifyTonTopUpTransfer({
+          boc: getRecordValue(metadata, 'boc'),
+          messageHash: getRecordValue(metadata, 'messageHash') || pendingTransaction.txHash || undefined,
+          transactionHash: input.settledTxHash,
+          expectedDestinationAddress: depositAddress,
+          expectedAmountTon: getRecordNumber(metadata, 'amountTon') ?? pendingTransaction.amount,
+          expectedSenderAddress: getRecordValue(metadata, 'senderAddress'),
+        });
+
+        if (!verification.confirmed) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'TON transfer is not confirmed on chain yet. Wait for confirmation and try again.',
+          });
+        }
+
         return await reconcilePendingTreasuryTransaction({
           prisma: ctx.prisma,
           squadId: input.squadId,
           transactionId: input.transactionId,
           reconciledByUserId: ctx.userId!,
-          settledTxHash: input.settledTxHash,
+          settledTxHash: verification.transactionHash ?? input.settledTxHash,
         });
       } catch (error) {
         if (error instanceof TreasuryReconciliationError) {
