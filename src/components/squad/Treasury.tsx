@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PaymentRailNotice } from '@/components/payments/PaymentRailNotice';
+import { useToast } from '@/contexts/ToastContext';
 import { 
   Wallet, ArrowUpRight, ArrowDownRight, Plus, Minus, 
   History, PieChart
@@ -13,19 +14,32 @@ import { MOCK_TREASURY } from '@/lib/mocks';
 
 interface TreasuryProps {
   treasury?: TreasuryType;
-  onDeposit?: (amount: number) => void;
-  onWithdraw?: (amount: number, reason: string) => void;
+  onDeposit?: (amount: number) => Promise<void>;
+  onWithdraw?: (amount: number, reason: string) => Promise<void>;
+  onSetTonWalletAddress?: (walletAddress: string | null) => Promise<void>;
+  onReconcilePendingTopUp?: (transactionId: string, settledTxHash?: string) => Promise<void>;
 }
 
 export const Treasury: React.FC<TreasuryProps> = ({
   treasury = MOCK_TREASURY,
   onDeposit,
   onWithdraw,
+  onSetTonWalletAddress,
+  onReconcilePendingTopUp,
 }) => {
+  const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState<'overview' | 'transactions' | 'deposit' | 'withdraw'>('overview');
   const [depositAmount, setDepositAmount] = useState('');
   const [withdrawAmount, setWithdrawAmount] = useState('');
   const [withdrawReason, setWithdrawReason] = useState('');
+  const [tonWalletAddress, setTonWalletAddress] = useState(treasury.tonRail?.walletAddress ?? '');
+  const [settlementReferences, setSettlementReferences] = useState<Record<string, string>>({});
+  const [savingTonWallet, setSavingTonWallet] = useState(false);
+  const [reconcilingTransactionId, setReconcilingTransactionId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setTonWalletAddress(treasury.tonRail?.walletAddress ?? '');
+  }, [treasury.tonRail?.walletAddress]);
 
   // Calculate stats
   const totalIncome = treasury.transactions
@@ -40,22 +54,109 @@ export const Treasury: React.FC<TreasuryProps> = ({
     .filter(t => t.type === 'income' && t.timestamp > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const handleDeposit = () => {
+  const pendingTonTopUps = treasury.transactions.filter(
+    (transaction) => transaction.category === 'deposit_pending' && !transaction.verified
+  );
+
+  const handleDeposit = async () => {
     const amount = parseInt(depositAmount);
     if (amount > 0) {
-      onDeposit?.(amount);
-      setDepositAmount('');
-      setActiveTab('overview');
+      try {
+        await onDeposit?.(amount);
+        setDepositAmount('');
+        setActiveTab('overview');
+        addToast({
+          title: 'Treasury',
+          message: 'Deposit recorded successfully.',
+          tone: 'success',
+        });
+      } catch (error) {
+        addToast({
+          title: 'Treasury',
+          message: error instanceof Error ? error.message : 'Deposit failed.',
+          tone: 'error',
+        });
+      }
     }
   };
 
-  const handleWithdraw = () => {
+  const handleWithdraw = async () => {
     const amount = parseInt(withdrawAmount);
     if (amount > 0 && withdrawReason.trim()) {
-      onWithdraw?.(amount, withdrawReason);
-      setWithdrawAmount('');
-      setWithdrawReason('');
-      setActiveTab('overview');
+      try {
+        await onWithdraw?.(amount, withdrawReason);
+        setWithdrawAmount('');
+        setWithdrawReason('');
+        setActiveTab('overview');
+        addToast({
+          title: 'Treasury',
+          message: 'Withdrawal recorded successfully.',
+          tone: 'success',
+        });
+      } catch (error) {
+        addToast({
+          title: 'Treasury',
+          message: error instanceof Error ? error.message : 'Withdrawal failed.',
+          tone: 'error',
+        });
+      }
+    }
+  };
+
+  const handleSaveTonWallet = async (nextWalletAddress = tonWalletAddress) => {
+    if (!onSetTonWalletAddress) {
+      return;
+    }
+
+    setSavingTonWallet(true);
+    try {
+      const trimmedWalletAddress = nextWalletAddress.trim();
+      await onSetTonWalletAddress(trimmedWalletAddress || null);
+      setTonWalletAddress(trimmedWalletAddress);
+      addToast({
+        title: 'TON Vault',
+        message: trimmedWalletAddress
+          ? 'Squad TON vault updated.'
+          : 'Squad TON vault cleared.',
+        tone: 'success',
+      });
+    } catch (error) {
+      addToast({
+        title: 'TON Vault',
+        message: error instanceof Error ? error.message : 'Failed to update the squad TON vault.',
+        tone: 'error',
+      });
+    } finally {
+      setSavingTonWallet(false);
+    }
+  };
+
+  const handleReconcilePendingTopUp = async (transactionId: string) => {
+    if (!onReconcilePendingTopUp) {
+      return;
+    }
+
+    setReconcilingTransactionId(transactionId);
+    try {
+      const settlementReference = settlementReferences[transactionId]?.trim();
+      await onReconcilePendingTopUp(transactionId, settlementReference || undefined);
+      setSettlementReferences((current) => ({
+        ...current,
+        [transactionId]: '',
+      }));
+      addToast({
+        title: 'TON Treasury',
+        message: 'Pending TON top-up reconciled into the squad treasury.',
+        tone: 'success',
+      });
+    } catch (error) {
+      addToast({
+        title: 'TON Treasury',
+        message: error instanceof Error ? error.message : 'Failed to reconcile the TON top-up.',
+        tone: 'error',
+      });
+    } finally {
+      setReconcilingTransactionId(null);
     }
   };
 
@@ -128,22 +229,118 @@ export const Treasury: React.FC<TreasuryProps> = ({
         />
       )}
 
-      {treasury.tonRail?.enabled && (
+      {(treasury.tonRail || onSetTonWalletAddress || onReconcilePendingTopUp) && (
         <Card>
           <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center">
             <Wallet className="w-5 h-5 mr-2 text-cyan-600" />
-            TON Vault
+            TON Treasury Rail
           </h3>
-          <p className="text-sm text-gray-700 break-all">
-            {treasury.tonRail.walletAddress}
-          </p>
           <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
-            Telegram Mini App top-ups land here first and appear in the ledger as pending until treasury reconciliation.
+            Telegram Mini App top-ups land here first and appear in the ledger as pending until a squad leader reconciles them into treasury balance.
           </p>
-          {treasury.tonRail.pendingTopUps > 0 && (
-            <p className="text-xs font-semibold text-amber-600 mt-2">
-              {treasury.tonRail.pendingTopUps} TON top-up{treasury.tonRail.pendingTopUps === 1 ? '' : 's'} pending review
-            </p>
+
+          <div className="mt-4 space-y-3">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Squad TON vault address
+              </label>
+              <input
+                type="text"
+                value={tonWalletAddress}
+                onChange={(event) => setTonWalletAddress(event.target.value)}
+                placeholder="Enter the squad's TON wallet address"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+              />
+              <p className="text-xs text-gray-600 dark:text-gray-300 mt-2 break-all">
+                Current vault: {treasury.tonRail?.walletAddress || 'Not configured yet'}
+              </p>
+            </div>
+
+            {onSetTonWalletAddress && (
+              <div className="flex flex-wrap gap-3">
+                <Button onClick={() => void handleSaveTonWallet()} loading={savingTonWallet}>
+                  Save TON Vault
+                </Button>
+                <Button
+                  onClick={() => {
+                    setTonWalletAddress('');
+                    void handleSaveTonWallet('');
+                  }}
+                  variant="outline"
+                  disabled={savingTonWallet || !treasury.tonRail?.walletAddress}
+                >
+                  Clear Vault
+                </Button>
+              </div>
+            )}
+
+            {!treasury.tonRail?.enabled && !treasury.tonRail?.walletAddress && (
+              <p className="text-xs font-semibold text-amber-600">
+                Set a TON vault address to enable Telegram Mini App top-ups for this squad.
+              </p>
+            )}
+          </div>
+
+          {pendingTonTopUps.length > 0 && (
+            <div className="mt-5 border-t border-gray-200 pt-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
+                Pending TON top-ups
+              </p>
+              <div className="mt-3 space-y-3">
+                {pendingTonTopUps.map((transaction) => {
+                  const senderAddress = getTransactionMetadataString(transaction, 'senderAddress');
+                  const settlementReference = settlementReferences[transaction.id] ?? '';
+
+                  return (
+                    <div key={transaction.id} className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-semibold text-gray-900">
+                            {transaction.amount.toLocaleString()} TON pending
+                          </p>
+                          <p className="text-sm text-gray-700 mt-1">
+                            {transaction.description}
+                          </p>
+                          <p className="text-xs text-gray-600 mt-1">
+                            {transaction.timestamp.toLocaleString()}
+                          </p>
+                          {senderAddress && (
+                            <p className="text-xs text-gray-600 mt-2 break-all">
+                              Sender: {senderAddress}
+                            </p>
+                          )}
+                        </div>
+                        <p className="text-xs font-semibold text-amber-700">
+                          Awaiting reconciliation
+                        </p>
+                      </div>
+
+                      {onReconcilePendingTopUp && (
+                        <div className="mt-3 flex flex-col gap-3 md:flex-row">
+                          <input
+                            type="text"
+                            value={settlementReference}
+                            onChange={(event) => setSettlementReferences((current) => ({
+                              ...current,
+                              [transaction.id]: event.target.value,
+                            }))}
+                            placeholder="Optional on-chain tx hash"
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg"
+                          />
+                          <Button
+                            onClick={() => void handleReconcilePendingTopUp(transaction.id)}
+                            loading={reconcilingTransactionId === transaction.id}
+                            className="md:min-w-[180px]"
+                          >
+                            Mark Reconciled
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           )}
         </Card>
       )}
@@ -305,6 +502,11 @@ export const Treasury: React.FC<TreasuryProps> = ({
 interface TransactionRowProps {
   transaction: TreasuryTransaction;
   currency: string;
+}
+
+function getTransactionMetadataString(transaction: TreasuryTransaction, key: string): string | null {
+  const value = transaction.metadata?.[key];
+  return typeof value === 'string' && value.trim() ? value : null;
 }
 
 const TransactionRow: React.FC<TransactionRowProps> = ({ transaction, currency }) => {
