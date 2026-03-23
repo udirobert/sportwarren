@@ -4,12 +4,11 @@ import React, { useEffect, useState } from 'react';
 import { Settings, Wallet, User, Bell, Link2, Check, X, Copy, LogOut, Trophy, Target, Star, MessageCircle, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useMySquads } from '@/hooks/squad/useSquad';
-import { useUserPreferences } from '@/hooks/useUserPreferences';
-import { useOnboarding } from '@/hooks/useOnboarding';
+import { usePlatformConnections } from '@/hooks/usePlatformConnections';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { WalletConnectModal } from '@/components/common/WalletConnectModal';
-import { PlatformType, NotificationPreferences, PLATFORM_CONFIG, PLATFORM_LIST } from '@/types';
+import { PlatformType, NotificationPreferences, PLATFORM_CONFIG } from '@/types';
 import { trackFeatureUsed } from '@/lib/analytics';
 
 const tabs = [
@@ -38,15 +37,20 @@ const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [showWalletModal, setShowWalletModal] = useState(false);
-  const { address, chain, balance, isGuest, hasAccount, hasWallet, loginMethod, authStatus, disconnect } = useWallet();
-  const { preferences, updateConnection, disconnectPlatform } = useUserPreferences();
-  const { completeChecklistItem } = useOnboarding();
+  const [connectionNotice, setConnectionNotice] = useState<string | null>(null);
+  const { address, chain, balance, isGuest, hasAccount, hasWallet, loginMethod, authStatus, disconnect, isVerified } = useWallet();
   const { memberships } = useMySquads();
   const [notifications, setNotifications] = useState<NotificationPreferences>(DEFAULT_NOTIFICATIONS);
   const [copied, setCopied] = useState(false);
-  const [celebrating, setCelebrating] = useState<PlatformType | null>(null);
 
-  const connections = preferences.connections ?? {};
+  const primarySquad = memberships?.[0]?.squad;
+  const {
+    connections,
+    createTelegramLink,
+    disconnectPlatform,
+    isCreatingTelegramLink,
+    isDisconnectingPlatform,
+  } = usePlatformConnections({ squadId: primarySquad?.id });
   const needsVerification = hasWallet && (authStatus.state === 'missing' || authStatus.state === 'expired');
   const hasYellowEligibleWallet = hasWallet && (chain === 'avalanche' || chain === 'lens');
   const accountStatusLabel = isGuest
@@ -126,18 +130,42 @@ export default function SettingsPage() {
     localStorage.setItem('sw_notification_prefs', JSON.stringify(updated));
   };
 
-  const handleConnect = (platform: PlatformType) => {
-    updateConnection(platform);
-    setCelebrating(platform);
-    trackFeatureUsed('channel_connect', { platform, total_connected: PLATFORM_LIST.filter(p => preferences.connections?.[p]?.connected || p === platform).length });
-    setTimeout(() => setCelebrating(null), 3000);
+  const handleConnect = async (platform: PlatformType) => {
+    if (platform !== 'telegram') {
+      return;
+    }
+
+    if (!primarySquad?.id) {
+      setConnectionNotice('Create or join a squad before linking Telegram.');
+      return;
+    }
+
+    if (!isVerified) {
+      setConnectionNotice('Verify your wallet before linking Telegram to a squad.');
+      return;
+    }
+
+    try {
+      const result = await createTelegramLink();
+      trackFeatureUsed('channel_connect', { platform, squad_id: primarySquad.id });
+      setConnectionNotice('Telegram link created. Open the bot and tap Start to finish linking this squad chat.');
+
+      if (typeof window !== 'undefined') {
+        window.open(result.botUrl, '_blank', 'noopener,noreferrer');
+      }
+    } catch (error) {
+      setConnectionNotice((error as Error).message || 'Telegram linking is unavailable right now.');
+    }
   };
 
-  const handleDisconnect = (platform: PlatformType) => {
-    disconnectPlatform(platform);
+  const handleDisconnect = async (platform: PlatformType) => {
+    try {
+      await disconnectPlatform(platform);
+      setConnectionNotice(`${PLATFORM_CONFIG[platform].name} was unlinked from this squad.`);
+    } catch (error) {
+      setConnectionNotice((error as Error).message || `Could not unlink ${PLATFORM_CONFIG[platform].name}.`);
+    }
   };
-
-  const primarySquad = memberships?.[0]?.squad;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 nav-spacer-top nav-spacer-bottom space-y-6">
@@ -332,17 +360,26 @@ export default function SettingsPage() {
           <Card>
             <div className="mb-4">
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">Connect Your Squad's Chat</h2>
-              <p className="text-sm text-gray-600 dark:text-gray-300">Link messaging platforms to share match updates with your squad automatically</p>
+              <p className="text-sm text-gray-600 dark:text-gray-300">Link real messaging channels to the active squad instead of storing local-only connection flags</p>
             </div>
+            {connectionNotice && (
+              <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
+                {connectionNotice}
+              </div>
+            )}
             <div className="space-y-3">
               {(Object.keys(PLATFORM_CONFIG) as PlatformType[]).map(platform => {
                 const info = PLATFORM_CONFIG[platform];
                 const connection = connections[platform];
                 const isConnected = connection?.connected;
+                const isPending = connection?.status === 'pending';
+                const actionDisabled = isCreatingTelegramLink || isDisconnectingPlatform;
                 return (
                   <div key={platform} className={`p-4 border rounded-xl transition-all ${
                     isConnected
                       ? 'border-green-300 dark:border-green-700 bg-green-50/50 dark:bg-green-900/20'
+                      : isPending
+                        ? 'border-blue-300 dark:border-blue-700 bg-blue-50/50 dark:bg-blue-900/20'
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                   }`}>
                     <div className="flex items-start justify-between gap-4">
@@ -359,25 +396,83 @@ export default function SettingsPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => handleDisconnect(platform)}
+                          onClick={() => void handleDisconnect(platform)}
+                          disabled={actionDisabled}
                           className="text-red-600 shrink-0"
                         >
                           <X className="w-3 h-3 mr-1" />
                           Unlink
                         </Button>
+                      ) : info.selfServe ? (
+                        isPending && connection?.linkUrl ? (
+                          <a
+                            href={connection.linkUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="shrink-0"
+                          >
+                            <Button size="sm" variant="outline" className="shrink-0">
+                              <Link2 className="w-3 h-3 mr-1" />
+                              Open Bot
+                            </Button>
+                          </a>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={() => void handleConnect(platform)}
+                            disabled={actionDisabled}
+                            className="shrink-0"
+                          >
+                            <Link2 className="w-3 h-3 mr-1" />
+                            {isVerified ? 'Connect' : 'Verify Wallet'}
+                          </Button>
+                        )
                       ) : (
-                        <Button size="sm" onClick={() => handleConnect(platform)} className="shrink-0">
-                          <Link2 className="w-3 h-3 mr-1" />
-                          Connect
-                        </Button>
+                        <div className="text-xs font-semibold text-gray-500 shrink-0">
+                          Admin managed
+                        </div>
                       )}
                     </div>
-                    {isConnected && (
+                    {(isConnected || isPending) && (
                       <div className="mt-3 pt-3 border-t border-green-200/50 dark:border-green-800/50">
-                        <p className="text-xs font-medium text-green-700 dark:text-green-400 mb-2">You'll receive:</p>
+                        <p className={`text-xs font-medium mb-2 ${
+                          isConnected
+                            ? 'text-green-700 dark:text-green-400'
+                            : 'text-blue-700 dark:text-blue-300'
+                        }`}>
+                          {isConnected ? "You'll receive:" : 'Pending link:'}
+                        </p>
                         <code className="block text-xs bg-gray-900 text-gray-100 p-2 rounded-lg overflow-x-auto">
                           {info.preview}
                         </code>
+                        {connection?.username && (
+                          <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                            Telegram username: @{connection.username}
+                          </p>
+                        )}
+                        {isPending && platform === 'telegram' && (
+                          <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">
+                            Finish linking in Telegram, then this page will refresh automatically.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {!isConnected && !isPending && info.selfServe && (
+                      <div className="mt-3 pt-3 border-t border-gray-200/70 dark:border-gray-700/70">
+                        <p className="text-xs text-gray-600 dark:text-gray-300">
+                          {primarySquad
+                            ? isVerified
+                              ? `This will link Telegram to ${primarySquad.name}.`
+                              : 'Verify your wallet first so SportWarren can bind Telegram to the correct squad.'
+                            : 'Create or join a squad before linking Telegram.'}
+                        </p>
+                      </div>
+                    )}
+                    {!info.selfServe && !isConnected && (
+                      <div className="mt-3 pt-3 border-t border-gray-200/70 dark:border-gray-700/70">
+                        <p className="text-xs text-gray-600 dark:text-gray-300">
+                          This channel is not self-serve in the current deployment. Keep Telegram as the user-facing path for now.
+                        </p>
                       </div>
                     )}
                   </div>
@@ -400,6 +495,7 @@ export default function SettingsPage() {
           <Card>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">What to notify</h2>
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">Choose which notifications you want to receive</p>
+            <div className="space-y-1">
               {[
                 { key: 'matchReminders', label: 'Match reminders', desc: 'Get notified before your scheduled matches' },
                 { key: 'verificationRequests', label: 'Verification requests', desc: 'When an opponent submits a match for you to verify' },
@@ -538,35 +634,6 @@ export default function SettingsPage() {
           )}
         </div>
       )}
-
-      {/* Celebration Toast with XP and Next Step */}
-      {celebrating && (() => {
-        const connectedCount = PLATFORM_LIST.filter(p => preferences.connections?.[p]?.connected || p === celebrating).length;
-        const remaining = PLATFORM_LIST.length - connectedCount;
-        const nextPlatform = PLATFORM_LIST.find(p => !preferences.connections?.[p]?.connected && p !== celebrating);
-        
-        return (
-          <div className="fixed bottom-6 right-6 z-50 animate-bounce">
-            <div className="bg-green-600 text-white px-4 py-3 rounded-xl shadow-lg flex items-center gap-3 max-w-xs">
-              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center text-xl shrink-0">
-                {PLATFORM_CONFIG[celebrating].icon}
-              </div>
-              <div className="min-w-0">
-                <p className="font-bold text-sm">{PLATFORM_CONFIG[celebrating].name} connected!</p>
-                <p className="text-xs text-green-100">+50 XP for connecting your first channel</p>
-                {remaining > 0 && nextPlatform && (
-                  <p className="text-xs text-green-200 mt-0.5 truncate">
-                    💡 Connect {PLATFORM_CONFIG[nextPlatform].name} too ({connectedCount}/{PLATFORM_LIST.length})
-                  </p>
-                )}
-                {remaining === 0 && (
-                  <p className="text-xs text-green-200 mt-0.5">🏆 All channels connected!</p>
-                )}
-              </div>
-            </div>
-          </div>
-        );
-      })()}
 
       <WalletConnectModal
         isOpen={showWalletModal}

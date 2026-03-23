@@ -242,10 +242,15 @@ export default function MatchPage() {
       let nextSummary: { totalXP: number; attributeGains: { attribute: string; xp: number; oldRating: number; newRating: number }[] } | null = null;
       try {
         const result = await finalizeMatchXP.mutateAsync({ matchId });
-        if (result?.results?.length) {
-          const totalXP = result.results.reduce((sum: number, r: any) => sum + (r.totalXP || 0), 0);
-          const attributeGains = result.results.flatMap((r: any) =>
-            Object.entries(r.attributeBreakdown || {}).map(([attribute, xpGained]) => ({
+        type FinalizedXPResult = {
+          totalXP?: number | null;
+          attributeBreakdown?: Record<string, number> | null;
+        };
+        const finalizedResults = (result?.results ?? []) as FinalizedXPResult[];
+        if (finalizedResults.length) {
+          const totalXP = finalizedResults.reduce((sum, item) => sum + (item.totalXP || 0), 0);
+          const attributeGains = finalizedResults.flatMap((item) =>
+            Object.entries(item.attributeBreakdown || {}).map(([attribute, xpGained]) => ({
               attribute,
               xpGained: xpGained as number,
               newRating: 0,

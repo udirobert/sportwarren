@@ -577,13 +577,16 @@ export interface PlatformConnections {
 
 export interface PlatformConnection {
   connected: boolean;
+  status?: 'pending' | 'connected';
   connectedAt?: string;
   username?: string;
   chatId?: string;
   groupAddress?: string; // XMTP-specific
+  linkUrl?: string;
 }
 
 export type PlatformType = 'telegram' | 'whatsapp' | 'xmtp';
+export type PlatformAvailability = 'live' | 'manual';
 
 export interface PlatformConfig {
   name: string;
@@ -594,6 +597,8 @@ export interface PlatformConfig {
   benefits: string[];
   preview: string;
   sort: number;
+  availability: PlatformAvailability;
+  selfServe: boolean;
 }
 
 /**
@@ -614,6 +619,8 @@ export const PLATFORM_CONFIG: Record<PlatformType, PlatformConfig> = {
     ],
     preview: '🎉 We won 3-1!\n@player just earned +150 XP',
     sort: 1,
+    availability: 'manual',
+    selfServe: false,
   },
   telegram: {
     name: 'Telegram',
@@ -628,6 +635,8 @@ export const PLATFORM_CONFIG: Record<PlatformType, PlatformConfig> = {
     ],
     preview: '🏆 Match Result: W 3-1 vs Sunday Legends\n+150 XP earned!',
     sort: 2,
+    availability: 'live',
+    selfServe: true,
   },
   xmtp: {
     name: 'XMTP',
@@ -642,10 +651,15 @@ export const PLATFORM_CONFIG: Record<PlatformType, PlatformConfig> = {
     ],
     preview: '🔐 Verified: Match #12345 confirmed\nvs Red Lions FC',
     sort: 3,
+    availability: 'manual',
+    selfServe: false,
   },
 };
 
 export const PLATFORM_LIST: PlatformType[] = ['whatsapp', 'telegram', 'xmtp'];
+export const SELF_SERVE_PLATFORM_LIST: PlatformType[] = PLATFORM_LIST.filter(
+  (platform) => PLATFORM_CONFIG[platform].selfServe
+);
 
 export interface NotificationPreferences {
   matchReminders: boolean;

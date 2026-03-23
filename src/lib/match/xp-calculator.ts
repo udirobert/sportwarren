@@ -3,7 +3,7 @@
  * Determines XP gains from match performance
  */
 
-import type { MatchResult, SkillRating, AttributeType, PlayerPosition } from '@/types';
+import type { MatchResult, AttributeType, PlayerPosition } from '@/types';
 import {
   BASE_XP,
   MATCH_MULTIPLIERS,
