@@ -25,6 +25,8 @@ import { ComputerVisionService } from './services/ai/vision.js';
 import { AlgorandService } from './services/blockchain/algorand.js';
 import { LensService, LensServiceUnavailableError } from './services/communication/lens.js';
 import { EventStreamService } from './services/events/kafka.js';
+import { TonSettlementWorker } from './services/economy/ton-settlement-worker.js';
+import { prisma } from '../src/lib/db.js';
 
 dotenv.config();
 
@@ -70,6 +72,15 @@ async function startServer() {
     await communicationBridge.initialize();
   } catch (error) {
     console.warn('⚠️ Communication bridge initialization failed (non-fatal):', (error as Error).message);
+  }
+
+  // TON settlement retry worker — auto-settles pending deposits on-chain
+  const tonWorker = new TonSettlementWorker(prisma, communicationBridge.getTelegramService());
+  try {
+    await tonWorker.tick();
+    tonWorker.start();
+  } catch (error) {
+    console.warn('⚠️ TON settlement worker failed to start (non-fatal):', (error as Error).message);
   }
 
   if (isEnabled(process.env.ENABLE_EVENT_STREAMING)) {
@@ -449,6 +460,31 @@ async function startServer() {
     });
   });
 
+  // Telegram webhook endpoint
+  const telegramService = communicationBridge.getTelegramService();
+  if (telegramService && process.env.TELEGRAM_WEBHOOK_URL?.trim()) {
+    const webhookPath = `/api/telegram/webhook/${process.env.TELEGRAM_BOT_TOKEN?.slice(-8) || 'default'}`;
+
+    app.post(webhookPath, express.json({ limit: '1mb' }), async (req, res) => {
+      try {
+        telegramService.getBot().processUpdate(req.body);
+        res.sendStatus(200);
+      } catch (error) {
+        console.error('Telegram webhook processing error:', error);
+        res.sendStatus(500);
+      }
+    });
+
+    try {
+      const fullWebhookUrl = `${process.env.TELEGRAM_WEBHOOK_URL.replace(/\/$/, '')}${webhookPath}`;
+      await telegramService.setWebhook(fullWebhookUrl);
+    } catch (error) {
+      console.warn('⚠️ Failed to set Telegram webhook, falling back to polling:', (error as Error).message);
+    }
+  } else if (telegramService) {
+    console.log('ℹ️ Telegram using polling mode (set TELEGRAM_WEBHOOK_URL for webhook mode)');
+  }
+
   // Health check endpoint
   app.get('/health', (_req, res) => {
     res.json({
@@ -469,6 +505,10 @@ async function startServer() {
   process.on('SIGTERM', async () => {
     console.log('Shutting down gracefully...');
 
+    tonWorker.stop();
+    if (telegramService && process.env.TELEGRAM_WEBHOOK_URL?.trim()) {
+      await telegramService.deleteWebhook().catch(() => {});
+    }
     await eventStreamService.disconnect();
     await redisService.disconnect();
     await dbService.disconnect();

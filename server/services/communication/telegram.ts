@@ -11,6 +11,13 @@ import {
   isTelegramConnectToken,
 } from './platform-connections.js';
 import { parseTelegramMatchResult, type ParsedTelegramMatchResult } from './telegram-match-parser.js';
+import {
+  cancelPendingTreasuryActivity,
+  ensureSquadTreasury,
+  recordPendingTreasuryActivity,
+  settlePendingTreasuryActivity,
+  TreasuryBalanceError,
+} from '../economy/treasury-ledger.js';
 
 interface PendingMatchDraft extends ParsedTelegramMatchResult {
   id: string;
@@ -20,7 +27,29 @@ interface PendingMatchDraft extends ParsedTelegramMatchResult {
   createdAt: number;
 }
 
+type LinkedTelegramChat = NonNullable<Awaited<ReturnType<typeof findTelegramConnectionByChatId>>>;
+type AuthorizedLinkedTelegramChat = LinkedTelegramChat & {
+  squadId: string;
+  platformUserId: string;
+};
+type AuthorizedTelegramCaptainActor =
+  | { error: string }
+  | {
+      linkedChat: AuthorizedLinkedTelegramChat;
+      membership: NonNullable<Awaited<ReturnType<typeof getSquadMembership>>>;
+    };
+
 const MATCH_DRAFT_TTL_MS = 15 * 60 * 1000;
+const MATCH_FEE_TON = 1;
+
+function readMetadataString(metadata: unknown, key: string): string | null {
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return null;
+  }
+
+  const value = (metadata as Record<string, unknown>)[key];
+  return typeof value === 'string' && value.trim() ? value : null;
+}
 
 export class TelegramService {
   private bot: TelegramBot;
@@ -32,22 +61,50 @@ export class TelegramService {
       throw new Error('TELEGRAM_BOT_TOKEN environment variable is required');
     }
 
-    this.bot = new TelegramBot(token, { polling: true });
+    const useWebhook = process.env.TELEGRAM_WEBHOOK_URL?.trim();
 
-    this.bot.on('polling_error', (error: Error) => {
-      if (!error.message.includes('409 Conflict')) {
-        console.error('Telegram polling error:', error.message);
-      }
-    });
+    this.bot = new TelegramBot(token, { polling: !useWebhook });
+
+    if (!useWebhook) {
+      this.bot.on('polling_error', (error: Error) => {
+        if (!error.message.includes('409 Conflict')) {
+          console.error('Telegram polling error:', error.message);
+        }
+      });
+    }
 
     this.setupCommands();
     this.setupEventHandlers();
+  }
+
+  getBot(): TelegramBot {
+    return this.bot;
+  }
+
+  async setWebhook(webhookUrl: string): Promise<void> {
+    try {
+      await this.bot.setWebHook(webhookUrl);
+      console.log(`✅ Telegram webhook set to ${webhookUrl}`);
+    } catch (error) {
+      console.error('❌ Failed to set Telegram webhook:', error);
+      throw error;
+    }
+  }
+
+  async deleteWebhook(): Promise<void> {
+    try {
+      await this.bot.deleteWebHook();
+      console.log('✅ Telegram webhook deleted');
+    } catch (error) {
+      console.error('❌ Failed to delete Telegram webhook:', error);
+    }
   }
 
   private setupCommands(): void {
     this.bot.setMyCommands([
       { command: 'start', description: 'Link Telegram to your SportWarren squad' },
       { command: 'log', description: 'Submit a match result for verification' },
+      { command: 'fee', description: 'Propose a match fee from the treasury' },
       { command: 'stats', description: 'View real player or squad stats' },
       { command: 'fixtures', description: 'View scheduled squad fixtures' },
       { command: 'treasury', description: 'Open the Telegram Mini App for TON treasury top-ups' },
@@ -95,6 +152,21 @@ export class TelegramService {
 
     this.bot.onText(/\/fixtures/, async (msg) => {
       await this.handleFixturesRequest(msg.chat.id);
+    });
+
+    this.bot.onText(/\/fee(?:\s+(.+))?/, async (msg, match) => {
+      const chatId = msg.chat.id;
+      const args = match?.[1]?.trim();
+
+      if (!args) {
+        await this.bot.sendMessage(
+          chatId,
+          'Usage: /fee <matchId> [amount]\n\nExample: /fee abc123 2\n\nProposes a match fee (in TON) to be paid from the squad treasury.'
+        );
+        return;
+      }
+
+      await this.handleFeeProposal(chatId, args, msg.from);
     });
 
     this.bot.onText(/\/treasury/, async (msg) => {
@@ -178,6 +250,33 @@ export class TelegramService {
 
   private async requireLinkedChat(chatId: number) {
     return findTelegramConnectionByChatId(prisma, String(chatId));
+  }
+
+  private async requireLinkedCaptainActor(chatId: number, telegramUserId: string): Promise<AuthorizedTelegramCaptainActor> {
+    const linkedChat = await this.requireLinkedChat(chatId);
+    if (!linkedChat?.squadId) {
+      return {
+        error: 'This chat is not linked to a SportWarren squad yet.',
+      };
+    }
+
+    if (!linkedChat.platformUserId || linkedChat.platformUserId !== telegramUserId) {
+      return {
+        error: 'Only the Telegram account that linked this squad can manage treasury actions right now.',
+      };
+    }
+
+    const membership = await getSquadMembership(prisma, linkedChat.squadId, linkedChat.userId);
+    if (!membership || !isSquadLeader(membership.role)) {
+      return {
+        error: 'Only squad captains can manage treasury actions.',
+      };
+    }
+
+    return {
+      linkedChat: linkedChat as AuthorizedLinkedTelegramChat,
+      membership,
+    };
   }
 
   private async handleConnectStart(chatId: number, token: string, user: TelegramBot.User | undefined): Promise<void> {
@@ -490,6 +589,241 @@ export class TelegramService {
     await this.bot.sendMessage(chatId, `Upcoming fixtures\n\n${message}`);
   }
 
+  private async handleFeeProposal(chatId: number, args: string, user: TelegramBot.User | undefined): Promise<void> {
+    if (!user) {
+      await this.bot.sendMessage(chatId, 'Could not read your Telegram account.');
+      return;
+    }
+
+    const actor = await this.requireLinkedCaptainActor(chatId, String(user.id));
+    if ('error' in actor) {
+      await this.bot.sendMessage(chatId, actor.error);
+      return;
+    }
+
+    const { linkedChat } = actor;
+
+    const parts = args.split(/\s+/);
+    const matchId = parts[0]?.trim() || '';
+    const feeAmount = Number(parts[1]) || MATCH_FEE_TON;
+
+    if (!matchId) {
+      await this.bot.sendMessage(chatId, 'Provide a match ID. Example: /fee abc123 2');
+      return;
+    }
+
+    if (feeAmount <= 0 || feeAmount > 100) {
+      await this.bot.sendMessage(chatId, 'Fee amount must be between 0 and 100 TON.');
+      return;
+    }
+
+    try {
+      const match = await prisma.match.findUnique({
+        where: { id: matchId },
+        select: {
+          id: true,
+          homeSquadId: true,
+          awaySquadId: true,
+          homeSquad: { select: { name: true } },
+          awaySquad: { select: { name: true } },
+          homeScore: true,
+          awayScore: true,
+        },
+      });
+
+      if (!match) {
+        await this.bot.sendMessage(chatId, `Match "${matchId}" not found. Use /log to create a match first.`);
+        return;
+      }
+
+      if (match.homeSquadId !== linkedChat.squadId && match.awaySquadId !== linkedChat.squadId) {
+        await this.bot.sendMessage(chatId, 'That match does not belong to your squad.');
+        return;
+      }
+
+      const treasury = await ensureSquadTreasury(prisma, linkedChat.squadId);
+      if (treasury.balance < feeAmount) {
+        await this.bot.sendMessage(chatId, `Insufficient treasury balance (${treasury.balance} TON) for a ${feeAmount} TON fee.`);
+        return;
+      }
+
+      const feeReference = `telegram-match-fee:${linkedChat.squadId}:${match.id}:${feeAmount}`;
+      const feeTx = await recordPendingTreasuryActivity({
+        prisma,
+        squadId: linkedChat.squadId,
+        type: 'expense',
+        category: 'match_fee_pending',
+        amount: feeAmount,
+        description: `Match fee for ${match.homeSquad.name} vs ${match.awaySquad.name}`,
+        txHash: feeReference,
+        metadata: {
+          source: 'telegram-match-fee',
+          matchId: match.id,
+          proposedByUserId: linkedChat.userId,
+          proposedByTelegramUserId: String(user.id),
+          homeSquad: match.homeSquad.name,
+          awaySquad: match.awaySquad.name,
+          score: `${match.homeScore ?? '?'}-${match.awayScore ?? '?'}`,
+          feeReference,
+        },
+      });
+
+      const keyboard = {
+        inline_keyboard: [[
+          { text: `✅ Approve ${feeAmount} TON`, callback_data: `approve_fee:${feeTx.transaction.id}` },
+          { text: '❌ Reject', callback_data: `reject_fee:${feeTx.transaction.id}` },
+        ]],
+      };
+
+      const message = [
+        `⚽ Match Fee Proposal`,
+        '',
+        `${match.homeSquad.name} vs ${match.awaySquad.name}`,
+        `Score: ${match.homeScore ?? '?'} - ${match.awayScore ?? '?'}`,
+        '',
+        `Fee: ${feeAmount} TON from squad treasury`,
+        `Balance: ${treasury.balance} TON`,
+        '',
+        'Approve to deduct from treasury?',
+      ].join('\n');
+
+      await this.bot.sendMessage(chatId, message, { reply_markup: keyboard });
+    } catch (error) {
+      console.error('Error handling fee proposal:', error);
+      await this.bot.sendMessage(chatId, 'Could not create the fee proposal. Please try again.');
+    }
+  }
+
+  private async handleFeeCallback(
+    query: TelegramBot.CallbackQuery,
+    action: 'approve_fee' | 'reject_fee',
+    transactionId: string,
+  ): Promise<void> {
+    const chatId = query.message?.chat.id;
+    const messageId = query.message?.message_id;
+    const telegramUserId = String(query.from.id);
+
+    if (!chatId || !messageId || !query.id || !transactionId) {
+      if (query.id) {
+        await this.bot.answerCallbackQuery(query.id);
+      }
+      return;
+    }
+
+    const actor = await this.requireLinkedCaptainActor(chatId, telegramUserId);
+    if ('error' in actor) {
+      await this.bot.answerCallbackQuery(query.id, {
+        text: actor.error,
+        show_alert: true,
+      });
+      return;
+    }
+
+    const { linkedChat } = actor;
+    const pendingTransaction = await prisma.treasuryTransaction.findFirst({
+      where: {
+        id: transactionId,
+        treasury: {
+          squadId: linkedChat.squadId,
+        },
+      },
+      include: {
+        treasury: true,
+      },
+    });
+
+    if (
+      !pendingTransaction
+      || pendingTransaction.type !== 'expense'
+      || pendingTransaction.category !== 'match_fee_pending'
+    ) {
+      await this.bot.answerCallbackQuery(query.id, {
+        text: 'That fee proposal is no longer pending.',
+        show_alert: false,
+      });
+      return;
+    }
+
+    const homeSquad = readMetadataString(pendingTransaction.metadata, 'homeSquad') ?? 'Home Squad';
+    const awaySquad = readMetadataString(pendingTransaction.metadata, 'awaySquad') ?? 'Away Squad';
+    const score = readMetadataString(pendingTransaction.metadata, 'score') ?? '?-?';
+    const matchId = readMetadataString(pendingTransaction.metadata, 'matchId') ?? 'unknown';
+
+    try {
+      if (action === 'reject_fee') {
+        await cancelPendingTreasuryActivity({
+          prisma,
+          squadId: linkedChat.squadId,
+          transactionId,
+          expectedType: 'expense',
+          expectedCategory: 'match_fee_pending',
+        });
+
+        await this.bot.editMessageText(
+          [
+            'Match fee rejected.',
+            '',
+            `${homeSquad} vs ${awaySquad}`,
+            `Score: ${score}`,
+            `Match ID: ${matchId}`,
+            '',
+            'No treasury funds were moved.',
+          ].join('\n'),
+          {
+            chat_id: chatId,
+            message_id: messageId,
+          }
+        );
+        await this.bot.answerCallbackQuery(query.id, { text: 'Fee rejected' });
+        return;
+      }
+
+      const settled = await settlePendingTreasuryActivity({
+        prisma,
+        squadId: linkedChat.squadId,
+        transactionId,
+        settledByUserId: linkedChat.userId,
+        settledTxHash: pendingTransaction.txHash,
+        expectedType: 'expense',
+        expectedCategory: 'match_fee_pending',
+        nextCategory: 'match_fee',
+        metadataPatch: {
+          approvedByTelegramUserId: telegramUserId,
+          approvedVia: 'telegram',
+        },
+      });
+
+      await this.bot.editMessageText(
+        [
+          'Match fee approved.',
+          '',
+          `${homeSquad} vs ${awaySquad}`,
+          `Score: ${score}`,
+          `Match ID: ${matchId}`,
+          '',
+          `Deducted: ${pendingTransaction.amount} TON`,
+          `Updated balance: ${settled.treasury.balance} TON`,
+        ].join('\n'),
+        {
+          chat_id: chatId,
+          message_id: messageId,
+        }
+      );
+      await this.bot.answerCallbackQuery(query.id, { text: 'Fee approved' });
+    } catch (error) {
+      const message = error instanceof TreasuryBalanceError
+        ? 'Treasury balance is no longer sufficient for that fee.'
+        : error instanceof Error
+          ? error.message
+          : 'Could not update the fee proposal.';
+
+      await this.bot.answerCallbackQuery(query.id, {
+        text: message,
+        show_alert: false,
+      });
+    }
+  }
+
   private async handleInlineQuery(query: TelegramBot.InlineQuery): Promise<void> {
     const queryText = query.query.toLowerCase();
     const results: TelegramBot.InlineQueryResultArticle[] = [];
@@ -536,6 +870,12 @@ export class TelegramService {
     this.pruneExpiredDrafts();
 
     const [action, draftId] = data.split(':');
+
+    if (action === 'approve_fee' || action === 'reject_fee') {
+      await this.handleFeeCallback(query, action, draftId);
+      return;
+    }
+
     const draft = draftId ? this.pendingMatchDrafts.get(draftId) : undefined;
 
     if (!draft || draft.chatId !== chatId) {

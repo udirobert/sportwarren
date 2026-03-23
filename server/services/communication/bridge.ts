@@ -133,4 +133,8 @@ export class CommunicationBridge {
   private formatMessageForTelegram(content: string): string {
     return `🔄 **SportWarren**\n\n${content}`;
   }
+
+  getTelegramService(): TelegramService | null {
+    return this.telegram;
+  }
 }

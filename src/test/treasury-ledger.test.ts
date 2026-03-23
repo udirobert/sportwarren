@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  cancelPendingTreasuryActivity,
   reconcilePendingTreasuryTransaction,
+  settlePendingTreasuryActivity,
   TreasuryReconciliationError,
 } from '../../server/services/economy/treasury-ledger';
 
@@ -150,5 +152,105 @@ describe('reconcilePendingTreasuryTransaction', () => {
       transactionId: 'tx_3',
       reconciledByUserId: 'user_1',
     })).rejects.toBeInstanceOf(TreasuryReconciliationError);
+  });
+});
+
+describe('settlePendingTreasuryActivity', () => {
+  it('settles a pending match fee and decrements treasury balance', async () => {
+    const { prisma, squadTreasuryUpdate, squadUpdate, transactionUpdate } = createPrismaStub({
+      pendingTransaction: {
+        id: 'tx_fee',
+        treasuryId: 'treasury_1',
+        type: 'expense',
+        category: 'match_fee_pending',
+        amount: 4,
+        description: 'Match fee proposal',
+        txHash: 'telegram-match-fee:squad_1:match_1:4',
+        verified: false,
+        metadata: {
+          matchId: 'match_1',
+        },
+        treasury: {
+          id: 'treasury_1',
+          squadId: 'squad_1',
+          balance: 20,
+        },
+      },
+    });
+
+    const result = await settlePendingTreasuryActivity({
+      prisma,
+      squadId: 'squad_1',
+      transactionId: 'tx_fee',
+      settledByUserId: 'user_1',
+      expectedType: 'expense',
+      expectedCategory: 'match_fee_pending',
+      nextCategory: 'match_fee',
+      metadataPatch: {
+        approvedVia: 'telegram',
+      },
+    });
+
+    expect(squadTreasuryUpdate).toHaveBeenCalledWith({
+      where: { id: 'treasury_1' },
+      data: {
+        balance: { increment: -4 },
+      },
+    });
+    expect(squadUpdate).toHaveBeenCalledWith({
+      where: { id: 'squad_1' },
+      data: {
+        treasuryBalance: { increment: -4 },
+      },
+    });
+    expect(transactionUpdate).toHaveBeenCalled();
+    expect(result.duplicate).toBe(false);
+    expect(result.treasury.balance).toBe(16);
+    expect(result.transaction.category).toBe('match_fee');
+    expect((result.transaction.metadata as Record<string, unknown>).approvedVia).toBe('telegram');
+  });
+});
+
+describe('cancelPendingTreasuryActivity', () => {
+  it('deletes a pending match fee without changing treasury balance', async () => {
+    const pendingTransaction = {
+      id: 'tx_fee_cancel',
+      treasuryId: 'treasury_1',
+      type: 'expense',
+      category: 'match_fee_pending',
+      amount: 3,
+      description: 'Match fee proposal',
+      txHash: 'telegram-match-fee:squad_1:match_1:3',
+      verified: false,
+      metadata: {},
+      treasury: {
+        id: 'treasury_1',
+        squadId: 'squad_1',
+        balance: 18,
+      },
+    };
+
+    const transactionDelete = vi.fn().mockResolvedValue(pendingTransaction);
+    const prisma = {
+      treasuryTransaction: {
+        findFirst: vi.fn().mockResolvedValue(pendingTransaction),
+        delete: transactionDelete,
+      },
+    } as any;
+
+    const result = await cancelPendingTreasuryActivity({
+      prisma,
+      squadId: 'squad_1',
+      transactionId: 'tx_fee_cancel',
+      expectedType: 'expense',
+      expectedCategory: 'match_fee_pending',
+    });
+
+    expect(transactionDelete).toHaveBeenCalledWith({
+      where: { id: 'tx_fee_cancel' },
+    });
+    expect(result.duplicate).toBe(false);
+    expect(result.transaction.id).toBe('tx_fee_cancel');
+    expect(result.treasury.balance).toBe(18);
   });
 });
