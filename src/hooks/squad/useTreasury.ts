@@ -205,6 +205,7 @@ export function useTreasury(squadId?: string): UseTreasuryReturn {
           timestamp: new Date(tx.createdAt),
           verified: tx.verified,
           txHash: tx.txHash || undefined,
+          metadata: tx.metadata || undefined,
         })),
         paymentRail: {
           enabled: rawData.paymentRail?.enabled ?? yellowSession.enabled,
@@ -218,6 +219,11 @@ export function useTreasury(squadId?: string): UseTreasuryReturn {
           assetSymbol: rawData.paymentRail?.assetSymbol || yellowSession.assetSymbol,
           sessionId: rawData.paymentRail?.sessionId || yellowSession.sessionId,
           settledBalance: rawData.paymentRail?.settledBalance ?? rawData.balance ?? 0,
+        },
+        tonRail: {
+          enabled: rawData.tonRail?.enabled ?? false,
+          walletAddress: rawData.tonRail?.walletAddress ?? null,
+          pendingTopUps: rawData.tonRail?.pendingTopUps ?? 0,
         },
       }
     : null;
