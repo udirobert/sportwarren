@@ -99,6 +99,7 @@ npm run dev
 - **Kite AI:** Agent identity, payments
 - **Yellow Network:** Instant off-chain match fees, treasury, and transfers
 - **Lens Network:** Social graph, highlight sharing
+- **Telegram + TON:** Bot commands (`/start`, `/log`, `/stats`, `/fixtures`, `/treasury`, `/fee`), Mini App treasury top-ups, TON settlement worker with webhook delivery
 
 ---
 

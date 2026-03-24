@@ -57,6 +57,17 @@ NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-project-id
 # Optional: Sentry for error monitoring
 SENTRY_DSN=https://your-sentry-dsn
 NEXT_PUBLIC_SENTRY_DSN=https://your-sentry-dsn
+
+# Communications
+TELEGRAM_BOT_TOKEN=123456:bot-token
+TELEGRAM_BOT_USERNAME=sportwarrenbot           # without @
+# Optional: webhook mode (otherwise polling is used)
+TELEGRAM_WEBHOOK_URL=https://api.sportwarren.com
+
+# TON Rail (Telegram Mini App + treasury top-ups)
+TON_TREASURY_WALLET_ADDRESS=EQ...              # squad default vault (optional)
+TONCENTER_API_KEY=your-toncenter-key           # improves reliability; uses public quota if unset
+TON_SETTLEMENT_POLL_INTERVAL_MS=60000          # optional; default 60000
 ```
 
 ### Simulation Mode
@@ -189,11 +200,17 @@ ALGORAND_MATCH_VERIFICATION_APP_ID=756828208
 DEPLOYER_MNEMONIC="25-word mnemonic"
 AVALANCHE_PRIVATE_KEY=0x...
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=...
+TELEGRAM_BOT_TOKEN=123456:bot-token
+TELEGRAM_BOT_USERNAME=sportwarrenbot
+TELEGRAM_WEBHOOK_URL=https://api.sportwarren.com
+TONCENTER_API_KEY=your-toncenter-key
 
 # Recommended
 SENTRY_DSN=https://...
 NEXT_PUBLIC_SENTRY_DSN=https://...
 REDIS_URL=redis://... (for caching)
+TON_TREASURY_WALLET_ADDRESS=EQ...  # fallback vault for squads without one set
+TON_SETTLEMENT_POLL_INTERVAL_MS=60000
 ```
 
 ---
