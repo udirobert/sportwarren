@@ -108,6 +108,42 @@ export const playerRouter = createTRPCRouter({
       }
     }),
 
+  updateProfile: protectedProcedure
+    .input(z.object({
+      name: z.string().trim().min(2, 'Name must be at least 2 characters').max(40, 'Name must be 40 characters or fewer'),
+      position: z.enum(['GK', 'DF', 'MF', 'ST', 'WG']),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await ensurePlayerProfile(ctx.prisma, ctx.userId!);
+
+        const user = await ctx.prisma.user.update({
+          where: { id: ctx.userId! },
+          data: {
+            name: input.name,
+            position: input.position,
+          },
+          select: {
+            id: true,
+            name: true,
+            position: true,
+          },
+        });
+
+        return {
+          success: true,
+          user,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update player profile',
+          cause: error,
+        });
+      }
+    }),
+
   // Get player form history
   getForm: publicProcedure
     .input(z.object({
