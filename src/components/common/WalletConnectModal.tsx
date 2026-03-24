@@ -14,9 +14,15 @@ interface WalletConnectModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConnected?: () => void;
+  forceWalletSetup?: boolean;
 }
 
-export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, onClose, onConnected }) => {
+export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
+  isOpen,
+  onClose,
+  onConnected,
+  forceWalletSetup = false,
+}) => {
   const { connect, hasWallet, refreshAuthSignature, authStatus } = useWallet();
   const { login: privyLogin, authenticated, ready } = usePrivy();
   const {
@@ -30,13 +36,15 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
   const [selectedChain, setSelectedChain] = useState<'algorand' | 'avalanche' | 'lens' | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showWalletOptions, setShowWalletOptions] = useState(false);
+  const [showWalletOptions, setShowWalletOptions] = useState(forceWalletSetup);
   const needsVerification = authStatus.state === 'missing' || authStatus.state === 'expired';
   const showAuthBanner = hasWallet && authStatus.state !== 'none' && authStatus.state !== 'guest';
   const publicContent = getJourneyContent('public_visitor');
   const accountReadyContent = getJourneyContent('account_ready');
 
   if (!isOpen) return null;
+
+  const walletOptionsVisible = forceWalletSetup || showWalletOptions;
 
   const normalizePrivyError = (err: unknown) => {
     const message = err instanceof Error ? err.message : String(err || 'Sign in failed');
@@ -56,8 +64,10 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
     setError(null);
     try {
       await privyLogin();
-      onConnected?.();
-      onClose();
+      if (!forceWalletSetup) {
+        onConnected?.();
+        onClose();
+      }
     } catch (err) {
       setError(normalizePrivyError(err));
     }
@@ -207,6 +217,10 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                           title: 'Wallet Verified',
                           message: 'Protected features are now unlocked.',
                         });
+                        if (forceWalletSetup) {
+                          onConnected?.();
+                          onClose();
+                        }
                       } else {
                         setError('Unable to verify wallet. Please try again.');
                         addToast({
@@ -292,7 +306,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
             </div>
           )}
 
-          {!showWalletOptions && (
+          {!walletOptionsVisible && (
             <div className="mb-4 grid gap-2">
               {accountReadyContent.authModal.benefits.map((item) => (
                 <div key={item} className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
@@ -302,7 +316,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
             </div>
           )}
 
-          {!showWalletOptions ? (
+          {!walletOptionsVisible ? (
             <div className="space-y-3">
               <button
                 onClick={() => { onConnected?.(); onClose(); }}
@@ -360,12 +374,14 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({ isOpen, 
                 {selectedChain === 'lens' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-green-600" />}
               </button>
 
-              <button
-                onClick={() => setShowWalletOptions(false)}
-                className="w-full py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
-              >
-                ← Skip for now
-              </button>
+              {!forceWalletSetup && (
+                <button
+                  onClick={() => setShowWalletOptions(false)}
+                  className="w-full py-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                >
+                  ← Skip for now
+                </button>
+              )}
             </div>
           )}
         </div>

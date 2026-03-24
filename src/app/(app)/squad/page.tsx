@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
   Users, Target, ArrowRightLeft, Wallet, 
-  Shield, Vote, Activity, Info
+  Shield, Vote, Activity, Info, UserPlus, CheckCircle2
 } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { CreateSquadFlow } from "@/components/squad/CreateSquadFlow";
@@ -28,6 +28,7 @@ import { getJourneyActionGate } from "@/lib/journey/action-gates";
 import { describeMatchForSquad } from "@/lib/match/summary";
 import { useJourneyState } from "@/hooks/useJourneyState";
 import type { Player, PlayerPosition, Tactics, Formation, PlayStyle, TeamInstructions } from "@/types";
+import { buildSquadInviteUrl } from "@/lib/squad/invite";
 
 type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance";
 
@@ -74,6 +75,7 @@ export default function SquadPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<SquadTab>("overview");
   const [showCreateSquadFlow, setShowCreateSquadFlow] = useState(false);
+  const [inviteShareState, setInviteShareState] = useState<"idle" | "copied" | "shared" | "error">("idle");
   const { chain, hasAccount, hasWallet, isVerified } = useWallet();
   const { journeyStage, memberships, refreshSquads } = useJourneyState();
 
@@ -323,6 +325,30 @@ export default function SquadPage() {
     return treasuryState.withdraw(amount, reason, "other");
   };
 
+  const handleShareSquadInvite = async () => {
+    if (!activeSquadId) {
+      return;
+    }
+
+    const inviteUrl = buildSquadInviteUrl(activeSquadId);
+    try {
+      if (navigator.share && window.matchMedia("(max-width: 1024px)").matches) {
+        await navigator.share({
+          title: `Join ${activeSquad?.name ?? "our squad"} on SportWarren`,
+          text: "Join the squad so tonight's match counts toward your player record.",
+          url: inviteUrl,
+        });
+        setInviteShareState("shared");
+        return;
+      }
+
+      await navigator.clipboard.writeText(inviteUrl);
+      setInviteShareState("copied");
+    } catch {
+      setInviteShareState("error");
+    }
+  };
+
   if (showCreateSquadFlow) {
     return (
       <CreateSquadFlow
@@ -380,6 +406,21 @@ export default function SquadPage() {
                 fund your <button onClick={() => setActiveTab('treasury')} className="underline font-medium">treasury</button>,
                 then <Link href="/match?mode=capture" className="underline font-medium">log your first match</Link> to start building reputation.
               </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button size="sm" variant="secondary" onClick={handleShareSquadInvite}>
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  {inviteShareState === "shared"
+                    ? "Invite Shared"
+                    : inviteShareState === "copied"
+                      ? "Invite Copied"
+                      : "Invite Teammates"}
+                </Button>
+              </div>
+              {inviteShareState === "error" && (
+                <p className="mt-2 text-xs text-red-600">
+                  Couldn&apos;t copy the invite link on this device. Open the squad on mobile and share again.
+                </p>
+              )}
             </div>
             <button onClick={() => setIsNewSquad(false)} className="shrink-0 text-green-600 hover:text-green-800 text-lg leading-none">×</button>
           </div>
@@ -532,6 +573,40 @@ export default function SquadPage() {
                   )}
                 </div>
               </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50/80 p-4">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <div className="flex items-center gap-2 text-blue-900">
+                    <UserPlus className="w-4 h-4" />
+                    <h3 className="font-semibold">Invite teammates before kickoff</h3>
+                  </div>
+                  <p className="mt-1 text-sm text-blue-800">
+                    Share the squad invite so players can connect a wallet, join the squad, and make tonight&apos;s result count toward their record.
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button size="sm" variant="secondary" onClick={handleShareSquadInvite}>
+                    {inviteShareState === "shared"
+                      ? "Invite Shared"
+                      : inviteShareState === "copied"
+                        ? "Invite Copied"
+                        : "Copy Invite Link"}
+                  </Button>
+                  {inviteShareState === "copied" && (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Ready for WhatsApp
+                    </span>
+                  )}
+                </div>
+              </div>
+              {inviteShareState === "error" && (
+                <p className="mt-2 text-xs text-red-600">
+                  We couldn&apos;t copy the squad invite on this device. Try again from a browser with clipboard access.
+                </p>
+              )}
             </div>
           </Card>
 

@@ -7,8 +7,10 @@ import { useMySquads } from '@/hooks/squad/useSquad';
 import { usePlatformConnections } from '@/hooks/usePlatformConnections';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { trpc } from '@/lib/trpc-client';
 import { WalletConnectModal } from '@/components/common/WalletConnectModal';
 import { PlatformType, NotificationPreferences, PLATFORM_CONFIG } from '@/types';
+import type { PlayerPosition } from '@/types';
 import { trackFeatureUsed } from '@/lib/analytics';
 
 const tabs = [
@@ -34,16 +36,50 @@ const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
   },
 };
 
+const POSITION_OPTIONS: PlayerPosition[] = ['GK', 'DF', 'MF', 'WG', 'ST'];
+const POSITION_LABELS: Record<PlayerPosition, string> = {
+  GK: 'Goalkeeper',
+  DF: 'Defender',
+  MF: 'Midfielder',
+  WG: 'Winger',
+  ST: 'Striker',
+};
+
+function normalizeEditableName(name?: string | null): string {
+  if (!name) {
+    return '';
+  }
+
+  return /^Player_[a-z0-9]+$/i.test(name) ? '' : name;
+}
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('profile');
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [connectionNotice, setConnectionNotice] = useState<string | null>(null);
+  const [profileNotice, setProfileNotice] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState('');
+  const [profilePosition, setProfilePosition] = useState<PlayerPosition>('MF');
   const { address, chain, balance, isGuest, hasAccount, hasWallet, loginMethod, authStatus, disconnect, isVerified } = useWallet();
   const { memberships } = useMySquads();
   const [notifications, setNotifications] = useState<NotificationPreferences>(DEFAULT_NOTIFICATIONS);
   const [copied, setCopied] = useState(false);
+  const utils = trpc.useUtils();
 
   const primarySquad = memberships?.[0]?.squad;
+  const { data: currentProfile, isLoading: currentProfileLoading } = trpc.player.getCurrentProfile.useQuery(
+    undefined,
+    { enabled: isVerified, staleTime: 30 * 1000 }
+  );
+  const updateProfileMutation = trpc.player.updateProfile.useMutation({
+    onSuccess: async () => {
+      await utils.player.getCurrentProfile.invalidate();
+      setProfileNotice('Profile updated. Your squad will now see your real name and preferred position.');
+    },
+    onError: (error) => {
+      setProfileNotice(error.message || 'Could not update your profile.');
+    },
+  });
   const {
     connections,
     createTelegramLink,
@@ -107,6 +143,15 @@ export default function SettingsPage() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!currentProfile) {
+      return;
+    }
+
+    setProfileName(normalizeEditableName(currentProfile.user?.name));
+    setProfilePosition((currentProfile.user?.position as PlayerPosition | undefined) ?? 'MF');
+  }, [currentProfile]);
+
   const copyAddress = async () => {
     if (hasWallet && address) {
       await navigator.clipboard.writeText(address);
@@ -167,6 +212,25 @@ export default function SettingsPage() {
     }
   };
 
+  const handleSaveProfile = async () => {
+    if (!isVerified) {
+      setProfileNotice('Verify your wallet before saving your player identity.');
+      return;
+    }
+
+    const trimmedName = profileName.trim();
+    if (trimmedName.length < 2) {
+      setProfileNotice('Use the name your squad will recognise tonight.');
+      return;
+    }
+
+    setProfileNotice(null);
+    await updateProfileMutation.mutateAsync({
+      name: trimmedName,
+      position: profilePosition,
+    });
+  };
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 nav-spacer-top nav-spacer-bottom space-y-6">
       {/* Header */}
@@ -204,6 +268,83 @@ export default function SettingsPage() {
       {/* Profile Tab */}
       {activeTab === 'profile' && (
         <div className="space-y-4">
+          <Card>
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Player Identity</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Claim the name and position that should appear when your squad sets tactics and logs tonight&apos;s match.
+                </p>
+              </div>
+              <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${
+                isVerified ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+              }`}>
+                {isVerified ? 'Ready' : 'Verify first'}
+              </span>
+            </div>
+
+            {profileNotice && (
+              <div className={`mb-4 rounded-xl border px-4 py-3 text-sm ${
+                updateProfileMutation.error
+                  ? 'border-red-200 bg-red-50 text-red-700'
+                  : 'border-blue-200 bg-blue-50 text-blue-900'
+              }`}>
+                {profileNotice}
+              </div>
+            )}
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="block">
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                  Display name
+                </span>
+                <input
+                  type="text"
+                  value={profileName}
+                  onChange={(event) => setProfileName(event.target.value)}
+                  placeholder={currentProfileLoading ? 'Loading...' : 'Your name on the pitch'}
+                  disabled={!isVerified || updateProfileMutation.isPending}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                />
+              </label>
+
+              <label className="block">
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                  Preferred position
+                </span>
+                <select
+                  value={profilePosition}
+                  onChange={(event) => setProfilePosition(event.target.value as PlayerPosition)}
+                  disabled={!isVerified || updateProfileMutation.isPending}
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                >
+                  {POSITION_OPTIONS.map((position) => (
+                    <option key={position} value={position}>
+                      {position} · {POSITION_LABELS[position]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Button
+                onClick={() => void handleSaveProfile()}
+                loading={updateProfileMutation.isPending}
+                disabled={!isVerified}
+              >
+                <User className="w-4 h-4 mr-2" />
+                Save player identity
+              </Button>
+              {!isVerified && (
+                <Button variant="outline" onClick={() => setShowWalletModal(true)}>
+                  <ShieldAlert className="w-4 h-4 mr-2" />
+                  Verify wallet first
+                </Button>
+              )}
+            </div>
+          </Card>
+
           {/* Account Summary */}
           <Card>
             <div className="flex items-start justify-between gap-4 mb-4">
@@ -313,23 +454,23 @@ export default function SettingsPage() {
             <div className="grid grid-cols-4 gap-3">
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <Trophy className="w-5 h-5 mx-auto mb-1 text-yellow-500" />
-                <p className="text-xl font-bold text-gray-900 dark:text-white">0</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{currentProfile?.totalMatches ?? 0}</p>
                 <p className="text-xs text-gray-600 dark:text-gray-300">Matches</p>
               </div>
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <Target className="w-5 h-5 mx-auto mb-1 text-green-500" />
-                <p className="text-xl font-bold text-gray-900 dark:text-white">0</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{currentProfile?.totalGoals ?? 0}</p>
                 <p className="text-xs text-gray-600 dark:text-gray-300">Goals</p>
               </div>
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <MessageCircle className="w-5 h-5 mx-auto mb-1 text-blue-500" />
-                <p className="text-xl font-bold text-gray-900 dark:text-white">0</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{currentProfile?.totalAssists ?? 0}</p>
                 <p className="text-xs text-gray-600 dark:text-gray-300">Assists</p>
               </div>
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <Star className="w-5 h-5 mx-auto mb-1 text-purple-500" />
-                <p className="text-xl font-bold text-gray-900 dark:text-white">-</p>
-                <p className="text-xs text-gray-600 dark:text-gray-300">Rating</p>
+                <p className="text-xl font-bold text-gray-900 dark:text-white">{currentProfile?.level ?? 1}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">Level</p>
               </div>
             </div>
           </Card>
