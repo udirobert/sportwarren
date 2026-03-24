@@ -8,7 +8,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { AUTH_STORAGE_KEYS } from '@/lib/auth/constants';
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
-  const { address, chain } = useWallet();
+  const { address, chain, hasWallet } = useWallet();
 
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
@@ -37,8 +37,8 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
             const headers: Record<string, string> = {};
 
             // Use address & chain from closure (they are reactive via useMemo dep)
-            if (address) headers['x-wallet-address'] = address;
-            if (chain) headers['x-chain'] = chain;
+            if (hasWallet && address) headers['x-wallet-address'] = address;
+            if (hasWallet && chain) headers['x-chain'] = chain;
 
             // Auth tokens written by WalletContext.connect() after local signing
             if (typeof window !== 'undefined') {
@@ -56,7 +56,7 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
       ],
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [address, chain]); // re-create when wallet identity changes
+    [address, chain, hasWallet]); // re-create when wallet identity changes
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
@@ -66,4 +66,3 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
     </trpc.Provider>
   );
 }
-

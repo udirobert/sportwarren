@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useWallet } from './WalletContext';
 import { LensConnectionState } from '@/types';
 import { useWallets } from '@privy-io/react-auth';
+import { signWithPrivyEmbeddedWallet } from '@/lib/auth/embedded-wallet';
 
 interface LensContextType extends LensConnectionState {
   login: () => Promise<void>;
@@ -48,7 +49,7 @@ async function readJsonResponse(response: Response) {
 }
 
 export const LensProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { address, chain } = useWallet();
+  const { address, chain, hasWallet } = useWallet();
   const { wallets } = useWallets();
   const lensEnabled = isLensSocialEnabled();
 
@@ -111,7 +112,7 @@ export const LensProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error(LENS_UNAVAILABLE_MESSAGE);
     }
 
-    if (!address) {
+    if (!address || !hasWallet) {
       const message = 'Connect a wallet before linking Lens.';
       setError(message);
       throw new Error(message);
@@ -141,10 +142,10 @@ export const LensProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       let signature = '';
-      const privyWallet = wallets.find((wallet) => wallet.walletClientType === 'privy');
 
-      if (privyWallet && chain === 'social') {
-        signature = await privyWallet.sign(text);
+      if (chain === 'social') {
+        const signed = await signWithPrivyEmbeddedWallet(wallets, text, address);
+        signature = signed.signature;
       } else if (typeof window !== 'undefined' && (window as any).ethereum) {
         const provider = (window as any).ethereum;
         signature = await provider.request({

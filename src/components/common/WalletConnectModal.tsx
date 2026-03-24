@@ -39,6 +39,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
   const [showWalletOptions, setShowWalletOptions] = useState(forceWalletSetup);
   const needsVerification = authStatus.state === 'missing' || authStatus.state === 'expired';
   const showAuthBanner = hasWallet && authStatus.state !== 'none' && authStatus.state !== 'guest';
+  const showLensSection = lensAvailable || lensConnected;
   const publicContent = getJourneyContent('public_visitor');
   const accountReadyContent = getJourneyContent('account_ready');
 
@@ -200,8 +201,8 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
                   <div className="text-sm font-medium">
                     {needsVerification
                       ? (authStatus.state === 'expired'
-                        ? 'Session expired. Re-verify to continue.'
-                        : 'Signature required to unlock protected features.')
+                        ? 'Session expired. Confirm again to continue.'
+                        : 'Confirm once to unlock squad features.')
                       : 'Verified • Protected features unlocked.'}
                   </div>
                 </div>
@@ -214,7 +215,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
                         setError(null);
                         addToast({
                           tone: 'success',
-                          title: 'Wallet Verified',
+                          title: 'Access Confirmed',
                           message: 'Protected features are now unlocked.',
                         });
                         if (forceWalletSetup) {
@@ -225,20 +226,21 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
                         setError('Unable to verify wallet. Please try again.');
                         addToast({
                           tone: 'error',
-                          title: 'Verification Failed',
-                          message: 'Please approve the signature request to continue.',
+                          title: 'Confirmation Failed',
+                          message: 'Please approve the confirmation request to continue.',
                         });
                       }
                     }}
                     disabled={authStatus.isRefreshing || isConnecting}
                     className="h-8 text-xs font-black uppercase tracking-widest"
                   >
-                    {authStatus.isRefreshing ? 'Verifying...' : 'Verify'}
+                    {authStatus.isRefreshing ? 'Confirming...' : 'Confirm'}
                   </Button>
                 )}
               </div>
             </div>
 
+            {showLensSection && (
             <div className="border-t border-gray-100 pt-4">
               <div className="flex items-center justify-between gap-3">
                 <div>
@@ -273,6 +275,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
                 )}
               </div>
             </div>
+            )}
           </div>
         </Card>
       </div>

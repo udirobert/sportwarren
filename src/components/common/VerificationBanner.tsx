@@ -25,14 +25,14 @@ export const VerificationBanner: React.FC<VerificationBannerProps> = ({ classNam
     if (ok) {
       addToast({
         tone: 'success',
-        title: 'Wallet Verified',
+        title: 'Access Confirmed',
         message: 'Protected features are now unlocked.',
       });
     } else {
       addToast({
         tone: 'error',
-        title: 'Verification Failed',
-        message: 'Please approve the signature request to continue.',
+        title: 'Confirmation Failed',
+        message: 'Please approve the confirmation request to continue.',
       });
     }
   };
@@ -42,9 +42,9 @@ export const VerificationBanner: React.FC<VerificationBannerProps> = ({ classNam
       <div className="flex items-center gap-3">
         <ShieldAlert className="w-4 h-4 text-amber-600" />
         <div>
-          <div className="section-title text-amber-700">Verification Required</div>
+          <div className="section-title text-amber-700">One More Step</div>
           <div className="text-sm text-amber-900">
-            {authStatus.state === 'expired' ? 'Session expired — re-verify to continue.' : 'Verify your wallet to unlock protected data.'}
+            {authStatus.state === 'expired' ? 'Session expired. Confirm again to continue.' : 'Confirm once to unlock team actions.'}
           </div>
         </div>
       </div>
@@ -54,7 +54,7 @@ export const VerificationBanner: React.FC<VerificationBannerProps> = ({ classNam
         disabled={authStatus.isRefreshing}
         className="h-9 text-xs font-black uppercase tracking-widest"
       >
-        {authStatus.isRefreshing ? 'Verifying…' : 'Verify'}
+        {authStatus.isRefreshing ? 'Confirming…' : 'Confirm'}
       </Button>
     </div>
   );
