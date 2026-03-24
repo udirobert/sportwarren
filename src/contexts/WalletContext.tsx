@@ -111,6 +111,9 @@ interface AuthStatus {
 const isWalletChain = (value: string | null): value is 'algorand' | 'avalanche' | 'lens' =>
   value === 'algorand' || value === 'avalanche' || value === 'lens';
 
+const isAuthCapableChain = (value: string | null): value is 'algorand' | 'avalanche' | 'lens' | 'social' =>
+  value === 'social' || isWalletChain(value);
+
 const getStoredAuth = (): { signature?: string; message?: string; timestamp?: number; address?: string; chain?: string } => {
   if (typeof window === 'undefined') return {};
   const signature = localStorage.getItem(AUTH_STORAGE_KEYS.SIGNATURE) || undefined;
@@ -151,15 +154,15 @@ const clearAuth = () => {
 };
 
 const computeAuthStatus = (
-  connected: boolean,
+  hasWallet: boolean,
   isGuest: boolean,
   chain: string | null,
-  address: string | null
+  walletAddress: string | null
 ): AuthStatus => {
   if (isGuest) {
     return { state: 'guest', isRefreshing: false };
   }
-  if (!connected || !isWalletChain(chain) || !address) {
+  if (!hasWallet || !isAuthCapableChain(chain) || !walletAddress) {
     return { state: 'none', isRefreshing: false };
   }
   const stored = getStoredAuth();
@@ -169,7 +172,7 @@ const computeAuthStatus = (
   if (!stored.address || !stored.chain) {
     return { state: 'missing', isRefreshing: false };
   }
-  if (stored.address.toLowerCase() !== address.toLowerCase() || stored.chain !== chain) {
+  if (stored.address.toLowerCase() !== walletAddress.toLowerCase() || stored.chain !== chain) {
     return { state: 'missing', isRefreshing: false };
   }
   const expiresAt = stored.timestamp + SIGNATURE_EXPIRY_MS;
@@ -217,6 +220,7 @@ interface WalletProviderProps {
 
 export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [address, setAddress] = useState<string | null>(null);
+  const [walletAddress, setWalletAddress] = useState<string | null>(null);
   const [chain, setChain] = useState<'algorand' | 'avalanche' | 'lens' | 'social' | null>(null);
   const [balance, setBalance] = useState<number>(0);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
@@ -231,10 +235,10 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   const updateAuthStatus = useCallback((refreshingOverride?: boolean) => {
     setAuthStatus(prev => {
-      const next = computeAuthStatus(!!address, isGuest, chain, address);
+      const next = computeAuthStatus(!!walletAddress, isGuest, chain, walletAddress);
       return { ...next, isRefreshing: refreshingOverride ?? prev.isRefreshing };
     });
-  }, [address, isGuest, chain]);
+  }, [walletAddress, isGuest, chain]);
 
   const loadPreferences = useCallback(() => {
     if (typeof window !== 'undefined') {
@@ -279,26 +283,53 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       setIsGuest(false);
       localStorage.removeItem('sw_is_guest');
       setLoginMethod('social');
-      if (user.wallet) {
-        setAddress(user.wallet.address);
-        setChain('social');
-      } else {
-        // Social-only login (Google/email) — Privy authenticated but no wallet yet
-        const socialId = user.email?.address || user.google?.email || user.id;
-        setAddress(socialId || `privy:${user.id}`);
-        setChain('social');
-      }
+      
+      const setupEmbeddedWallet = async () => {
+        if (user.wallet) {
+          const embeddedWalletAddress = user.wallet.address;
+          setAddress(embeddedWalletAddress);
+          setWalletAddress(embeddedWalletAddress);
+          // Privy embedded wallets use their own signing path — not MetaMask/window.ethereum
+          setChain('social');
 
-      // Persist email server-side for re-engagement (fire-and-forget)
-      const email = user.email?.address || user.google?.email;
-      const resolvedAddress = user.wallet?.address || email || `privy:${user.id}`;
-      if (email && resolvedAddress) {
-        fetch('/api/trpc/auth.persistEmail', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ json: { email, walletAddress: resolvedAddress } }),
-        }).catch(() => {});
-      }
+          try {
+            const challengeRes = await fetch('/api/auth/challenge');
+            const { message, timestamp } = await challengeRes.json();
+            const signature = await (user.wallet as any).sign(message);
+            if (signature) {
+              persistAuth(signature, message, timestamp, embeddedWalletAddress, 'social');
+              localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'social');
+              setAuthStatus({
+                state: 'valid',
+                signedAt: timestamp,
+                expiresAt: timestamp + SIGNATURE_EXPIRY_MS,
+                isRefreshing: false,
+              });
+            }
+          } catch (signError) {
+            console.warn('Failed to sign auth challenge with embedded wallet:', signError);
+          }
+        } else {
+          // Social-only login (Google/email) — Privy authenticated but no wallet yet
+          const socialId = user.email?.address || user.google?.email || user.id;
+          setAddress(socialId || `privy:${user.id}`);
+          setWalletAddress(null);
+          setChain('social');
+        }
+
+        // Persist email server-side for re-engagement (fire-and-forget)
+        const email = user.email?.address || user.google?.email;
+        const resolvedAddress = user.wallet?.address || email || `privy:${user.id}`;
+        if (email && resolvedAddress) {
+          fetch('/api/trpc/auth.persistEmail', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ json: { email, walletAddress: resolvedAddress } }),
+          }).catch(() => {});
+        }
+      };
+      
+      setupEmbeddedWallet();
     } else if (ready && !authenticated) {
       const savedPrefs = loadPreferences();
 
@@ -309,23 +340,28 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
       if (savedAlgorand) {
         setAddress(savedAlgorand);
+        setWalletAddress(savedAlgorand);
         setChain('algorand');
         fetchAlgorandBalance(savedAlgorand);
       } else if (savedAvalanche) {
         setAddress(savedAvalanche);
+        setWalletAddress(savedAvalanche);
         setChain('avalanche');
         fetchAvalancheBalance(savedAvalanche);
       } else if (savedLens) {
         setAddress(savedLens);
+        setWalletAddress(savedLens);
         setChain('lens');
         fetchLensBalance(savedLens);
       } else if (localStorage.getItem('sw_is_guest') === 'true') {
         setIsGuest(true);
         setAddress('0xGUEST_DEMO_MODE');
+        setWalletAddress(null);
         setChain('lens');
         setBalance(1000);
         trackGuestMode('started');
       } else if (savedPrefs?.preferredChain) {
+        setWalletAddress(null);
         setChain(savedPrefs.preferredChain);
       }
     }
@@ -333,7 +369,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   useEffect(() => {
     updateAuthStatus(false);
-  }, [address, chain, isGuest, updateAuthStatus]);
+  }, [walletAddress, chain, isGuest, updateAuthStatus]);
 
   useEffect(() => {
     if (authStatus.state !== 'valid' || !authStatus.expiresAt) return;
@@ -385,7 +421,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   };
 
   const refreshAuthSignature = useCallback(async (): Promise<boolean> => {
-    if (isGuest || !address || !isWalletChain(chain)) {
+    if (isGuest || !walletAddress || !isAuthCapableChain(chain)) {
       updateAuthStatus(false);
       return false;
     }
@@ -403,18 +439,20 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         const deflyWallet = (window as any).deflyWallet;
         const algoSigner = (window as any).AlgoSigner;
         signature =
-          (await signWithAlgorandProvider(peraWallet, address, messageBytes, message)) ||
-          (await signWithAlgorandProvider(deflyWallet, address, messageBytes, message)) ||
-          (await signWithAlgoSigner(algoSigner, address, messageBytes));
+          (await signWithAlgorandProvider(peraWallet, walletAddress, messageBytes, message)) ||
+          (await signWithAlgorandProvider(deflyWallet, walletAddress, messageBytes, message)) ||
+          (await signWithAlgoSigner(algoSigner, walletAddress, messageBytes));
+      } else if (chain === 'social' && user?.wallet) {
+        signature = await (user.wallet as any).sign(message);
       } else {
-        signature = await signWithEvmProvider(address, message);
+        signature = await signWithEvmProvider(walletAddress, message);
       }
 
       if (!signature) {
         throw new Error('Failed to sign authentication message.');
       }
 
-      persistAuth(signature, message, timestamp, address, chain);
+      persistAuth(signature, message, timestamp, walletAddress, chain);
       updateAuthStatus(false);
       return true;
     } catch (error) {
@@ -424,7 +462,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     } finally {
       setAuthStatus(prev => ({ ...prev, isRefreshing: false }));
     }
-  }, [address, chain, isGuest, updateAuthStatus]);
+  }, [walletAddress, chain, isGuest, user, updateAuthStatus]);
 
   const connect = async (method: 'algorand' | 'avalanche' | 'lens' | 'google' | 'discord') => {
     try {
@@ -513,6 +551,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
         // ── Step 4: Persist auth state ──
         setAddress(walletAddress);
+        setWalletAddress(walletAddress);
         setChain('algorand');
         localStorage.setItem(STORAGE_KEYS.ALGORAND_ADDRESS, walletAddress);
         localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'algorand');
@@ -538,6 +577,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         const signature = await signWithEvmProvider(walletAddress, message);
 
         setAddress(walletAddress);
+        setWalletAddress(walletAddress);
         setChain('avalanche');
         localStorage.setItem(STORAGE_KEYS.AVALANCHE_ADDRESS, walletAddress);
         localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'avalanche');
@@ -586,6 +626,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         const signature = await signWithEvmProvider(walletAddress, message);
 
         setAddress(walletAddress);
+        setWalletAddress(walletAddress);
         setChain('lens');
         localStorage.setItem(STORAGE_KEYS.LENS_ADDRESS, walletAddress);
         localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'lens');
@@ -606,6 +647,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     clearAuth();
     setIsGuest(true);
     setAddress('0xGUEST_DEMO_MODE');
+    setWalletAddress(null);
     setChain('lens');
     setBalance(1000);
     setLoginMethod('guest');
@@ -620,6 +662,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       privyLogout();
     }
     setAddress(null);
+    setWalletAddress(null);
     setChain(null);
     setBalance(0);
     setIsGuest(false);
@@ -672,7 +715,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         address,
         connected: !!address,
         hasAccount: !!address && !isGuest,
-        hasWallet: !!address && !isGuest && isWalletChain(chain),
+        hasWallet: !!walletAddress && !isGuest,
         isGuest,
         loginMethod,
         chain,
