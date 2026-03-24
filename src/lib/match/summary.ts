@@ -1,4 +1,6 @@
 export interface SquadScopedMatchRecord {
+  id?: string | null;
+  matchDate?: string | Date | null;
   status?: string | null;
   homeSquadId?: string | null;
   awaySquadId?: string | null;

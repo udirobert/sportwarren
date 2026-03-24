@@ -137,3 +137,4 @@ cache/
 typechain-types/
 .output.txt
 dump.rdb
+.blackboxcli/

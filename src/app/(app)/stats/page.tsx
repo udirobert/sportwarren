@@ -233,7 +233,7 @@ export default function StatsPage() {
 
           {recentSettledMatches.length > 0 ? (
             <div className="space-y-3">
-              {recentSettledMatches.map((match) => {
+              {recentSettledMatches.map((match: Parameters<typeof describeMatchForSquad>[0]) => {
                 const summary = describeMatchForSquad(match, primarySquadId);
                 return (
                   <Link
@@ -255,7 +255,7 @@ export default function StatsPage() {
                     <div className="min-w-0 flex-1">
                       <div className="text-sm font-semibold text-gray-900 truncate">vs {summary.opponent}</div>
                       <div className="text-xs text-gray-600 dark:text-gray-300">
-                        {summary.goalsFor}-{summary.goalsAgainst} · {new Date(match.matchDate).toLocaleDateString()}
+                        {summary.goalsFor}-{summary.goalsAgainst} · {match.matchDate ? new Date(match.matchDate).toLocaleDateString() : 'Unknown date'}
                       </div>
                     </div>
                     <ArrowRight className="h-4 w-4 text-gray-300" />

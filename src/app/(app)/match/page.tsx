@@ -284,7 +284,8 @@ export default function MatchPage() {
 
   if (matchCenterGate.status === "blocked") {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-6 nav-spacer-top nav-spacer-bottom text-gray-900 dark:text-gray-100">
+      <div className="mx-auto max-w-4xl px-4 py-8 md:py-12 nav-spacer-top nav-spacer-bottom text-gray-900 dark:text-gray-100 space-y-4">
+        <VerificationBanner />
         <JourneyGateCard
           icon={Trophy}
           eyebrow={matchCenterGate.eyebrow}

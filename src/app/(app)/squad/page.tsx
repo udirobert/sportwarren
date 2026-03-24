@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { CreateSquadFlow } from "@/components/squad/CreateSquadFlow";
+import { SquadPreview } from "@/components/squad/SquadPreview";
 import { trpc } from "@/lib/trpc-client";
 import { useTreasury } from "@/hooks/squad/useTreasury";
 import { useTransfers } from "@/hooks/squad/useTransfers";
@@ -363,15 +364,21 @@ export default function SquadPage() {
 
   if (squadWorkspaceGate.status === "blocked") {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom text-gray-900 dark:text-gray-100">
-        <JourneyGateCard
-          icon={Shield}
-          eyebrow={squadWorkspaceGate.eyebrow}
+      <div className="max-w-4xl mx-auto px-4 py-8 md:py-12 nav-spacer-top nav-spacer-bottom text-gray-900 dark:text-gray-100 space-y-4">
+        <VerificationBanner />
+        <SquadPreview
           title={squadWorkspaceGate.title}
           description={squadWorkspaceGate.description}
-          primaryAction={squadWorkspaceGate.primaryAction}
-          secondaryAction={squadWorkspaceGate.secondaryAction}
-          onPrimaryAction={squadWorkspaceGate.reason === 'missing_squad' ? () => setShowCreateSquadFlow(true) : undefined}
+          primaryAction={squadWorkspaceGate.primaryAction ? {
+            label: squadWorkspaceGate.primaryAction.label,
+            href: squadWorkspaceGate.primaryAction.href,
+            onClick: squadWorkspaceGate.reason === 'missing_squad' ? () => setShowCreateSquadFlow(true) : undefined
+          } : undefined}
+          secondaryAction={squadWorkspaceGate.secondaryAction ? {
+            label: squadWorkspaceGate.secondaryAction.label,
+            href: squadWorkspaceGate.secondaryAction.href
+          } : undefined}
+          onCreateSquad={squadWorkspaceGate.reason === 'missing_squad' ? () => setShowCreateSquadFlow(true) : undefined}
         />
       </div>
     );
