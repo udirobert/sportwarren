@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
+import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 
 export const authRouter = createTRPCRouter({
@@ -88,38 +88,5 @@ export const authRouter = createTRPCRouter({
                     cause: error
                 });
             }
-        }),
-
-    persistEmail: publicProcedure
-        .input(z.object({
-            email: z.string().email(),
-            walletAddress: z.string().min(1),
-        }))
-        .mutation(async ({ ctx, input }) => {
-            const { prisma } = ctx;
-
-            try {
-                await prisma.user.upsert({
-                    where: { walletAddress: input.walletAddress },
-                    update: { email: input.email },
-                    create: {
-                        walletAddress: input.walletAddress,
-                        chain: 'social',
-                        email: input.email,
-                        name: input.email.split('@')[0],
-                    },
-                });
-                return { success: true };
-            } catch (error) {
-                // Unique constraint violation — email already claimed by another account
-                if ((error as any).code === 'P2002') {
-                    return { success: true }; // Already saved, no-op
-                }
-                throw new TRPCError({
-                    code: 'INTERNAL_SERVER_ERROR',
-                    message: 'Failed to persist email',
-                    cause: error,
-                });
-            }
-        }),
+    }),
 });

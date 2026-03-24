@@ -14,7 +14,7 @@ import { trpc } from '@/lib/trpc-client';
 
 export const LensSocialHub: React.FC = () => {
   const { isAvailable, isConnected, profile, login, postMatchProof, error } = useLens();
-  const { hasAccount, isGuest, loginMethod } = useWallet();
+  const { hasAccount, hasWallet, isGuest, loginMethod } = useWallet();
   const { venue, city } = useEnvironment();
   const [isSharing, setIsSharing] = useState(false);
   const [lastPubId, setLastPubId] = useState<string | null>(null);
@@ -112,6 +112,14 @@ export const LensSocialHub: React.FC = () => {
           <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
             <p className="text-xs text-gray-600 leading-relaxed font-semibold">
               Keep verified results inside SportWarren for now. The social layer will reopen once Lens is wired end-to-end instead of simulating posts.
+            </p>
+          </div>
+        </div>
+      ) : !hasWallet ? (
+        <div className="space-y-4">
+          <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
+            <p className="text-xs text-gray-600 leading-relaxed font-semibold">
+              Add a wallet-backed identity first. Lens only works once SportWarren can sign as your account.
             </p>
           </div>
         </div>

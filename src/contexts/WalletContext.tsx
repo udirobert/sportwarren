@@ -2,8 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { UserPreferences } from '@/types';
-import { usePrivy } from '@privy-io/react-auth';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { AUTH_STORAGE_KEYS, SIGNATURE_EXPIRY_MS } from '@/lib/auth/constants';
+import { getPrivyEmbeddedWallet, signWithPrivyEmbeddedWallet } from '@/lib/auth/embedded-wallet';
 import { trackWalletConnection, trackGuestMode, trackFeatureUsed } from '@/lib/analytics';
 
 // Storage keys - centralized for consistency
@@ -232,6 +233,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   }));
 
   const { login, logout: privyLogout, authenticated, user, ready } = usePrivy();
+  const { wallets } = useWallets();
 
   const updateAuthStatus = useCallback((refreshingOverride?: boolean) => {
     setAuthStatus(prev => {
@@ -289,25 +291,35 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           const embeddedWalletAddress = user.wallet.address;
           setAddress(embeddedWalletAddress);
           setWalletAddress(embeddedWalletAddress);
-          // Privy embedded wallets use their own signing path — not MetaMask/window.ethereum
           setChain('social');
+          localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'social');
+
+          const existingStatus = computeAuthStatus(true, false, 'social', embeddedWalletAddress);
+          if (existingStatus.state === 'valid') {
+            setAuthStatus(existingStatus);
+            return;
+          }
+
+          const embeddedWallet = getPrivyEmbeddedWallet(wallets, embeddedWalletAddress);
+          if (!embeddedWallet) {
+            setAuthStatus({ state: 'missing', isRefreshing: false });
+            return;
+          }
 
           try {
             const challengeRes = await fetch('/api/auth/challenge');
             const { message, timestamp } = await challengeRes.json();
-            const signature = await (user.wallet as any).sign(message);
-            if (signature) {
-              persistAuth(signature, message, timestamp, embeddedWalletAddress, 'social');
-              localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'social');
-              setAuthStatus({
-                state: 'valid',
-                signedAt: timestamp,
-                expiresAt: timestamp + SIGNATURE_EXPIRY_MS,
-                isRefreshing: false,
-              });
-            }
+            const { signature, address: signerAddress } = await signWithPrivyEmbeddedWallet(wallets, message, embeddedWalletAddress);
+            persistAuth(signature, message, timestamp, signerAddress, 'social');
+            setAuthStatus({
+              state: 'valid',
+              signedAt: timestamp,
+              expiresAt: timestamp + SIGNATURE_EXPIRY_MS,
+              isRefreshing: false,
+            });
           } catch (signError) {
             console.warn('Failed to sign auth challenge with embedded wallet:', signError);
+            setAuthStatus({ state: 'missing', isRefreshing: false });
           }
         } else {
           // Social-only login (Google/email) — Privy authenticated but no wallet yet
@@ -315,17 +327,6 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           setAddress(socialId || `privy:${user.id}`);
           setWalletAddress(null);
           setChain('social');
-        }
-
-        // Persist email server-side for re-engagement (fire-and-forget)
-        const email = user.email?.address || user.google?.email;
-        const resolvedAddress = user.wallet?.address || email || `privy:${user.id}`;
-        if (email && resolvedAddress) {
-          fetch('/api/trpc/auth.persistEmail', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ json: { email, walletAddress: resolvedAddress } }),
-          }).catch(() => {});
         }
       };
       
@@ -365,7 +366,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         setChain(savedPrefs.preferredChain);
       }
     }
-  }, [loadPreferences, ready, authenticated, user]);
+  }, [loadPreferences, ready, authenticated, user, wallets]);
 
   useEffect(() => {
     updateAuthStatus(false);
@@ -442,8 +443,9 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           (await signWithAlgorandProvider(peraWallet, walletAddress, messageBytes, message)) ||
           (await signWithAlgorandProvider(deflyWallet, walletAddress, messageBytes, message)) ||
           (await signWithAlgoSigner(algoSigner, walletAddress, messageBytes));
-      } else if (chain === 'social' && user?.wallet) {
-        signature = await (user.wallet as any).sign(message);
+      } else if (chain === 'social') {
+        const signed = await signWithPrivyEmbeddedWallet(wallets, message, walletAddress);
+        signature = signed.signature;
       } else {
         signature = await signWithEvmProvider(walletAddress, message);
       }
@@ -462,7 +464,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     } finally {
       setAuthStatus(prev => ({ ...prev, isRefreshing: false }));
     }
-  }, [walletAddress, chain, isGuest, user, updateAuthStatus]);
+  }, [walletAddress, chain, isGuest, updateAuthStatus, wallets]);
 
   const connect = async (method: 'algorand' | 'avalanche' | 'lens' | 'google' | 'discord') => {
     try {

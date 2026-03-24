@@ -2,7 +2,7 @@ import algosdk from 'algosdk';
 import { ethers } from 'ethers';
 import { SIGNATURE_EXPIRY_MS } from './constants';
 
-export type WalletChain = 'algorand' | 'avalanche' | 'lens';
+export type WalletChain = 'algorand' | 'avalanche' | 'lens' | 'social';
 
 export interface WalletAuthPayload {
   address: string;
@@ -68,7 +68,7 @@ export async function verifyAlgorandSignature(
 /**
  * Verify an EVM wallet signature (EIP-191 compatible)
  */
-export async function verifyAvalancheSignature(
+export async function verifyEvmSignature(
   address: string,
   signature: string,
   message: string,
@@ -111,8 +111,8 @@ export async function verifyWalletSignature(
 
   if (chain === 'algorand') {
     verified = await verifyAlgorandSignature(address, signature, message, timestamp);
-  } else if (chain === 'avalanche' || chain === 'lens') {
-    verified = await verifyAvalancheSignature(address, signature, message, timestamp);
+  } else if (chain === 'avalanche' || chain === 'lens' || chain === 'social') {
+    verified = await verifyEvmSignature(address, signature, message, timestamp);
   } else {
     throw new Error(`Unsupported chain: ${chain}`);
   }
@@ -125,7 +125,7 @@ export async function verifyWalletSignature(
 }
 
 export const isSupportedWalletChain = (chain?: string): chain is WalletChain =>
-  chain === 'algorand' || chain === 'avalanche' || chain === 'lens';
+  chain === 'algorand' || chain === 'avalanche' || chain === 'lens' || chain === 'social';
 
 /**
  * Generate authentication message for wallet signing
