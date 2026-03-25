@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { PrismaClient } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, publicProcedure, protectedProcedure, adminProcedure } from '../trpc';
 import { calculateSharpnessDecay, calculateActivityGain } from '../../lib/player/fitness-engine';
@@ -19,11 +20,11 @@ const playerProfileInclude = {
   user: { select: { name: true, avatar: true, position: true, walletAddress: true } },
 } as const;
 
-async function ensurePlayerProfile(prisma: any, userId: string) {
-  const profile = await prisma.playerProfile.findUnique({
-    where: { userId },
-    include: playerProfileInclude,
-  });
+async function ensurePlayerProfile(prisma: PrismaClient, userId: string) {
+    const profile = await prisma.playerProfile.findUnique({
+        where: { userId },
+        include: playerProfileInclude,
+    });
 
   if (profile) {
     return profile;
