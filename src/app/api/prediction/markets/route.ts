@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getActiveMarkets } from "@/server/services/prediction/market";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const category = searchParams.get("category") || undefined;
-    const sportType = searchParams.get("sportType") || undefined;
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const offset = parseInt(searchParams.get("offset") || "0");
+    const category = request.nextUrl.searchParams.get("category") || undefined;
+    const sportType = request.nextUrl.searchParams.get("sportType") || undefined;
+    const limit = parseInt(request.nextUrl.searchParams.get("limit") || "20");
+    const offset = parseInt(request.nextUrl.searchParams.get("offset") || "0");
 
     const markets = await getActiveMarkets({ category, sportType, limit, offset });
 

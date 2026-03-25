@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { getJourneyActionGate } from '@/lib/journey/action-gates';
 
 describe('journey action gates', () => {
-  it('blocks match center for account-ready users until a wallet is connected', () => {
+  it('blocks match center for account-ready users until they create a squad', () => {
     expect(getJourneyActionGate('match_center', {
       stage: 'account_ready',
       hasAccount: true,
@@ -12,8 +12,8 @@ describe('journey action gates', () => {
       chain: 'social',
     })).toMatchObject({
       status: 'blocked',
-      reason: 'missing_wallet',
-      primaryAction: { label: 'Connect wallet', href: '/settings?tab=wallet' },
+      reason: 'missing_squad',
+      primaryAction: { label: 'Create squad', href: '/squad' },
     });
   });
 

@@ -33,7 +33,8 @@ describe('getDashboardEntryState', () => {
     });
 
     expect(state.id).toBe('account_ready');
-    expect(state.secondaryAction?.label).toBe('Connect wallet');
+    expect(state.primaryAction.label).toBe('Log your first match');
+    expect(state.secondaryAction?.label).toBe('Explore the Staff Room');
   });
 
   it('returns wallet verification state when a wallet is connected but not verified', () => {
@@ -50,7 +51,8 @@ describe('getDashboardEntryState', () => {
     });
 
     expect(state.id).toBe('wallet_unverified');
-    expect(state.primaryAction.intent).toBe('verify_wallet');
+    expect(state.primaryAction.intent).toBe('log_match');
+    expect(state.secondaryAction?.intent).toBe('verify_wallet');
   });
 
   it('returns verified-no-squad state for verified users without a squad', () => {

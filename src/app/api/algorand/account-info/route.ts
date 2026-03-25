@@ -1,10 +1,11 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { getAccountInfo } from '@/lib/algorand';
 
-export async function GET(request: Request) {
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const address = searchParams.get('address');
+    const address = request.nextUrl.searchParams.get('address');
 
     if (!address) {
       return NextResponse.json({ error: 'Address is required' }, { status: 400 });

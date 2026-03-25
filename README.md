@@ -1,18 +1,18 @@
 # SportWarren
 
-**Chainlink CRE-Powered Phygital Sports Platform** | Football is Just the Start
+**Phygital Football Management Platform** | Real matches, verified data, and Web3-native squad operations
 
-A next-generation football management platform where real Sunday league matches drive a Championship Manager-style game layer. Built with Next.js, PostgreSQL, and multi-chain Web3 infrastructure.
+SportWarren turns grassroots football into a Championship Manager-style experience where real-world match activity feeds progression, squad decisions, and treasury outcomes. It combines modern web tooling, backend services, AI assistants, messaging channels, and multi-network integrations.
 
 ---
 
 ## 🎯 Vision
 
 SportWarren transforms amateur football with:
-- **Real Match Verification** - On-chain verified matches via Chainlink CRE
-- **Player Progression** - FIFA-style attributes that improve with real performance
+- **Real Match Verification** - Structured submissions, consensus checks, and oracle-assisted trust signals
+- **Player Progression** - FIFA-style attributes that improve through real performance
 - **Squad Management** - Team organization, tactics, treasury, and transfers
-- **Championship Manager UX** - Familiar gameplay with Web3 ownership
+- **Championship Manager UX** - Familiar gameplay with verifiable digital ownership
 
 **The Flywheel:** Real performance → Game rewards → Better tools/strategy → Improved real performance
 
@@ -37,7 +37,7 @@ npm run dev
 
 ---
 
-## 📚 Documentation
+## 📚 Documentation Index
 
 | Document | Purpose |
 |----------|---------|
@@ -45,10 +45,12 @@ npm run dev
 | **[BUILD.md](docs/BUILD.md)** | Development guide, deployment, testing, troubleshooting |
 | **[CONTRACTS.md](docs/CONTRACTS.md)** | Deployed contracts, Chainlink oracles, integrations |
 | **[GROWTH.md](docs/GROWTH.md)** | Roadmap, growth strategy, hackathon demo |
+| **[TELEGRAM.md](docs/TELEGRAM.md)** | Telegram bot + Mini App architecture, commands, and integration flows |
+| **[YELLOW_INTEGRATION.md](docs/YELLOW_INTEGRATION.md)** | Yellow Network integration details and operational notes |
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture (High-Level)
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -89,7 +91,7 @@ npm run dev
 ### Match Verification
 - Both teams submit results independently
 - Consensus required (3 verifications)
-- Chainlink CRE: Weather + Location oracles → Trust Score
+- Oracle-backed context (e.g., environmental/location signals) contributes to trust scoring
 - Trust tiers affect verification weight
 - On-chain settlement on Algorand
 
@@ -100,6 +102,11 @@ npm run dev
 - **Yellow Network:** Instant off-chain match fees, treasury, and transfers
 - **Lens Network:** Social graph, highlight sharing
 - **Telegram + TON:** Bot commands (`/start`, `/log`, `/stats`, `/fixtures`, `/treasury`, `/fee`), Mini App treasury top-ups, TON settlement worker with webhook delivery
+
+### AI Staff Layer
+- Multi-persona staff assistants (Agent, Scout, Coach, Physio, Analyst, Commercial)
+- Context-aware responses using squad data, treasury signals, and recent decisions
+- Provider abstraction with Venice AI primary + OpenAI fallback
 
 ---
 
@@ -113,7 +120,9 @@ npm run dev
 | ORM | Prisma 7 |
 | State | TanStack Query, Zustand |
 | Auth | Wallet signatures (algosdk, ethers) |
-| Blockchains | Algorand, Avalanche, Kite AI, Lens, Yellow |
+| AI | Venice AI, OpenAI fallback |
+| Messaging | Telegram Bot API, Telegram Mini App, TON flows |
+| Blockchains & Networks | Algorand, Avalanche, Kite AI, Lens, Yellow, TON |
 
 ---
 
@@ -152,4 +161,4 @@ MIT License - see LICENSE file for details.
 
 **Built with ❤️ for footballers everywhere.**
 
-⚽ **SportWarren** | 🔗 **Powered by Chainlink CRE**
+⚽ **SportWarren** | 🌐 **Built across web, AI, messaging, and multi-network rails**
