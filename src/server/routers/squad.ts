@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { PrismaClient } from '@prisma/client';
 import { TRPCError } from '@trpc/server';
 import { Address as TonAddress } from '@ton/core';
 import { isAddress, type Address } from 'viem';
@@ -73,7 +74,7 @@ function getRecordNumber(record: unknown, key: string): number | undefined {
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
-async function getSquadLeaderWallets(prisma: any, squadId: string) {
+async function getSquadLeaderWallets(prisma: PrismaClient, squadId: string) {
   const leaders = await prisma.squadMember.findMany({
     where: {
       squadId,
@@ -103,7 +104,7 @@ async function getSquadLeaderWallets(prisma: any, squadId: string) {
   return Array.from(participants.values());
 }
 
-async function movePlayerToSquad(prisma: any, offer: { playerId: string; fromSquadId: string; toSquadId: string }) {
+async function movePlayerToSquad(prisma: PrismaClient, offer: { playerId: string; fromSquadId: string; toSquadId: string }) {
   const currentMembership = await prisma.squadMember.findUnique({
     where: {
       squadId_userId: {
@@ -146,7 +147,7 @@ async function movePlayerToSquad(prisma: any, offer: { playerId: string; fromSqu
   });
 }
 
-async function expireTransferOffers(prisma: any, squadId?: string) {
+async function expireTransferOffers(prisma: PrismaClient, squadId?: string) {
   const now = new Date();
   const where: Record<string, unknown> = {
     status: 'pending',

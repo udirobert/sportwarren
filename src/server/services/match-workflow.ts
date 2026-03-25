@@ -372,7 +372,7 @@ export async function ensureMatchParticipationStats(
   });
 
   const profilesToSeed = members
-    .filter((m) => m.user.playerProfile)
+    .filter((m) => m.user?.playerProfile?.id)
     .map((m) => m.user.playerProfile!.id);
 
   if (profilesToSeed.length === 0) return;
