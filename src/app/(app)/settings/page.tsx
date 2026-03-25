@@ -66,7 +66,9 @@ export default function SettingsPage() {
   const [copied, setCopied] = useState(false);
   const utils = trpc.useUtils();
 
-  const primarySquad = memberships?.[0]?.squad;
+  const primaryMembership = memberships?.[0];
+  const primarySquad = primaryMembership?.squad;
+  const canManageSquadConnections = primaryMembership?.role === 'captain' || primaryMembership?.role === 'vice_captain';
   const { data: currentProfile, isLoading: currentProfileLoading } = trpc.player.getCurrentProfile.useQuery(
     undefined,
     { enabled: isVerified, staleTime: 30 * 1000 }
@@ -187,6 +189,11 @@ export default function SettingsPage() {
 
     if (!isVerified) {
       setConnectionNotice('Verify your wallet before linking Telegram to a squad.');
+      return;
+    }
+
+    if (!canManageSquadConnections) {
+      setConnectionNotice('Only squad captains or vice-captains can link Telegram for the squad.');
       return;
     }
 
@@ -515,6 +522,7 @@ export default function SettingsPage() {
                 const isConnected = connection?.connected;
                 const isPending = connection?.status === 'pending';
                 const actionDisabled = isCreatingTelegramLink || isDisconnectingPlatform;
+                const canManagePlatform = platform === 'telegram' ? canManageSquadConnections : false;
                 return (
                   <div key={platform} className={`p-4 border rounded-xl transition-all ${
                     isConnected
@@ -538,11 +546,11 @@ export default function SettingsPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => void handleDisconnect(platform)}
-                          disabled={actionDisabled}
+                          disabled={actionDisabled || !canManagePlatform}
                           className="text-red-600 shrink-0"
                         >
                           <X className="w-3 h-3 mr-1" />
-                          Unlink
+                          {canManagePlatform ? 'Unlink' : 'Captain only'}
                         </Button>
                       ) : info.selfServe ? (
                         isPending && connection?.linkUrl ? (
@@ -561,11 +569,11 @@ export default function SettingsPage() {
                           <Button
                             size="sm"
                             onClick={() => void handleConnect(platform)}
-                            disabled={actionDisabled}
+                            disabled={actionDisabled || !canManagePlatform}
                             className="shrink-0"
                           >
                             <Link2 className="w-3 h-3 mr-1" />
-                            {isVerified ? 'Connect' : 'Verify Wallet'}
+                            {canManagePlatform ? (isVerified ? 'Connect' : 'Verify Wallet') : 'Captain only'}
                           </Button>
                         )
                       ) : (
@@ -593,7 +601,9 @@ export default function SettingsPage() {
                         )}
                         {isPending && platform === 'telegram' && (
                           <p className="mt-2 text-xs text-gray-600 dark:text-gray-300">
-                            Finish linking in Telegram, then this page will refresh automatically.
+                            {connection?.linkUrl
+                              ? 'Finish linking in Telegram, then this page will refresh automatically.'
+                              : 'A squad captain or vice-captain needs to finish linking in Telegram.'}
                           </p>
                         )}
                       </div>
@@ -603,7 +613,9 @@ export default function SettingsPage() {
                         <p className="text-xs text-gray-600 dark:text-gray-300">
                           {primarySquad
                             ? isVerified
-                              ? `This will link Telegram to ${primarySquad.name}.`
+                              ? canManageSquadConnections
+                                ? `This will link Telegram to ${primarySquad.name}.`
+                                : `Only captains or vice-captains can link Telegram to ${primarySquad.name}.`
                               : 'Verify your wallet first so SportWarren can bind Telegram to the correct squad.'
                             : 'Create or join a squad before linking Telegram.'}
                         </p>

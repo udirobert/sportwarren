@@ -18,6 +18,7 @@ import {
   settlePendingTreasuryActivity,
   TreasuryBalanceError,
 } from '../economy/treasury-ledger.js';
+import type { RedisService } from '../redis.js';
 
 interface PendingMatchDraft extends ParsedTelegramMatchResult {
   id: string;
@@ -53,13 +54,16 @@ function readMetadataString(metadata: unknown, key: string): string | null {
 
 export class TelegramService {
   private bot: TelegramBot;
+  private redisService: RedisService | null;
   private pendingMatchDrafts = new Map<string, PendingMatchDraft>();
 
-  constructor() {
+  constructor(redisService: RedisService | null = null) {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) {
       throw new Error('TELEGRAM_BOT_TOKEN environment variable is required');
     }
+
+    this.redisService = redisService;
 
     const useWebhook = process.env.TELEGRAM_WEBHOOK_URL?.trim();
 
@@ -248,6 +252,74 @@ export class TelegramService {
     return randomBytes(6).toString('hex');
   }
 
+  private getDraftKey(draftId: string): string {
+    return `telegram:match-draft:${draftId}`;
+  }
+
+  private async storePendingDraft(draft: PendingMatchDraft): Promise<void> {
+    this.pendingMatchDrafts.set(draft.id, draft);
+
+    if (!this.redisService) {
+      return;
+    }
+
+    await this.redisService.set(
+      this.getDraftKey(draft.id),
+      JSON.stringify(draft),
+      Math.floor(MATCH_DRAFT_TTL_MS / 1000),
+    );
+  }
+
+  private async getPendingDraft(draftId: string): Promise<PendingMatchDraft | null> {
+    this.pruneExpiredDrafts();
+
+    const inMemoryDraft = this.pendingMatchDrafts.get(draftId);
+    if (inMemoryDraft) {
+      return inMemoryDraft;
+    }
+
+    if (!this.redisService) {
+      return null;
+    }
+
+    const serializedDraft = await this.redisService.get(this.getDraftKey(draftId));
+    if (!serializedDraft) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(serializedDraft) as PendingMatchDraft;
+      if (
+        typeof parsed?.id !== 'string'
+        || typeof parsed.chatId !== 'number'
+        || typeof parsed.squadId !== 'string'
+        || typeof parsed.submittedBy !== 'string'
+        || typeof parsed.createdAt !== 'number'
+        || typeof parsed.teamScore !== 'number'
+        || typeof parsed.opponentScore !== 'number'
+        || typeof parsed.outcome !== 'string'
+        || typeof parsed.opponent !== 'string'
+      ) {
+        return null;
+      }
+
+      this.pendingMatchDrafts.set(parsed.id, parsed);
+      return parsed;
+    } catch {
+      return null;
+    }
+  }
+
+  private async deletePendingDraft(draftId: string): Promise<void> {
+    this.pendingMatchDrafts.delete(draftId);
+
+    if (!this.redisService) {
+      return;
+    }
+
+    await this.redisService.del(this.getDraftKey(draftId));
+  }
+
   private async requireLinkedChat(chatId: number) {
     return findTelegramConnectionByChatId(prisma, String(chatId));
   }
@@ -344,7 +416,7 @@ export class TelegramService {
         ...parsed,
       };
 
-      this.pendingMatchDrafts.set(draftId, draft);
+      await this.storePendingDraft(draft);
 
       const keyboard = {
         inline_keyboard: [[
@@ -433,7 +505,7 @@ export class TelegramService {
       matchDate: new Date(),
     });
 
-    this.pendingMatchDrafts.delete(draft.id);
+    await this.deletePendingDraft(draft.id);
 
     return {
       id: match.id,
@@ -867,8 +939,6 @@ export class TelegramService {
       return;
     }
 
-    this.pruneExpiredDrafts();
-
     const [action, draftId] = data.split(':');
 
     if (action === 'approve_fee' || action === 'reject_fee') {
@@ -876,7 +946,7 @@ export class TelegramService {
       return;
     }
 
-    const draft = draftId ? this.pendingMatchDrafts.get(draftId) : undefined;
+    const draft = draftId ? await this.getPendingDraft(draftId) : null;
 
     if (!draft || draft.chatId !== chatId) {
       await this.bot.answerCallbackQuery(query.id, {
@@ -887,7 +957,7 @@ export class TelegramService {
     }
 
     if (action === 'cancel_match') {
-      this.pendingMatchDrafts.delete(draft.id);
+      await this.deletePendingDraft(draft.id);
       await this.bot.editMessageText('Match logging cancelled.', {
         chat_id: chatId,
         message_id: messageId,

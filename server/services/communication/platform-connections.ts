@@ -104,16 +104,21 @@ export function extractTelegramConnectToken(value: string): string {
 
 export async function getPlatformConnectionsForSquad(
   prisma: PlatformStore,
-  squadId: string
+  squadId: string,
+  options?: { includePendingLinkUrl?: boolean }
 ): Promise<PlatformConnections> {
   const connections = await prisma.platformConnection.findMany({
     where: { squadId },
     orderBy: { createdAt: 'asc' },
   });
 
+  const includePendingLinkUrl = options?.includePendingLinkUrl ?? false;
+
   return connections.reduce<PlatformConnections>((accumulator, connection) => {
     const platform = connection.platform as PlatformType;
-    accumulator[platform] = mapConnection(connection, { includeLinkUrl: connection.status === 'pending' });
+    accumulator[platform] = mapConnection(connection, {
+      includeLinkUrl: includePendingLinkUrl && connection.status === 'pending',
+    });
     return accumulator;
   }, {});
 }
