@@ -1,6 +1,7 @@
 import { XMTPBotService, type IncomingXmtpMessage, type XmtpPayload } from './xmtp.js';
 import { WhatsAppService } from './whatsapp.js';
 import { TelegramService } from './telegram.js';
+import type { RedisService } from '../redis.js';
 
 export interface CommunicationTargets {
   xmtp?: { kind: 'group'; groupId: string } | { kind: 'dm'; inboxId: string };
@@ -47,10 +48,10 @@ export class CommunicationBridge {
   private whatsapp: WhatsAppService;
   private telegram: TelegramService | null;
 
-  constructor() {
+  constructor(redisService: RedisService | null = null) {
     this.xmtp = new XMTPBotService();
     this.whatsapp = new WhatsAppService();
-    this.telegram = process.env.TELEGRAM_BOT_TOKEN ? new TelegramService() : null;
+    this.telegram = process.env.TELEGRAM_BOT_TOKEN ? new TelegramService(redisService) : null;
   }
 
   async initialize(): Promise<void> {
@@ -131,7 +132,7 @@ export class CommunicationBridge {
   }
 
   private formatMessageForTelegram(content: string): string {
-    return `🔄 **SportWarren**\n\n${content}`;
+    return `🔄 SportWarren\n\n${content}`;
   }
 
   getTelegramService(): TelegramService | null {

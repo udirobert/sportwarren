@@ -60,7 +60,7 @@ async function startServer() {
   await redisService.connect();
 
   // Initialize advanced services
-  const communicationBridge = new CommunicationBridge();
+  const communicationBridge = new CommunicationBridge(redisService);
   const voiceService = new VoiceProcessingService();
   const visionService = new ComputerVisionService();
   const algorandService = new AlgorandService();

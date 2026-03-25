@@ -40,8 +40,10 @@ export const communicationRouter = createTRPCRouter({
       squadId: z.string().min(1, 'Squad ID is required'),
     }))
     .query(async ({ ctx, input }) => {
-      await requireSquadMember(ctx.prisma, input.squadId, ctx.userId!);
-      return getPlatformConnectionsForSquad(ctx.prisma, input.squadId);
+      const membership = await requireSquadMember(ctx.prisma, input.squadId, ctx.userId!);
+      return getPlatformConnectionsForSquad(ctx.prisma, input.squadId, {
+        includePendingLinkUrl: isSquadLeader(membership.role),
+      });
     }),
 
   createTelegramLink: protectedProcedure
