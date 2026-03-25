@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Home, Trophy, User, Wallet, Bot, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { Home, Trophy, User, Wallet, Bot, Loader2, AlertCircle, RefreshCw, Link2, ArrowRight } from 'lucide-react';
 
 // Types for the enhanced Mini App context
 export interface PlayerContext {
@@ -161,7 +161,6 @@ export function TelegramMiniAppShell({
   // Load context
   const loadContext = async (showRefresh = false) => {
     if (!token) {
-      setError('Mini App token missing. Open this screen from Telegram.');
       setLoading(false);
       return;
     }
@@ -232,6 +231,18 @@ export function TelegramMiniAppShell({
     loadContext(true);
   };
 
+  const openConnections = () => {
+    const settingsUrl = `${window.location.origin}/settings?tab=connections`;
+    const webApp = window.Telegram?.WebApp;
+
+    if (webApp?.openLink) {
+      webApp.openLink(settingsUrl);
+      return;
+    }
+
+    window.open(settingsUrl, '_blank', 'noopener,noreferrer');
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -246,6 +257,39 @@ export function TelegramMiniAppShell({
           <div className="text-center">
             <p className="text-sm font-medium text-slate-300">Loading SportWarren</p>
             <p className="mt-1 text-xs text-slate-500">Connecting to your squad...</p>
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (!token) {
+    return (
+      <main className="flex min-h-screen flex-col justify-center bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.12),_transparent_45%),linear-gradient(180deg,_#09111f_0%,_#0d1526_100%)] px-4 py-8">
+        <div className="mx-auto w-full max-w-md">
+          <div className="rounded-3xl border border-white/10 bg-slate-950/70 p-6 shadow-2xl shadow-black/30">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
+              <Link2 className="h-7 w-7" />
+            </div>
+            <h1 className="mt-4 text-2xl font-bold text-white">SportWarren Mini App</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              Open the full squad dashboard in Telegram after you link this chat to a SportWarren squad.
+            </p>
+
+            <div className="mt-5 space-y-3 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-slate-300">
+              <p>1. Open SportWarren on the web.</p>
+              <p>2. Create or join a squad.</p>
+              <p>3. Go to Settings &gt; Connections &gt; Telegram.</p>
+              <p>4. Return to this chat and type <span className="font-semibold text-emerald-300">/app</span>.</p>
+            </div>
+
+            <button
+              onClick={openConnections}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
+            >
+              Open SportWarren Settings
+              <ArrowRight className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </main>

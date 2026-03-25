@@ -83,13 +83,32 @@ export function buildTelegramDeepLink(token: string): string | null {
   return `https://t.me/${botUsername}?start=${TELEGRAM_CONNECT_PREFIX}${token}`;
 }
 
-export function buildTelegramMiniAppUrl(token: string): string | null {
+export function buildTelegramMiniAppUrl(options?: string | {
+  token?: string;
+  tab?: string;
+  mode?: string;
+}): string | null {
   const baseUrl = getAppBaseUrl();
   if (!baseUrl) {
     return null;
   }
 
-  return `${baseUrl}/telegram/mini-app?token=${encodeURIComponent(token)}`;
+  const url = new URL(`${baseUrl}/telegram/mini-app`);
+  const resolvedOptions = typeof options === 'string' ? { token: options } : options;
+
+  if (resolvedOptions?.token) {
+    url.searchParams.set('token', resolvedOptions.token);
+  }
+
+  if (resolvedOptions?.tab) {
+    url.searchParams.set('tab', resolvedOptions.tab);
+  }
+
+  if (resolvedOptions?.mode) {
+    url.searchParams.set('mode', resolvedOptions.mode);
+  }
+
+  return url.toString();
 }
 
 export function isTelegramConnectToken(value: string | undefined): value is string {
@@ -225,7 +244,7 @@ export async function createTelegramMiniAppSession(
   connectionId: string
 ): Promise<{ token: string; url: string }> {
   const token = randomBytes(12).toString('hex');
-  const url = buildTelegramMiniAppUrl(token);
+  const url = buildTelegramMiniAppUrl({ token });
 
   if (!url) {
     throw new Error('NEXT_PUBLIC_CLIENT_URL or CLIENT_URL must be configured to launch the Telegram Mini App');
