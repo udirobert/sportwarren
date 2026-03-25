@@ -9,6 +9,7 @@ import {
 } from "@/server/services/permissions";
 import { submitMatchResult } from "../match-workflow.js";
 import {
+  buildTelegramMiniAppUrl,
   connectTelegramChatByToken,
   createTelegramMiniAppSession,
   extractTelegramConnectToken,
@@ -291,6 +292,7 @@ export class TelegramService {
       "",
       "🔗 Linking:",
       "Settings > Connections > Telegram in the web app.",
+      "/app opens onboarding if you have not linked a squad yet.",
     ].join("\n");
   }
 
@@ -300,9 +302,28 @@ export class TelegramService {
   ): Promise<void> {
     const linkedChat = await this.requireLinkedChat(chatId);
     if (!linkedChat?.squadId) {
+      const onboardingUrl = buildTelegramMiniAppUrl({ mode: "onboarding" });
+      const keyboard = onboardingUrl
+        ? {
+            inline_keyboard: [
+              [
+                {
+                  text: "Open SportWarren Mini App",
+                  web_app: { url: onboardingUrl },
+                },
+              ],
+            ],
+          }
+        : undefined;
+
       await this.bot.sendMessage(
         chatId,
-        "This chat is not linked to a SportWarren squad yet. Link Telegram from Settings before opening the Mini App.",
+        [
+          "This chat is not linked to a SportWarren squad yet.",
+          "",
+          "Open the Mini App for onboarding, then connect Telegram from SportWarren Settings > Connections > Telegram when your squad is ready.",
+        ].join("\n"),
+        keyboard ? { reply_markup: keyboard } : undefined,
       );
       return;
     }

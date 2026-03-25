@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { getSquadMembership, isSquadLeader } from '@/server/services/permissions';
 import { createPendingMatchSubmission } from '../match-submission.js';
 import {
+  buildTelegramMiniAppUrl,
   connectTelegramChatByToken,
   createTelegramMiniAppSession,
   extractTelegramConnectToken,
@@ -226,7 +227,8 @@ export class TelegramService {
       '',
       'Linking:',
       'Open SportWarren Settings > Connections > Telegram and use the generated link.',
-      'Then type /app to open the full Mini App inside Telegram.',
+      'Type /app to open the full Mini App inside Telegram.',
+      'If you have not linked a squad yet, /app will show onboarding and the next steps.',
     ].join('\n');
   }
 
@@ -236,9 +238,26 @@ export class TelegramService {
   ): Promise<void> {
     const linkedChat = await this.requireLinkedChat(chatId);
     if (!linkedChat?.squadId) {
+      const onboardingUrl = buildTelegramMiniAppUrl({ mode: 'onboarding' });
+      const keyboard = onboardingUrl
+        ? {
+            inline_keyboard: [[
+              {
+                text: 'Open SportWarren Mini App',
+                web_app: { url: onboardingUrl },
+              },
+            ]],
+          }
+        : undefined;
+
       await this.bot.sendMessage(
         chatId,
-        'This chat is not linked to a SportWarren squad yet. Link Telegram from SportWarren Settings > Connections > Telegram, then type /app to open the Mini App.',
+        [
+          'This chat is not linked to a SportWarren squad yet.',
+          '',
+          'Open the Mini App for onboarding, then connect Telegram from SportWarren Settings > Connections > Telegram when your squad is ready.',
+        ].join('\n'),
+        keyboard ? { reply_markup: keyboard } : undefined,
       );
       return;
     }
@@ -485,7 +504,7 @@ export class TelegramService {
         linkedChat?.squadId
           ? 'The user already has a linked squad, so guide them toward the most relevant squad action.'
           : 'The user has not linked Telegram yet, so explain that linking happens in SportWarren Settings > Connections > Telegram.',
-        'If they ask how to open the Mini App, tell them to type "/app" after linking. Mention "/treasury" if they specifically want wallet or TON treasury actions.',
+        'If they ask how to open the Mini App, tell them to type "/app". If they are not linked yet, explain that /app opens onboarding and they can finish linking from SportWarren Settings > Connections > Telegram.',
         'If they want to log a result, tell them to use "/log 4-2 win vs Red Lions".',
         'If they want squad or player stats, tell them to use "/stats" or "/stats Marcus".',
         'If they want fixtures, tell them to use "/fixtures".',
@@ -514,8 +533,8 @@ export class TelegramService {
       return [
         'SportWarren Telegram',
         '',
-        'Link this chat from SportWarren Settings > Connections > Telegram to unlock squad guidance.',
-        'After linking, type /app to open the full Mini App.',
+        'Type /app to open the Mini App onboarding flow.',
+        'Then link this chat from SportWarren Settings > Connections > Telegram to unlock squad guidance.',
         'Once linked, you can log matches, check stats, and open the TON treasury Mini App from here.',
       ].join('\n');
     }
