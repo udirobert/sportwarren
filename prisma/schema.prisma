@@ -212,7 +212,6 @@ model PlatformConnection {
   username       String?
   chatId         String?   @map("chat_id")
   platformUserId String?   @map("platform_user_id")
-  groupAddress   String?   @map("group_address")
   linkToken      String?   @unique @map("link_token")
   miniAppToken   String?   @unique @map("mini_app_token")
   miniAppTokenExpiresAt DateTime? @map("mini_app_token_expires_at")
@@ -612,4 +611,91 @@ model AiMemory {
 
   @@unique([userId])
   @@map("ai_memories")
+}
+
+// ============================================================================
+// PREDICTION MARKETS
+// ============================================================================
+
+model PredictionMarket {
+  id          String   @id @default(cuid())
+  question    String   // "Who will win the match?"
+  description String?  // Additional context
+  category    String   // 'sports', 'politics', 'entertainment', 'crypto'
+  sportType   String?  // 'football', 'basketball', 'tennis', etc.
+  
+  // Market metadata
+  creatorId   String   @map("creator_id")
+  creatorName String?  @map("creator_name") // Telegram username
+  
+  // Timing
+  deadline    DateTime // When betting closes
+  settleBy    DateTime @map("settle_by") // When AI must resolve
+  
+  // Status
+  status      String   @default("active") // 'active', 'settled', 'cancelled', 'disputed'
+  result      String?  // The winning option ID
+  
+  // Payout tracking
+  totalPool   Int      @default(0) @map("total_pool") // Total TON staked
+  creatorFee  Int      @default(0) @map("creator_fee") // Creator's share
+  
+  // AI verification
+  aiVerified  Boolean  @default(false) @map("ai_verified")
+  aiReasoning String?  @map("ai_reasoning")
+  
+  // Timestamps
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  options     PredictionOption[]
+  bets        PredictionBet[]
+  
+  @@map("prediction_markets")
+}
+
+model PredictionOption {
+  id        String           @id @default(cuid())
+  marketId  String           @map("market_id")
+  market    PredictionMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  
+  text      String           // "Team A wins", "Draw", "Team B wins"
+  odds      Float            @default(2.0) // Payout multiplier
+  totalBet  Int              @default(0)   @map("total_bet") // Total staked on this option
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  // Relations
+  bets      PredictionBet[]
+  
+  @@unique([marketId, text])
+  @@map("prediction_options")
+}
+
+model PredictionBet {
+  id        String           @id @default(cuid())
+  marketId  String           @map("market_id")
+  market    PredictionMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
+  
+  optionId  String           @map("option_id")
+  option    PredictionOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  
+  userId    String           @map("user_id")
+  userName  String?          @map("user_name") // Telegram username
+  
+  amount    Int              // Amount in nanoTON
+  potentialWin Int           @map("potential_win") // If they win
+  
+  // Status
+  status    String   @default("pending") // 'pending', 'won', 'lost', 'refunded'
+  
+  // Telegram message for dispute
+  messageId String?  @map("message_id")
+  
+  // Timestamps
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  @@map("prediction_bets")
 }

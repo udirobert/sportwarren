@@ -8,7 +8,7 @@ export interface SportEvent {
   playerId?: string;
   data: any;
   timestamp: number;
-  source: 'app' | 'whatsapp' | 'telegram' | 'xmtp' | 'voice' | 'vision';
+  source: 'app' | 'telegram' | 'voice' | 'vision';
 }
 
 export class EventStreamService {

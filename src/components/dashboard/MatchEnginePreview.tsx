@@ -10,7 +10,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 import {
-    SIM_PARAMS, COMMENTARY_PARAMS, PASS_WEIGHTS,
+    SIM_PARAMS, COMMENTARY_PARAMS,
     buildFormation, distanceBetween, resolveCollisions,
     tickPlayer, selectPassTarget, executePass,
     computeSupportOptions, determineBallState, tryGkSave,
@@ -25,7 +25,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; awaySquadId?: stri
     const [isPlaying, setIsPlaying] = useState(false);
     const [matchPhase, setMatchPhase] = useState<MatchPhase>('first_half');
     const [ball, setBall] = useState({ x: 50, y: 50, vx: 0, vy: 0, ownerId: null as string | null });
-    const [ballState, setBallState] = useState<BallState>('controlled');
+    const [_ballState, setBallState] = useState<BallState>('controlled');
     const [players, setPlayers] = useState<PlayerPuck[]>([]);
     const [commentary, setCommentary] = useState<MatchCommentary[]>([]);
     const [time, setTime] = useState(0);
@@ -95,7 +95,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; awaySquadId?: stri
         setLatestEvent(text);
     }, []);
 
-    const addCommentary = useCallback((text: string, type: MatchCommentary['type'] = 'action') => {
+    const _addCommentary = useCallback((text: string, type: MatchCommentary['type'] = 'action') => {
         const evtType: MatchEvent['type'] =
             type === 'goal' ? 'goal' :
             type === 'dao' ? 'dao' :

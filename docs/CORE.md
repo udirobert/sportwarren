@@ -1,6 +1,8 @@
 # SportWarren Core
 
-**Phygital Football Platform | Real World + Championship Manager Layer**
+**Phygital Football Platform | Championship Manager in Telegram, powered by TON**
+
+> **Hackathon Focus:** User-Facing AI Agents on TON — an AI-powered squad management assistant that lives in Telegram, handles match tracking, tactics, and treasury via TON payments.
 
 ---
 
@@ -30,6 +32,31 @@ Team coordination      →            Squad chemistry + Morale
 4. **XP Distribution** - Players earn attribute XP
 5. **Leaderboards** - Rankings updated, rivalries formed
 
+### Current Product Scope
+
+SportWarren's current MVP scope is the **Championship Manager-style squad loop, Telegram-first**:
+
+| Primitive | Description | Status |
+|-----------|-------------|--------|
+| Match Tracking | Log results, events, verification | ✅ Complete |
+| Game Simulation | AI-powered match prediction engine | ✅ Complete |
+| Tactics/Strategy | Formation, instructions, lineups | ✅ Complete |
+| Payments | TON treasury, fees, rewards | ✅ Complete |
+| XP System | Player progression, reputation | ✅ Complete |
+| AI Staff | 5 agents (Scout, Coach, Physio, etc.) | ✅ Complete |
+
+**Telegram is the primary distribution layer. TON is the payment/trust layer.**
+
+### Out of Scope (Future Build)
+
+The following features exist in code but are **not part of the current core product**:
+
+- **Prediction Markets** (`/predict`, `server/services/prediction/`) — Speculative feature, not CM-style core loop
+- **Lens Social Integration** — Future social layer, not launch priority
+- **Advanced DAO Governance** — Beyond basic treasury operations
+
+These should not displace the primary CM-style loop during consolidation, hackathon judging, or roadmap prioritization.
+
 ### Weekly Cycle
 
 | Day | Real World | SportWarren Layer |
@@ -43,13 +70,31 @@ Team coordination      →            Squad chemistry + Morale
 
 ## System Architecture
 
+### Telegram-First Distribution
+
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│                      Next.js 14 Application                          │
+│                     TELEGRAM LAYER (Primary)                         │
+├─────────────────────────────────────────────────────────────────────┤
+│  ┌──────────────────┐  ┌──────────────────┐  ┌─────────────────┐   │
+│  │  Bot Commands    │  │  Mini App        │  │  Inline Queries │   │
+│  │  /log /stats     │  │  Full CM UI      │  │  Quick actions  │   │
+│  │  /fixtures /fee  │  │  Squad+Match+XP  │  │  Share results  │   │
+│  └────────┬─────────┘  └────────┬─────────┘  └────────┬────────┘   │
+│           └─────────────────────┼─────────────────────┘            │
+│                                 ▼                                   │
+│              ┌─────────────────────────────────┐                   │
+│              │   TON Connect + Treasury        │                   │
+│              │   (Payments, Fees, Rewards)     │                   │
+│              └─────────────────┬───────────────┘                   │
+└────────────────────────────────┼────────────────────────────────────┘
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                      BACKEND (Shared Primitives)                     │
 ├─────────────────────────────────────────────────────────────────────┤
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐          │
-│  │   Match      │  │   Squad      │  │   Championship   │          │
-│  │   Capture    │  │   Management │  │   Manager Layer  │          │
+│  │   Match      │  │   Squad      │  │   AI Staff       │          │
+│  │   Router     │  │   Router     │  │   (5 Agents)     │          │
 │  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘          │
 │         └──────────────────┼───────────────────┘                    │
 │                            ▼                                        │
@@ -60,8 +105,8 @@ Team coordination      →            Squad chemistry + Morale
 │              ┌───────────┴───────────┐                              │
 │              ▼                       ▼                              │
 │  ┌─────────────────────┐  ┌─────────────────────┐                  │
-│  │   Prisma ORM        │  │   Logic Engines     │                  │
-│  │   (PostgreSQL)      │  │   (Simulation/Val)  │                  │
+│  │   Prisma ORM        │  │   Simulation Engine │                  │
+│  │   (PostgreSQL)      │  │   (Match Prediction)│                  │
 │  └──────────┬──────────┘  └─────────────────────┘                  │
 │             │                                                       │
 │  ┌──────────┴──────────┐                                           │

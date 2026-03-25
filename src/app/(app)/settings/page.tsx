@@ -31,8 +31,6 @@ const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
   channels: {
     inApp: true,
     telegram: false,
-    whatsapp: false,
-    xmtp: false,
   },
 };
 
@@ -679,8 +677,6 @@ export default function SettingsPage() {
               {[
                 { key: 'inApp', label: 'In-app' },
                 { key: 'telegram', label: 'Telegram', disabled: !connections.telegram?.connected },
-                { key: 'whatsapp', label: 'WhatsApp', disabled: !connections.whatsapp?.connected },
-                { key: 'xmtp', label: 'XMTP', disabled: !connections.xmtp?.connected },
               ].map(({ key, label, disabled }) => (
                 <label
                   key={key}

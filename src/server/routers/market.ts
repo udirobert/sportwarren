@@ -3,7 +3,7 @@ import { z } from 'zod';
 import {
   TreasuryBalanceError,
   ensureSquadTreasury,
-} from '../../../server/services/economy/treasury-ledger';
+} from '../services/economy/treasury-ledger';
 import { calculatePlayerValue } from '../../lib/player/valuation-engine';
 import { getSquadMembership } from '../services/permissions';
 import {

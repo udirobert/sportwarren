@@ -243,7 +243,6 @@ brew services start redis
 ### Known warnings (non-fatal)
 - `⚠️ Invalid Algorand mnemonic` — set valid `DEPLOYER_MNEMONIC`; on-chain deployments skipped otherwise
 - `[ioredis] ECONNREFUSED` — Redis not running; start with `brew services start redis`
-- `⚠️ XMTP_DB_ENCRYPTION_KEY not set` — set 32-byte hex; temporary key used otherwise
 - `punycode module deprecated` — Node.js v22 warning from transitive dependency; safe to ignore
 
 ---

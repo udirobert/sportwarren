@@ -4,8 +4,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, TrendingUp, ShieldCheck, Briefcase, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
-
 interface ContractNegotiationModalProps {
     playerName: string;
     currentWage: number;

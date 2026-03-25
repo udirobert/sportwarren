@@ -1,11 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { parseTelegramMatchResult } from '../../server/services/communication/telegram-match-parser';
+import { parseTelegramMatchResult } from '../server/services/communication/telegram-match-parser';
 import {
   buildTelegramDeepLink,
   buildTelegramMiniAppUrl,
   extractTelegramConnectToken,
   isTelegramConnectToken,
-} from '../../server/services/communication/platform-connections';
+} from '../server/services/communication/platform-connections';
 import { buildTonCommentPayload, toTonNanoString } from '../lib/ton/payload';
 
 const originalTelegramBotUsername = process.env.TELEGRAM_BOT_USERNAME;

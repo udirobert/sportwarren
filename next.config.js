@@ -1,10 +1,21 @@
 import { withSentryConfig } from "@sentry/nextjs";
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
   images: {
     unoptimized: true,
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      '@/server': path.resolve(__dirname, 'src/server'),
+    };
+    return config;
   },
   async rewrites() {
     return [

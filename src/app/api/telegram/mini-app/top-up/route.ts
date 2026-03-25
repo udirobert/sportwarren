@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { recordTelegramTonTopUp } from '../../../../../../server/services/communication/telegram-mini-app';
+import { recordTelegramTonTopUp } from '@/server/services/communication/telegram-mini-app';
 
 export const dynamic = 'force-dynamic';
 

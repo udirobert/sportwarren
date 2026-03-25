@@ -4,7 +4,7 @@ import {
   reconcilePendingTreasuryTransaction,
   settlePendingTreasuryActivity,
   TreasuryReconciliationError,
-} from '../../server/services/economy/treasury-ledger';
+} from '../server/services/economy/treasury-ledger';
 
 function createPrismaStub(overrides?: {
   pendingTransaction?: any;

@@ -111,7 +111,7 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
         };
         window.addEventListener('sw-tour-step', handleTourStep);
         return () => window.removeEventListener('sw-tour-step', handleTourStep);
-    }, [address, city, rivals, venue, journeyContent]);
+    }, [TOUR_STEP_PROMPTS, address, city, rivals, venue, journeyContent]);
 
     useEffect(() => {
         if (scrollRef.current) {

@@ -571,15 +571,13 @@ export interface UserPreferences {
     widgetOrder: string[];
   };
 
-  // Platform connections (Telegram, WhatsApp, XMTP)
+  // Platform connections (Telegram)
   connections?: PlatformConnections;
 }
 
 // Platform connection types
 export interface PlatformConnections {
   telegram?: PlatformConnection;
-  whatsapp?: PlatformConnection;
-  xmtp?: PlatformConnection;
 }
 
 export interface PlatformConnection {
@@ -588,11 +586,10 @@ export interface PlatformConnection {
   connectedAt?: string;
   username?: string;
   chatId?: string;
-  groupAddress?: string; // XMTP-specific
   linkUrl?: string;
 }
 
-export type PlatformType = 'telegram' | 'whatsapp' | 'xmtp';
+export type PlatformType = 'telegram';
 export type PlatformAvailability = 'live' | 'manual';
 
 export interface PlatformConfig {
@@ -613,22 +610,6 @@ export interface PlatformConfig {
  * Used by: CommunicationHub, Settings, Onboarding, Analytics
  */
 export const PLATFORM_CONFIG: Record<PlatformType, PlatformConfig> = {
-  whatsapp: {
-    name: 'WhatsApp',
-    icon: '💬',
-    color: 'text-green-600',
-    bgColor: 'bg-green-100',
-    description: 'Share to your existing squad group',
-    benefits: [
-      'Share to existing WhatsApp group',
-      'Rich media previews',
-      'Instant delivery to all members',
-    ],
-    preview: '🎉 We won 3-1!\n@player just earned +150 XP',
-    sort: 1,
-    availability: 'manual',
-    selfServe: false,
-  },
   telegram: {
     name: 'Telegram',
     icon: '📱',
@@ -641,29 +622,13 @@ export const PLATFORM_CONFIG: Record<PlatformType, PlatformConfig> = {
       'No phone number required',
     ],
     preview: '🏆 Match Result: W 3-1 vs Sunday Legends\n+150 XP earned!',
-    sort: 2,
+    sort: 1,
     availability: 'live',
     selfServe: true,
   },
-  xmtp: {
-    name: 'XMTP',
-    icon: '🔐',
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-100',
-    description: 'Web3-native encrypted messaging',
-    benefits: [
-      'End-to-end encrypted',
-      'Wallet-based identity',
-      'No phone number needed',
-    ],
-    preview: '🔐 Verified: Match #12345 confirmed\nvs Red Lions FC',
-    sort: 3,
-    availability: 'manual',
-    selfServe: false,
-  },
 };
 
-export const PLATFORM_LIST: PlatformType[] = ['whatsapp', 'telegram', 'xmtp'];
+export const PLATFORM_LIST: PlatformType[] = ['telegram'];
 export const SELF_SERVE_PLATFORM_LIST: PlatformType[] = PLATFORM_LIST.filter(
   (platform) => PLATFORM_CONFIG[platform].selfServe
 );
@@ -677,7 +642,5 @@ export interface NotificationPreferences {
   channels: {
     inApp: boolean;
     telegram: boolean;
-    whatsapp: boolean;
-    xmtp: boolean;
   };
 }

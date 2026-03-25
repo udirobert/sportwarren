@@ -28,7 +28,7 @@ export default function PublicSquadInvitePage() {
     joinSquad,
     isJoining,
   } = useSquadDetails(squadId);
-  const { memberships, loading: membershipsLoading } = useMySquads();
+  const { memberships, loading: _membershipsLoading } = useMySquads();
 
   const existingMembership = useMemo(
     () => memberships.find((membership) => membership.squad.id === squadId),
@@ -233,8 +233,7 @@ export default function PublicSquadInvitePage() {
               </div>
               <div className="mt-4 space-y-4 text-sm text-gray-300">
                 <p>
-                  The match should become more than a WhatsApp message. Joining the squad links the player to the result, the squad story, and future progression.
-                </p>
+                  The match should become more than a chat message. Joining the squad links the player to the result, the squad story, and future progression.                </p>
                 <p>
                   The protected join flow is wallet-backed because squad actions are authenticated. For tonight, the fastest path is Algorand if the player only cares about profile, XP, and recorded match history.
                 </p>
