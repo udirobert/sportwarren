@@ -150,7 +150,7 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
 
       setMessages((prev) => [...prev, staffReply]);
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
-    } catch (err) {
+    } catch {
       const errorMessage: ChatMessage = {
         id: `error-${Date.now()}`,
         sender: 'staff',

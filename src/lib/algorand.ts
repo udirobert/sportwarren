@@ -1,4 +1,4 @@
-import algosdk, { Address } from 'algosdk';
+import algosdk from 'algosdk';
 
 const ALGOD_URL = process.env.NEXT_PUBLIC_ALGORAND_NODE_URL || 'https://testnet-api.algonode.cloud';
 const INDEXER_URL = process.env.NEXT_PUBLIC_ALGORAND_INDEXER_URL || 'https://testnet-idx.algonode.cloud';

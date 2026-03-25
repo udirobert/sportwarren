@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Sparkles, Star, Trophy, UserCheck } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
-import { useOnboarding } from '@/hooks/useOnboarding';
 import { trpc } from '@/lib/trpc-client';
 import type { TransferMarketPlayer } from '@/types';
 import { Button } from '@/components/ui/Button';
@@ -23,7 +22,6 @@ export const DraftEngine: React.FC<DraftEngineProps> = ({
   const [isDrafting, setIsDrafting] = useState(false);
   const [draftStep, setDraftStep] = useState(0);
   const [selectedProspect, setSelectedProspect] = useState<TransferMarketPlayer | null>(null);
-  const { completeChecklistItem } = useOnboarding();
   const utils = trpc.useUtils();
 
   const signMutation = trpc.market.signProspect.useMutation({
@@ -69,7 +67,7 @@ export const DraftEngine: React.FC<DraftEngineProps> = ({
       if (currentDraftsStr) {
         try {
           drafts = JSON.parse(currentDraftsStr);
-        } catch {}
+        } catch { /* ignore parse errors */ }
       }
 
       if (!drafts.includes(selectedProspect.id)) {

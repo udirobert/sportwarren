@@ -56,7 +56,7 @@ const signWithAlgorandProvider = async (
   try {
     const signed = await provider.signData(payload, walletAddress);
     return normalizeAlgorandSignature(signed);
-  } catch (error) {
+  } catch {
     try {
       const fallbackPayload = [{ data: messageBytes, message }];
       const signed = await provider.signData(fallbackPayload, walletAddress);
@@ -337,7 +337,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       const savedAlgorand = localStorage.getItem(STORAGE_KEYS.ALGORAND_ADDRESS);
       const savedAvalanche = localStorage.getItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
       const savedLens = localStorage.getItem(STORAGE_KEYS.LENS_ADDRESS);
-      const savedChain = localStorage.getItem(STORAGE_KEYS.PREFERRED_CHAIN) as 'algorand' | 'avalanche' | 'lens' | null;
+      const _savedChain = localStorage.getItem(STORAGE_KEYS.PREFERRED_CHAIN) as 'algorand' | 'avalanche' | 'lens' | null;
 
       if (savedAlgorand) {
         setAddress(savedAlgorand);

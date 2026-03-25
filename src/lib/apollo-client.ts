@@ -55,7 +55,7 @@ const splitLink = wsLink
 
 // Helper to create array merge policy
 const arrayMergePolicy = {
-  merge(existing: unknown[] = [], incoming: unknown[]) {
+  merge(_existing: unknown[] = [], incoming: unknown[]) {
     return incoming;
   },
 };

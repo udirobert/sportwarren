@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/Card";
-import { Users, Vote, Trophy, Plus, Check, X, Clock, Shield, ArrowRight } from "lucide-react";
+import { Vote, Plus, Check, X, Clock, Shield, ArrowRight } from "lucide-react";
 import { useWallet } from "@/contexts/WalletContext";
-import { useFujiGovernance, type FujiProposal } from "@/hooks/squad/useFujiGovernance";
+import { useFujiGovernance } from "@/hooks/squad/useFujiGovernance";
 
 interface SquadDAOInfo {
   governanceAppId: number;
@@ -31,7 +31,7 @@ export const SquadDAO: React.FC = () => {
 
   const fujiGov = useFujiGovernance();
 
-  const [squadDAOInfo, setSquadDAOInfo] = useState<SquadDAOInfo | null>(null);
+  const [_squadDAOInfo, setSquadDAOInfo] = useState<SquadDAOInfo | null>(null);
   const [algoProposals, setAlgoProposals] = useState<Proposal[]>([]);
   const [showCreateProposal, setShowCreateProposal] = useState(false);
   const [newProposal, setNewProposal] = useState({
@@ -116,7 +116,7 @@ export const SquadDAO: React.FC = () => {
       const data = await response.json();
       if (data.success) fetchAlgoDAOData();
       else setError(data.error || "Failed to cast vote.");
-    } catch (err) {
+    } catch {
       setError("Failed to cast vote. Network error.");
     } finally {
       setLoading(false);
@@ -126,7 +126,7 @@ export const SquadDAO: React.FC = () => {
   const renderProposalStatus = (status: Proposal["status"]) => {
     const isSuccess = status === "passed" || status === "Succeeded" || status === "Executed" || status === "executed";
     const isPending = status === "active" || status === "Active" || status === "Pending" || status === "Queued";
-    const isFailure = status === "rejected" || status === "Defeated" || status === "Canceled" || status === "Expired";
+    const _isFailure = status === "rejected" || status === "Defeated" || status === "Canceled" || status === "Expired";
 
     return (
       <span className={`flex items-center text-sm font-medium ${

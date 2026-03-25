@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     MessageSquare,
@@ -55,7 +55,7 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
     }, [journeyContent.assistant.welcome, messages.length]);
 
     // Tour step contextual prompts
-    const TOUR_STEP_PROMPTS: Record<string, string> = {
+    const TOUR_STEP_PROMPTS = useMemo((): Record<string, string> => ({
         'welcome': `Quickly welcome the user to the SportWarren preview at ${venue}. Mention they're exploring a live football management experience. Keep it brief (2 sentences).`,
         'match-engine': `The user is viewing the Match Engine - the tactical visualization canvas. Briefly explain how it tracks momentum, possession, and key moments. Mention it previews what they'll see after logging real match results.`,
         'match-verification': `The user is looking at Match Verification - the system that confirms results through distributed validation. Explain that each logged result becomes verifiable data that powers squad operations.`,
@@ -63,7 +63,7 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
         'lens-social-step': `The user is viewing the Social layer - Lens-powered identity that connects their on-chain reputation with their manager profile. Explain how verified results build their legacy.`,
         'rpg-stats': `The user is exploring the RPG Stats system. Explain how each result contributes to their manager profile - XP, achievements, and career progression.`,
         'claim-identity': `The user is at the identity claim step. Explain that connecting their wallet creates their manager identity that persists across seasons.`,
-    };
+    }), [venue, rivals.away, journeyContent.assistant.tourPrompt]);
 
     // Listen for Tour Steps
     useEffect(() => {
@@ -134,7 +134,7 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
         setIsTyping(true);
 
         try {
-            const history = messages.map(m => ({
+            const history = messages.map((m: Message) => ({
                 role: m.role === 'agent' ? 'assistant' : 'user',
                 content: m.content
             }));
@@ -208,7 +208,7 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
                             ref={scrollRef}
                             className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-none"
                         >
-                            {messages.map((m) => (
+                            {messages.map((m: Message) => (
                                 <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role === 'user'
                                         ? 'bg-blue-600 text-white shadow-lg'
@@ -249,7 +249,7 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
                                 </button>
                             </div>
                             <div className="mt-4 grid grid-cols-2 gap-2">
-                                {journeyContent.assistant.prompts.map((prompt) => (
+                                {journeyContent.assistant.prompts.map((prompt: { label: string, message: string }) => (
                                     <button
                                         key={prompt.label}
                                         className="text-[9px] font-black text-gray-400 uppercase tracking-widest text-left hover:text-blue-400 transition-colors truncate"

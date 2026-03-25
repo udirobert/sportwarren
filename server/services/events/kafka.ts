@@ -35,19 +35,14 @@ export class EventStreamService {
   }
 
   async initialize(): Promise<void> {
-    try {
-      await this.producer.connect();
-      console.log('✅ Kafka producer connected');
+    await this.producer.connect();
+    console.log('✅ Kafka producer connected');
 
-      // Create consumers for different event types
-      await this.createConsumer('match-events', this.handleMatchEvent.bind(this));
-      await this.createConsumer('achievements', this.handleAchievementEvent.bind(this));
-      await this.createConsumer('statistics', this.handleStatisticEvent.bind(this));
-      await this.createConsumer('communications', this.handleCommunicationEvent.bind(this));
-
-    } catch (error) {
-      throw error;
-    }
+    // Create consumers for different event types
+    await this.createConsumer('match-events', this.handleMatchEvent.bind(this));
+    await this.createConsumer('achievements', this.handleAchievementEvent.bind(this));
+    await this.createConsumer('statistics', this.handleStatisticEvent.bind(this));
+    await this.createConsumer('communications', this.handleCommunicationEvent.bind(this));
   }
 
   private async createConsumer(topic: string, handler: (payload: EachMessagePayload) => Promise<void>): Promise<void> {

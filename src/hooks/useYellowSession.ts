@@ -460,13 +460,14 @@ export function useYellowSession(sessionId?: string | null) {
 
     authenticate();
 
+    const pendingToClear = pendingRef.current;
     return () => {
       cancelled = true;
       authenticatedRef.current = false;
       sessionSignerRef.current = null;
       websocketRef.current?.close();
       websocketRef.current = null;
-      pendingRef.current.clear();
+      pendingToClear.clear();
     };
   }, [address, application, assetSymbol, chain, configured, hasWallet, requested, sendRawMessage]);
 

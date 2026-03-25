@@ -233,15 +233,26 @@ export default function MatchPage() {
     setXpSummaryData(null);
     setXpResultState("idle");
     setShowXPSummary(false);
+    
+    // Haptic feedback
+    import("@/lib/utils").then(({ triggerHaptic }) => triggerHaptic("success"));
+    
     openVerificationQueue();
   };
 
   const handleVerify = async (matchId: string, verified: boolean) => {
+    // Haptic feedback for interaction
+    import("@/lib/utils").then(({ triggerHaptic }) => triggerHaptic("medium"));
+
     await verifyMatch(matchId, verified);
     if (verified) {
       let nextSummary: { totalXP: number; attributeGains: { attribute: string; xp: number; oldRating: number; newRating: number }[] } | null = null;
       try {
         const result = await finalizeMatchXP.mutateAsync({ matchId });
+        
+        // Haptic for successful verification result
+        import("@/lib/utils").then(({ triggerHaptic }) => triggerHaptic("success"));
+
         type FinalizedXPResult = {
           totalXP?: number | null;
           attributeBreakdown?: Record<string, number> | null;

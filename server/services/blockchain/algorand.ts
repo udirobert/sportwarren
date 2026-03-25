@@ -250,7 +250,7 @@ export class AlgorandService {
     }
     try {
       return algosdk.mnemonicToSecretKey(mnemonic);
-    } catch (e) {
+    } catch (_e) {
       console.warn("⚠️ Invalid Algorand mnemonic in .env. On-chain deployments will fail.");
       return null;
     }

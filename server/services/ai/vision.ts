@@ -67,7 +67,7 @@ export class ComputerVisionService {
       if (content) {
         try {
           return JSON.parse(content);
-        } catch (parseError) {
+        } catch (_parseError) {
           return this.createFallbackPhotoAnalysis();
         }
       }
@@ -206,7 +206,7 @@ export class ComputerVisionService {
       if (content) {
         try {
           return JSON.parse(content);
-        } catch (parseError) {
+        } catch (_parseError) {
           return this.createFallbackPositionAnalysis();
         }
       }

@@ -7,7 +7,7 @@
  * - src/components/rivalry/RivalryTracker.tsx (MOCK_RIVALRIES)
  */
 
-import type { Treasury, TransferOffer, Rivalry, Squad, TreasuryTransaction } from '@/types';
+import type { Treasury, TransferOffer, Rivalry, Squad } from '@/types';
 import { MOCK_SQUAD_PLAYERS } from './players';
 
 /**

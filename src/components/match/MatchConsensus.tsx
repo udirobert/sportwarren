@@ -393,6 +393,26 @@ export const MatchConsensusPanel: React.FC<MatchConsensusProps> = ({ match }) =>
         {/* Technical Commentary - Championship Manager Style */}
         <TechnicalCommentary match={match} />
 
+        {/* Consensus Progress Bar - Parity with Telegram Mini App */}
+        {!consensus.resolved && !consensus.discrepancy && (
+          <div className="space-y-2 p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+            <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-widest text-gray-500">
+              <div className="flex items-center gap-1.5">
+                <Users className="w-3 h-3" />
+                <span>PHX-CON NODE: {match.verifications.length}/4 CAPTAINS</span>
+              </div>
+              <span>{Math.round((match.verifications.length / 4) * 100)}% CONSENSUS</span>
+            </div>
+            <div className="h-1.5 w-full bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden">
+               <motion.div 
+                 initial={{ width: 0 }}
+                 animate={{ width: `${(match.verifications.length / 4) * 100}%` }}
+                 className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full"
+               />
+            </div>
+          </div>
+        )}
+
         {/* Yellow Rail Notice */}
         {match.paymentRail && (
           <PaymentRailNotice

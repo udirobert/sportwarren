@@ -29,7 +29,7 @@ export class AgenticService {
                     const { veniceAI } = await import('./venice');
                     report = await veniceAI.generateCompletion(messages);
                     console.log(`[AGENTIC-SERVICE] Report generated via Venice AI (${persona.name})`);
-                } catch (veniceError) {
+                } catch (_veniceError) {
                     console.warn('[AGENTIC-SERVICE] Venice AI failed, falling back to OpenAI.');
                 }
             }
@@ -57,7 +57,7 @@ export class AgenticService {
                 decision: creResult.verified ? "APPROVE_XP_DISBURSEMENT" : "DENY_XP_PENDING_REVIEW",
                 timestamp: new Date().toISOString()
             };
-        } catch (error) {
+        } catch (_error) {
             console.warn('[AGENTIC-SERVICE] AI Report generation failed, falling back to basic data.');
             return {
                 agentId: persona.id,

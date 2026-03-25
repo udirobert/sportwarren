@@ -122,8 +122,8 @@ export class OpenAIService {
       if (content) {
         try {
           return JSON.parse(content);
-        } catch (parseError) {
-          console.error('Failed to parse OpenAI response:', parseError);
+        } catch (_parseError) {
+          console.error('Failed to parse OpenAI response:', _parseError);
           return null;
         }
       }

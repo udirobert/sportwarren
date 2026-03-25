@@ -8,7 +8,7 @@ import {
 import { isHex, type Hex } from 'viem';
 import { trpc } from '@/lib/trpc-client';
 import { useYellowSession } from '@/hooks/useYellowSession';
-import type { MatchResult, Verification, MatchStatus, TrustTier } from '@/types';
+import type { MatchResult, MatchStatus, TrustTier } from '@/types';
 import { calculateTrustScore } from '@/lib/match/verification';
 import { getMatchFeeDistribution } from '@/lib/yellow/match-fees';
 
@@ -137,7 +137,7 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
     },
   });
 
-  const matches = squadId ? (data?.matches.map(transformMatch) || []) : [];
+  const matches = useMemo(() => squadId ? (data?.matches.map(transformMatch) || []) : [], [squadId, data?.matches]);
   const pendingMatches = useMemo(
     () => matches.filter((match) => match.status === 'pending'),
     [matches],

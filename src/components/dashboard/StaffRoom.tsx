@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import {
@@ -112,7 +112,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     );
     const recentDecisions = decisionData?.decisions ?? [];
 
-    const chatHistory = selectedStaff ? (chatHistories[selectedStaff.id] || []) : [];
+    const chatHistory = useMemo(() => selectedStaff ? (chatHistories[selectedStaff.id] || []) : [], [selectedStaff, chatHistories]);
     const setChatHistory = (updater: ChatMessage[] | ((prev: ChatMessage[]) => ChatMessage[])) => {
         if (!selectedStaff) return;
         const staffId = selectedStaff.id;
@@ -196,7 +196,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
             });
             setUsedActions(new Set());
         }
-    }, [selectedStaff?.id]);
+    }, [selectedStaff]);
 
     // Inject proactive agent alerts once per staff member after data loads
     const alertsInjectedRef = useRef<Set<string>>(new Set());
@@ -678,7 +678,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                 ⚠️ Could not load part of the live squad record. Only confirmed data and planning guidance are available right now.
                             </div>
                         )}
-                        {chatHistory.map((chat, i) => (
+                        {chatHistory.map((chat: ChatMessage, i: number) => (
                             <motion.div
                                 key={i}
                                 initial={{ opacity: 0, y: 10 }}
@@ -693,7 +693,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                 </div>
                                 {chat.actions && chat.actions.length > 0 && (
                                     <div className="flex gap-2 mt-2 flex-wrap">
-                                        {chat.actions.map((action, ai) => {
+                                        {chat.actions.map((action: { label: string, onClick: () => void }, ai: number) => {
                                             const actionKey = `${i}-${ai}`;
                                             const consumed = usedActions.has(actionKey);
                                             return (

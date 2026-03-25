@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card } from '@/components/ui/Card';
-import type { SkillRating, AttributeType } from '@/types';
+import type { SkillRating } from '@/types';
 import {
   ATTRIBUTE_NAMES,
   getAttributeColor,

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card } from '@/components/ui/Card';
-import { User, TrendingUp, Award, Shield } from 'lucide-react';
+import { User, Award } from 'lucide-react';
 import { FormBadge } from './FormIndicator';
 import type { PlayerAttributes, PlayerPosition } from '@/types';
 import {

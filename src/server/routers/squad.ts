@@ -1724,7 +1724,7 @@ export const squadRouter = createTRPCRouter({
         });
 
         if (nextMatch) {
-          const isHome = nextMatch.homeSquadId === squadId;
+          const _isHome = nextMatch.homeSquadId === squadId;
           const homeData = nextMatch.homeSquad;
           const awayData = nextMatch.awaySquad;
 

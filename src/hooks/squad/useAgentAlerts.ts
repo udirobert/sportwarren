@@ -33,7 +33,7 @@ interface UseAgentAlertsInput {
 }
 
 // Rule-based thresholds
-const CONTRACT_EXPIRY_MATCH_THRESHOLD = 40; // >= this many matches → contract nearing end
+const _CONTRACT_EXPIRY_MATCH_THRESHOLD = 40; // >= this many matches → contract nearing end
 const LOW_BUDGET_THRESHOLD = 1500;
 const HIGH_INJURY_RISK_MATCHES = 35;
 const HIGH_MORALE_LEVEL = 7;
@@ -57,7 +57,7 @@ function calcWeeksRemaining(matches: number, totalWeeks = 48): number {
  *  Physio   — high match-load injury risk per player
  *  Comms    — low budget blocks sponsorship requirements
  */
-export function useAgentAlerts({ members, treasury, tactics, dataReady }: UseAgentAlertsInput): AgentAlert[] {
+export function useAgentAlerts({ members, treasury, tactics: _tactics, dataReady }: UseAgentAlertsInput): AgentAlert[] {
     return useMemo(() => {
         if (!dataReady || !members.length) return [];
 
@@ -141,5 +141,5 @@ export function useAgentAlerts({ members, treasury, tactics, dataReady }: UseAge
         }
 
         return alerts;
-    }, [dataReady, members, treasury, tactics]);
+    }, [dataReady, members, treasury]);
 }

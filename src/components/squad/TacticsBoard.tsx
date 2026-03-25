@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
@@ -366,7 +366,7 @@ export const TacticsBoard: React.FC<TacticsBoardProps> = ({
 
   useEffect(() => {
     setLineup((prev) => reconcileLineup(formationRoles, players, prev));
-  }, [formationRoles, players, reconcileLineup]);
+  }, [formationRoles, players]);
 
   useEffect(() => {
     if (initialLineup && initialLineup.length > 0) {
