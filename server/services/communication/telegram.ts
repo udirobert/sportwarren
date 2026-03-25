@@ -109,6 +109,7 @@ export class TelegramService {
   private setupCommands(): void {
     this.bot.setMyCommands([
       { command: 'start', description: 'Link Telegram to your SportWarren squad' },
+      { command: 'app', description: 'Open the full SportWarren Mini App' },
       { command: 'log', description: 'Submit a match result for verification' },
       { command: 'fee', description: 'Propose a match fee from the treasury' },
       { command: 'stats', description: 'View real player or squad stats' },
@@ -136,6 +137,10 @@ export class TelegramService {
 
     this.bot.onText(/\/help/, async (msg) => {
       await this.bot.sendMessage(msg.chat.id, this.buildHelpMessage());
+    });
+
+    this.bot.onText(/\/app/, async (msg) => {
+      await this.handleMiniAppRequest(msg.chat.id, 'squad');
     });
 
     this.bot.onText(/\/log(?:\s+(.+))?/, async (msg, match) => {
@@ -210,6 +215,7 @@ export class TelegramService {
       'You can also send a normal message and I will guide you.',
       '',
       'Commands:',
+      '/app',
       '/log 4-2 win vs Red Lions',
       '/stats',
       '/stats Marcus',
@@ -220,23 +226,45 @@ export class TelegramService {
       '',
       'Linking:',
       'Open SportWarren Settings > Connections > Telegram and use the generated link.',
+      'Then type /app to open the full Mini App inside Telegram.',
     ].join('\n');
   }
 
-  private async handleTreasuryMiniAppRequest(chatId: number): Promise<void> {
+  private async handleMiniAppRequest(
+    chatId: number,
+    tab: 'squad' | 'match' | 'profile' | 'treasury' | 'ai' = 'squad',
+  ): Promise<void> {
     const linkedChat = await this.requireLinkedChat(chatId);
     if (!linkedChat?.squadId) {
-      await this.bot.sendMessage(chatId, 'This chat is not linked to a SportWarren squad yet. Link Telegram from Settings before opening the treasury Mini App.');
+      await this.bot.sendMessage(
+        chatId,
+        'This chat is not linked to a SportWarren squad yet. Link Telegram from SportWarren Settings > Connections > Telegram, then type /app to open the Mini App.',
+      );
       return;
     }
 
     try {
       const session = await createTelegramMiniAppSession(prisma, linkedChat.id);
+      const urlWithTab = `${session.url}&tab=${tab}`;
+      const tabLabels: Record<typeof tab, string> = {
+        squad: 'Squad Dashboard',
+        match: 'Match Center',
+        profile: 'Player Profile',
+        treasury: 'Treasury',
+        ai: 'AI Staff',
+      };
+      const descriptions: Record<typeof tab, string> = {
+        squad: 'Open the full SportWarren Mini App for squad overview, match operations, player profile, AI staff, and TON treasury.',
+        match: 'Open Match Center to log results, verify matches, and review XP movement.',
+        profile: 'Open your player profile to review attributes, XP, and sharpness.',
+        treasury: 'Open the Telegram Mini App to connect a TON wallet and submit a squad treasury top-up.',
+        ai: 'Open AI Staff chat for tactical, scouting, physio, and commercial guidance.',
+      };
       const keyboard = {
         inline_keyboard: [[
           {
-            text: 'Open Treasury Mini App',
-            web_app: { url: session.url },
+            text: tab === 'treasury' ? 'Open Treasury Mini App' : 'Open SportWarren Mini App',
+            web_app: { url: urlWithTab },
           },
         ]],
       };
@@ -244,10 +272,12 @@ export class TelegramService {
       await this.bot.sendMessage(
         chatId,
         [
-          `${linkedChat.squad?.name || 'Squad'} treasury`,
+          `${linkedChat.squad?.name || 'Squad'} ${tabLabels[tab]}`,
           '',
-          'Open the Telegram Mini App to connect a TON wallet and submit a squad treasury top-up.',
-          'Top-ups are recorded as pending until they are reconciled on-chain.',
+          descriptions[tab],
+          tab === 'treasury'
+            ? 'Top-ups are recorded as pending until they are reconciled on-chain.'
+            : 'Use /treasury if you want to jump directly into TON treasury actions.',
         ].join('\n'),
         { reply_markup: keyboard }
       );
@@ -255,6 +285,10 @@ export class TelegramService {
       const message = error instanceof Error ? error.message : 'The Telegram Mini App is not configured on this deployment.';
       await this.bot.sendMessage(chatId, message);
     }
+  }
+
+  private async handleTreasuryMiniAppRequest(chatId: number): Promise<void> {
+    await this.handleMiniAppRequest(chatId, 'treasury');
   }
 
   private pruneExpiredDrafts(): void {
@@ -451,6 +485,7 @@ export class TelegramService {
         linkedChat?.squadId
           ? 'The user already has a linked squad, so guide them toward the most relevant squad action.'
           : 'The user has not linked Telegram yet, so explain that linking happens in SportWarren Settings > Connections > Telegram.',
+        'If they ask how to open the Mini App, tell them to type "/app" after linking. Mention "/treasury" if they specifically want wallet or TON treasury actions.',
         'If they want to log a result, tell them to use "/log 4-2 win vs Red Lions".',
         'If they want squad or player stats, tell them to use "/stats" or "/stats Marcus".',
         'If they want fixtures, tell them to use "/fixtures".',
@@ -480,6 +515,7 @@ export class TelegramService {
         'SportWarren Telegram',
         '',
         'Link this chat from SportWarren Settings > Connections > Telegram to unlock squad guidance.',
+        'After linking, type /app to open the full Mini App.',
         'Once linked, you can log matches, check stats, and open the TON treasury Mini App from here.',
       ].join('\n');
     }
@@ -488,6 +524,7 @@ export class TelegramService {
       'SportWarren Telegram',
       '',
       'Try one of these next actions:',
+      '/app',
       '/log 4-2 win vs Red Lions',
       '/stats',
       '/fixtures',
