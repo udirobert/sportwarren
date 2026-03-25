@@ -1,4 +1,6 @@
 import { randomBytes } from "crypto";
+import { veniceAI } from "../ai/venice";
+import { AGENT_PERSONAS } from "../ai/prompts";
 import TelegramBot from "node-telegram-bot-api";
 import { prisma } from "@/lib/db";
 import {
@@ -161,6 +163,13 @@ export class TelegramService {
         return;
       }
 
+      const linkedChat = await this.requireLinkedChat(chatId);
+      if (linkedChat?.squadId) {
+        const summary = await this.buildSquadSummaryCard(linkedChat.squadId);
+        await this.bot.sendMessage(chatId, summary);
+        return;
+      }
+
       await this.bot.sendMessage(chatId, this.buildHelpMessage());
     });
 
@@ -249,6 +258,11 @@ export class TelegramService {
 
     this.bot.on("callback_query", async (query) => {
       await this.handleCallbackQuery(query);
+    });
+
+    this.bot.on("message", async (msg) => {
+      if (msg.text?.startsWith("/") || !msg.text) return;
+      await this.handleGeneralAiQuery(msg.chat.id, msg.text);
     });
   }
 
@@ -384,10 +398,23 @@ export class TelegramService {
     await this.bot.sendChatAction(chatId, "typing");
 
     try {
-      // For now, provide contextual responses based on squad data
-      // In production, this would call the AI agent router
       const squadStats = await this.getSquadStatsForAi(linkedChat.squadId);
 
+      // Use Venice AI for a high-quality persona response
+      const systemPrompt = AGENT_PERSONAS[staffMember.toUpperCase() as keyof typeof AGENT_PERSONAS]?.systemPrompt 
+        || AGENT_PERSONAS.COACH_KITE.systemPrompt;
+
+      const aiResponse = await veniceAI.generateCompletion([
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: `Squad Context: ${JSON.stringify(squadStats)}. User Query: ${cleanQuery}` }
+      ]);
+
+      if (aiResponse) {
+        await this.bot.sendMessage(chatId, aiResponse);
+        return;
+      }
+
+      // Fallback to static templates if AI fails
       const staffResponses: Record<string, (q: string, stats: any) => string> =
         {
           coach: (q, stats) =>
@@ -455,8 +482,28 @@ export class TelegramService {
       console.error("AI Staff query error:", error);
       await this.bot.sendMessage(
         chatId,
-        "AI Staff is temporarily unavailable. Try again later or use the Mini App.",
+        "The coaching staff are in a meeting right now. Please try again later.",
       );
+    }
+  }
+
+  private async handleGeneralAiQuery(chatId: number, text: string): Promise<void> {
+    await this.bot.sendChatAction(chatId, "typing");
+    
+    try {
+      const response = await veniceAI.generateCompletion([
+        { 
+          role: 'system', 
+          content: "You are the SportWarren Concierge. Be welcoming, use football terminology, and help the user navigate the platform. If they sound like they want to log a match, suggest using /log." 
+        },
+        { role: 'user', content: text }
+      ]);
+      
+      if (response) {
+        await this.bot.sendMessage(chatId, response);
+      }
+    } catch (error) {
+      console.warn("General AI query failed:", error);
     }
   }
 
@@ -919,14 +966,14 @@ export class TelegramService {
     });
 
     const totals = matches.reduce(
-      (summary, match) => {
-        const isHome = match.homeSquadId === linkedChat.squadId;
+      (summary, m) => {
+        const isHome = m.homeSquadId === linkedChat.squadId;
         const goalsFor = isHome
-          ? (match.homeScore ?? 0)
-          : (match.awayScore ?? 0);
+          ? (m.homeScore ?? 0)
+          : (m.awayScore ?? 0);
         const goalsAgainst = isHome
-          ? (match.awayScore ?? 0)
-          : (match.homeScore ?? 0);
+          ? (m.awayScore ?? 0)
+          : (m.homeScore ?? 0);
 
         summary.goalsFor += goalsFor;
         summary.goalsAgainst += goalsAgainst;
@@ -940,21 +987,81 @@ export class TelegramService {
       { wins: 0, draws: 0, losses: 0, goalsFor: 0, goalsAgainst: 0 },
     );
 
-    const winRate =
-      matches.length > 0 ? Math.round((totals.wins / matches.length) * 100) : 0;
-
     await this.bot.sendMessage(
       chatId,
       [
-        `${squad?.name || "Squad"} stats`,
+        `📊 ${squad?.name || "Squad"} Combined Stats`,
         "",
-        `Verified matches: ${matches.length}`,
-        `Record: ${totals.wins}-${totals.draws}-${totals.losses}`,
-        `Goals scored: ${totals.goalsFor}`,
-        `Goals conceded: ${totals.goalsAgainst}`,
-        `Win rate: ${winRate}%`,
+        `Record: ${totals.wins}W - ${totals.draws}D - ${totals.losses}L`,
+        `Goals: ${totals.goalsFor} For / ${totals.goalsAgainst} Against`,
+        "",
+        "Use /app for full fixture history and player breakdowns.",
       ].join("\n"),
     );
+  }
+
+  private async buildSquadSummaryCard(squadId: string): Promise<string> {
+    const squad = await prisma.squad.findUnique({
+      where: { id: squadId },
+      include: {
+        treasury: true,
+        matchesHome: {
+          where: { status: { in: ["verified", "finalized"] } },
+          orderBy: { matchDate: "desc" },
+          take: 1,
+          include: { awaySquad: { select: { name: true } } },
+        },
+        matchesAway: {
+          where: { status: { in: ["verified", "finalized"] } },
+          orderBy: { matchDate: "desc" },
+          take: 1,
+          include: { homeSquad: { select: { name: true } } },
+        },
+      },
+    });
+
+    if (!squad) return "Squad not found.";
+
+    const lastMatchHome = squad.matchesHome[0];
+    const lastMatchAway = squad.matchesAway[0];
+
+    let latestMatch: any = null;
+    if (lastMatchHome && lastMatchAway) {
+      latestMatch =
+        lastMatchHome.matchDate > lastMatchAway.matchDate
+          ? { ...lastMatchHome, type: "home" }
+          : { ...lastMatchAway, type: "away" };
+    } else if (lastMatchHome) {
+      latestMatch = { ...lastMatchHome, type: "home" };
+    } else if (lastMatchAway) {
+      latestMatch = { ...lastMatchAway, type: "away" };
+    }
+
+    const treasuryBalance = squad.treasury?.balance ?? 0;
+    const formattedBalance = (treasuryBalance / 1000).toFixed(2);
+
+    let matchSection = "No verified matches yet.";
+    if (latestMatch) {
+      const opponent =
+        latestMatch.type === "home"
+          ? latestMatch.awaySquad.name
+          : latestMatch.homeSquad.name;
+      const scoreLine =
+        latestMatch.type === "home"
+          ? `${latestMatch.homeScore} - ${latestMatch.awayScore}`
+          : `${latestMatch.awayScore} - ${latestMatch.homeScore}`;
+
+      matchSection = `🏟 Last Result: ${squad.name} ${scoreLine} ${opponent}`;
+    }
+
+    return [
+      `🛡 SportWarren Squad Card: ${squad.name}`,
+      "",
+      matchSection,
+      `💰 Treasury: ${formattedBalance} TON`,
+      "",
+      "Use /app to open the Mini App for tactics and rewards.",
+    ].join("\n");
   }
 
   private async handleFixturesRequest(chatId: number): Promise<void> {
