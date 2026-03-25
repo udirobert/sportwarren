@@ -33,20 +33,6 @@ interface MiniAppContext {
   };
 }
 
-declare global {
-  interface Window {
-    Telegram?: {
-      WebApp?: {
-        ready: () => void;
-        expand: () => void;
-        setHeaderColor?: (color: string) => void;
-        setBackgroundColor?: (color: string) => void;
-        BackButton?: { hide: () => void };
-        MainButton?: { hide: () => void };
-      };
-    };
-  }
-}
 
 export function TelegramTreasuryMiniApp() {
   const searchParams = useSearchParams();

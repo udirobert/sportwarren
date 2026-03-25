@@ -30,7 +30,7 @@ export const MarketReport: React.FC<MarketReportProps> = ({
   );
 
   // 3. Fetch Match Simulation (if opponent is known)
-  const { stats: simStats, isLoading: simLoading } = useMatchPreview(squadId, opponentSquadId);
+  const { stats: simStats, isLoading: _simLoading } = useMatchPreview(squadId, opponentSquadId);
 
   if (valLoading || trainLoading) {
     return (

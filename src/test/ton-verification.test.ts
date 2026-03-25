@@ -3,7 +3,7 @@ import { beginCell } from '@ton/core';
 import {
   computeTonMessageHashFromBoc,
   verifyTonTopUpTransfer,
-} from '../../server/services/blockchain/ton';
+} from '../server/services/blockchain/ton';
 
 const senderAddress = `0:${'11'.repeat(32)}`;
 const destinationAddress = `0:${'22'.repeat(32)}`;

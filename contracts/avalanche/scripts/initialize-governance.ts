@@ -36,13 +36,13 @@ async function main() {
 
   // Get contract instances
   const SquadToken = await ethers.getContractFactory("SquadToken");
-  const squadToken = SquadToken.attach(SQUAD_TOKEN_ADDRESS);
+  const _squadToken = SquadToken.attach(SQUAD_TOKEN_ADDRESS);
 
   const SquadTimelock = await ethers.getContractFactory("SquadTimelock");
   const squadTimelock = SquadTimelock.attach(SQUAD_TIMELOCK_ADDRESS);
 
   const SquadGovernor = await ethers.getContractFactory("SquadGovernor");
-  const squadGovernor = SquadGovernor.attach(SQUAD_GOVERNOR_ADDRESS);
+  const _squadGovernor = SquadGovernor.attach(SQUAD_GOVERNOR_ADDRESS);
 
   // Role constants (from OpenZeppelin TimelockController)
   const TIMELOCK_ADMIN_ROLE = ethers.id("TIMELOCK_ADMIN_ROLE");

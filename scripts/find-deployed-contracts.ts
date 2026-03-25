@@ -33,7 +33,7 @@ async function findAlgorandContracts() {
       "https://testnet-api.algonode.cloud",
       443
     );
-    const indexerClient = new algosdk.Indexer(
+    const _indexerClient = new algosdk.Indexer(
       "",
       "https://testnet-idx.algonode.cloud",
       443

@@ -3,9 +3,9 @@ import { TRPCError } from '@trpc/server';
 import { Address as TonAddress } from '@ton/core';
 import { isAddress, type Address } from 'viem';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
-import { verifyTonTopUpTransfer } from '../../../server/services/blockchain/ton';
-import { yellowService } from '../../../server/services/blockchain/yellow';
-import { managerInsightService } from '../../../server/services/ai/manager-insights';
+import { verifyTonTopUpTransfer } from '../services/blockchain/ton';
+import { yellowService } from '../services/blockchain/yellow';
+import { managerInsightService } from '../services/ai/manager-insights';
 import {
   ensureSquadTreasury,
   postTreasuryLedgerEntry,
@@ -13,7 +13,7 @@ import {
   TreasuryBalanceError,
   TreasuryReconciliationError,
   reconcilePendingTreasuryTransaction,
-} from '../../../server/services/economy/treasury-ledger';
+} from '../services/economy/treasury-ledger';
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
 
 const formationSchema = z.enum([

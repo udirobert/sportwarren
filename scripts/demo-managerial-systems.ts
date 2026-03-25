@@ -4,8 +4,8 @@
  */
 
 import { calculatePlayerValue } from '../src/lib/player/valuation-engine';
-import { getFitnessStatus, applyFitnessToAttributes } from '../src/lib/player/fitness-engine';
-import { simulateMatch, calculateWinProbabilities } from '../src/lib/match/simulation-engine';
+import { getFitnessStatus } from '../src/lib/player/fitness-engine';
+import { calculateWinProbabilities } from '../src/lib/match/simulation-engine';
 import { PlayerAttributes, Tactics } from '../src/types';
 
 // 1. Setup Mock Players

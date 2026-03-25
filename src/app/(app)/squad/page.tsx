@@ -101,7 +101,7 @@ export default function SquadPage() {
   const { squad: detailedSquad, members } = useSquadDetails(activeSquadId);
   const activeSquad = detailedSquad ?? activeMembership?.squad;
 
-  const { checklistItems } = useOnboarding();
+  const { checklistItems: _checklistItems } = useOnboarding();
   const squadChecklistDone = true; // open_office removed from checklist
 
   const treasuryState = useTreasury(activeSquadId);
@@ -604,8 +604,7 @@ export default function SquadPage() {
                   {inviteShareState === "copied" && (
                     <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      Ready for WhatsApp
-                    </span>
+                      Ready for Chat Share                    </span>
                   )}
                 </div>
               </div>

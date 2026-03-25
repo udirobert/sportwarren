@@ -6,9 +6,9 @@ import {
   createTelegramLinkSession,
   disconnectPlatformConnection,
   getPlatformConnectionsForSquad,
-} from '../../../server/services/communication/platform-connections';
+} from '../services/communication/platform-connections';
 
-const platformSchema = z.enum(['telegram', 'whatsapp', 'xmtp']);
+const platformSchema = z.enum(['telegram']);
 
 async function requireSquadMember(prisma: any, squadId: string, userId: string) {
   const membership = await getSquadMembership(prisma, squadId, userId);

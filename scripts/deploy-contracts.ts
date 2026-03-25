@@ -155,7 +155,7 @@ class ContractDeployer {
       try {
         const data = JSON.parse(fs.readFileSync(filepath, 'utf8'));
         return data || { contracts: {} };
-      } catch (e) {
+      } catch (_e) {
         console.warn(`Error parsing ${filename}, starting fresh`);
       }
     }
@@ -232,7 +232,6 @@ class ContractDeployer {
       console.log(`⏳ Waiting for transaction confirmation...`);
       const confirmedTxn = await this.waitForTransaction(txId);
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const appId = (confirmedTxn as any)["application-index"] || (confirmedTxn as any).applicationIndex;
       if (!appId) {
         throw new Error(`Application ID not found in confirmed transaction.`);

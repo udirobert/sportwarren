@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-export async function POST(request: Request) {
+export async function POST(_request: Request) {
   try {
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:4000';
     const response = await fetch(`${serverUrl}/api/lens/connect-wallet`, {

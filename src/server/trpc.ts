@@ -114,23 +114,24 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
     });
   }
 
-  return next({ 
+  return next({
     ctx: {
       ...ctx,
       userId: user.id,
-    }
+    },
   });
 });
 
-// Admin procedure - for system operations
-export const adminProcedure = t.procedure.use(async ({ ctx, next }) => {
-  if (!ctx.walletAddress) {
+// Admin procedure - requires specific admin wallet
+export const adminProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  const adminWallets = (process.env.ADMIN_WALLETS || '').split(',').filter(Boolean);
+  
+  if (!adminWallets.includes(ctx.walletAddress || '')) {
     throw new TRPCError({
-      code: 'UNAUTHORIZED',
-      message: 'Authentication required',
+      code: 'FORBIDDEN',
+      message: 'Admin access required.',
     });
   }
-  
-  // For now, allow any authenticated user
+
   return next({ ctx });
 });

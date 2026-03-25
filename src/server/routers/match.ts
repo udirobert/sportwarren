@@ -1,15 +1,17 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import algosdk from 'algosdk';
-import { isAddress, type Address } from 'viem';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
-import { chainlinkService } from '../../../server/services/blockchain/chainlink';
-import { yellowService } from '../../../server/services/blockchain/yellow';
-import { finalizeMatchFeeSettlement } from '../../../server/services/blockchain/yellow-recovery';
-import { createPendingMatchSubmission } from '../../../server/services/match-submission';
-import { postTreasuryLedgerEntryOnce, distributeMatchRewards } from '../../../server/services/economy/treasury-ledger';
+import { chainlinkService } from '../services/blockchain/chainlink';
+import { yellowService } from '../services/blockchain/yellow';
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
-import { simulateMatch, calculateWinProbabilities } from '../../lib/match/simulation-engine';
+import {
+  getMatchParticipantCandidates,
+  MatchWorkflowError,
+  settleMatchFee,
+  submitMatchResult,
+  verifyMatchResult,
+} from '../services/match-workflow';
+import { simulateMatch, calculateWinProbabilities } from '@/lib/match/simulation-engine';
 import { Tactics, PlayerAttributes } from '@/types';
 
 const MatchStatus = z.enum(['pending', 'verified', 'disputed', 'finalized']);
@@ -29,54 +31,24 @@ const yellowMatchSettlementSchema = z.object({
   settlementId: z.string().min(1).optional(),
 });
 
-async function getMatchParticipantCandidates(prisma: any, homeSquadId: string, awaySquadId: string) {
-  const members = await prisma.squadMember.findMany({
-    where: {
-      squadId: { in: [homeSquadId, awaySquadId] },
-      role: { in: ['captain', 'vice_captain'] },
-    },
-    include: {
-      user: {
-        select: { walletAddress: true },
-      },
-    },
-    orderBy: { joinedAt: 'asc' },
+function toTRPCError(error: unknown) {
+  if (error instanceof TRPCError) {
+    return error;
+  }
+
+  if (error instanceof MatchWorkflowError) {
+    return new TRPCError({
+      code: error.code,
+      message: error.message,
+      cause: error,
+    });
+  }
+
+  return new TRPCError({
+    code: 'INTERNAL_SERVER_ERROR',
+    message: 'Match operation failed',
+    cause: error,
   });
-
-  const participants = new Map<string, Address>();
-  for (const member of members) {
-    const walletAddress = member.user?.walletAddress;
-    if (!walletAddress || !isAddress(walletAddress)) {
-      continue;
-    }
-
-    participants.set(walletAddress.toLowerCase(), walletAddress as Address);
-  }
-
-  const platformWallet = process.env.NEXT_PUBLIC_YELLOW_PLATFORM_WALLET;
-  if (platformWallet && isAddress(platformWallet)) {
-    participants.set(platformWallet.toLowerCase(), platformWallet as Address);
-  }
-
-  return Array.from(participants.values());
-}
-
-async function settleMatchFee(
-  prisma: any,
-  match: any,
-  status: 'verified' | 'disputed',
-  settlement?: { sessionId: string; version: number; settlementId: string },
-) {
-  if (!match.yellowFeeSessionId || match.yellowFeeSettledAt) {
-    return null;
-  }
-
-  if (!settlement) {
-    return null;
-  }
-
-  await finalizeMatchFeeSettlement(prisma, match, status, settlement);
-  return settlement;
 }
 
 export const matchRouter = createTRPCRouter({
@@ -108,60 +80,7 @@ export const matchRouter = createTRPCRouter({
           });
         }
 
-        // Validate squads exist
-        const [homeSquad, awaySquad] = await Promise.all([
-          ctx.prisma.squad.findUnique({ where: { id: input.homeSquadId } }),
-          ctx.prisma.squad.findUnique({ where: { id: input.awaySquadId } }),
-        ]);
-
-        if (!homeSquad) {
-          throw new TRPCError(Errors.SQUAD_NOT_FOUND);
-        }
-        if (!awaySquad) {
-          throw new TRPCError({ ...Errors.SQUAD_NOT_FOUND, message: 'Away squad not found' });
-        }
-        if (input.homeSquadId === input.awaySquadId) {
-          throw new TRPCError({
-            code: 'BAD_REQUEST',
-            message: 'Home and away squads must be different',
-          });
-        }
-
-        let weatherVerified = false;
-        let locationVerified = false;
-
-        // Perform Chainlink Verification if coordinates are provided
-        if (input.latitude !== undefined && input.longitude !== undefined) {
-          try {
-            const verificationResult = await chainlinkService.verifyMatch({
-              latitude: input.latitude,
-              longitude: input.longitude,
-              timestamp: Math.floor(input.matchDate.getTime() / 1000),
-              homeTeam: homeSquad.name,
-              awayTeam: awaySquad.name,
-            });
-
-            weatherVerified = verificationResult.weatherVerified;
-            locationVerified = verificationResult.locationVerified;
-            (input as any).verificationDetails = verificationResult.details;
-
-            // Trigger Agentic Narrative Insight
-            try {
-              const { agenticService } = await import('../../../server/services/ai/agentic');
-              (input as any).agentInsights = await agenticService.generateMatchReport(
-                { homeSquad, awaySquad, homeScore: input.homeScore, awayScore: input.awayScore },
-                verificationResult.details
-              );
-            } catch (aiError) {
-              console.warn('Agentic insight generation failed:', aiError);
-            }
-          } catch (e) {
-            console.error('Chainlink verification failed during match submission:', e);
-            // We don't fail the match submission if oracle fails, just log it.
-          }
-        }
-
-        const match = await createPendingMatchSubmission({
+        return await submitMatchResult({
           prisma: ctx.prisma,
           homeSquadId: input.homeSquadId,
           awaySquadId: input.awaySquadId,
@@ -171,86 +90,10 @@ export const matchRouter = createTRPCRouter({
           submittedBy: ctx.userId!,
           latitude: input.latitude,
           longitude: input.longitude,
-          weatherVerified,
-          locationVerified,
-          verificationDetails: (input as any).verificationDetails || null,
-          agentInsights: (input as any).agentInsights || null,
+          yellowSettlement: input.yellowSettlement,
         });
-
-        const matchFeeAmount = yellowService.getMatchFeeAmount();
-        if (yellowService.isEnabled() && matchFeeAmount > 0 && input.yellowSettlement) {
-          try {
-            const [homeTreasury, awayTreasury] = await Promise.all([
-              ctx.prisma.squadTreasury.findUnique({ where: { squadId: input.homeSquadId } }),
-              ctx.prisma.squadTreasury.findUnique({ where: { squadId: input.awaySquadId } }),
-            ]);
-
-            const homeHasFunds = (homeTreasury?.balance ?? 0) >= matchFeeAmount;
-            const awayHasFunds = (awayTreasury?.balance ?? 0) >= matchFeeAmount;
-
-            if (homeHasFunds && awayHasFunds) {
-              const matchParticipants = await getMatchParticipantCandidates(
-                ctx.prisma,
-                input.homeSquadId,
-                input.awaySquadId,
-              );
-              const feeSession = await yellowService.verifyClientSettlement({
-                settlement: input.yellowSettlement,
-                participantCandidates: matchParticipants,
-                applicationPrefixes: ['sportwarren-match-fee-'],
-                expectedParticipants: matchParticipants,
-                expectedSessionData: {
-                  homeSquadId: input.homeSquadId,
-                  awaySquadId: input.awaySquadId,
-                },
-              });
-
-              if (feeSession.sessionId) {
-                await ctx.prisma.match.update({
-                  where: { id: match.id },
-                  data: { yellowFeeSessionId: feeSession.sessionId },
-                });
-
-                await postTreasuryLedgerEntryOnce({
-                  prisma: ctx.prisma,
-                  squadId: input.homeSquadId,
-                  amountDelta: -matchFeeAmount,
-                  type: 'expense',
-                  category: 'match_fee',
-                  description: `Match fee locked for match ${match.id}`,
-                  txHash: feeSession.settlementId,
-                });
-
-                await postTreasuryLedgerEntryOnce({
-                  prisma: ctx.prisma,
-                  squadId: input.awaySquadId,
-                  amountDelta: -matchFeeAmount,
-                  type: 'expense',
-                  category: 'match_fee',
-                  description: `Match fee locked for match ${match.id}`,
-                  txHash: feeSession.settlementId,
-                });
-
-                (match as any).yellowFeeSessionId = feeSession.sessionId;
-              }
-            }
-          } catch (yellowError) {
-            console.error('Yellow match fee session setup failed:', yellowError);
-          }
-        }
-
-        // Return with CRE result if we have it
-        return {
-          ...match,
-          creResult: (match as any).verificationDetails,
-        };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to submit match',
-          cause: error,
-        });
+        throw toTRPCError(error);
       }
     }),
 
@@ -267,7 +110,6 @@ export const matchRouter = createTRPCRouter({
       try {
         const { matchId, verified, homeScore, awayScore, yellowSettlement } = input;
 
-        // Check if match exists
         const match = await ctx.prisma.match.findUnique({
           where: { id: matchId },
           include: { verifications: true },
@@ -295,184 +137,17 @@ export const matchRouter = createTRPCRouter({
           });
         }
 
-        if (match.submittedBy === ctx.userId) {
-          throw new TRPCError({
-            code: 'FORBIDDEN',
-            message: 'Match submitters cannot verify their own result',
-          });
-        }
-
-        // Check if already verified by this user
-        const existingVerification = match.verifications.find(
-          v => v.verifierId === ctx.userId
-        );
-        if (existingVerification) {
-          throw new TRPCError(Errors.ALREADY_VERIFIED);
-        }
-
-        // Check if match is already finalized
-        if (match.status === 'finalized') {
-          throw new TRPCError({
-            code: 'CONFLICT',
-            message: 'Match is already finalized',
-          });
-        }
-
-        // Create verification record
-        await ctx.prisma.matchVerification.create({
-          data: {
-            matchId,
-            verifierId: ctx.userId!,
-            verified,
-            homeScore,
-            awayScore,
-            trustTier: 'gold', // TODO: Calculate from reputation
-          },
+        return await verifyMatchResult({
+          prisma: ctx.prisma,
+          matchId,
+          verifierId: ctx.userId!,
+          verified,
+          homeScore,
+          awayScore,
+          yellowSettlement,
         });
-
-        // Check consensus
-        const updatedMatch = await ctx.prisma.match.findUnique({
-          where: { id: matchId },
-          include: { verifications: true },
-        });
-
-        if (!updatedMatch) {
-          throw new TRPCError(Errors.MATCH_NOT_FOUND);
-        }
-
-        const verifiedCount = updatedMatch.verifications.filter(v => v.verified).length;
-        const disputedCount = updatedMatch.verifications.filter(v => !v.verified).length;
-
-        // Self-verified matches (has shareSlug) need only 2 verifications total
-        // Non-self-verified matches need 3
-        const requiredVerifications = match.shareSlug ? 2 : 3;
-
-        let newStatus = updatedMatch.status;
-        if (verifiedCount >= requiredVerifications) {
-          newStatus = 'verified';
-        } else if (disputedCount >= 2) {
-          newStatus = 'disputed';
-        }
-
-        if (newStatus !== updatedMatch.status) {
-          let txId = null;
-          const matchParticipants = await getMatchParticipantCandidates(
-            ctx.prisma,
-            updatedMatch.homeSquadId,
-            updatedMatch.awaySquadId,
-          );
-          const verifiedSettlement = yellowSettlement && updatedMatch.yellowFeeSessionId
-            ? await yellowService.verifyClientSettlement({
-                settlement: yellowSettlement,
-                participantCandidates: matchParticipants,
-                expectedSessionId: updatedMatch.yellowFeeSessionId,
-                applicationPrefixes: ['sportwarren-match-fee-'],
-                expectedParticipants: matchParticipants,
-                expectedSessionData: {
-                  matchId,
-                  status: newStatus,
-                },
-              })
-            : null;
-
-          // If match is now verified, post to Algorand
-          if (newStatus === 'verified') {
-            try {
-              const { algodClient, deployerAccount } = await import('../../../server/services/blockchain/algorand');
-              const appId = parseInt(process.env.ALGORAND_MATCH_VERIFICATION_APP_ID || '0');
-
-              if (appId > 0 && deployerAccount) {
-                const params = await algodClient.getTransactionParams().do();
-                const encoder = new TextEncoder();
-
-                // Op: verify_match, Args: [match_id, type (1=confirm), weight]
-                const appArgs = [
-                  encoder.encode('verify_match'),
-                  algosdk.encodeUint64(parseInt(matchId.replace(/\D/g, '').slice(0, 10)) || 1),
-                  algosdk.encodeUint64(1),
-                  algosdk.encodeUint64(100),
-                ];
-
-                const txn = algosdk.makeApplicationNoOpTxnFromObject({
-                  sender: deployerAccount.addr.toString(),
-                  suggestedParams: params,
-                  appIndex: appId,
-                  appArgs,
-                });
-
-                const signedTxn = txn.signTxn(deployerAccount.sk);
-                const { txid: submittedTxId } = await algodClient.sendRawTransaction(signedTxn).do();
-                txId = submittedTxId;
-                console.log(`Match ${matchId} verified on-chain! Tx: ${txId}`);
-              }
-            } catch (algoError) {
-              console.error('Failed to post verification to Algorand:', algoError);
-            }
-          }
-
-          await ctx.prisma.match.update({
-            where: { id: matchId },
-            data: {
-              status: newStatus,
-              txId: txId || undefined
-            },
-          });
-
-        if (newStatus === 'verified' || newStatus === 'disputed') {
-          try {
-            if (verifiedSettlement) {
-              await settleMatchFee(ctx.prisma, updatedMatch, newStatus, verifiedSettlement);
-            } else if (updatedMatch.yellowFeeSessionId && !updatedMatch.yellowFeeSettledAt) {
-              console.warn('Yellow fee session remains unsettled until the client submits a signed settlement.');
-            }
-
-              // AUTOMATED DAO REWARDS: Trigger prize and bonus payouts for both squads
-              if (newStatus === 'verified') {
-                const homeFinalScore = homeScore ?? updatedMatch.homeScore ?? 0;
-                const awayFinalScore = awayScore ?? updatedMatch.awayScore ?? 0;
-                const isDraw = homeFinalScore === awayFinalScore;
-
-                // Process Home Squad
-                await distributeMatchRewards({
-                  prisma: ctx.prisma,
-                  squadId: updatedMatch.homeSquadId,
-                  matchId: updatedMatch.id,
-                  isWinner: homeFinalScore > awayFinalScore,
-                  isDraw,
-                  playerStats: [], // Would fetch from playerStats table in full impl
-                });
-
-                // Process Away Squad
-                await distributeMatchRewards({
-                  prisma: ctx.prisma,
-                  squadId: updatedMatch.awaySquadId,
-                  matchId: updatedMatch.id,
-                  isWinner: awayFinalScore > homeFinalScore,
-                  isDraw,
-                  playerStats: [],
-                });
-              }
-            } catch (yellowError) {
-              console.error('Failed to settle Yellow match fee or distribute rewards:', yellowError);
-            }
-          }
-        }
-
-        return {
-          success: true,
-          newStatus,
-          requiresYellowSettlement:
-            (newStatus === 'verified' || newStatus === 'disputed') &&
-            Boolean(updatedMatch.yellowFeeSessionId) &&
-            !updatedMatch.yellowFeeSettledAt,
-        };
       } catch (error) {
-        if (error instanceof TRPCError) throw error;
-        throw new TRPCError({
-          code: 'INTERNAL_SERVER_ERROR',
-          message: 'Failed to verify match',
-          cause: error,
-        });
+        throw toTRPCError(error);
       }
     }),
 
@@ -583,7 +258,7 @@ export const matchRouter = createTRPCRouter({
 
         // Mint On-Chain Reputation (Soulbound logic simulation) via Algorand Service
         try {
-          const { algorandService } = await import('../../../server/services/blockchain/algorand');
+          const { algorandService } = await import('@/server/services/blockchain/algorand');
 
           // Determine who won to issue different reputation gains
           const homeScore = match.homeScore || 0;

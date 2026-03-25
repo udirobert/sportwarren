@@ -57,7 +57,7 @@ class MatchVerificationWorkflow {
 
         // Action 3: Multi-factor Verification Logic (The 'Consensus' part of the workflow)
         let confidence = 0;
-        let reasons: string[] = [];
+        const reasons: string[] = [];
 
         // Weather score (40% weight) - verifies match was possible in those conditions
         if (weatherData.verified) {

@@ -11,6 +11,8 @@ import {
   isTelegramConnectToken,
 } from './platform-connections.js';
 import { parseTelegramMatchResult, type ParsedTelegramMatchResult } from './telegram-match-parser.js';
+import { generateStaffReply } from '@/server/services/ai/staff-chat';
+
 import {
   cancelPendingTreasuryActivity,
   ensureSquadTreasury,
@@ -111,6 +113,7 @@ export class TelegramService {
       { command: 'fee', description: 'Propose a match fee from the treasury' },
       { command: 'stats', description: 'View real player or squad stats' },
       { command: 'fixtures', description: 'View scheduled squad fixtures' },
+      { command: 'ask', description: 'Ask your AI Backroom Staff for insights' },
       { command: 'treasury', description: 'Open the Telegram Mini App for TON treasury top-ups' },
       { command: 'help', description: 'Show Telegram commands and linking help' },
     ]).catch((error: Error) => {
@@ -156,6 +159,10 @@ export class TelegramService {
 
     this.bot.onText(/\/fixtures/, async (msg) => {
       await this.handleFixturesRequest(msg.chat.id);
+    });
+
+    this.bot.onText(/\/ask(?:\s+(.+))?/, async (msg, match) => {
+      await this.handleAiStaffQuery(msg.chat.id, match?.[1]?.trim());
     });
 
     this.bot.onText(/\/fee(?:\s+(.+))?/, async (msg, match) => {
@@ -349,6 +356,94 @@ export class TelegramService {
       linkedChat: linkedChat as AuthorizedLinkedTelegramChat,
       membership,
     };
+  }
+
+  private async handleAiStaffQuery(
+    chatId: number,
+    query: string | undefined,
+  ): Promise<void> {
+    const linkedChat = await this.requireLinkedChat(chatId);
+    if (!linkedChat?.squadId) {
+      await this.bot.sendMessage(
+        chatId,
+        "Link this chat from SportWarren Settings before using AI Staff.",
+      );
+      return;
+    }
+
+    if (!query) {
+      await this.bot.sendMessage(
+        chatId,
+        "Who do you want to ask, Boss? Format: /ask coach <question>, /ask scout <question>, etc.\n\nType '/ask coach how is the squad form?' to see an example.",
+      );
+      return;
+    }
+
+    // Parse the query to identify the staff member
+    const staffPatterns: Record<string, RegExp> = {
+      coach: /^coach\s+/i,
+      scout: /^scout\s+/i,
+      physio: /^physio\s+/i,
+      analyst: /^analyst\s+/i,
+      commercial: /^commercial\s+/i,
+    };
+
+    let staffMember = "coach"; // default
+    let cleanQuery = query;
+
+    for (const [staff, pattern] of Object.entries(staffPatterns)) {
+      if (pattern.test(query)) {
+        staffMember = staff;
+        cleanQuery = query.replace(pattern, "").trim();
+        break;
+      }
+    }
+
+    // Send typing indicator
+    await this.bot.sendChatAction(chatId, "typing");
+
+    try {
+      // Build squad context for the AI
+      const squad = await prisma.squad.findUnique({
+        where: { id: linkedChat.squadId },
+        select: { name: true },
+      });
+
+      const members = await prisma.squadMember.findMany({
+        where: { squadId: linkedChat.squadId },
+        include: {
+          user: {
+            select: { name: true },
+            include: { playerProfile: { select: { level: true, totalMatches: true, sharpness: true } } },
+          },
+        },
+        take: 8,
+      });
+
+      const contextLines = [
+        `Club: ${squad?.name || 'Squad'}`,
+        `Squad size: ${members.length} players`,
+        members.length > 0 &&
+          `Squad: ${members.map((m) => `${m.user.name || 'Player'} (Lvl ${m.user.playerProfile?.level ?? 1}, ${m.user.playerProfile?.totalMatches ?? 0} matches, ${m.user.playerProfile?.sharpness ?? 50}% sharp)`).join(', ')}`,
+      ].filter(Boolean).join('\n');
+
+      const { reply, staff } = await generateStaffReply({
+        staffId: staffMember,
+        message: cleanQuery || query,
+        contextBlock: contextLines,
+      });
+
+      await this.bot.sendMessage(
+        chatId,
+        `${staff.emoji} ${staff.name}\n\n${reply}`,
+      );
+    } catch (error) {
+      console.error("[TELEGRAM] AI /ask query failed:", error);
+      await this.bot.sendMessage(
+        chatId,
+        `🤖 AI Staff\n\nSorry Boss, I'm having trouble connecting right now. Try again in a moment.`,
+      );
+    }
   }
 
   private async handleConnectStart(chatId: number, token: string, user: TelegramBot.User | undefined): Promise<void> {

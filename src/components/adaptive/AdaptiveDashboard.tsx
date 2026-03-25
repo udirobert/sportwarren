@@ -167,7 +167,7 @@ export const AdaptiveDashboard: React.FC = () => {
         component: (
           <OnboardingChecklist
             journeyStage={entryState.id}
-            onStepAction={(id) => {
+            onStepAction={(_id) => {
               // tour step actions handled by checklist
             }}
           />
@@ -558,7 +558,7 @@ export const AdaptiveDashboard: React.FC = () => {
     );
 
     return widgets;
-  }, [allChecklistDone, completeChecklistItem, currentUserId, dataState, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, stats, trackFeatureUsage]);
+  }, [allChecklistDone, completeChecklistItem, currentUserId, dataState, entryState.id, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, stats, trackFeatureUsage]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {

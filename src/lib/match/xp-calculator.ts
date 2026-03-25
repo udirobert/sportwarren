@@ -39,7 +39,7 @@ export function calculateMatchXP(
   const multiplier = MATCH_MULTIPLIERS[matchType];
 
   // Base XP for appearance
-  let baseXP = BASE_XP.appearance;
+  const baseXP = BASE_XP.appearance;
 
   // Team result XP
   const isWin = match.homeScore > match.awayScore;

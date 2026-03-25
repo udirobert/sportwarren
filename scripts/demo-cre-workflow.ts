@@ -130,7 +130,7 @@ function printConsensusComputation(confidence: number, weatherVerified: boolean,
   console.log(`     └────────────────────────────────────────┘\n`);
 }
 
-function printSettlement(workflowId: string, verified: boolean, confidence: number) {
+function printSettlement(workflowId: string, verified: boolean, _confidence: number) {
   const statusColor = verified ? colors.bgGreen : colors.bgYellow;
   const statusText = verified ? '✓ VERIFIED' : '⚠ PENDING REVIEW';
   
