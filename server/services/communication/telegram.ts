@@ -191,6 +191,15 @@ export class TelegramService {
     this.bot.on('callback_query', async (query) => {
       await this.handleCallbackQuery(query);
     });
+
+    this.bot.on('message', async (msg) => {
+      const text = msg.text?.trim();
+      if (!text || text.startsWith('/')) {
+        return;
+      }
+
+      await this.handleGeneralGuidanceQuery(msg.chat.id, text);
+    });
   }
 
   private buildHelpMessage(): string {
@@ -198,12 +207,14 @@ export class TelegramService {
       'SportWarren Telegram',
       '',
       'Use Telegram as a real squad operations surface once you link it from Settings in the app.',
+      'You can also send a normal message and I will guide you.',
       '',
       'Commands:',
       '/log 4-2 win vs Red Lions',
       '/stats',
       '/stats Marcus',
       '/fixtures',
+      '/ask coach how is the squad form?',
       '/treasury',
       '/help',
       '',
@@ -403,29 +414,7 @@ export class TelegramService {
     await this.bot.sendChatAction(chatId, "typing");
 
     try {
-      // Build squad context for the AI
-      const squad = await prisma.squad.findUnique({
-        where: { id: linkedChat.squadId },
-        select: { name: true },
-      });
-
-      const members = await prisma.squadMember.findMany({
-        where: { squadId: linkedChat.squadId },
-        include: {
-          user: {
-            select: { name: true },
-            include: { playerProfile: { select: { level: true, totalMatches: true, sharpness: true } } },
-          },
-        },
-        take: 8,
-      });
-
-      const contextLines = [
-        `Club: ${squad?.name || 'Squad'}`,
-        `Squad size: ${members.length} players`,
-        members.length > 0 &&
-          `Squad: ${members.map((m) => `${m.user.name || 'Player'} (Lvl ${m.user.playerProfile?.level ?? 1}, ${m.user.playerProfile?.totalMatches ?? 0} matches, ${m.user.playerProfile?.sharpness ?? 50}% sharp)`).join(', ')}`,
-      ].filter(Boolean).join('\n');
+      const contextLines = await this.buildSquadAiContext(linkedChat.squadId);
 
       const { reply, staff } = await generateStaffReply({
         staffId: staffMember,
@@ -444,6 +433,100 @@ export class TelegramService {
         `🤖 AI Staff\n\nSorry Boss, I'm having trouble connecting right now. Try again in a moment.`,
       );
     }
+  }
+
+  private async handleGeneralGuidanceQuery(chatId: number, message: string): Promise<void> {
+    const linkedChat = await this.requireLinkedChat(chatId);
+
+    await this.bot.sendChatAction(chatId, 'typing');
+
+    try {
+      const contextLines = linkedChat?.squadId
+        ? await this.buildSquadAiContext(linkedChat.squadId)
+        : 'Telegram link status: not linked to a squad yet.';
+
+      const guidanceRules = [
+        'You are acting as the SportWarren Telegram concierge.',
+        'Be welcoming, concise, and practical.',
+        linkedChat?.squadId
+          ? 'The user already has a linked squad, so guide them toward the most relevant squad action.'
+          : 'The user has not linked Telegram yet, so explain that linking happens in SportWarren Settings > Connections > Telegram.',
+        'If they want to log a result, tell them to use "/log 4-2 win vs Red Lions".',
+        'If they want squad or player stats, tell them to use "/stats" or "/stats Marcus".',
+        'If they want fixtures, tell them to use "/fixtures".',
+        'If they want treasury or TON wallet actions, tell them to use "/treasury".',
+        'If they want detailed staff analysis, tell them to use "/ask coach <question>" or another staff role.',
+        'If the message is just a greeting, welcome them and suggest the single most relevant next step.',
+        'Do not pretend an action has already happened.',
+      ].join('\n');
+
+      const { reply, staff } = await generateStaffReply({
+        staffId: linkedChat?.squadId ? 'coach' : 'commercial',
+        message,
+        contextBlock: contextLines,
+        decisionBlock: guidanceRules,
+      });
+
+      await this.bot.sendMessage(chatId, `${staff.emoji} ${staff.name}\n\n${reply}`);
+    } catch (error) {
+      console.error('[TELEGRAM] General guidance query failed:', error);
+      await this.bot.sendMessage(chatId, this.buildGeneralGuidanceFallback(Boolean(linkedChat?.squadId)));
+    }
+  }
+
+  private buildGeneralGuidanceFallback(isLinked: boolean): string {
+    if (!isLinked) {
+      return [
+        'SportWarren Telegram',
+        '',
+        'Link this chat from SportWarren Settings > Connections > Telegram to unlock squad guidance.',
+        'Once linked, you can log matches, check stats, and open the TON treasury Mini App from here.',
+      ].join('\n');
+    }
+
+    return [
+      'SportWarren Telegram',
+      '',
+      'Try one of these next actions:',
+      '/log 4-2 win vs Red Lions',
+      '/stats',
+      '/fixtures',
+      '/treasury',
+      '/ask coach how is the squad form?',
+    ].join('\n');
+  }
+
+  private async buildSquadAiContext(squadId: string): Promise<string> {
+    const squad = await prisma.squad.findUnique({
+      where: { id: squadId },
+      select: { name: true },
+    });
+
+    const members = await prisma.squadMember.findMany({
+      where: { squadId },
+      include: {
+        user: {
+          select: { name: true },
+          include: {
+            playerProfile: {
+              select: {
+                level: true,
+                totalMatches: true,
+                sharpness: true,
+              },
+            },
+          },
+        },
+      },
+      take: 8,
+    });
+
+    return [
+      `Club: ${squad?.name || 'Squad'}`,
+      `Squad size: ${members.length} players`,
+      members.length > 0
+        && `Squad: ${members.map((member) => `${member.user.name || 'Player'} (Lvl ${member.user.playerProfile?.level ?? 1}, ${member.user.playerProfile?.totalMatches ?? 0} matches, ${member.user.playerProfile?.sharpness ?? 50}% sharp)`).join(', ')}`,
+    ].filter(Boolean).join('\n');
   }
 
   private async handleConnectStart(chatId: number, token: string, user: TelegramBot.User | undefined): Promise<void> {
