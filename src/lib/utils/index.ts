@@ -17,3 +17,6 @@ export * from './calculations';
 
 // Treasury utilities
 export * from './treasury';
+
+// Haptic utilities
+export * from './haptics';

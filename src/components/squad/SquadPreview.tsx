@@ -5,8 +5,7 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { 
   Shield, Target, ArrowRightLeft, Wallet, 
-  Users, Zap, ChevronRight, Activity,
-  LucideIcon
+  Users, ChevronRight, Activity
 } from 'lucide-react';
 import Link from 'next/link';
 

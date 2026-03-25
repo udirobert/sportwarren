@@ -6,7 +6,7 @@
  * - src/app/match/page.tsx (MOCK_XP_SUMMARY)
  */
 
-import type { MatchResult, MatchEvent, TrustTier, VerificationRole, AttributeType } from '@/types';
+import type { MatchResult, MatchEvent, AttributeType } from '@/types';
 
 /**
  * Default mock matches for development and testing

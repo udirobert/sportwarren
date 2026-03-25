@@ -50,7 +50,7 @@ export const GuestMigrationPrompt: React.FC = () => {
         let accumulatedXP = 0;
 
         if (draftsStr) {
-            try { draftedPlayerIds = JSON.parse(draftsStr); } catch (e) { }
+            try { draftedPlayerIds = JSON.parse(draftsStr); } catch { /* ignore */ }
         }
         if (xpStr) {
             accumulatedXP = parseInt(xpStr, 10) || 0;

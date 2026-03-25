@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { Card } from '@/components/ui/Card';
-import { Share2, Award, Zap, ShieldCheck, Trophy, Target, Download, Check, Loader2 } from 'lucide-react';
+import { Share2, Zap, ShieldCheck, Trophy, Download, Check, Loader2 } from 'lucide-react';
 import { 
   getOverallColor, 
   getAttributeTextColor, 

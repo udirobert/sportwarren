@@ -26,7 +26,7 @@ export class AuthService {
   async verifyToken(token: string): Promise<any> {
     try {
       return jwt.verify(token, this.jwtSecret);
-    } catch (error) {
+    } catch (_error) {
       throw new Error('Invalid token');
     }
   }
@@ -38,7 +38,7 @@ export class AuthService {
     try {
       const decoded = jwt.decode(token);
       return decoded;
-    } catch (error) {
+    } catch (_error) {
       throw new Error('Invalid Auth0 token');
     }
   }
@@ -62,7 +62,7 @@ export class AuthService {
     try {
       jwt.verify(sessionId, this.jwtSecret);
       return true;
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }

@@ -474,7 +474,7 @@ export const playerRouter = createTRPCRouter({
           // Import dynamic to avoid circular or early loading issues
           const { kiteAIService } = await import('../../../server/services/ai/kite');
           await kiteAIService.recordInteraction('coach_kite', 'generate_insight', { userId, type });
-        } catch (e) {
+        } catch {
           console.warn('Kite AI service not available for analytics');
         }
 
@@ -509,7 +509,7 @@ export const playerRouter = createTRPCRouter({
         try {
           const { kiteAIService } = await import('../../../server/services/ai/kite');
           await kiteAIService.recordInteraction('coach_kite', 'chat_request', { userId });
-        } catch (e) {
+        } catch {
           console.warn('Kite AI service not available for analytics');
         }
 
@@ -666,7 +666,7 @@ export const playerRouter = createTRPCRouter({
         try {
           const { kiteAIService } = await import('../../../server/services/ai/kite');
           await kiteAIService.recordInteraction('fitness_agent', 'activity_synced', { userId, type, duration });
-        } catch (e) { }
+        } catch { /* ignore */ }
 
         return activity;
       } catch (error) {

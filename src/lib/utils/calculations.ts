@@ -3,7 +3,7 @@
  * Math, ratings, XP, and form calculations
  */
 
-import type { SkillRating, AttributeType, PlayerPosition } from '@/types';
+import type { SkillRating, PlayerPosition } from '@/types';
 import { BASE_XP, POSITION_ATTRIBUTE_WEIGHTS } from '../match/constants';
 
 // ============================================================================
@@ -98,7 +98,7 @@ interface XPBreakdown {
  */
 export function calculateMatchXP(
   stats: MatchStats,
-  matchType: 'league' | 'cup' | 'friendly' | 'playoff' | 'derby' = 'league',
+  _matchType: 'league' | 'cup' | 'friendly' | 'playoff' | 'derby' = 'league',
   isWinner: boolean = false
 ): XPBreakdown {
   const breakdown: Array<{ source: string; xp: number }> = [];

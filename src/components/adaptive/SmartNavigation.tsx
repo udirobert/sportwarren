@@ -151,6 +151,8 @@ export const SmartNavigation: React.FC = () => {
   }, [isMoreOpen]);
 
   const handleNavClick = useCallback((path: string) => {
+    // Haptic feedback for tactile navigation
+    import("@/lib/utils").then(({ triggerHaptic }) => triggerHaptic("light"));
     trackFeatureUsage(path.slice(1) || 'dashboard');
   }, [trackFeatureUsage]);
 

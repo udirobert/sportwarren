@@ -152,7 +152,7 @@ class MatchVerificationWorkflow {
                 verified: true,
                 source: 'Open-Meteo (Sovereign)'
             };
-        } catch (error) {
+        } catch (_error) {
             console.warn('[CRE] Open-Meteo action failed, checking for OpenWeatherMap fallback.');
         }
 
@@ -263,8 +263,8 @@ class MatchVerificationWorkflow {
                     placeType: osmType
                 };
             }
-        } catch (error) {
-            console.error('[CRE] Fallback Location Action (OSM) failed:', error instanceof Error ? error.message : error);
+        } catch (_error) {
+            console.error('[CRE] Fallback Location Action (OSM) failed:', _error instanceof Error ? _error.message : _error);
         }
 
         return {

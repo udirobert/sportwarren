@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import type { MatchResult, AttributeType } from '@/types';
-import { calculateMatchXP, calculateDerbyBonus, BASE_XP } from '@/lib/match/xp-calculator';
+import { calculateMatchXP, calculateDerbyBonus, calculateNewRating } from '@/lib/match/xp-calculator';
 
 interface XPGainNotification {
   id: string;
@@ -57,7 +57,7 @@ export function useXPGain(): UseXPGainReturn {
                      (match.awayScore > match.homeScore && playerStats.position === 'away');
     const derbyBonus = calculateDerbyBonus(xpBreakdown.total, isWinner, isRivalryMatch);
     
-    const totalXPGained = xpBreakdown.total + derbyBonus;
+    const _totalXPGained = xpBreakdown.total + derbyBonus;
 
     // Create notifications for each affected attribute
     const newNotifications: XPGainNotification[] = [];
@@ -67,7 +67,6 @@ export function useXPGain(): UseXPGainReturn {
       if (!currentAttr) continue;
 
       // Calculate new rating after XP gain
-      const { calculateNewRating } = require('@/lib/match/xp-calculator');
       const { newRating, levelsGained } = calculateNewRating(
         currentAttr.rating,
         currentAttr.xp,

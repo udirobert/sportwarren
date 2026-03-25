@@ -13,9 +13,7 @@ import {
   AlertCircle,
   Zap,
   RefreshCw,
-  ExternalLink,
   Copy,
-  Shield,
   TrendingUp,
   Banknote,
 } from 'lucide-react';
@@ -120,7 +118,7 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
   const [success, setSuccess] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const { treasury, ton, squad } = context;
+  const { treasury, ton, squad: _squad } = context;
 
   // Check if can submit
   const canSubmit = Boolean(

@@ -405,7 +405,7 @@ export class TelegramService {
               `Try the Mini App for detailed tactical adjustments.`,
             ].join("\n"),
 
-          scout: (_q, _stats) =>
+          scout: (q, _stats) =>
             [
               `🔍 Scout Report`,
               "",

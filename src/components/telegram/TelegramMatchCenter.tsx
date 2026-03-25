@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import {
   Trophy,
   Plus,
@@ -12,8 +12,6 @@ import {
   AlertCircle,
   Zap,
   Users,
-  Calendar,
-  Send,
   Shield,
   Star,
   TrendingUp,
@@ -103,7 +101,7 @@ function ScoreInput({
 }
 
 // Match result badge
-function ResultBadge({ match, squadId }: { match: PendingMatch | RecentMatch; squadId: string }) {
+function ResultBadge({ match, squadId: _squadId }: { match: PendingMatch | RecentMatch; squadId: string }) {
   const ourScore = match.isHome ? match.homeScore : match.awayScore;
   const theirScore = match.isHome ? match.awayScore : match.homeScore;
 
@@ -176,7 +174,7 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
   });
 
   // Handle match submission (extracted for MainButton availability)
-  const handleSubmitInternal = async () => {
+  const handleSubmitInternal = useCallback(async () => {
     if (!form.opponentName.trim()) {
       setError('Please enter the opponent name');
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
@@ -231,7 +229,7 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
       setSubmitting(false);
       window.Telegram?.WebApp?.MainButton?.hideProgress();
     }
-  };
+  }, [form.opponentName, form.homeScore, form.awayScore, form.isHome, setError, setSubmitting, setSuccess, setVerificationNote, onRefresh]);
 
   // Integration with Telegram native buttons
   useEffect(() => {
@@ -267,7 +265,7 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
       webApp.BackButton.offClick(handleBack);
       webApp.MainButton.offClick(handleSubmitInternal);
     };
-  }, [viewMode, form.opponentName, submitting]);
+  }, [viewMode, form.opponentName, submitting, handleSubmitInternal]);
 
   // Aggregate stats from recent matches
   const recentStats = useMemo(() => {

@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { X, TrendingUp, Star, ChevronUp, Zap } from 'lucide-react';
+import { X, TrendingUp, ChevronUp, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { AttributeType } from '@/types';
-import { ATTRIBUTE_NAMES, getAttributeColor, getAttributeTextColor } from '@/lib/utils';
+import { ATTRIBUTE_NAMES, getAttributeTextColor } from '@/lib/utils';
 
 interface XPGainNotification {
   id: string;

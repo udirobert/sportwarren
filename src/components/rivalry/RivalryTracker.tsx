@@ -4,8 +4,7 @@ import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { 
-  Swords, Trophy, History, TrendingUp, Flame, 
-  Calendar, MapPin, Users, Star 
+  Swords, History, TrendingUp, Flame, Star 
 } from 'lucide-react';
 import type { Rivalry, RivalryMatch } from '@/types';
 import { MOCK_RIVALRIES } from '@/lib/mocks';

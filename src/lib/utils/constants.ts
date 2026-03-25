@@ -3,7 +3,7 @@
  * Centralized display names, mappings, and constants
  */
 
-import type { AttributeType, PlayerPosition, TrustTier, MatchStatus } from '@/types';
+import type { AttributeType, PlayerPosition, TrustTier } from '@/types';
 
 // ============================================================================
 // ATTRIBUTE MAPPINGS

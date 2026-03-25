@@ -12,7 +12,6 @@ import {
   Shield,
   ChevronUp,
   Flame,
-  Heart,
   Wind,
   Footprints,
   Brain,
