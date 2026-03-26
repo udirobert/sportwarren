@@ -640,7 +640,7 @@ export async function getTelegramMiniAppContext(
     // Treasury
     treasury: {
       balance: treasury.balance,
-      currency: treasury.tonWalletAddress || tonWalletAddress ? "TON" : "ALGO",
+      currency: "TON",
       pendingTopUps,
       recentTransactions: recentTransactions.map((transaction) => ({
         id: transaction.id,
