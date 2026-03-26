@@ -218,7 +218,8 @@ export class TelegramService {
     return [
       'SportWarren Telegram',
       '',
-      'Use Telegram as a real squad operations surface.',
+      'Stop ghost matches.',
+      'Log the score. Track your stats. Build your legacy.',
       'You can also send a normal message and I will guide you.',
       '',
       'Commands:',
@@ -258,10 +259,11 @@ export class TelegramService {
       await this.bot.sendMessage(
         chatId,
         [
-          'This Telegram account is not linked to a SportWarren profile yet.',
+          'No squad linked yet.',
           '',
           'Open the Mini App to create or join a squad.',
-          'If you want a squad group chat linked for team commands, captains can do that later from Settings > Connections.',
+          'Every match. Every stat. Forever.',
+          'Need group-chat commands? Captains can link Telegram later in Settings > Connections.',
         ].join('\n'),
         keyboard ? { reply_markup: keyboard } : undefined,
       );
@@ -444,7 +446,7 @@ export class TelegramService {
     if (!query) {
       await this.bot.sendMessage(
         chatId,
-        "Who do you want to ask, Boss? Format: /ask coach <question>, /ask scout <question>, etc.\n\nType '/ask coach how is the squad form?' to see an example.",
+        "Pick a staff role and ask your question.\n\nFormat: /ask coach <question>\nExample: /ask coach how is the squad form?",
       );
       return;
     }
@@ -489,7 +491,7 @@ export class TelegramService {
       console.error("[TELEGRAM] AI /ask query failed:", error);
       await this.bot.sendMessage(
         chatId,
-        `🤖 AI Staff\n\nSorry Boss, I'm having trouble connecting right now. Try again in a moment.`,
+        `🤖 AI Staff\n\nStill warming up. Try again in a moment.`,
       );
     }
   }
@@ -505,8 +507,10 @@ export class TelegramService {
         : 'Telegram link status: not linked to a squad yet.';
 
       const guidanceRules = [
-        'You are acting as the SportWarren Telegram concierge.',
-        'Be welcoming, concise, and practical.',
+        'You are the SportWarren assistant.',
+        'Tone: direct, punchy, football-first. No corporate phrasing.',
+        'Never call the user "Boss".',
+        'Style anchors: "Stop ghost matches." / "Log the score. Track your stats. Build your legacy." / "Every match. Every stat. Forever."',
         linkedChat?.squadId
           ? 'The user already has a linked squad, so guide them toward the most relevant squad action.'
           : 'The user is new, so explain that /app opens Telegram-native onboarding where they can create or join a squad.',
@@ -520,14 +524,14 @@ export class TelegramService {
         'Do not pretend an action has already happened.',
       ].join('\n');
 
-      const { reply, staff } = await generateStaffReply({
+      const { reply } = await generateStaffReply({
         staffId: linkedChat?.squadId ? 'coach' : 'commercial',
         message,
         contextBlock: contextLines,
         decisionBlock: guidanceRules,
       });
 
-      await this.bot.sendMessage(chatId, `${staff.emoji} ${staff.name}\n\n${reply}`);
+      await this.bot.sendMessage(chatId, reply);
     } catch (error) {
       console.error('[TELEGRAM] General guidance query failed:', error);
       await this.bot.sendMessage(chatId, this.buildGeneralGuidanceFallback(Boolean(linkedChat?.squadId)));
