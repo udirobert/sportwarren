@@ -11,8 +11,8 @@ import { JourneyGateCard } from "@/components/common/JourneyGateCard";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
-  Users, Target, ArrowRightLeft, Wallet, 
-  Shield, Vote, Activity, Info, UserPlus, CheckCircle2
+  Users, Target, ArrowRightLeft, Wallet,
+  Shield, Vote, Activity, Info, UserPlus, CheckCircle2, MessageCircle, Diamond
 } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { CreateSquadFlow } from "@/components/squad/CreateSquadFlow";
@@ -28,6 +28,7 @@ import { VerificationBanner } from "@/components/common/VerificationBanner";
 import { getJourneyActionGate } from "@/lib/journey/action-gates";
 import { describeMatchForSquad } from "@/lib/match/summary";
 import { useJourneyState } from "@/hooks/useJourneyState";
+import { usePlatformConnections } from "@/hooks/usePlatformConnections";
 import type { Player, PlayerPosition, Tactics, Formation, PlayStyle, TeamInstructions } from "@/types";
 import { buildSquadInviteUrl } from "@/lib/squad/invite";
 
@@ -100,6 +101,8 @@ export default function SquadPage() {
   });
   const { squad: detailedSquad, members } = useSquadDetails(activeSquadId);
   const activeSquad = detailedSquad ?? activeMembership?.squad;
+  const { connections } = usePlatformConnections({ squadId: activeSquadId });
+  const telegramConnected = connections.telegram?.connected;
 
   const { checklistItems: _checklistItems } = useOnboarding();
   const squadChecklistDone = true; // open_office removed from checklist
@@ -393,7 +396,21 @@ export default function SquadPage() {
           <Shield className="w-5 h-5 md:w-8 md:h-8 text-white" />
         </div>
         <div className="min-w-0">
-          <h1 className="text-xl md:text-3xl font-bold text-gray-900 truncate">{activeSquad?.name ?? 'Squad Management'}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl md:text-3xl font-bold text-gray-900 truncate">{activeSquad?.name ?? 'Squad Management'}</h1>
+            {telegramConnected && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold">
+                <MessageCircle className="w-3 h-3" />
+                Telegram
+              </span>
+            )}
+            {treasuryState.treasury?.tonRail?.enabled && treasuryState.treasury?.tonRail?.walletAddress && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 text-xs font-semibold">
+                <Diamond className="w-3 h-3" />
+                TON
+              </span>
+            )}
+          </div>
           <p className="text-sm text-gray-600 dark:text-gray-300 truncate md:hidden">{activeSquad ? 'Manage your team' : 'Tactics · Transfers · Treasury'}</p>
           <p className="hidden md:block text-gray-600 dark:text-gray-300 mt-1">{activeSquad ? `Manage ${activeSquad.name}` : 'Manage your team, tactics, transfers, and finances'}</p>
         </div>

@@ -157,6 +157,7 @@ function VerificationProgress({ current, required, trustScore }: { current: numb
 
 export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterProps) {
   const { squad, matches } = context;
+  const [hasTelegramWebApp, setHasTelegramWebApp] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [submitting, setSubmitting] = useState(false);
   const [verifying, setVerifying] = useState<string | null>(null);
@@ -172,6 +173,64 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
     awayScore: '0',
     isHome: true,
   });
+  const [opponentSuggestions, setOpponentSuggestions] = useState<Array<{ id: string; name: string; shortName: string | null }>>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+
+  useEffect(() => {
+    setHasTelegramWebApp(Boolean(window.Telegram?.WebApp));
+  }, []);
+
+  useEffect(() => {
+    if (viewMode !== 'submit') {
+      return;
+    }
+
+    const query = form.opponentName.trim();
+    if (query.length < 2) {
+      setOpponentSuggestions([]);
+      return;
+    }
+
+    const token = new URLSearchParams(window.location.search).get('token');
+    if (!token) {
+      setOpponentSuggestions([]);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      try {
+        setLoadingSuggestions(true);
+        const response = await fetch(
+          `/api/telegram/mini-app/match/opponents?token=${encodeURIComponent(token)}&q=${encodeURIComponent(query)}`,
+          { signal: controller.signal },
+        );
+
+        if (!response.ok) {
+          setOpponentSuggestions([]);
+          return;
+        }
+
+        const data = await response.json();
+        setOpponentSuggestions(Array.isArray(data?.opponents) ? data.opponents : []);
+      } catch {
+        setOpponentSuggestions([]);
+      } finally {
+        setLoadingSuggestions(false);
+      }
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [form.opponentName, viewMode]);
+
+  const selectOpponent = (name: string) => {
+    setForm((prev) => ({ ...prev, opponentName: name }));
+    setOpponentSuggestions([]);
+    window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
+  };
 
   // Handle match submission (extracted for MainButton availability)
   const handleSubmitInternal = useCallback(async () => {
@@ -405,6 +464,24 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
               placeholder="Enter exact squad name..."
               className="w-full rounded-2xl border border-white/10 bg-slate-800/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:border-emerald-500/50 focus:outline-none transition-shadow"
             />
+            {loadingSuggestions && (
+              <p className="mt-2 text-[11px] text-slate-500">Searching squads...</p>
+            )}
+            {!loadingSuggestions && opponentSuggestions.length > 0 && (
+              <div className="mt-2 space-y-1 rounded-xl border border-white/10 bg-slate-900/80 p-2">
+                {opponentSuggestions.map((opponent) => (
+                  <button
+                    key={opponent.id}
+                    type="button"
+                    onClick={() => selectOpponent(opponent.name)}
+                    className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs text-slate-200 transition hover:bg-white/5"
+                  >
+                    <span className="font-medium">{opponent.name}</span>
+                    {opponent.shortName && <span className="text-[10px] text-slate-500">{opponent.shortName}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Home/Away Toggle */}
@@ -458,7 +535,7 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
           </div>
 
           {/* Fail-safe button for users who don't see MainButton */}
-          {!window.Telegram?.WebApp && (
+          {!hasTelegramWebApp && (
             <button
               onClick={handleSubmitInternal}
               disabled={submitting || !form.opponentName.trim()}

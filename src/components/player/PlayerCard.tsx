@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card } from '@/components/ui/Card';
-import { User, Award } from 'lucide-react';
+import { User, Award, Bot } from 'lucide-react';
 import { FormBadge } from './FormIndicator';
 import type { PlayerAttributes, PlayerPosition } from '@/types';
 import {
@@ -15,6 +15,7 @@ import {
   getTopAttributes,
   detectPositionFromSkills,
 } from '@/lib/utils';
+import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
 
 interface PlayerCardProps {
   player: PlayerAttributes;
@@ -178,6 +179,17 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             ))}
           </div>
         )}
+
+        {/* AI Staff Promotion */}
+        <a
+          href={buildTelegramDeepLink({ tab: 'ai', prefilled: { query: `How is ${player.playerName} performing?` } })}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 pt-3 border-t border-gray-200 text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
+        >
+          <Bot className="w-4 h-4" />
+          Ask AI Staff about {player.playerName}
+        </a>
       </div>
     </Card>
   );
