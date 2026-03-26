@@ -8,7 +8,10 @@ import {
   computeTonMessageHashFromBoc,
   verifyTonTopUpTransfer,
 } from "../blockchain/ton";
-import { findPlatformIdentityByMiniAppToken } from "./platform-connections";
+import {
+  findPlatformIdentityByMiniAppToken,
+  updateActiveSquadContext,
+} from "./platform-connections";
 import { getSquadMembership, isSquadLeader } from "../permissions";
 import {
   getRequiredMatchVerifications,
@@ -167,11 +170,23 @@ export interface VerifyTelegramMiniAppMatchInput {
   };
 }
 
-/**
- * Resolve a Mini App session by token.
- * Uses PlatformIdentity (user-scoped) instead of PlatformConnection (squad-scoped).
- */
-async function requireTelegramMiniAppConnection(prisma: PrismaClient, token: string) {
+export interface CreateTelegramMiniAppSquadInput {
+  token: string;
+  name: string;
+  shortName: string;
+  homeGround?: string;
+}
+
+export interface JoinTelegramMiniAppSquadInput {
+  token: string;
+  squadId: string;
+}
+
+type TelegramMiniAppIdentity = NonNullable<
+  Awaited<ReturnType<typeof findPlatformIdentityByMiniAppToken>>
+>;
+
+async function requireTelegramMiniAppIdentity(prisma: PrismaClient, token: string) {
   const identity = await findPlatformIdentityByMiniAppToken(prisma, token);
   if (!identity) {
     throw new Error(
@@ -179,21 +194,42 @@ async function requireTelegramMiniAppConnection(prisma: PrismaClient, token: str
     );
   }
 
-  // Derive active squad from identity's activeSquadId or first membership
+  return identity;
+}
+
+function resolveActiveSquadFromIdentity(identity: TelegramMiniAppIdentity) {
   const memberships = identity.user.squads;
-  const activeSquadId = identity.activeSquadId;
-  const activeSquad = activeSquadId
-    ? memberships.find((m) => m.squad.id === activeSquadId)?.squad
-    : memberships[0]?.squad;
+  if (memberships.length === 0) {
+    return null;
+  }
+
+  const selectedMembership = identity.activeSquadId
+    ? memberships.find((membership) => membership.squad.id === identity.activeSquadId)
+    : undefined;
+
+  const activeMembership = selectedMembership ?? memberships[0];
+  return {
+    squad: activeMembership.squad,
+    membership: activeMembership,
+  };
+}
+
+/**
+ * Resolve a Mini App session by token.
+ * Uses PlatformIdentity (user-scoped) instead of PlatformConnection (squad-scoped).
+ */
+async function requireTelegramMiniAppConnection(prisma: PrismaClient, token: string) {
+  const identity = await requireTelegramMiniAppIdentity(prisma, token);
+  const activeSquad = resolveActiveSquadFromIdentity(identity);
 
   if (!activeSquad) {
-    throw new Error("You don't belong to a squad yet.");
+    throw new Error("NO_SQUAD:You don't belong to a squad yet.");
   }
 
   return {
     ...identity,
-    squadId: activeSquad.id,
-    squad: activeSquad,
+    squadId: activeSquad.squad.id,
+    squad: activeSquad.squad,
   };
 }
 
@@ -206,6 +242,139 @@ async function requireTelegramMiniAppLeader(prisma: PrismaClient, token: string)
   }
 
   return connection;
+}
+
+export async function searchTelegramMiniAppOnboardingSquads(
+  prisma: PrismaClient,
+  token: string,
+  query: string,
+) {
+  const identity = await requireTelegramMiniAppIdentity(prisma, token);
+  const userId = identity.user.id;
+  const trimmed = query.trim();
+
+  const where = trimmed.length > 0
+    ? {
+        OR: [
+          { name: { contains: trimmed, mode: "insensitive" as const } },
+          { shortName: { contains: trimmed, mode: "insensitive" as const } },
+        ],
+      }
+    : undefined;
+
+  const squads = await prisma.squad.findMany({
+    where,
+    include: {
+      _count: { select: { members: true } },
+      members: {
+        where: { userId },
+        select: { userId: true },
+      },
+    },
+    orderBy: { createdAt: "desc" },
+    take: 20,
+  });
+
+  return squads.map((squad) => ({
+    id: squad.id,
+    name: squad.name,
+    shortName: squad.shortName,
+    memberCount: squad._count.members,
+    alreadyMember: squad.members.length > 0,
+  }));
+}
+
+export async function createTelegramMiniAppSquad(
+  prisma: PrismaClient,
+  input: CreateTelegramMiniAppSquadInput,
+) {
+  const identity = await requireTelegramMiniAppIdentity(prisma, input.token);
+  const name = input.name.trim();
+  const shortName = input.shortName.trim().toUpperCase();
+  const homeGround = input.homeGround?.trim() || null;
+
+  if (name.length < 2) {
+    throw new Error("Squad name must be at least 2 characters.");
+  }
+
+  if (shortName.length < 2 || shortName.length > 5) {
+    throw new Error("Short name must be between 2 and 5 characters.");
+  }
+
+  const existingShortName = await prisma.squad.findFirst({
+    where: { shortName: { equals: shortName, mode: "insensitive" } },
+    select: { id: true },
+  });
+
+  if (existingShortName) {
+    throw new Error("That short name is already taken.");
+  }
+
+  const squad = await prisma.squad.create({
+    data: {
+      name,
+      shortName,
+      homeGround,
+      members: {
+        create: {
+          userId: identity.user.id,
+          role: "captain",
+        },
+      },
+    },
+  });
+
+  await updateActiveSquadContext(prisma, identity.id, squad.id);
+
+  return {
+    id: squad.id,
+    name: squad.name,
+    shortName: squad.shortName,
+  };
+}
+
+export async function joinTelegramMiniAppSquad(
+  prisma: PrismaClient,
+  input: JoinTelegramMiniAppSquadInput,
+) {
+  const identity = await requireTelegramMiniAppIdentity(prisma, input.token);
+  const squad = await prisma.squad.findUnique({
+    where: { id: input.squadId },
+    select: { id: true, name: true, shortName: true },
+  });
+
+  if (!squad) {
+    throw new Error("Squad not found.");
+  }
+
+  const existingMembership = await prisma.squadMember.findUnique({
+    where: {
+      squadId_userId: {
+        squadId: squad.id,
+        userId: identity.user.id,
+      },
+    },
+    select: { role: true },
+  });
+
+  if (!existingMembership) {
+    await prisma.squadMember.create({
+      data: {
+        squadId: squad.id,
+        userId: identity.user.id,
+        role: "player",
+      },
+    });
+  }
+
+  await updateActiveSquadContext(prisma, identity.id, squad.id);
+
+  return {
+    id: squad.id,
+    name: squad.name,
+    shortName: squad.shortName,
+    alreadyMember: Boolean(existingMembership),
+  };
 }
 
 async function resolveOpponentSquad(prisma: PrismaClient, squadId: string, opponentName: string) {

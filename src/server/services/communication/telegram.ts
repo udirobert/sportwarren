@@ -296,8 +296,8 @@ export class TelegramService {
       "/ask Physio who needs rest?",
       "",
       "🔗 Linking:",
-      "Settings > Connections > Telegram in the web app.",
-      "/app opens onboarding if you have not linked a squad yet.",
+      "/app opens Telegram-native onboarding if you are new.",
+      "Captains can still link squad chats from Settings > Connections for group commands.",
     ].join("\n");
   }
 
@@ -327,9 +327,10 @@ export class TelegramService {
       await this.bot.sendMessage(
         chatId,
         [
-          "This chat is not linked to a SportWarren squad yet.",
+          "This Telegram account is not linked to a SportWarren profile yet.",
           "",
-          "Open the Mini App for onboarding, then connect Telegram from SportWarren Settings > Connections > Telegram when your squad is ready.",
+          "Open the Mini App to create or join a squad.",
+          "If you want a squad group chat linked for team commands, captains can do that later from Settings > Connections.",
         ].join("\n"),
         keyboard ? { reply_markup: keyboard } : undefined,
       );
@@ -359,7 +360,7 @@ export class TelegramService {
 
       await this.bot.sendMessage(
         chatId,
-        "You don't belong to a squad yet. Open the Mini App to discover or create one.",
+        "You don't belong to a squad yet. Open the Mini App to create or join one.",
         keyboard ? { reply_markup: keyboard } : undefined,
       );
       return;
@@ -798,24 +799,33 @@ export class TelegramService {
       return;
     }
 
-    const result = await connectTelegramChatByToken(prisma, token, {
-      chatId: String(chatId),
-      platformUserId: String(user.id),
-      username: user.username,
-    });
+    try {
+      const result = await connectTelegramChatByToken(prisma, token, {
+        chatId: String(chatId),
+        platformUserId: String(user.id),
+        username: user.username,
+      });
 
-    if (!result) {
+      if (!result) {
+        await this.bot.sendMessage(
+          chatId,
+          "That link is no longer valid. Generate a fresh Telegram link from SportWarren Settings and try again.",
+        );
+        return;
+      }
+
       await this.bot.sendMessage(
         chatId,
-        "That link is no longer valid. Generate a fresh Telegram link from SportWarren Settings and try again.",
+        "Telegram is now linked to your SportWarren squad. You can return to the app, or start with /log, /stats, or /fixtures.",
       );
-      return;
+    } catch (error) {
+      await this.bot.sendMessage(
+        chatId,
+        error instanceof Error
+          ? error.message
+          : "We could not complete Telegram linking right now.",
+      );
     }
-
-    await this.bot.sendMessage(
-      chatId,
-      "Telegram is now linked to your SportWarren squad. You can return to the app, or start with /log, /stats, or /fixtures.",
-    );
   }
 
   private async handleMatchLog(

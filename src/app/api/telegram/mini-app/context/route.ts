@@ -21,17 +21,43 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const context = await getTelegramMiniAppContext(prisma, parsed.data.token);
-  if (!context) {
+  try {
+    const context = await getTelegramMiniAppContext(prisma, parsed.data.token);
+    if (!context) {
+      return NextResponse.json(
+        { error: 'That Telegram Mini App session expired. Re-open it from Telegram.', code: 'SESSION_EXPIRED' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json(context, {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Failed to load Mini App context';
+
+    if (message.startsWith('NO_SQUAD:')) {
+      return NextResponse.json(
+        {
+          error: message.replace(/^NO_SQUAD:/, ''),
+          code: 'NO_SQUAD',
+        },
+        { status: 409 },
+      );
+    }
+
+    if (message.toLowerCase().includes('expired')) {
+      return NextResponse.json(
+        { error: message, code: 'SESSION_EXPIRED' },
+        { status: 404 },
+      );
+    }
+
     return NextResponse.json(
-      { error: 'That Telegram Mini App session expired. Re-open it from Telegram.' },
-      { status: 404 }
+      { error: message, code: 'CONTEXT_ERROR' },
+      { status: 400 },
     );
   }
-
-  return NextResponse.json(context, {
-    headers: {
-      'Cache-Control': 'no-store',
-    },
-  });
 }

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { createHmac } from 'crypto';
 import { parseTelegramMatchResult } from '../server/services/communication/telegram-match-parser';
 import {
   buildTelegramDeepLink,
@@ -6,10 +7,12 @@ import {
   extractTelegramConnectToken,
   isTelegramConnectToken,
 } from '../server/services/communication/platform-connections';
+import { verifyTelegramWebAppInitData } from '../server/services/communication/telegram-auth';
 import { buildTonCommentPayload, toTonNanoString } from '../lib/ton/payload';
 
 const originalTelegramBotUsername = process.env.TELEGRAM_BOT_USERNAME;
 const originalClientUrl = process.env.NEXT_PUBLIC_CLIENT_URL;
+const originalTelegramBotToken = process.env.TELEGRAM_BOT_TOKEN;
 
 afterEach(() => {
   if (originalTelegramBotUsername === undefined) {
@@ -20,10 +23,15 @@ afterEach(() => {
 
   if (originalClientUrl === undefined) {
     delete process.env.NEXT_PUBLIC_CLIENT_URL;
-    return;
+  } else {
+    process.env.NEXT_PUBLIC_CLIENT_URL = originalClientUrl;
   }
 
-  process.env.NEXT_PUBLIC_CLIENT_URL = originalClientUrl;
+  if (originalTelegramBotToken === undefined) {
+    delete process.env.TELEGRAM_BOT_TOKEN;
+  } else {
+    process.env.TELEGRAM_BOT_TOKEN = originalTelegramBotToken;
+  }
 });
 
 describe('telegram match parsing', () => {
@@ -72,6 +80,54 @@ describe('telegram connection deep links', () => {
     process.env.NEXT_PUBLIC_CLIENT_URL = 'https://www.sportwarren.com';
 
     expect(buildTelegramMiniAppUrl({ token: 'launch123' })).toBe('https://www.sportwarren.com/telegram/mini-app?token=launch123');
+  });
+});
+
+describe('telegram mini app auth', () => {
+  it('verifies valid init data signatures', () => {
+    process.env.TELEGRAM_BOT_TOKEN = '12345:test-token';
+
+    const params = new URLSearchParams({
+      auth_date: String(Math.floor(Date.now() / 1000)),
+      query_id: 'AAEAAEAA',
+      user: JSON.stringify({ id: 9917, first_name: 'Marcus', username: 'marcus' }),
+    });
+
+    const dataCheckString = [...params.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${key}=${value}`)
+      .join('\n');
+
+    const secret = createHmac('sha256', 'WebAppData')
+      .update(process.env.TELEGRAM_BOT_TOKEN)
+      .digest();
+    const hash = createHmac('sha256', secret).update(dataCheckString).digest('hex');
+    params.set('hash', hash);
+
+    const result = verifyTelegramWebAppInitData(params.toString());
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.platformUserId).toBe('9917');
+      expect(result.data.username).toBe('marcus');
+      expect(result.data.displayName).toBe('Marcus');
+    }
+  });
+
+  it('rejects invalid init data signatures', () => {
+    process.env.TELEGRAM_BOT_TOKEN = '12345:test-token';
+
+    const params = new URLSearchParams({
+      auth_date: String(Math.floor(Date.now() / 1000)),
+      query_id: 'AAEAAEAA',
+      user: JSON.stringify({ id: 1001, first_name: 'Test' }),
+      hash: 'deadbeef',
+    });
+
+    const result = verifyTelegramWebAppInitData(params.toString());
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error).toContain('invalid');
+    }
   });
 });
 

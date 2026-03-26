@@ -4,6 +4,8 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 const TELEGRAM_PLATFORM = 'telegram' as const;
 const TELEGRAM_CONNECT_PREFIX = 'connect_';
 const TELEGRAM_MINI_APP_TTL_MS = 30 * 60 * 1000;
+const DEFAULT_TELEGRAM_CHAIN = 'telegram';
+const CONNECT_TOKEN_SEPARATOR = '.';
 
 type PlatformStore = PrismaClient | Prisma.TransactionClient;
 
@@ -12,6 +14,15 @@ interface TelegramLinkContext {
   platformUserId: string;
   username?: string;
 }
+
+const DEFAULT_PLAYER_ATTRIBUTES = [
+  { attribute: 'pace', rating: 50, xp: 0, xpToNext: 100 },
+  { attribute: 'shooting', rating: 50, xp: 0, xpToNext: 100 },
+  { attribute: 'passing', rating: 50, xp: 0, xpToNext: 100 },
+  { attribute: 'dribbling', rating: 50, xp: 0, xpToNext: 100 },
+  { attribute: 'defending', rating: 50, xp: 0, xpToNext: 100 },
+  { attribute: 'physical', rating: 50, xp: 0, xpToNext: 100 },
+] as const;
 
 // ============================================================================
 // URL Helpers
@@ -54,6 +65,33 @@ export function isTelegramConnectToken(value: string | undefined): value is stri
 
 export function extractTelegramConnectToken(value: string): string {
   return value.slice(TELEGRAM_CONNECT_PREFIX.length);
+}
+
+function buildTelegramConnectSessionToken(userId: string): string {
+  const nonce = randomBytes(12).toString('hex');
+  return `${nonce}${CONNECT_TOKEN_SEPARATOR}${userId}`;
+}
+
+function extractUserIdFromLinkToken(token: string): string | null {
+  const separatorIndex = token.lastIndexOf(CONNECT_TOKEN_SEPARATOR);
+  if (separatorIndex <= 0 || separatorIndex >= token.length - 1) {
+    return null;
+  }
+
+  const userId = token.slice(separatorIndex + 1).trim();
+  if (!/^[a-zA-Z0-9_-]+$/.test(userId)) {
+    return null;
+  }
+
+  return userId;
+}
+
+function shouldHydrateName(value: string | null | undefined): boolean {
+  if (!value) {
+    return true;
+  }
+
+  return /^player_[a-z0-9]+$/i.test(value) || /^telegram_[0-9]+$/i.test(value);
 }
 
 // ============================================================================
@@ -105,7 +143,7 @@ export async function createTelegramLinkSession(
   userId: string,
   squadId: string
 ): Promise<{ botUrl: string; group: SquadGroupConnection }> {
-  const token = randomBytes(12).toString('hex');
+  const token = buildTelegramConnectSessionToken(userId);
   const botUrl = buildTelegramDeepLink(token);
 
   if (!botUrl) {
@@ -147,6 +185,22 @@ export async function connectTelegramChatByToken(
 
   if (!group || group.platform !== TELEGRAM_PLATFORM) return null;
 
+  const linkedUserId = extractUserIdFromLinkToken(token);
+  const existingIdentity = await prisma.platformIdentity.findUnique({
+    where: {
+      platform_platformUserId: {
+        platform: TELEGRAM_PLATFORM,
+        platformUserId: context.platformUserId,
+      },
+    },
+  });
+
+  if (linkedUserId && existingIdentity && existingIdentity.userId !== linkedUserId) {
+    throw new Error(
+      'This Telegram account is already linked to a different SportWarren profile. Unlink it first before reconnecting.',
+    );
+  }
+
   const updated = await prisma.squadGroup.update({
     where: { id: group.id },
     data: {
@@ -158,10 +212,47 @@ export async function connectTelegramChatByToken(
     },
   });
 
+  let resolvedUserId = '';
+  if (linkedUserId) {
+    await prisma.platformIdentity.upsert({
+      where: {
+        platform_platformUserId: {
+          platform: TELEGRAM_PLATFORM,
+          platformUserId: context.platformUserId,
+        },
+      },
+      create: {
+        platform: TELEGRAM_PLATFORM,
+        platformUserId: context.platformUserId,
+        userId: linkedUserId,
+        chatId: context.chatId,
+        username: context.username ?? null,
+        activeSquadId: updated.squadId,
+      },
+      update: {
+        userId: linkedUserId,
+        chatId: context.chatId,
+        username: context.username ?? null,
+        activeSquadId: updated.squadId,
+      },
+    });
+    resolvedUserId = linkedUserId;
+  } else if (existingIdentity) {
+    await prisma.platformIdentity.update({
+      where: { id: existingIdentity.id },
+      data: {
+        chatId: context.chatId,
+        username: context.username ?? null,
+        activeSquadId: existingIdentity.activeSquadId ?? updated.squadId,
+      },
+    });
+    resolvedUserId = existingIdentity.userId;
+  }
+
   return {
     group: updated,
     squadId: updated.squadId,
-    userId: '', // resolved by caller from PlatformIdentity
+    userId: resolvedUserId,
   };
 }
 
@@ -220,6 +311,125 @@ export async function findOrCreatePlatformIdentity(
   }
 
   return null;
+}
+
+export async function ensureTelegramIdentityForMiniApp(
+  prisma: PrismaClient,
+  context: {
+    platformUserId: string;
+    chatId?: string | null;
+    username?: string | null;
+    displayName?: string | null;
+  }
+) {
+  const existing = await prisma.platformIdentity.findUnique({
+    where: {
+      platform_platformUserId: {
+        platform: TELEGRAM_PLATFORM,
+        platformUserId: context.platformUserId,
+      },
+    },
+    include: {
+      user: {
+        include: {
+          squads: { include: { squad: true } },
+        },
+      },
+    },
+  });
+
+  if (existing) {
+    const identityUpdates: Prisma.PlatformIdentityUpdateInput = {};
+
+    if (
+      context.chatId !== undefined
+      && context.chatId !== null
+      && context.chatId !== existing.chatId
+    ) {
+      identityUpdates.chatId = context.chatId;
+    }
+
+    if (context.username !== undefined && context.username !== existing.username) {
+      identityUpdates.username = context.username;
+    }
+
+    if (Object.keys(identityUpdates).length > 0) {
+      await prisma.platformIdentity.update({
+        where: { id: existing.id },
+        data: identityUpdates,
+      });
+    }
+
+    if (context.displayName?.trim() && shouldHydrateName(existing.user.name)) {
+      await prisma.user.update({
+        where: { id: existing.userId },
+        data: { name: context.displayName.trim() },
+      });
+    }
+
+    return findPlatformIdentityByUserId(prisma, context.platformUserId);
+  }
+
+  const walletAddress = `telegram:${context.platformUserId}`;
+  const preferredName = context.displayName?.trim() || `Telegram_${context.platformUserId}`;
+
+  await prisma.$transaction(async (tx) => {
+    const user = await tx.user.upsert({
+      where: { walletAddress },
+      update: {
+        name: preferredName,
+      },
+      create: {
+        walletAddress,
+        chain: DEFAULT_TELEGRAM_CHAIN,
+        name: preferredName,
+      },
+    });
+
+    const existingProfile = await tx.playerProfile.findUnique({
+      where: { userId: user.id },
+      select: { id: true },
+    });
+
+    if (!existingProfile) {
+      await tx.playerProfile.create({
+        data: {
+          userId: user.id,
+          attributes: {
+            create: DEFAULT_PLAYER_ATTRIBUTES.map((attribute) => ({ ...attribute })),
+          },
+        },
+      });
+    }
+
+    await tx.platformIdentity.upsert({
+      where: {
+        platform_platformUserId: {
+          platform: TELEGRAM_PLATFORM,
+          platformUserId: context.platformUserId,
+        },
+      },
+      create: {
+        platform: TELEGRAM_PLATFORM,
+        platformUserId: context.platformUserId,
+        userId: user.id,
+        chatId: context.chatId ?? null,
+        username: context.username ?? null,
+      },
+      update: {
+        userId: user.id,
+        chatId: context.chatId ?? null,
+        username: context.username ?? null,
+      },
+    });
+  });
+
+  const hydrated = await findPlatformIdentityByUserId(prisma, context.platformUserId);
+  if (!hydrated) {
+    throw new Error('Could not provision Telegram identity.');
+  }
+
+  return hydrated;
 }
 
 export async function findPlatformIdentityByUserId(
