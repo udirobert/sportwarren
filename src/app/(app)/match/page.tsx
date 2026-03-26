@@ -15,6 +15,7 @@ import { useMatchCenterData } from "@/hooks/match/useMatchCenterData";
 import { useWallet } from "@/contexts/WalletContext";
 import { VerificationBanner } from "@/components/common/VerificationBanner";
 import { JourneyGateCard } from "@/components/common/JourneyGateCard";
+import { TelegramContextualTip } from "@/components/common/TelegramContextualTip";
 import {
   Trophy,
   Shield,
@@ -459,6 +460,7 @@ export default function MatchPage() {
       {viewMode === "capture" && (
         <div className="grid gap-4 lg:grid-cols-[1.15fr,0.85fr]">
           <div className="space-y-4">
+            <TelegramContextualTip context="match-log" />
             <Card>
               <div className="grid gap-4 md:grid-cols-[1.1fr,0.9fr] md:items-end">
                 <div>
@@ -597,6 +599,7 @@ export default function MatchPage() {
 
       {viewMode === "verify" && (
         <div className="space-y-4">
+          <TelegramContextualTip context="verification" />
           {pendingMatches.length === 0 ? (
             <Card className="py-10 text-center">
               <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-500" />

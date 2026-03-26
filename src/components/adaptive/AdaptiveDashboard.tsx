@@ -7,7 +7,7 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2, CheckCircle2, ArrowRight, Smartphone } from 'lucide-react';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2, CheckCircle2, ArrowRight, Smartphone, ExternalLink } from 'lucide-react';
 import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
 import { AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
@@ -822,6 +822,26 @@ export const AdaptiveDashboard: React.FC = () => {
               journeyStage={entryState.id}
               onStepAction={(_id) => {}}
             />
+          </div>
+
+          {/* Mobile Telegram banner */}
+          <div className="md:hidden mt-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">📱</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-blue-900 dark:text-blue-100">Get the best mobile experience</p>
+                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">Open SportWarren in Telegram for faster access and instant notifications.</p>
+                <a
+                  href={buildTelegramDeepLink()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
+                >
+                  Open in Telegram
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
           </div>
         </div>
 

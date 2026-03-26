@@ -21,6 +21,10 @@ import {
   type ParsedTelegramMatchResult,
 } from "./telegram-match-parser.js";
 import {
+  buildVerificationNudgeMessage,
+  shouldSendNudge,
+} from "@/lib/telegram/verification-nudge";
+import {
   cancelPendingTreasuryActivity,
   ensureSquadTreasury,
   recordPendingTreasuryActivity,
@@ -1551,5 +1555,46 @@ export class TelegramService {
     ].join("\n");
 
     await this.sendMatchNotification(chatId, message);
+  }
+
+  async sendVerificationNudge(
+    chatId: string,
+    squadName: string,
+    pendingMatches: Array<{
+      id: string;
+      opponent: string;
+      homeScore: number;
+      awayScore: number;
+      isHome: boolean;
+      requiredVerifications: number;
+      verificationCount: number;
+      createdAt: Date;
+      lastNudgeAt?: Date | null;
+    }>,
+  ): Promise<void> {
+    const matchesToNudge = pendingMatches.filter((match) =>
+      shouldSendNudge(match.createdAt, match.lastNudgeAt),
+    );
+
+    if (matchesToNudge.length === 0) return;
+
+    const message = buildVerificationNudgeMessage({
+      squadName,
+      pendingMatches: matchesToNudge,
+      chatId,
+    });
+
+    if (!message) return;
+
+    const numericChatId = Number(chatId);
+    if (Number.isNaN(numericChatId)) return;
+
+    try {
+      await this.bot.sendMessage(numericChatId, message, {
+        parse_mode: "Markdown",
+      });
+    } catch (error) {
+      console.error("Failed to send verification nudge:", error);
+    }
   }
 }
