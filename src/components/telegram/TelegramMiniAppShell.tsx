@@ -203,7 +203,17 @@ export function TelegramMiniAppShell({
 
     let cancelled = false;
     const bootstrapSession = async () => {
-      const initData = window.Telegram?.WebApp?.initData;
+      let initData = window.Telegram?.WebApp?.initData;
+
+      if (!initData) {
+        for (let attempt = 0; attempt < 3; attempt++) {
+          await new Promise((resolve) => setTimeout(resolve, 600));
+          if (cancelled) return;
+          initData = window.Telegram?.WebApp?.initData;
+          if (initData) break;
+        }
+      }
+
       if (!initData) {
         if (!cancelled) {
           setSessionBootstrapped(true);
@@ -387,6 +397,17 @@ export function TelegramMiniAppShell({
     loadContext(true);
   };
 
+  const handleRetry = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(CONTEXT_CACHE_KEY);
+    }
+    setError(null);
+    setContext(null);
+    setSessionToken('');
+    setSessionBootstrapped(false);
+    setLoading(true);
+  };
+
   const renderTabSkeleton = () => (
     <div className="space-y-4 p-4">
       <div className="h-24 animate-pulse rounded-2xl bg-white/5" />
@@ -434,17 +455,45 @@ export function TelegramMiniAppShell({
     setPullDistance(0);
   };
 
-  const openSquadSetup = () => {
-    const squadUrl = `${window.location.origin}/squad`;
+  const openSquadSetup = useCallback(async () => {
     const webApp = window.Telegram?.WebApp;
+    const initData = webApp?.initData;
 
-    if (webApp?.openLink) {
-      webApp.openLink(squadUrl);
-      return;
+    if (initData) {
+      // Bootstrap session from Telegram - will show in-Telegram onboarding if no squad
+      setLoading(true);
+      try {
+        const response = await fetch('/api/telegram/mini-app/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData }),
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (response.ok && data?.token) {
+          setSessionToken(data.token as string);
+          setRequiresSquadOnboarding(Boolean(data?.hasSquad === false));
+          setSessionBootstrapped(true);
+
+          // Update URL with token
+          if (typeof window !== 'undefined') {
+            const url = new URL(window.location.href);
+            url.searchParams.set('token', data.token as string);
+            window.history.replaceState(window.history.state, '', url.toString());
+          }
+          return;
+        }
+      } catch {
+        // Fall through to error state
+      } finally {
+        setLoading(false);
+      }
     }
 
-    window.open(squadUrl, '_blank', 'noopener,noreferrer');
-  };
+    // Fallback: If no Telegram context, show inline onboarding to create/join squad
+    setRequiresSquadOnboarding(true);
+    setOnboardingMode('menu');
+  }, []);
 
   const fetchJoinOptions = useCallback(async () => {
     if (!sessionToken) {
@@ -578,6 +627,9 @@ export function TelegramMiniAppShell({
   }
 
   if (!sessionToken) {
+    const hasError = Boolean(error);
+    const telegramDataAvailable = Boolean(window.Telegram?.WebApp?.initData);
+
     return (
       <main className="flex min-h-screen flex-col justify-center bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.12),_transparent_45%),linear-gradient(180deg,_#09111f_0%,_#0d1526_100%)] px-4 py-8">
         <div className="mx-auto w-full max-w-md">
@@ -585,25 +637,44 @@ export function TelegramMiniAppShell({
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
               <Link2 className="h-7 w-7" />
             </div>
-            <h1 className="mt-4 text-2xl font-bold text-white">SportWarren Mini App</h1>
+            <h1 className="mt-4 text-2xl font-bold text-white">Stop playing ghost matches.</h1>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              Open the full squad dashboard in Telegram after you link this chat to a SportWarren squad.
+              Log the score. Track your stats. Build your legacy. Every match. Every stat. Forever.
             </p>
 
-            <div className="mt-5 space-y-3 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-slate-300">
-              <p>1. Open SportWarren on the web.</p>
-              <p>2. Create a squad (captain) or ask your captain to link Telegram.</p>
-              <p>3. If you are captain: Settings &gt; Connections &gt; Telegram.</p>
-              <p>4. Return to this chat and type <span className="font-semibold text-emerald-300">/app</span>.</p>
-            </div>
+            {hasError ? (
+              <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+                <p className="text-sm font-medium text-amber-200">{error}</p>
+              </div>
+            ) : telegramDataAvailable ? (
+              <p className="mt-5 text-sm text-slate-400">
+                We couldn&rsquo;t initialize your session. Try again or open the app from Telegram.
+              </p>
+            ) : (
+              <div className="mt-5 space-y-3 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-slate-300">
+                <p>1. Create or join a squad — right here in Telegram.</p>
+                <p>2. Captains can link your group chat in Settings &gt; Connections.</p>
+                <p>3. Already linked? Just tap <span className="font-semibold text-emerald-300">Get Started</span>.</p>
+              </div>
+            )}
 
-            <button
-              onClick={openSquadSetup}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
-            >
-              Open Squad Hub
-              <ArrowRight className="h-4 w-4" />
-            </button>
+            {telegramDataAvailable || hasError ? (
+              <button
+                onClick={handleRetry}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Retry
+              </button>
+            ) : (
+              <button
+                onClick={openSquadSetup}
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
+              >
+                Get Started
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </div>
       </main>
@@ -617,9 +688,9 @@ export function TelegramMiniAppShell({
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
             <Link2 className="h-7 w-7" />
           </div>
-          <h1 className="mt-4 text-2xl font-bold text-white">Complete Squad Setup</h1>
+          <h1 className="mt-4 text-2xl font-bold text-white">Stop playing ghost matches.</h1>
           <p className="mt-3 text-sm leading-6 text-slate-300">
-            This Telegram account is ready. Create a squad or join one to unlock the full SportWarren Mini App.
+            Log the score. Track your stats. Build your legacy. Every match. Every stat. Forever.
           </p>
 
           {onboardingNotice && (
@@ -637,7 +708,7 @@ export function TelegramMiniAppShell({
                 }}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
               >
-                Create New Squad
+                Create Your Squad
                 <ArrowRight className="h-4 w-4" />
               </button>
               <button
