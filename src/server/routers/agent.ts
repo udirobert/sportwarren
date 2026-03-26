@@ -53,7 +53,7 @@ export const agentRouter = createTRPCRouter({
         return { reply };
       } catch (error) {
         console.error('[TRPC-AGENT] Chat failed:', error);
-        return { reply: "I'll look into that and get back to you, Boss." };
+        return { reply: "AI staff is warming up. Try again in a moment." };
       }
     }),
 });

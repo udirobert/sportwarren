@@ -100,7 +100,7 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
         sender: 'staff',
         staffName: staff.name,
         staffEmoji: staff.emoji,
-        text: `Welcome to the backroom, Boss. I'm ${staff.name}, your ${staff.role}. How can I help you today?`,
+        text: `You're in the backroom. I'm ${staff.name}, your ${staff.role}. What do you want to improve before the next whistle?`,
         timestamp: Date.now(),
       },
     ]);
@@ -161,7 +161,7 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
         sender: 'staff',
         staffName: selectedStaff.name,
         staffEmoji: selectedStaff.emoji,
-        text: "Sorry Boss, I'm having trouble connecting right now. Try again in a moment.",
+        text: "AI staff is warming up. Try again in a moment.",
         timestamp: Date.now(),
       };
       setMessages((prev) => [...prev, errorMessage]);

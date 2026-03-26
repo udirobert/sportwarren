@@ -274,30 +274,27 @@ export class TelegramService {
 
   private buildHelpMessage(): string {
     return [
-      "⚽ SportWarren Telegram",
+      "SportWarren Telegram",
       "",
-      "Championship Manager in your pocket. Link from Settings to get started.",
+      "Stop ghost matches.",
+      "Log the score. Track your stats. Build your legacy.",
+      "You can also send a normal message and I will guide you.",
       "",
-      "📱 Mini App:",
-      "/app — Open the full SportWarren experience",
-      "/profile — View your player card & attributes",
-      "/treasury — Squad finances & TON top-ups",
+      "Commands:",
+      "/app",
+      "/profile",
+      "/log 4-2 win vs Red Lions",
+      "/stats",
+      "/stats Marcus",
+      "/fixtures",
+      "/fee abc123 2",
+      "/treasury",
+      "/ask coach how is the squad form?",
+      "/help",
       "",
-      "⚽ Match Operations:",
-      "/log 4-2 win vs Red Lions — Submit result",
-      "/stats — Squad record",
-      "/stats Marcus — Player stats",
-      "/fixtures — Upcoming matches",
-      "/fee abc123 2 — Propose match fee (2 TON)",
-      "",
-      "🤖 AI Staff:",
-      "/ask Coach what formation should we use?",
-      "/ask Scout analyze Red Lions",
-      "/ask Physio who needs rest?",
-      "",
-      "🔗 Linking:",
+      "Linking:",
       "/app opens Telegram-native onboarding if you are new.",
-      "Captains can still link squad chats from Settings > Connections for group commands.",
+      "Captains can link squad chats from Settings > Connections > Telegram for team commands.",
     ].join("\n");
   }
 
@@ -327,10 +324,11 @@ export class TelegramService {
       await this.bot.sendMessage(
         chatId,
         [
-          "This Telegram account is not linked to a SportWarren profile yet.",
+          "No squad linked yet.",
           "",
           "Open the Mini App to create or join a squad.",
-          "If you want a squad group chat linked for team commands, captains can do that later from Settings > Connections.",
+          "Every match. Every stat. Forever.",
+          "Need group-chat commands? Captains can link Telegram later in Settings > Connections.",
         ].join("\n"),
         keyboard ? { reply_markup: keyboard } : undefined,
       );
@@ -360,7 +358,11 @@ export class TelegramService {
 
       await this.bot.sendMessage(
         chatId,
-        "You don't belong to a squad yet. Open the Mini App to create or join one.",
+        [
+          "No squad yet.",
+          "Open the Mini App to create or join one.",
+          "Every match. Every stat. Forever.",
+        ].join("\n"),
         keyboard ? { reply_markup: keyboard } : undefined,
       );
       return;
@@ -548,29 +550,60 @@ export class TelegramService {
       console.error("AI Staff query error:", error);
       await this.bot.sendMessage(
         chatId,
-        "The coaching staff are in a meeting right now. Please try again later.",
+        "AI staff is warming up. Try again in a moment.",
       );
     }
   }
 
   private async handleGeneralAiQuery(chatId: number, text: string): Promise<void> {
     await this.bot.sendChatAction(chatId, "typing");
-    
+
     try {
+      const linkedChat = await this.requireLinkedChat(chatId);
+      const guidanceRules = [
+        "You are the SportWarren assistant.",
+        "Tone: direct, punchy, football-first. No corporate phrasing.",
+        "Never call the user \"Boss\".",
+        "Keep replies short (2-4 sentences).",
+        "Style anchors: \"Stop ghost matches.\" / \"Log the score. Track your stats. Build your legacy.\" / \"Every match. Every stat. Forever.\"",
+        linkedChat?.squadId
+          ? "The user has a linked squad, so guide them to the most relevant next action."
+          : "The user is new, so explain that /app opens Telegram-native onboarding where they can create or join a squad.",
+        "If they ask how to open the Mini App, tell them to type /app.",
+        "If they want to log a result, tell them to use /log 4-2 win vs Red Lions.",
+        "If they want stats, tell them to use /stats or /stats Marcus.",
+        "If they want fixtures, tell them to use /fixtures.",
+        "If they want treasury or TON actions, tell them to use /treasury.",
+        "If they want staff analysis, tell them to use /ask coach <question>.",
+        "If the message is just a greeting, welcome them and suggest the single best next step.",
+        "Do not pretend an action has already happened.",
+      ].join("\n");
+
       const response = await veniceAI.generateCompletion([
-        { 
-          role: 'system', 
-          content: "You are the SportWarren Concierge. Be welcoming, use football terminology, and help the user navigate the platform. If they sound like they want to log a match, suggest using /log." 
+        {
+          role: "system",
+          content: guidanceRules,
         },
-        { role: 'user', content: text }
+        { role: "user", content: text },
       ]);
-      
+
       if (response) {
         await this.bot.sendMessage(chatId, response);
+        return;
       }
     } catch (error) {
       console.warn("General AI query failed:", error);
+      await this.bot.sendMessage(chatId, this.buildGeneralGuidanceFallback());
     }
+  }
+
+  private buildGeneralGuidanceFallback(): string {
+    return [
+      "SportWarren Telegram",
+      "",
+      "Type /app to open onboarding and get moving.",
+      "Log the score. Track your stats. Build your legacy.",
+    ].join("\n");
   }
 
   private async getSquadStatsForAi(squadId: string): Promise<{
