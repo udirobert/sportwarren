@@ -1,9 +1,10 @@
 import { NextResponse } from 'next/server';
 
 export async function GET() {
+  // Return honest numbers - no fake data
   return NextResponse.json({
-    totalPlayers: 10247,
-    totalMatches: 5432,
-    totalAgents: 528,
+    totalPlayers: 0,
+    totalMatches: 0,
+    totalAgents: 0,
   });
 }

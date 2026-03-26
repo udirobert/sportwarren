@@ -212,12 +212,12 @@ export function getJourneyContent(
       return {
         hero: {
           primaryCtaLabel: 'Start Your Own Season',
-          stageLine: 'This is an interactive preview. Explore the flow, then create your own account when you want real progress to stick.',
+          stageLine: 'Try the match flow, then create an account to track real progress.',
           previewLinkLabel: 'or continue the preview',
           highlights: [
-            'See the full match flow before committing',
-            'Understand how verification makes results stick',
-            'Convert preview progress into a real season when ready',
+            'See the full match flow',
+            'Understand how verification works',
+            'Convert to a real account when ready',
           ],
         },
         authModal: {
@@ -264,11 +264,11 @@ export function getJourneyContent(
       return {
         hero: {
           primaryCtaLabel: 'Continue Your Kickoff',
-          stageLine: 'Your account is ready. The fastest way to feel the product is to log one real match and send the verification link.',
+          stageLine: 'Log a match to start building your season history.',
           highlights: [
-            'Log your first result in under a minute',
-            'Send one opponent verification link',
-            'Create the first piece of real season proof',
+            'Log your first match in under a minute',
+            'Send a verification link',
+            'Build your season proof',
           ],
         },
         authModal: {
@@ -315,11 +315,11 @@ export function getJourneyContent(
       return {
         hero: {
           primaryCtaLabel: 'Verify And Continue',
-          stageLine: 'Your wallet is connected. One signature unlocks protected actions, secure progression, and squad control.',
+          stageLine: 'One signature unlocks protected actions and squad control.',
           highlights: [
-            'Unlock protected squad actions',
-            'Secure season progression to your wallet',
-            'Keep treasury and governance paths ready',
+            'Unlock protected actions',
+            'Secure your progression',
+            'Keep treasury paths ready',
           ],
         },
         authModal: {
@@ -365,11 +365,11 @@ export function getJourneyContent(
       return {
         hero: {
           primaryCtaLabel: 'Build Your Squad',
-          stageLine: 'Identity is secured. The next compounding step is creating the squad your season will run through.',
+          stageLine: 'Create your squad to start tracking matches together.',
           highlights: [
-            'Create the team container for every result',
-            'Invite teammates into the same season loop',
-            'Turn individual matches into shared momentum',
+            'Invite teammates',
+            'Track matches together',
+            'Compete as a team',
           ],
         },
         authModal: {
@@ -415,11 +415,11 @@ export function getJourneyContent(
       return {
         hero: {
           primaryCtaLabel: 'Log Your First Result',
-          stageLine: 'You have the essentials in place. One verified result creates the proof, reputation, and momentum that make the product sticky.',
+          stageLine: 'Log a match to create proof and start your season.',
           highlights: [
-            'Create the first verified proof point',
-            'Give Marcus real match context to work with',
-            'Start the loop that brings teammates back weekly',
+            'Create the first verified result',
+            'Give your squad real context',
+            'Start the weekly match loop',
           ],
         },
         authModal: {
@@ -465,11 +465,11 @@ export function getJourneyContent(
       return {
         hero: {
           primaryCtaLabel: 'Open Manager Console',
-          stageLine: 'The squad is live. Jump back into the queue, clear blockers, and keep weekly momentum moving.',
+          stageLine: 'Your squad is ready. Get back to logging matches.',
           highlights: [
-            'Review what needs attention right now',
-            'Log the next result before momentum cools',
-            'Coordinate the squad from one control surface',
+            'Review what needs attention',
+            'Log the next result',
+            'Coordinate your squad',
           ],
         },
         authModal: {
@@ -515,29 +515,29 @@ export function getJourneyContent(
     default:
       return {
         hero: {
-          primaryCtaLabel: 'Start Your Season',
-          stageLine: 'Start free, log one real match, and feel how verified progression changes the way a Sunday team stays organized.',
-          previewLinkLabel: 'or explore the preview',
+          primaryCtaLabel: 'Log Your First Match',
+          stageLine: 'Every match. Every stat. Forever.',
+          previewLinkLabel: 'or take the tour',
           highlights: [
-            'Log your first match in under a minute',
-            'Send one verification link to the other captain',
-            'Build a season-long reputation your squad can trust',
+            'Log matches in 30 seconds',
+            'Stats that level up like FIFA',
+            'Banter with AI coaches. Relive the highlights.',
           ],
         },
         authModal: {
-          title: 'Start your season',
-          description: 'Create your account, log one real match, and turn weekly Sunday games into proof, reputation, and squad momentum.',
+          title: 'Stop ghost games.',
+          description: 'Every goal. Every assist. Every clean sheet. Tracked, verified, and yours forever. Log the match. See your stats level up. Get roasted by AI coaches. Your kickabouts just got an upgrade.',
           benefits: [
-            'Start free with social sign-in',
-            'Log your first result before connecting a wallet',
-            'Unlock wallet, squad, and reputation layers when you need them',
+            'Track every banger',
+            'Level up your squad',
+            'Turn matches into memories that actually stick',
           ],
           primaryActionLabel: 'Get Started Free',
           secondaryActionLabel: 'Explore preview',
         },
         assistant: {
-          welcome: "I'm Marcus. I can show you how SportWarren turns one Sunday result into a season you can prove, revisit, and run with your squad.",
-          placeholder: 'Ask how this becomes sticky after week one...',
+          welcome: "I'm here to make your footy matches more legendary — before, during, and after the final whistle.",
+          placeholder: 'Ask about recording a result...',
           prompts: [
             {
               label: 'What does this app actually do?',
