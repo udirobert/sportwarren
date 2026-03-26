@@ -198,6 +198,7 @@ export function TelegramMiniAppShell({
   useEffect(() => {
     if (tokenFromUrl) {
       setSessionBootstrapped(true);
+      setLoading(false);
       return;
     }
 
@@ -460,8 +461,8 @@ export function TelegramMiniAppShell({
     const initData = webApp?.initData;
 
     if (initData) {
-      // Bootstrap session from Telegram - will show in-Telegram onboarding if no squad
       setLoading(true);
+      setError(null);
       try {
         const response = await fetch('/api/telegram/mini-app/session', {
           method: 'POST',
@@ -474,8 +475,8 @@ export function TelegramMiniAppShell({
           setSessionToken(data.token as string);
           setRequiresSquadOnboarding(Boolean(data?.hasSquad === false));
           setSessionBootstrapped(true);
+          setError(null);
 
-          // Update URL with token
           if (typeof window !== 'undefined') {
             const url = new URL(window.location.href);
             url.searchParams.set('token', data.token as string);
@@ -483,16 +484,16 @@ export function TelegramMiniAppShell({
           }
           return;
         }
+
+        setError(data?.error || 'Failed to connect. Please try again.');
       } catch {
-        // Fall through to error state
+        setError('Network error. Please check your connection and try again.');
       } finally {
         setLoading(false);
       }
+    } else {
+      setError('This app must be opened from Telegram. Tap the bot menu or use /app in your squad chat.');
     }
-
-    // Fallback: If no Telegram context, show inline onboarding to create/join squad
-    setRequiresSquadOnboarding(true);
-    setOnboardingMode('menu');
   }, []);
 
   const fetchJoinOptions = useCallback(async () => {

@@ -17,7 +17,8 @@ interface DeepLinkOptions {
  * @returns Deep link URL for Telegram Mini App
  */
 export function buildTelegramDeepLink(options: DeepLinkOptions = {}): string {
-  const baseUrl = 'https://t.me/sportwarrenbot/app';
+  const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'sportwarrenbot';
+  const baseUrl = `https://t.me/${botUsername}/app`;
   const params = new URLSearchParams();
 
   if (options.tab) {
