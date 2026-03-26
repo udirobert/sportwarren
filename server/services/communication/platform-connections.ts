@@ -6,24 +6,56 @@ const TELEGRAM_PLATFORM: PlatformType = 'telegram';
 const TELEGRAM_CONNECT_PREFIX = 'connect_';
 const TELEGRAM_MINI_APP_TTL_MS = 30 * 60 * 1000;
 
-interface PersistedPlatformConnection {
-  platform: string;
-  status: string;
-  linkedAt: Date | null;
-  username: string | null;
-  chatId: string | null;
-  linkToken: string | null;
-  miniAppToken: string | null;
-  squadId: string | null;
-  userId: string;
-}
-
 type PlatformStore = PrismaClient | Prisma.TransactionClient;
 
 interface TelegramLinkContext {
   chatId: string;
   platformUserId: string;
   username?: string;
+}
+
+interface IdentityWithMemberships {
+  id: string;
+  userId: string;
+  platform: string;
+  platformUserId: string;
+  chatId: string | null;
+  username: string | null;
+  miniAppToken: string | null;
+  miniAppTokenExpiresAt: Date | null;
+  activeSquadId: string | null;
+  user: {
+    id: string;
+    name: string | null;
+    squads: Array<{
+      squadId: string;
+      squad: {
+        id: string;
+        name: string;
+        shortName: string | null;
+        homeGround: string | null;
+        treasury?: {
+          id: string;
+          balance: number;
+          tonWalletAddress: string | null;
+          transactions: Array<{
+            id: string;
+            type: string;
+            category: string;
+            amount: number;
+            description: string | null;
+            createdAt: Date;
+            verified: boolean;
+          }>;
+          yellowSessionId: string | null;
+          budgets: unknown;
+          createdAt: Date;
+          updatedAt: Date;
+          squadId: string;
+        } | null;
+      };
+    }>;
+  };
 }
 
 function getTelegramBotUsername(): string | null {
@@ -36,12 +68,7 @@ function getTelegramBotUsername(): string | null {
 }
 
 function getAppBaseUrl(): string | null {
-  const candidates = [
-    process.env.NEXT_PUBLIC_CLIENT_URL,
-    process.env.CLIENT_URL,
-  ];
-
-  for (const candidate of candidates) {
+  for (const candidate of [process.env.NEXT_PUBLIC_CLIENT_URL, process.env.CLIENT_URL]) {
     const trimmed = candidate?.trim();
     if (trimmed) {
       return trimmed.replace(/\/$/, '');
@@ -51,27 +78,107 @@ function getAppBaseUrl(): string | null {
   return null;
 }
 
-function toConnectionStatus(status: string): 'pending' | 'connected' {
-  return status === 'connected' ? 'connected' : 'pending';
-}
-
-function mapConnection(
-  connection: PersistedPlatformConnection,
-  options?: { includeLinkUrl?: boolean }
-): PlatformConnection {
-  const includeLinkUrl = options?.includeLinkUrl ?? false;
-  const linkUrl = includeLinkUrl && connection.platform === TELEGRAM_PLATFORM && connection.linkToken
-    ? buildTelegramDeepLink(connection.linkToken) ?? undefined
+function mapConnectionView(params: {
+  connected: boolean;
+  linkedAt?: Date | null;
+  username?: string | null;
+  chatId?: string | null;
+  linkToken?: string | null;
+  includeLinkUrl?: boolean;
+}): PlatformConnection {
+  const linkUrl = params.includeLinkUrl && params.linkToken
+    ? buildTelegramDeepLink(params.linkToken) ?? undefined
     : undefined;
 
   return {
-    connected: connection.status === 'connected',
-    status: toConnectionStatus(connection.status),
-    connectedAt: connection.linkedAt?.toISOString(),
-    username: connection.username ?? undefined,
-    chatId: connection.chatId ?? undefined,
+    connected: params.connected,
+    status: params.connected ? 'connected' : 'pending',
+    connectedAt: params.linkedAt?.toISOString(),
+    username: params.username ?? undefined,
+    chatId: params.chatId ?? undefined,
     linkUrl,
   };
+}
+
+function resolveActiveMembership(
+  identity: IdentityWithMemberships,
+  fallbackSquadId?: string | null
+) {
+  if (!identity.user.squads.length) {
+    return null;
+  }
+
+  if (fallbackSquadId) {
+    const byFallback = identity.user.squads.find((membership) => membership.squadId === fallbackSquadId);
+    if (byFallback) {
+      return byFallback;
+    }
+  }
+
+  if (identity.activeSquadId) {
+    const byActive = identity.user.squads.find((membership) => membership.squadId === identity.activeSquadId);
+    if (byActive) {
+      return byActive;
+    }
+  }
+
+  return identity.user.squads[0] ?? null;
+}
+
+async function resolveIdentityForToken(
+  prisma: PlatformStore,
+  token: string,
+  context: TelegramLinkContext,
+  squadId: string
+) {
+  const existingIdentity = await prisma.platformIdentity.findUnique({
+    where: {
+      platform_platformUserId: {
+        platform: TELEGRAM_PLATFORM,
+        platformUserId: context.platformUserId,
+      },
+    },
+  });
+
+  if (existingIdentity) {
+    return prisma.platformIdentity.update({
+      where: { id: existingIdentity.id },
+      data: {
+        chatId: context.chatId,
+        username: context.username ?? existingIdentity.username ?? null,
+        activeSquadId: squadId,
+      },
+    });
+  }
+
+  // Backward-compatible fallback: bind identity to a squad leader when no identity exists yet.
+  const leaderMembership = await prisma.squadMember.findFirst({
+    where: {
+      squadId,
+      role: { in: ['captain', 'vice_captain'] },
+    },
+    orderBy: { joinedAt: 'asc' },
+  });
+
+  const fallbackMembership = leaderMembership ?? await prisma.squadMember.findFirst({
+    where: { squadId },
+    orderBy: { joinedAt: 'asc' },
+  });
+
+  if (!fallbackMembership) {
+    return null;
+  }
+
+  return prisma.platformIdentity.create({
+    data: {
+      userId: fallbackMembership.userId,
+      platform: TELEGRAM_PLATFORM,
+      platformUserId: context.platformUserId,
+      chatId: context.chatId,
+      username: context.username ?? null,
+      activeSquadId: squadId,
+    },
+  });
 }
 
 export function buildTelegramDeepLink(token: string): string | null {
@@ -124,17 +231,22 @@ export async function getPlatformConnectionsForSquad(
   squadId: string,
   options?: { includePendingLinkUrl?: boolean }
 ): Promise<PlatformConnections> {
-  const connections = await prisma.platformConnection.findMany({
+  const groups = await prisma.squadGroup.findMany({
     where: { squadId },
-    orderBy: { createdAt: 'asc' },
+    orderBy: { linkedAt: { sort: 'asc', nulls: 'last' } },
   });
 
   const includePendingLinkUrl = options?.includePendingLinkUrl ?? false;
 
-  return connections.reduce<PlatformConnections>((accumulator, connection) => {
-    const platform = connection.platform as PlatformType;
-    accumulator[platform] = mapConnection(connection, {
-      includeLinkUrl: includePendingLinkUrl && connection.status === 'pending',
+  return groups.reduce<PlatformConnections>((accumulator, group) => {
+    const platform = group.platform as PlatformType;
+    accumulator[platform] = mapConnectionView({
+      connected: Boolean(group.chatId),
+      linkedAt: group.linkedAt,
+      username: group.username,
+      chatId: group.chatId,
+      linkToken: group.linkToken,
+      includeLinkUrl: includePendingLinkUrl && !group.chatId,
     });
     return accumulator;
   }, {});
@@ -142,7 +254,7 @@ export async function getPlatformConnectionsForSquad(
 
 export async function createTelegramLinkSession(
   prisma: PlatformStore,
-  userId: string,
+  _userId: string,
   squadId: string
 ): Promise<{ botUrl: string; connection: PlatformConnection }> {
   const token = randomBytes(12).toString('hex');
@@ -152,36 +264,37 @@ export async function createTelegramLinkSession(
     throw new Error('TELEGRAM_BOT_USERNAME environment variable is required to link Telegram');
   }
 
-  const connection = await prisma.platformConnection.upsert({
+  const group = await prisma.squadGroup.upsert({
     where: {
-      platform_squadId: {
+      platform_chatId: {
         platform: TELEGRAM_PLATFORM,
-        squadId,
+        chatId: `__pending_${squadId}`,
       },
     },
     update: {
-      userId,
-      status: 'pending',
-      username: null,
       chatId: null,
       platformUserId: null,
+      username: null,
       linkedAt: null,
       linkToken: token,
-      miniAppToken: null,
-      miniAppTokenExpiresAt: null,
     },
     create: {
       platform: TELEGRAM_PLATFORM,
-      userId,
       squadId,
-      status: 'pending',
       linkToken: token,
     },
   });
 
   return {
     botUrl,
-    connection: mapConnection(connection, { includeLinkUrl: true }),
+    connection: mapConnectionView({
+      connected: false,
+      linkedAt: group.linkedAt,
+      username: group.username,
+      chatId: group.chatId,
+      linkToken: group.linkToken,
+      includeLinkUrl: true,
+    }),
   };
 }
 
@@ -190,32 +303,39 @@ export async function connectTelegramChatByToken(
   token: string,
   context: TelegramLinkContext
 ): Promise<{ connection: PlatformConnection; squadId?: string; userId: string } | null> {
-  const existing = await prisma.platformConnection.findUnique({
+  const group = await prisma.squadGroup.findUnique({
     where: { linkToken: token },
   });
 
-  if (!existing || existing.platform !== TELEGRAM_PLATFORM) {
+  if (!group || group.platform !== TELEGRAM_PLATFORM) {
     return null;
   }
 
-  const connected = await prisma.platformConnection.update({
-    where: { id: existing.id },
+  const connectedGroup = await prisma.squadGroup.update({
+    where: { id: group.id },
     data: {
-      status: 'connected',
       chatId: context.chatId,
       platformUserId: context.platformUserId,
       username: context.username ?? null,
       linkedAt: new Date(),
       linkToken: null,
-      miniAppToken: null,
-      miniAppTokenExpiresAt: null,
     },
   });
 
+  const identity = await resolveIdentityForToken(prisma, token, context, connectedGroup.squadId);
+  if (!identity) {
+    return null;
+  }
+
   return {
-    connection: mapConnection(connected),
-    squadId: connected.squadId ?? undefined,
-    userId: connected.userId,
+    connection: mapConnectionView({
+      connected: true,
+      linkedAt: connectedGroup.linkedAt,
+      username: connectedGroup.username,
+      chatId: connectedGroup.chatId,
+    }),
+    squadId: connectedGroup.squadId,
+    userId: identity.userId,
   };
 }
 
@@ -224,18 +344,11 @@ export async function disconnectPlatformConnection(
   platform: PlatformType,
   squadId: string
 ): Promise<void> {
-  await prisma.platformConnection.delete({
+  await prisma.squadGroup.deleteMany({
     where: {
-      platform_squadId: {
-        platform,
-        squadId,
-      },
+      platform,
+      squadId,
     },
-  }).catch((error: unknown) => {
-    const prismaError = error as { code?: string };
-    if (prismaError.code !== 'P2025') {
-      throw error;
-    }
   });
 }
 
@@ -243,6 +356,22 @@ export async function createTelegramMiniAppSession(
   prisma: PlatformStore,
   connectionId: string
 ): Promise<{ token: string; url: string }> {
+  const identity = await prisma.platformIdentity.findUnique({
+    where: { id: connectionId },
+    include: {
+      user: {
+        include: {
+          squads: true,
+        },
+      },
+    },
+  });
+
+  if (!identity) {
+    throw new Error('This Telegram session is no longer linked. Reconnect from Settings > Connections.');
+  }
+
+  const squadId = identity.activeSquadId ?? identity.user.squads[0]?.squadId ?? null;
   const token = randomBytes(12).toString('hex');
   const url = buildTelegramMiniAppUrl({ token });
 
@@ -250,11 +379,12 @@ export async function createTelegramMiniAppSession(
     throw new Error('NEXT_PUBLIC_CLIENT_URL or CLIENT_URL must be configured to launch the Telegram Mini App');
   }
 
-  await prisma.platformConnection.update({
-    where: { id: connectionId },
+  await prisma.platformIdentity.update({
+    where: { id: identity.id },
     data: {
       miniAppToken: token,
       miniAppTokenExpiresAt: new Date(Date.now() + TELEGRAM_MINI_APP_TTL_MS),
+      activeSquadId: squadId ?? undefined,
     },
   });
 
@@ -265,46 +395,114 @@ export async function findTelegramMiniAppConnectionByToken(
   prisma: PlatformStore,
   token: string
 ) {
-  return prisma.platformConnection.findFirst({
+  const identity = await prisma.platformIdentity.findFirst({
     where: {
       platform: TELEGRAM_PLATFORM,
-      status: 'connected',
       miniAppToken: token,
       miniAppTokenExpiresAt: {
         gt: new Date(),
       },
     },
     include: {
-      squad: {
+      user: {
         include: {
-          treasury: {
+          squads: {
             include: {
-              transactions: {
-                orderBy: { createdAt: 'desc' },
-                take: 10,
+              squad: {
+                include: {
+                  treasury: {
+                    include: {
+                      transactions: {
+                        orderBy: { createdAt: 'desc' },
+                        take: 10,
+                      },
+                    },
+                  },
+                },
               },
             },
           },
         },
       },
-      user: true,
     },
-  });
+  }) as IdentityWithMemberships | null;
+
+  if (!identity) {
+    return null;
+  }
+
+  const membership = resolveActiveMembership(identity);
+  if (!membership) {
+    return null;
+  }
+
+  return {
+    id: identity.id,
+    userId: identity.userId,
+    chatId: identity.chatId,
+    platformUserId: identity.platformUserId,
+    username: identity.username,
+    squadId: membership.squad.id,
+    squad: membership.squad,
+    user: identity.user,
+  };
 }
 
 export async function findTelegramConnectionByChatId(
   prisma: PlatformStore,
   chatId: string
 ) {
-  return prisma.platformConnection.findFirst({
-    where: {
-      platform: TELEGRAM_PLATFORM,
-      status: 'connected',
-      chatId,
-    },
-    include: {
-      squad: true,
-      user: true,
-    },
-  });
+  const [identity, group] = await Promise.all([
+    prisma.platformIdentity.findFirst({
+      where: {
+        platform: TELEGRAM_PLATFORM,
+        chatId,
+      },
+      include: {
+        user: {
+          include: {
+            squads: {
+              include: {
+                squad: true,
+              },
+            },
+          },
+        },
+      },
+    }) as Promise<IdentityWithMemberships | null>,
+    prisma.squadGroup.findFirst({
+      where: {
+        platform: TELEGRAM_PLATFORM,
+        chatId,
+      },
+      include: {
+        squad: true,
+      },
+    }),
+  ]);
+
+  if (!identity) {
+    return null;
+  }
+
+  const membership = resolveActiveMembership(identity, group?.squadId ?? null);
+  if (!membership) {
+    return null;
+  }
+
+  return {
+    id: identity.id,
+    platform: TELEGRAM_PLATFORM,
+    status: 'connected',
+    linkedAt: group?.linkedAt ?? null,
+    username: identity.username ?? group?.username ?? null,
+    chatId: group?.chatId ?? identity.chatId,
+    linkToken: null,
+    miniAppToken: identity.miniAppToken,
+    squadId: membership.squad.id,
+    userId: identity.userId,
+    platformUserId: identity.platformUserId,
+    squad: membership.squad,
+    user: identity.user,
+  };
 }

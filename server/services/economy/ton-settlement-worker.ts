@@ -213,21 +213,21 @@ export class TonSettlementWorker {
     }
 
     try {
-      const connections = await this.prisma.platformConnection.findMany({
+      const groups = await this.prisma.squadGroup.findMany({
         where: {
           platform: 'telegram',
-          status: 'connected',
           squadId: deposit.treasury.squadId,
+          chatId: { not: null },
         },
         select: { chatId: true, squad: { select: { name: true } } },
       });
 
       const txLabel = txHash ? `${txHash.slice(0, 8)}...${txHash.slice(-4)}` : 'pending';
 
-      for (const connection of connections) {
-        if (!connection.chatId) continue;
+      for (const group of groups) {
+        if (!group.chatId) continue;
 
-        const squadName = connection.squad?.name || 'Your squad';
+        const squadName = group.squad?.name || 'Your squad';
         const message = [
           `✅ TON Top-Up Settled`,
           '',
@@ -237,7 +237,7 @@ export class TonSettlementWorker {
           'The deposit has been verified on-chain and your squad balance is updated.',
         ].join('\n');
 
-        await this.telegramService!.sendMatchNotification(connection.chatId, message);
+        await this.telegramService!.sendMatchNotification(group.chatId, message);
       }
     } catch (error) {
       console.warn('Failed to send TON settlement notification:', error instanceof Error ? error.message : error);
