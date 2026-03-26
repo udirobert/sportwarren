@@ -7,7 +7,7 @@ import { CheckCircle2, Circle, ChevronRight, Trophy, RotateCcw } from 'lucide-re
 import { useOnboarding, type ChecklistId } from '@/hooks/useOnboarding';
 import { Card } from '@/components/ui/Card';
 import { getJourneyContent } from '@/lib/journey/content';
-import type { DashboardEntryStateId } from '@/lib/dashboard/entry-state';
+import { isNewUserState, type DashboardEntryStateId } from '@/lib/dashboard/entry-state';
 
 interface OnboardingChecklistProps {
     onStepAction?: (featureKey: ChecklistId) => void;
@@ -22,7 +22,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
         totalCount,
         resetOnboarding,
     } = useOnboarding();
-    const [expanded, setExpanded] = React.useState(false);
+    const [expanded, setExpanded] = React.useState(isNewUserState(journeyStage));
     const journeyContent = getJourneyContent(journeyStage);
 
     const progress = Math.round((completedCount / totalCount) * 100);

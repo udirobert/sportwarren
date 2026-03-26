@@ -28,6 +28,13 @@ export interface DashboardEntryStateInput {
   totalMatches: number;
 }
 
+export interface OnboardingStep {
+  number: number;
+  label: string;
+  completed: boolean;
+  href?: string;
+}
+
 export interface DashboardEntryState {
   id: DashboardEntryStateId;
   eyebrow: string;
@@ -39,6 +46,12 @@ export interface DashboardEntryState {
   queueLabel: string;
   identityLabel: string;
   squadLabel: string;
+  isNewUser: boolean;
+  steps: OnboardingStep[];
+}
+
+export function isNewUserState(id: DashboardEntryStateId): boolean {
+  return id !== 'returning_manager';
 }
 
 const getPendingLabel = (count: number) =>
@@ -71,6 +84,11 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       queueLabel: 'Preview queue ready',
       identityLabel: 'Guest mode',
       squadLabel: 'Preview roster',
+      isNewUser: true,
+      steps: [
+        { number: 1, label: 'Try a match', completed: false, href: '/match?mode=capture' },
+        { number: 2, label: 'Claim your season', completed: false, href: '/?connect=1' },
+      ],
     };
   }
 
@@ -86,6 +104,12 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       queueLabel: 'First result not logged yet',
       identityLabel: 'Account active',
       squadLabel: input.squadCount > 0 ? 'Squad linked' : 'No squad yet',
+      isNewUser: true,
+      steps: [
+        { number: 1, label: 'Log a match', completed: input.totalMatches > 0, href: '/match?mode=capture' },
+        { number: 2, label: 'Get verified', completed: false, href: '/match?mode=verify' },
+        { number: 3, label: 'Join a squad', completed: input.squadCount > 0, href: '/squad' },
+      ],
     };
   }
 
@@ -101,6 +125,12 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       queueLabel: getPendingLabel(input.pendingMatchesCount),
       identityLabel: 'Wallet connected',
       squadLabel: input.squadCount > 0 ? 'Squad linked' : 'No squad yet',
+      isNewUser: true,
+      steps: [
+        { number: 1, label: 'Log a match', completed: input.totalMatches > 0, href: '/match?mode=capture' },
+        { number: 2, label: 'Verify wallet', completed: false },
+        { number: 3, label: 'Join a squad', completed: input.squadCount > 0, href: '/squad' },
+      ],
     };
   }
 
@@ -116,6 +146,12 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       queueLabel: getPendingLabel(input.pendingMatchesCount),
       identityLabel: 'Verified',
       squadLabel: 'No squad yet',
+      isNewUser: true,
+      steps: [
+        { number: 1, label: 'Verify identity', completed: true },
+        { number: 2, label: 'Create a squad', completed: false },
+        { number: 3, label: 'Log first match', completed: input.totalMatches > 0, href: '/match?mode=capture' },
+      ],
     };
   }
 
@@ -131,6 +167,12 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       queueLabel: getPendingLabel(input.pendingMatchesCount),
       identityLabel: 'Verified',
       squadLabel: 'Squad active',
+      isNewUser: true,
+      steps: [
+        { number: 1, label: 'Set up squad', completed: true },
+        { number: 2, label: 'Log first match', completed: input.totalMatches > 0, href: '/match?mode=capture' },
+        { number: 3, label: 'Get verified', completed: false, href: '/match?mode=verify' },
+      ],
     };
   }
 
@@ -151,5 +193,7 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
     queueLabel: getPendingLabel(input.pendingMatchesCount),
     identityLabel: 'Verified',
     squadLabel: 'Squad active',
+    isNewUser: false,
+    steps: [],
   };
 }

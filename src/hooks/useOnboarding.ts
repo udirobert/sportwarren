@@ -8,6 +8,7 @@ export const CHECKLIST_IDS = [
     'verify_match',
     'view_match_engine',
     'claim_identity',
+    'connect_telegram',
 ] as const;
 
 export type ChecklistId = (typeof CHECKLIST_IDS)[number];
@@ -46,6 +47,14 @@ const CHECKLIST_CONFIG: ChecklistConfig[] = [
         href: '/settings?tab=wallet',
         actionLabel: 'Save progress',
     },
+    {
+        id: 'connect_telegram',
+        label: 'Connect Telegram',
+        description: 'Get instant match alerts, log results, and manage treasury from Telegram',
+        emoji: '📱',
+        href: '/settings?tab=connections',
+        actionLabel: 'Connect',
+    },
 ];
 
 const CHECKLIST_GROWTH_EVENTS: Partial<Record<ChecklistId, CoreGrowthEvent>> = {
@@ -75,6 +84,7 @@ const DEFAULT_STATE: OnboardingState = {
         view_match_engine: false,
         verify_match: false,
         claim_identity: false,
+        connect_telegram: false,
     },
 };
 
