@@ -94,7 +94,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               </div>
               <div>
                 <div className="text-sm font-black uppercase tracking-[0.22em] text-white/80">SportWarren</div>
-                <div className="text-xs text-white/60">Sunday league, with visible identity</div>
+                <div className="text-xs text-white/60">Rec football, with visible identity</div>
               </div>
             </Link>
 
@@ -141,7 +141,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
           </h1>
 
           <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto">
-            Log your weekend game in 30 seconds. Share verified results with your squad. Build your player reputation — season by season.
+            Log your game in 30 seconds. Share verified results with your squad. Build your player reputation — season by season.
           </p>
 
           {/* CTA - Single primary action */}
@@ -257,10 +257,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               <span>The Problem</span>
             </div>
             <h2 className="text-4xl md:text-6xl font-black text-white mb-6">
-              Sunday League Players Are <span className="text-red-400">Invisible</span>
+              Rec Players Are <span className="text-red-400">Invisible</span>
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              You play every weekend. You score goals. You build chemistry with your squad. But none of it matters beyond the pitch.
+              You play every week. You score goals. You build chemistry with your squad. But none of it matters beyond the pitch.
             </p>
           </div>
 
@@ -312,7 +312,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               A <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Parallel Season</span> That Matters
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              SportWarren creates a Championship Manager-style game layer on top of your real Sunday league. Every match you play drives your in-game progression.
+              SportWarren creates a Championship Manager-style game layer on top of your real matches. Every match you play drives your in-game progression.
             </p>
           </div>
 
