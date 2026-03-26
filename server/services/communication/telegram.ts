@@ -218,7 +218,7 @@ export class TelegramService {
     return [
       'SportWarren Telegram',
       '',
-      'Use Telegram as a real squad operations surface once you link it from Settings in the app.',
+      'Use Telegram as a real squad operations surface.',
       'You can also send a normal message and I will guide you.',
       '',
       'Commands:',
@@ -232,9 +232,8 @@ export class TelegramService {
       '/help',
       '',
       'Linking:',
-      'Open SportWarren Settings > Connections > Telegram and use the generated link.',
-      'Type /app to open the full Mini App inside Telegram.',
-      'If you have not linked a squad yet, /app will show onboarding and the next steps.',
+      '/app opens Telegram-native onboarding if you are new.',
+      'Captains can link squad chats from Settings > Connections > Telegram for team commands.',
     ].join('\n');
   }
 
@@ -259,9 +258,10 @@ export class TelegramService {
       await this.bot.sendMessage(
         chatId,
         [
-          'This chat is not linked to a SportWarren squad yet.',
+          'This Telegram account is not linked to a SportWarren profile yet.',
           '',
-          'Open the Mini App for onboarding, then connect Telegram from SportWarren Settings > Connections > Telegram when your squad is ready.',
+          'Open the Mini App to create or join a squad.',
+          'If you want a squad group chat linked for team commands, captains can do that later from Settings > Connections.',
         ].join('\n'),
         keyboard ? { reply_markup: keyboard } : undefined,
       );
@@ -509,8 +509,8 @@ export class TelegramService {
         'Be welcoming, concise, and practical.',
         linkedChat?.squadId
           ? 'The user already has a linked squad, so guide them toward the most relevant squad action.'
-          : 'The user has not linked Telegram yet, so explain that linking happens in SportWarren Settings > Connections > Telegram.',
-        'If they ask how to open the Mini App, tell them to type "/app". If they are not linked yet, explain that /app opens onboarding and they can finish linking from SportWarren Settings > Connections > Telegram.',
+          : 'The user is new, so explain that /app opens Telegram-native onboarding where they can create or join a squad.',
+        'If they ask how to open the Mini App, tell them to type "/app". If they ask about linking group chat notifications, explain captains can link from SportWarren Settings > Connections > Telegram.',
         'If they want to log a result, tell them to use "/log 4-2 win vs Red Lions".',
         'If they want squad or player stats, tell them to use "/stats" or "/stats Marcus".',
         'If they want fixtures, tell them to use "/fixtures".',
@@ -540,8 +540,8 @@ export class TelegramService {
         'SportWarren Telegram',
         '',
         'Type /app to open the Mini App onboarding flow.',
-        'Then link this chat from SportWarren Settings > Connections > Telegram to unlock squad guidance.',
-        'Once linked, you can log matches, check stats, and open the TON treasury Mini App from here.',
+        'Create or join a squad there first.',
+        'If you need group chat linking for team commands, captains can connect Telegram from Settings > Connections.',
       ].join('\n');
     }
 
@@ -597,24 +597,33 @@ export class TelegramService {
       return;
     }
 
-    const result = await connectTelegramChatByToken(prisma, token, {
-      chatId: String(chatId),
-      platformUserId: String(user.id),
-      username: user.username,
-    });
+    try {
+      const result = await connectTelegramChatByToken(prisma, token, {
+        chatId: String(chatId),
+        platformUserId: String(user.id),
+        username: user.username,
+      });
 
-    if (!result) {
+      if (!result) {
+        await this.bot.sendMessage(
+          chatId,
+          'That link is no longer valid. Generate a fresh Telegram link from SportWarren Settings and try again.'
+        );
+        return;
+      }
+
       await this.bot.sendMessage(
         chatId,
-        'That link is no longer valid. Generate a fresh Telegram link from SportWarren Settings and try again.'
+        'Telegram is now linked to your SportWarren squad. You can return to the app, or start with /log, /stats, or /fixtures.'
       );
-      return;
+    } catch (error) {
+      await this.bot.sendMessage(
+        chatId,
+        error instanceof Error
+          ? error.message
+          : 'We could not complete Telegram linking right now.',
+      );
     }
-
-    await this.bot.sendMessage(
-      chatId,
-      'Telegram is now linked to your SportWarren squad. You can return to the app, or start with /log, /stats, or /fixtures.'
-    );
   }
 
   private async handleMatchLog(chatId: number, matchText: string): Promise<void> {

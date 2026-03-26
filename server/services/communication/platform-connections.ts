@@ -5,6 +5,7 @@ import type { PlatformConnection, PlatformConnections, PlatformType } from '@/ty
 const TELEGRAM_PLATFORM: PlatformType = 'telegram';
 const TELEGRAM_CONNECT_PREFIX = 'connect_';
 const TELEGRAM_MINI_APP_TTL_MS = 30 * 60 * 1000;
+const CONNECT_TOKEN_SEPARATOR = '.';
 
 type PlatformStore = PrismaClient | Prisma.TransactionClient;
 
@@ -78,6 +79,25 @@ function getAppBaseUrl(): string | null {
   return null;
 }
 
+function buildTelegramConnectSessionToken(userId: string): string {
+  const nonce = randomBytes(12).toString('hex');
+  return `${nonce}${CONNECT_TOKEN_SEPARATOR}${userId}`;
+}
+
+function extractUserIdFromLinkToken(token: string): string | null {
+  const separatorIndex = token.lastIndexOf(CONNECT_TOKEN_SEPARATOR);
+  if (separatorIndex <= 0 || separatorIndex >= token.length - 1) {
+    return null;
+  }
+
+  const userId = token.slice(separatorIndex + 1).trim();
+  if (!/^[a-zA-Z0-9_-]+$/.test(userId)) {
+    return null;
+  }
+
+  return userId;
+}
+
 function mapConnectionView(params: {
   connected: boolean;
   linkedAt?: Date | null;
@@ -131,6 +151,7 @@ async function resolveIdentityForToken(
   context: TelegramLinkContext,
   squadId: string
 ) {
+  const linkedUserId = extractUserIdFromLinkToken(token);
   const existingIdentity = await prisma.platformIdentity.findUnique({
     where: {
       platform_platformUserId: {
@@ -139,6 +160,37 @@ async function resolveIdentityForToken(
       },
     },
   });
+
+  if (linkedUserId) {
+    if (existingIdentity && existingIdentity.userId !== linkedUserId) {
+      throw new Error(
+        'This Telegram account is already linked to a different SportWarren profile. Unlink it first before reconnecting.',
+      );
+    }
+
+    if (existingIdentity) {
+      return prisma.platformIdentity.update({
+        where: { id: existingIdentity.id },
+        data: {
+          userId: linkedUserId,
+          chatId: context.chatId,
+          username: context.username ?? existingIdentity.username ?? null,
+          activeSquadId: squadId,
+        },
+      });
+    }
+
+    return prisma.platformIdentity.create({
+      data: {
+        userId: linkedUserId,
+        platform: TELEGRAM_PLATFORM,
+        platformUserId: context.platformUserId,
+        chatId: context.chatId,
+        username: context.username ?? null,
+        activeSquadId: squadId,
+      },
+    });
+  }
 
   if (existingIdentity) {
     return prisma.platformIdentity.update({
@@ -254,10 +306,10 @@ export async function getPlatformConnectionsForSquad(
 
 export async function createTelegramLinkSession(
   prisma: PlatformStore,
-  _userId: string,
+  userId: string,
   squadId: string
 ): Promise<{ botUrl: string; connection: PlatformConnection }> {
-  const token = randomBytes(12).toString('hex');
+  const token = buildTelegramConnectSessionToken(userId);
   const botUrl = buildTelegramDeepLink(token);
 
   if (!botUrl) {
