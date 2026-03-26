@@ -9,6 +9,7 @@ import { getJourneyNavigationSubtitle } from '@/lib/journey/content';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { usePlatformConnections } from '@/hooks/usePlatformConnections';
 import { useJourneyState } from '@/hooks/useJourneyState';
+import { useActiveSquad } from '@/contexts/ActiveSquadContext';
 import { SELF_SERVE_PLATFORM_LIST } from '@/types';
 import { ContextualHelp } from './ContextualHelp';
 import { AccountStatusControl } from '@/components/common/AccountStatusControl';
@@ -27,11 +28,12 @@ const NAV_SHORTCUTS: Record<string, string> = {
 export const SmartNavigation: React.FC = () => {
   const pathname = usePathname();
   const { preferences, trackFeatureUsage } = useUserPreferences();
-  const { journeyStage, nextAction, memberships, isVerified } = useJourneyState();
+  const { journeyStage, nextAction, isVerified } = useJourneyState();
+  const { activeSquadId } = useActiveSquad();
   const [isMoreOpen, setIsMoreOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const needsJourneySetup = journeyStage !== 'returning_manager';
-  const primarySquadId = memberships[0]?.squad.id;
+  const primarySquadId = activeSquadId;
   const { connections } = usePlatformConnections({ squadId: primarySquadId });
   const hasUnconnectedPlatforms = Boolean(
     isVerified &&

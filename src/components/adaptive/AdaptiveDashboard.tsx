@@ -7,7 +7,7 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2, CheckCircle2, ArrowRight, Smartphone, ExternalLink } from 'lucide-react';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2, CheckCircle2, ArrowRight, Smartphone, ExternalLink, ChevronDown, Check } from 'lucide-react';
 import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
 import { AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
@@ -18,7 +18,7 @@ import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { VerificationBanner } from '@/components/common/VerificationBanner';
 import { EmptyState } from '@/components/common/EmptyState';
 import { getJourneyZeroState } from '@/lib/journey/content';
-import { useMySquads } from '@/hooks/squad/useSquad';
+import { useActiveSquad } from '@/contexts/ActiveSquadContext';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
 import { QuickPersonalization } from '@/components/onboarding/QuickPersonalization';
@@ -65,9 +65,22 @@ export const AdaptiveDashboard: React.FC = () => {
   const { addToast } = useToast();
   const [isStaffRoomOpen, setIsStaffRoomOpen] = React.useState(false);
   const [isTourActive, setIsTourActive] = React.useState(false);
-  const [forcedSquadId, setForcedSquadId] = React.useState<string | null>(null);
   const [showCreateSquadFlow, setShowCreateSquadFlow] = React.useState(false);
+  const [isSquadPickerOpen, setIsSquadPickerOpen] = React.useState(false);
+  const squadPickerRef = React.useRef<HTMLDivElement>(null);
   const isVerified = !isGuest && authStatus.state === 'valid';
+
+  // Close squad picker on outside click
+  React.useEffect(() => {
+    if (!isSquadPickerOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (squadPickerRef.current && !squadPickerRef.current.contains(e.target as Node)) {
+        setIsSquadPickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [isSquadPickerOpen]);
 
   const handleVerify = React.useCallback(async () => {
     const ok = await refreshAuthSignature();
@@ -86,10 +99,9 @@ export const AdaptiveDashboard: React.FC = () => {
     }
   }, [addToast, refreshAuthSignature]);
 
-  const { memberships, refresh: refreshSquads } = useMySquads();
-  const primaryMembership = memberships?.[0];
-  const primarySquadId = forcedSquadId || primaryMembership?.squad.id;
-  const primarySquadName = primaryMembership?.squad?.name || null;
+  const { activeSquad, activeSquadId: primarySquadId, memberships, setActiveSquad, refresh: refreshSquads } = useActiveSquad();
+  const primarySquadName = activeSquad?.squad?.name || null;
+  const activeMembersCount = activeSquad?.squad?.memberCount ?? 0;
   const hasOperationalSquad = Boolean(primarySquadId);
   const { data: stats, loading, dataState } = useDashboardData({
     isGuest,
@@ -112,7 +124,6 @@ export const AdaptiveDashboard: React.FC = () => {
     { enabled: !!primarySquadId, staleTime: 30 * 1000 }
   );
   const pendingMatchesCount = matchData?.matches?.filter((m: { status: string }) => m.status === 'pending').length ?? 0;
-  const activeMembersCount = primaryMembership?.squad?.memberCount ?? 0;
 
   const handleOpenOffice = React.useCallback(() => {
     setIsStaffRoomOpen(true);
@@ -638,7 +649,7 @@ export const AdaptiveDashboard: React.FC = () => {
     return (
       <CreateSquadFlow
         onCreated={async (id) => {
-          setForcedSquadId(id);
+          setActiveSquad(id);
           setShowCreateSquadFlow(false);
           await refreshSquads();
           router.push('/squad?tab=overview&new=1');
@@ -658,7 +669,7 @@ export const AdaptiveDashboard: React.FC = () => {
       ? (isVerified ? 'Verified' : 'Signature needed')
       : 'Not connected';
   const entrySquadLabel = primarySquadName
-    ? `${primarySquadName}${primaryMembership?.role ? ` • ${primaryMembership.role.replace(/_/g, ' ')}` : ''}`
+    ? `${primarySquadName}${activeSquad?.role ? ` • ${activeSquad.role.replace(/_/g, ' ')}` : ''}`
     : entryState.squadLabel;
   const entryFocusLabel = entryState.queueLabel;
 
@@ -887,7 +898,40 @@ export const AdaptiveDashboard: React.FC = () => {
                   {isGuest ? (
                     <span>{venue} preview</span>
                   ) : primarySquadName ? (
-                    <span>{entrySquadLabel}</span>
+                    memberships.length > 1 ? (
+                      <div ref={squadPickerRef} className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsSquadPickerOpen(!isSquadPickerOpen)}
+                          className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500 transition-colors hover:border-gray-400 hover:text-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:text-gray-100"
+                        >
+                          {entrySquadLabel}
+                          <ChevronDown className={`h-3 w-3 transition-transform ${isSquadPickerOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {isSquadPickerOpen && (
+                          <div className="absolute left-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
+                            {memberships.map((m) => (
+                              <button
+                                key={m.squad.id}
+                                type="button"
+                                onClick={() => {
+                                  setActiveSquad(m.squad.id);
+                                  setIsSquadPickerOpen(false);
+                                }}
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
+                              >
+                                <span className="flex-1 truncate">{m.squad.name}</span>
+                                {m.squad.id === primarySquadId && (
+                                  <Check className="h-3.5 w-3.5 flex-shrink-0 text-green-500" />
+                                )}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <span>{entrySquadLabel}</span>
+                    )
                   ) : (
                     <span>{entryAccountLabel}</span>
                   )}

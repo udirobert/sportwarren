@@ -71,7 +71,7 @@ describe('telegram connection deep links', () => {
   it('builds a Telegram mini app url from the configured client url', () => {
     process.env.NEXT_PUBLIC_CLIENT_URL = 'https://www.sportwarren.com';
 
-    expect(buildTelegramMiniAppUrl('launch123')).toBe('https://www.sportwarren.com/telegram/mini-app?token=launch123');
+    expect(buildTelegramMiniAppUrl({ token: 'launch123' })).toBe('https://www.sportwarren.com/telegram/mini-app?token=launch123');
   });
 });
 

@@ -4,8 +4,10 @@ import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
 import {
   createTelegramLinkSession,
-  disconnectPlatformConnection,
-  getPlatformConnectionsForSquad,
+  disconnectSquadGroup,
+  getSquadGroupsForSquad,
+  updateActiveSquadContext,
+  findPlatformIdentityByMiniAppToken,
 } from '../services/communication/platform-connections';
 
 const platformSchema = z.enum(['telegram']);
@@ -41,7 +43,7 @@ export const communicationRouter = createTRPCRouter({
     }))
     .query(async ({ ctx, input }) => {
       const membership = await requireSquadMember(ctx.prisma, input.squadId, ctx.userId!);
-      return getPlatformConnectionsForSquad(ctx.prisma, input.squadId, {
+      return getSquadGroupsForSquad(ctx.prisma, input.squadId, {
         includePendingLinkUrl: isSquadLeader(membership.role),
       });
     }),
@@ -71,7 +73,37 @@ export const communicationRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       await requireSquadLeader(ctx.prisma, input.squadId, ctx.userId!);
-      await disconnectPlatformConnection(ctx.prisma, input.platform, input.squadId);
+      await disconnectSquadGroup(ctx.prisma, input.platform, input.squadId);
       return { success: true };
+    }),
+
+  setActiveSquad: protectedProcedure
+    .input(z.object({
+      squadId: z.string().min(1, 'Squad ID is required'),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      // Verify user is a member of this squad
+      const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+      if (!membership) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'You must be a member of this squad to select it as active',
+        });
+      }
+
+      // Update PlatformIdentity's activeSquadId
+      // Find the user's PlatformIdentity for Telegram
+      const identity = await ctx.prisma.platformIdentity.findFirst({
+        where: {
+          platform: 'telegram',
+          userId: ctx.userId!,
+        },
+      });
+
+      if (identity) {
+        await updateActiveSquadContext(ctx.prisma, identity.id, input.squadId);
+      }
+
+      return { success: true, squadId: input.squadId };
     }),
 });

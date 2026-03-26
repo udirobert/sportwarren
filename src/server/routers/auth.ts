@@ -3,6 +3,33 @@ import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 
 export const authRouter = createTRPCRouter({
+    setActiveSquad: protectedProcedure
+        .input(z.object({ squadId: z.string() }))
+        .mutation(async ({ ctx, input }) => {
+            const { userId, prisma } = ctx;
+
+            // Verify the user actually belongs to this squad
+            const membership = await prisma.squadMember.findUnique({
+                where: { squadId_userId: { squadId: input.squadId, userId: userId! } },
+            });
+
+            if (!membership) {
+                throw new TRPCError({
+                    code: 'FORBIDDEN',
+                    message: 'You are not a member of this squad',
+                });
+            }
+
+            // Persist activeSquadId on PlatformIdentity if one exists (Telegram path).
+            // On web, the client handles this via React context — this is a no-op-safe write.
+            await prisma.platformIdentity.updateMany({
+                where: { userId: userId! },
+                data: { activeSquadId: input.squadId },
+            });
+
+            return { success: true };
+        }),
+
     migrateGuestProgress: protectedProcedure
         .input(z.object({
             guestData: z.object({

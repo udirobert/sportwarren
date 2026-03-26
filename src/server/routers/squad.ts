@@ -481,6 +481,81 @@ export const squadRouter = createTRPCRouter({
       }
     }),
 
+  // Get player context for a specific squad (per-squad stats)
+  getPlayerContext: protectedProcedure
+    .input(z.object({
+      squadId: z.string().min(1, 'Squad ID is required'),
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const { squadId } = input;
+
+        // Verify user is a member of this squad
+        const membership = await ctx.prisma.squadMember.findUnique({
+          where: {
+            squadId_userId: {
+              squadId,
+              userId: ctx.userId!,
+            },
+          },
+        });
+
+        if (!membership) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Not a member of this squad',
+          });
+        }
+
+        // Get or create SquadPlayerContext
+        let context = await ctx.prisma.squadPlayerContext.findUnique({
+          where: {
+            userId_squadId: {
+              userId: ctx.userId!,
+              squadId,
+            },
+          },
+        });
+
+        if (!context) {
+          // Create default context if it doesn't exist
+          context = await ctx.prisma.squadPlayerContext.create({
+            data: {
+              userId: ctx.userId!,
+              squadId,
+              role: membership.role,
+              squadXP: 0,
+              matchesPlayed: 0,
+              goals: 0,
+              assists: 0,
+              sharpness: 50,
+              form: 'neutral',
+            },
+          });
+        }
+
+        return {
+          squadId: context.squadId,
+          userId: context.userId,
+          role: context.role,
+          squadXP: context.squadXP,
+          matchesPlayed: context.matchesPlayed,
+          goals: context.goals,
+          assists: context.assists,
+          sharpness: context.sharpness,
+          form: context.form,
+          position: context.position,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch player context',
+          cause: error,
+        });
+      }
+    }),
+
   // ============================================================================
   // TACTICS
   // ============================================================================
