@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { Settings, Wallet, User, Bell, Link2, Check, X, Copy, LogOut, Trophy, Target, Star, MessageCircle, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useMySquads } from '@/hooks/squad/useSquad';
@@ -513,6 +514,24 @@ export default function SettingsPage() {
                 {connectionNotice}
               </div>
             )}
+            {!canManageSquadConnections && (
+              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <p className="font-semibold">Squad channel access is captain-managed.</p>
+                <p className="mt-1">
+                  {primarySquad
+                    ? `Only captains or vice-captains can link Telegram for ${primarySquad.name}.`
+                    : 'Create a squad first so you can manage Telegram linking as captain.'}
+                </p>
+                <div className="mt-3">
+                  <Link href="/squad" className="inline-flex">
+                    <Button size="sm" variant="outline">
+                      <ShieldCheck className="w-3 h-3 mr-1" />
+                      {primarySquad ? 'Open Squad Hub' : 'Create Squad'}
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            )}
             <div className="space-y-3">
               {(Object.keys(PLATFORM_CONFIG) as PlatformType[]).map(platform => {
                 const info = PLATFORM_CONFIG[platform];
@@ -540,16 +559,22 @@ export default function SettingsPage() {
                         </div>
                       </div>
                       {isConnected ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => void handleDisconnect(platform)}
-                          disabled={actionDisabled || !canManagePlatform}
-                          className="text-red-600 shrink-0"
-                        >
-                          <X className="w-3 h-3 mr-1" />
-                          {canManagePlatform ? 'Unlink' : 'Captain only'}
-                        </Button>
+                        canManagePlatform ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => void handleDisconnect(platform)}
+                            disabled={actionDisabled}
+                            className="text-red-600 shrink-0"
+                          >
+                            <X className="w-3 h-3 mr-1" />
+                            Unlink
+                          </Button>
+                        ) : (
+                          <span className="shrink-0 rounded-full border border-gray-300 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-gray-600 dark:border-gray-600 dark:text-gray-300">
+                            Managed by captain
+                          </span>
+                        )
                       ) : info.selfServe ? (
                         isPending && connection?.linkUrl ? (
                           <a
@@ -563,15 +588,22 @@ export default function SettingsPage() {
                               Open Bot
                             </Button>
                           </a>
+                        ) : !canManagePlatform ? (
+                          <Link href="/squad" className="shrink-0">
+                            <Button size="sm" variant="outline" className="shrink-0">
+                              <ShieldAlert className="w-3 h-3 mr-1" />
+                              {primarySquad ? 'Captain Access' : 'Create Squad'}
+                            </Button>
+                          </Link>
                         ) : (
                           <Button
                             size="sm"
                             onClick={() => void handleConnect(platform)}
-                            disabled={actionDisabled || !canManagePlatform}
+                            disabled={actionDisabled}
                             className="shrink-0"
                           >
                             <Link2 className="w-3 h-3 mr-1" />
-                            {canManagePlatform ? (isVerified ? 'Connect' : 'Verify Wallet') : 'Captain only'}
+                            {isVerified ? 'Connect' : 'Verify Wallet'}
                           </Button>
                         )
                       ) : (

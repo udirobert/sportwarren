@@ -329,16 +329,16 @@ export function TelegramMiniAppShell({
     setPullDistance(0);
   };
 
-  const openConnections = () => {
-    const settingsUrl = `${window.location.origin}/settings?tab=connections`;
+  const openSquadSetup = () => {
+    const squadUrl = `${window.location.origin}/squad`;
     const webApp = window.Telegram?.WebApp;
 
     if (webApp?.openLink) {
-      webApp.openLink(settingsUrl);
+      webApp.openLink(squadUrl);
       return;
     }
 
-    window.open(settingsUrl, '_blank', 'noopener,noreferrer');
+    window.open(squadUrl, '_blank', 'noopener,noreferrer');
   };
 
   // Loading state
@@ -376,16 +376,16 @@ export function TelegramMiniAppShell({
 
             <div className="mt-5 space-y-3 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-slate-300">
               <p>1. Open SportWarren on the web.</p>
-              <p>2. Create or join a squad.</p>
-              <p>3. Go to Settings &gt; Connections &gt; Telegram.</p>
+              <p>2. Create a squad (captain) or ask your captain to link Telegram.</p>
+              <p>3. If you are captain: Settings &gt; Connections &gt; Telegram.</p>
               <p>4. Return to this chat and type <span className="font-semibold text-emerald-300">/app</span>.</p>
             </div>
 
             <button
-              onClick={openConnections}
+              onClick={openSquadSetup}
               className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
             >
-              Open SportWarren Settings
+              Open Squad Hub
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
