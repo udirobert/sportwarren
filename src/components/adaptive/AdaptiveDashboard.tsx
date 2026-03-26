@@ -7,7 +7,7 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2 } from 'lucide-react';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2, CheckCircle2, ArrowRight } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
@@ -736,6 +736,109 @@ export const AdaptiveDashboard: React.FC = () => {
     }
   };
 
+  // ── New User Onboarding View ──────────────────────────────────────
+  if (entryState.isNewUser) {
+    return (
+      <>
+        <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10 nav-spacer-top nav-spacer-bottom">
+          {/* Onboarding card with large CTA */}
+          <Card className="overflow-hidden border-gray-200/80 bg-gradient-to-br from-white via-white to-green-50/30 dark:border-gray-700 dark:from-gray-900 dark:via-gray-900 dark:to-green-950/20">
+            <div className="text-center space-y-6">
+              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-green-600 dark:text-green-400">
+                {entryState.eyebrow}
+              </div>
+              <h1 className="text-2xl md:text-4xl font-black tracking-tight text-gray-900 dark:text-white">
+                {entryState.headline}
+              </h1>
+              <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 max-w-lg mx-auto">
+                {entryState.description}
+              </p>
+
+              {/* Primary CTA — large, centered */}
+              {entryState.primaryAction.href ? (
+                <Link
+                  href={entryState.primaryAction.href}
+                  onClick={() => completeChecklistItem(entryState.primaryAction.intent === 'log_match' ? 'verify_match' : 'view_match_engine')}
+                  className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-xl shadow-green-500/30 hover:shadow-green-500/50 transition-all duration-200 hover:scale-[1.02]"
+                >
+                  <Zap className="w-5 h-5 mr-2" />
+                  {entryState.primaryAction.label}
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Link>
+              ) : (
+                renderEntryAction(entryState.primaryAction, 'primary')
+              )}
+
+              {entryState.secondaryAction && (
+                <div>
+                  {renderEntryAction(entryState.secondaryAction, 'secondary')}
+                </div>
+              )}
+
+              {/* 3-step visual */}
+              {entryState.steps.length > 0 && (
+                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-center gap-1 md:gap-2">
+                    {entryState.steps.map((step, i) => (
+                      <React.Fragment key={step.number}>
+                        {i > 0 && (
+                          <div className={`w-6 md:w-10 h-px ${step.completed ? 'bg-green-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                        )}
+                        <div className="flex flex-col items-center gap-1.5">
+                          <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-sm font-black transition-colors ${
+                            step.completed
+                              ? 'bg-green-500 text-white'
+                              : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-2 border-gray-300 dark:border-gray-600'
+                          }`}>
+                            {step.completed ? <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" /> : step.number}
+                          </div>
+                          <span className={`text-[10px] md:text-xs font-bold uppercase tracking-wide ${
+                            step.completed ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'
+                          }`}>
+                            {step.label}
+                          </span>
+                        </div>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Subtle meta line */}
+              <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-400">
+                {isGuest ? (
+                  <span>{venue} preview</span>
+                ) : (
+                  <span>{entryAccountLabel}</span>
+                )}
+              </div>
+            </div>
+          </Card>
+
+          {/* Onboarding checklist — always visible for new users */}
+          <div className="mt-4">
+            <OnboardingChecklist
+              journeyStage={entryState.id}
+              onStepAction={(_id) => {}}
+            />
+          </div>
+        </div>
+
+        <GuestTour onVisibilityChange={setIsTourActive} />
+
+        {/* Floating Action Button — pulsing for new users */}
+        <Link
+          href={entryState.primaryAction.href || '/match?mode=capture'}
+          className="fixed bottom-6 left-6 z-50 md:hidden bg-green-600 hover:bg-green-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl shadow-green-600/40 transition-all active:scale-95 animate-pulse"
+          aria-label={entryState.primaryAction.label}
+        >
+          <Plus className="w-6 h-6" />
+        </Link>
+      </>
+    );
+  }
+
+  // ── Returning User Dashboard ──────────────────────────────────────
   return (
     <>
       <div className={`max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 nav-spacer-top nav-spacer-bottom ${getLayoutClass()}`}>
@@ -939,7 +1042,7 @@ export const AdaptiveDashboard: React.FC = () => {
         );
       })()}
 
-      {/* Floating Action Button — primary action on mobile (left side to avoid concierge overlap) */}
+      {/* Floating Action Button — primary action on mobile */}
       <Link
         href="/match?mode=capture"
         className="fixed bottom-6 left-6 z-50 md:hidden bg-green-600 hover:bg-green-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl shadow-green-600/40 transition-all active:scale-95"

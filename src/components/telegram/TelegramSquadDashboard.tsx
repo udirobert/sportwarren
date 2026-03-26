@@ -211,7 +211,7 @@ export function TelegramSquadDashboard({ context, onNavigate }: TelegramSquadDas
               />
             </div>
             <p className="mt-1 text-center text-[10px] text-slate-500">
-              {formStats.percentage}% win rate from last {squad.form.length} matches
+              {formStats.percentage}% points rate from last {squad.form.length} matches
             </p>
           </div>
         </div>

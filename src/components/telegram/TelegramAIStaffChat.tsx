@@ -77,8 +77,13 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [sending, setSending] = useState(false);
+  const [hasTelegramWebApp, setHasTelegramWebApp] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setHasTelegramWebApp(Boolean(window.Telegram?.WebApp));
+  }, []);
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -396,7 +401,12 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
       )}
 
       {/* Input */}
-      <div className="border-t border-white/5 bg-[#09111f]/80 px-4 py-3 backdrop-blur-lg pb-20">
+      <div
+        className="border-t border-white/5 bg-[#09111f]/80 px-4 py-3 backdrop-blur-lg"
+        style={{
+          paddingBottom: 'calc(1rem + env(safe-area-inset-bottom))',
+        }}
+      >
         <div className="flex items-center gap-2">
           <input
             ref={inputRef}
@@ -410,7 +420,7 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
             className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-purple-400/50 focus:bg-white/[0.07] disabled:opacity-50"
           />
           {/* Fallback button for desktop or non-native view */}
-          {!window.Telegram?.WebApp && (
+          {!hasTelegramWebApp && (
             <button
               onClick={handleSend}
               disabled={!inputText.trim() || sending}

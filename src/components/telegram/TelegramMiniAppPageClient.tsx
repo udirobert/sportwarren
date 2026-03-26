@@ -25,18 +25,11 @@ function MiniAppLoading() {
 function MiniAppContent() {
   return (
     <TelegramMiniAppShell
-      renderSquad={(context: MiniAppContext, refresh: () => void) => (
+      renderSquad={(context: MiniAppContext, refresh: () => void, navigate) => (
         <TelegramSquadDashboard
           context={context}
           onRefresh={refresh}
-          onNavigate={(tab) => {
-            const url = new URL(window.location.href);
-            url.searchParams.set("tab", tab);
-            window.history.replaceState({}, "", url.toString());
-            window.dispatchEvent(
-              new CustomEvent("miniapp:navigate", { detail: { tab } }),
-            );
-          }}
+          onNavigate={(tab) => navigate(tab)}
         />
       )}
       renderMatch={(context: MiniAppContext, refresh: () => void) => (

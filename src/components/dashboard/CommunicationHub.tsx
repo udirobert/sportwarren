@@ -2,11 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Link2, Check, ArrowRight } from 'lucide-react';
+import { Link2, Check, ArrowRight, ExternalLink, Bot, MessageCircle, Zap } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { usePlatformConnections } from '@/hooks/usePlatformConnections';
 import { PLATFORM_CONFIG, PLATFORM_LIST, SELF_SERVE_PLATFORM_LIST } from '@/types';
+import { buildTelegramDeepLink, getTabLabel } from '@/lib/telegram/deep-links';
 
 interface CommunicationHubProps {
   squadId?: string;

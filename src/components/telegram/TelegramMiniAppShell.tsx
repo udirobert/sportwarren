@@ -121,7 +121,7 @@ interface Tab {
 
 interface TelegramMiniAppShellProps {
   children?: ReactNode;
-  renderSquad?: (context: MiniAppContext, refresh: () => void) => ReactNode;
+  renderSquad?: (context: MiniAppContext, refresh: () => void, navigate: (tab: TabId) => void) => ReactNode;
   renderMatch?: (context: MiniAppContext, refresh: () => void) => ReactNode;
   renderProfile?: (context: MiniAppContext, refresh: () => void) => ReactNode;
   renderTreasury?: (context: MiniAppContext, refresh: () => void) => ReactNode;
@@ -324,7 +324,7 @@ export function TelegramMiniAppShell({
   const renderTabContent = () => {
     switch (activeTab) {
       case 'squad':
-        return renderSquad ? renderSquad(context, handleRefresh) : <DefaultSquadTab context={context} />;
+        return renderSquad ? renderSquad(context, handleRefresh, handleTabChange) : <DefaultSquadTab context={context} />;
       case 'match':
         return renderMatch ? renderMatch(context, handleRefresh) : <DefaultMatchTab context={context} />;
       case 'profile':

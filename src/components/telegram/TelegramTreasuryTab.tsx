@@ -117,8 +117,13 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [hasTelegramWebApp, setHasTelegramWebApp] = useState(false);
 
   const { treasury, ton, squad: _squad } = context;
+
+  useEffect(() => {
+    setHasTelegramWebApp(Boolean(window.Telegram?.WebApp));
+  }, []);
 
   // Check if can submit
   const canSubmit = Boolean(
@@ -407,7 +412,7 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
             </div>
           )}
 
-          {!window.Telegram?.WebApp && (
+          {!hasTelegramWebApp && (
             <button
               onClick={handleTopUp}
               disabled={!canSubmit || submitting}
