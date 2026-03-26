@@ -1,7 +1,16 @@
+import Script from "next/script";
 import { TelegramMiniAppPageClient } from "@/components/telegram/TelegramMiniAppPageClient";
 
 export default function TelegramMiniAppPage() {
-  return <TelegramMiniAppPageClient />;
+  return (
+    <>
+      <Script
+        src="https://telegram.org/js/telegram-web-app.js"
+        strategy="beforeInteractive"
+      />
+      <TelegramMiniAppPageClient />
+    </>
+  );
 }
 
 // Metadata for the page
