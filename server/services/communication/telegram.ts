@@ -22,6 +22,12 @@ import {
   TreasuryBalanceError,
 } from '../economy/treasury-ledger.js';
 import type { RedisService } from '../redis.js';
+import {
+  buildVerificationNudgeMessage,
+  buildSingleMatchNudge,
+  shouldSendNudge,
+  getNudgeFrequency,
+} from '@/lib/telegram/verification-nudge';
 
 interface PendingMatchDraft extends ParsedTelegramMatchResult {
   id: string;
@@ -1252,5 +1258,88 @@ export class TelegramService {
     ].join('\n');
 
     await this.sendMatchNotification(chatId, message);
+  }
+
+  /**
+   * Send verification nudge to a Telegram chat
+   * Uses the verification-nudge utility to build the message
+   * @param chatId - Telegram chat ID
+   * @param squadName - Squad name
+   * @param pendingMatches - Array of pending matches
+   */
+  async sendVerificationNudge(
+    chatId: string,
+    squadName: string,
+    pendingMatches: Array<{
+      id: string;
+      opponent: string;
+      homeScore: number;
+      awayScore: number;
+      isHome: boolean;
+      requiredVerifications: number;
+      verificationCount: number;
+    }>
+  ): Promise<void> {
+    if (pendingMatches.length === 0) {
+      return;
+    }
+
+    const message = buildVerificationNudgeMessage({
+      squadName,
+      pendingMatches,
+      chatId,
+    });
+
+    if (!message) {
+      return;
+    }
+
+    const numericChatId = Number.parseInt(chatId, 10);
+    if (Number.isNaN(numericChatId)) {
+      console.warn('Invalid Telegram chat ID for nudge:', chatId);
+      return;
+    }
+
+    try {
+      await this.bot.sendMessage(numericChatId, message, { parse_mode: 'Markdown' });
+      console.log(`[TELEGRAM] Verification nudge sent to chat ${chatId} for ${pendingMatches.length} pending matches`);
+    } catch (error) {
+      console.error('Failed to send verification nudge:', error);
+    }
+  }
+
+  /**
+   * Send a single match verification nudge
+   * @param chatId - Telegram chat ID
+   * @param match - Pending match details
+   * @param squadName - Squad name
+   */
+  async sendSingleMatchNudge(
+    chatId: string,
+    match: {
+      id: string;
+      opponent: string;
+      homeScore: number;
+      awayScore: number;
+      isHome: boolean;
+      requiredVerifications: number;
+      verificationCount: number;
+    },
+    squadName: string
+  ): Promise<void> {
+    const message = buildSingleMatchNudge(match, squadName);
+
+    const numericChatId = Number.parseInt(chatId, 10);
+    if (Number.isNaN(numericChatId)) {
+      console.warn('Invalid Telegram chat ID for single nudge:', chatId);
+      return;
+    }
+
+    try {
+      await this.bot.sendMessage(numericChatId, message, { parse_mode: 'Markdown' });
+      console.log(`[TELEGRAM] Single match nudge sent to chat ${chatId} for match ${match.id}`);
+    } catch (error) {
+      console.error('Failed to send single match nudge:', error);
+    }
   }
 }
