@@ -7,7 +7,8 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2, CheckCircle2, ArrowRight, Smartphone } from 'lucide-react';
+import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
 import { AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
@@ -916,6 +917,33 @@ export const AdaptiveDashboard: React.FC = () => {
       </div>
 
       <VerificationBanner className="mb-4" />
+
+      {/* Mobile-first Telegram banner */}
+      <div className="md:hidden mb-4">
+        <Card className="bg-gradient-to-r from-blue-600 to-blue-700 border-blue-500 text-white">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Smartphone className="w-5 h-5 text-white" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-bold text-white">📱 Better on Mobile?</h3>
+              <p className="text-xs text-blue-100 mt-0.5">
+                Open SportWarren in Telegram for a faster, native mobile experience with instant notifications.
+              </p>
+            </div>
+            <a
+              href={buildTelegramDeepLink()}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex-shrink-0"
+            >
+              <Button size="sm" className="bg-white text-blue-700 hover:bg-blue-50 font-bold text-xs">
+                Open
+              </Button>
+            </a>
+          </div>
+        </Card>
+      </div>
 
       <GuestTour onVisibilityChange={setIsTourActive} />
       {!isTourActive && <AgenticConcierge journeyStage={entryState.id} />}

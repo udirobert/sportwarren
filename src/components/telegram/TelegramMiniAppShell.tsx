@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, type ReactNode } from 'react';
+import { useEffect, useState, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Home, Trophy, User, Wallet, Bot, Loader2, AlertCircle, RefreshCw, Link2, ArrowRight } from 'lucide-react';
 
@@ -135,6 +135,8 @@ export function TelegramMiniAppShell({
   renderTreasury,
   renderAI,
 }: TelegramMiniAppShellProps) {
+  const CONTEXT_CACHE_KEY = 'telegram-mini-app:last-context';
+  const PULL_THRESHOLD = 72;
   const searchParams = useSearchParams();
   const token = searchParams.get('token') || '';
   const initialTab = (searchParams.get('tab') as TabId) || 'squad';
@@ -144,6 +146,12 @@ export function TelegramMiniAppShell({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isPulling, setIsPulling] = useState(false);
+  const [isTabTransitioning, setIsTabTransitioning] = useState(false);
+  const touchStartYRef = useRef<number | null>(null);
+  const pullTriggeredRef = useRef(false);
 
   // Initialize Telegram WebApp
   useEffect(() => {
@@ -159,7 +167,7 @@ export function TelegramMiniAppShell({
   }, []);
 
   // Load context
-  const loadContext = async (showRefresh = false) => {
+  const loadContext = useCallback(async (showRefresh = false) => {
     if (!token) {
       setLoading(false);
       return;
@@ -183,22 +191,63 @@ export function TelegramMiniAppShell({
       }
 
       setContext(data);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(CONTEXT_CACHE_KEY, JSON.stringify(data));
+      }
 
       // Haptic feedback on success
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load context');
+      const fallbackContextRaw = typeof window !== 'undefined'
+        ? window.localStorage.getItem(CONTEXT_CACHE_KEY)
+        : null;
+      let fallbackContext: MiniAppContext | null = null;
+      if (fallbackContextRaw) {
+        try {
+          fallbackContext = JSON.parse(fallbackContextRaw) as MiniAppContext;
+        } catch {
+          fallbackContext = null;
+        }
+      }
+
+      if (fallbackContext) {
+        setContext(fallbackContext);
+        setError(isOnline
+          ? 'Using your last synced squad snapshot. Pull to refresh or tap Retry when connection recovers.'
+          : 'You are offline. Showing your last synced squad snapshot.');
+      } else {
+        setError(err instanceof Error ? err.message : 'Failed to load context');
+      }
       window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, [token, isOnline]);
 
   useEffect(() => {
     loadContext();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    setIsOnline(window.navigator.onLine);
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Tab configuration with badges
   const tabs = useMemo<Tab[]>(() => {
@@ -222,6 +271,8 @@ export function TelegramMiniAppShell({
       window.Telegram?.WebApp?.MainButton?.hide();
       window.Telegram?.WebApp?.BackButton?.hide();
       setActiveTab(tabId);
+      setIsTabTransitioning(true);
+      window.setTimeout(() => setIsTabTransitioning(false), 220);
     }
   };
 
@@ -229,6 +280,53 @@ export function TelegramMiniAppShell({
   const handleRefresh = () => {
     window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
     loadContext(true);
+  };
+
+  const renderTabSkeleton = () => (
+    <div className="space-y-4 p-4">
+      <div className="h-24 animate-pulse rounded-2xl bg-white/5" />
+      <div className="h-20 animate-pulse rounded-2xl bg-white/5" />
+      <div className="h-28 animate-pulse rounded-2xl bg-white/5" />
+    </div>
+  );
+
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (event.currentTarget.scrollTop <= 0) {
+      touchStartYRef.current = event.touches[0]?.clientY ?? null;
+      pullTriggeredRef.current = false;
+      setIsPulling(true);
+      setPullDistance(0);
+    }
+  };
+
+  const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (touchStartYRef.current === null || refreshing) {
+      return;
+    }
+
+    const currentY = event.touches[0]?.clientY ?? touchStartYRef.current;
+    const delta = currentY - touchStartYRef.current;
+
+    if (delta <= 0) {
+      setPullDistance(0);
+      return;
+    }
+
+    const dampedDistance = Math.min(110, delta * 0.45);
+    setPullDistance(dampedDistance);
+
+    if (dampedDistance >= PULL_THRESHOLD && !pullTriggeredRef.current) {
+      pullTriggeredRef.current = true;
+      window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
+      handleRefresh();
+    }
+  };
+
+  const handleTouchEnd = () => {
+    touchStartYRef.current = null;
+    pullTriggeredRef.current = false;
+    setIsPulling(false);
+    setPullDistance(0);
   };
 
   const openConnections = () => {
@@ -297,7 +395,7 @@ export function TelegramMiniAppShell({
   }
 
   // Error state
-  if (error || !context) {
+  if (!context) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-[#09111f] px-4">
         <div className="flex flex-col items-center gap-4 text-center">
@@ -362,9 +460,33 @@ export function TelegramMiniAppShell({
         </div>
       </header>
 
+      {(!isOnline || error) && (
+        <div className="mx-4 mt-3 rounded-xl border border-amber-400/20 bg-amber-400/10 px-3 py-2">
+          <p className="text-[11px] text-amber-200">
+            {!isOnline
+              ? 'You are offline. Data may be stale until connection returns.'
+              : error}
+          </p>
+        </div>
+      )}
+
       {/* Content */}
-      <div className="flex-1 overflow-y-auto pb-20">
-        {renderTabContent()}
+      <div
+        className="relative flex-1 overflow-y-auto pb-20"
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
+      >
+        {(refreshing || isPulling) && (
+          <div className="sticky top-0 z-10 flex justify-center py-2" style={{ transform: `translateY(${Math.min(pullDistance, 26)}px)` }}>
+            <div className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-900/80 px-3 py-1 text-[11px] text-slate-300 backdrop-blur">
+              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin text-emerald-400' : ''}`} />
+              <span>{refreshing ? 'Refreshing...' : pullDistance >= PULL_THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}</span>
+            </div>
+          </div>
+        )}
+        {isTabTransitioning ? renderTabSkeleton() : renderTabContent()}
       </div>
 
       {/* Bottom Tab Navigation */}

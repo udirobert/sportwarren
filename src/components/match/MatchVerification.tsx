@@ -10,11 +10,15 @@ import {
   Clock,
   Shield,
   X,
+  ExternalLink,
+  Share2,
 } from 'lucide-react';
 import { useMatchVerification } from '@/hooks/match/useMatchVerification';
 import { useJourneyState } from '@/hooks/useJourneyState';
+import { usePlatformConnections } from '@/hooks/usePlatformConnections';
 import { trpc } from '@/lib/trpc-client';
 import { getMatchStatusLabel } from '@/lib/match/summary';
+import { buildTelegramDeepLink, buildTelegramShareUrl } from '@/lib/telegram/deep-links';
 
 interface MatchVerificationProps {
   squadId?: string;
@@ -29,6 +33,8 @@ export const MatchVerification: React.FC<MatchVerificationProps> = ({ squadId })
     [memberships, squadId],
   );
   const activeSquadId = activeSquad?.id;
+  const { connections } = usePlatformConnections({ squadId: activeSquadId });
+  const telegramConnected = connections.telegram?.connected;
   const {
     matches,
     pendingMatches,
@@ -263,12 +269,35 @@ export const MatchVerification: React.FC<MatchVerificationProps> = ({ squadId })
                             <X className="w-4 h-4" />
                             <span>Dispute</span>
                           </button>
+                          {telegramConnected && (
+                            <a
+                              href={buildTelegramDeepLink({ tab: 'match', prefilled: { mode: 'verify', matchId: match.id } })}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-center space-x-2 border border-blue-200 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                            >
+                              <ExternalLink className="w-4 h-4" />
+                              <span>Verify in Telegram</span>
+                            </a>
+                          )}
                         </>
                       ) : match.status === 'pending' ? (
                         <div className="rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700 dark:text-gray-200">
                           Awaiting another captain response or your prior review is already logged.
                         </div>
                       ) : null}
+
+                      <a
+                          href={buildTelegramShareUrl(
+                            `⚽ ${match.homeTeam} ${match.homeScore} - ${match.awayScore} ${match.awayTeam}`,
+                          )}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center justify-center space-x-2 border border-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+                        >
+                          <Share2 className="w-4 h-4" />
+                          <span>Share to Telegram</span>
+                        </a>
 
                       <button
                         onClick={() => setSelectedMatchId(selectedMatchId === match.id ? null : match.id)}

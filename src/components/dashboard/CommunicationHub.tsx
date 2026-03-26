@@ -139,6 +139,61 @@ export const CommunicationHub: React.FC<CommunicationHubProps> = ({
         })}
       </div>
 
+      {/* Telegram Mini App Quick Access - shown when connected */}
+      {connections.telegram?.connected && (
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Bot className="w-4 h-4 text-blue-500" />
+              <span className="text-sm font-semibold text-gray-900 dark:text-white">Quick Actions</span>
+            </div>
+            <span className="text-[10px] font-black uppercase tracking-widest text-blue-500">via Telegram</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <a
+              href={buildTelegramDeepLink({ tab: 'match' })}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors group"
+            >
+              <Zap className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">Log Match</span>
+              <ExternalLink className="w-3 h-3 text-blue-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
+            <a
+              href={buildTelegramDeepLink({ tab: 'treasury' })}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors group"
+            >
+              <MessageCircle className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">Treasury</span>
+              <ExternalLink className="w-3 h-3 text-blue-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
+            <a
+              href={buildTelegramDeepLink({ tab: 'ai' })}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors group"
+            >
+              <Bot className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">Ask AI</span>
+              <ExternalLink className="w-3 h-3 text-blue-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
+            <a
+              href={buildTelegramDeepLink({ tab: 'squad' })}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-2.5 rounded-lg bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors group"
+            >
+              <MessageCircle className="w-4 h-4 text-blue-600" />
+              <span className="text-xs font-semibold text-blue-700 dark:text-blue-300">Squad</span>
+              <ExternalLink className="w-3 h-3 text-blue-400 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
+          </div>
+        </div>
+      )}
+
       {!allSelfServeConnected && (
         <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
           <Link

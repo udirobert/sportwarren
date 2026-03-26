@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { trpc } from "@/lib/trpc-client";
 import { useWallet } from "@/contexts/WalletContext";
 import { MatchEnginePreview } from "@/components/dashboard/MatchEnginePreview";
-import { Trophy, Shield, Share2, Copy, CheckCircle2, AlertCircle, ArrowLeft } from "lucide-react";
+import { Trophy, Shield, Share2, Copy, CheckCircle2, AlertCircle, ArrowLeft, MessageCircle } from "lucide-react";
+import { buildTelegramShareUrl } from "@/lib/telegram/deep-links";
 
 export default function PublicMatchPage() {
     const params = useParams();
@@ -142,6 +143,19 @@ export default function PublicMatchPage() {
                                 Share
                             </Button>
                         )}
+                        <a
+                            href={buildTelegramShareUrl(
+                                `⚽ ${homeName} ${match.homeScore ?? 0} - ${match.awayScore ?? 0} ${awayName}`,
+                                window.location.href
+                            )}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <Button size="sm" variant="secondary" className="bg-blue-600/20 hover:bg-blue-600/30 border-blue-500/30">
+                                <MessageCircle className="w-3 h-3 mr-1.5 text-blue-400" />
+                                Share to Telegram
+                            </Button>
+                        </a>
                     </div>
                 </Card>
 

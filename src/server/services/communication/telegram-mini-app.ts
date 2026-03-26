@@ -223,6 +223,41 @@ async function resolveOpponentSquad(prisma: PrismaClient, squadId: string, oppon
   return null;
 }
 
+export async function searchTelegramOpponentSquads(
+  prisma: PrismaClient,
+  token: string,
+  query: string,
+) {
+  const connection = await requireTelegramMiniAppLeader(prisma, token);
+  const squadId = connection.squadId!;
+  const trimmedQuery = query.trim();
+
+  if (trimmedQuery.length < 2) {
+    return [];
+  }
+
+  const matches = await prisma.squad.findMany({
+    where: {
+      id: { not: squadId },
+      OR: [
+        { name: { contains: trimmedQuery, mode: 'insensitive' } },
+        { shortName: { contains: trimmedQuery, mode: 'insensitive' } },
+      ],
+    },
+    select: {
+      id: true,
+      name: true,
+      shortName: true,
+    },
+    orderBy: {
+      createdAt: 'asc',
+    },
+    take: 8,
+  });
+
+  return matches;
+}
+
 export async function getTelegramMiniAppContext(
   prisma: PrismaClient,
   token: string,
