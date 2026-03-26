@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import { createServer } from 'http';
 import { Server as SocketIOServer } from 'socket.io';
@@ -8,7 +9,6 @@ import { makeExecutableSchema } from '@graphql-tools/schema';
 import { WebSocketServer } from 'ws';
 import { useServer } from 'graphql-ws/lib/use/ws';
 import cors from 'cors';
-import dotenv from 'dotenv';
 
 import { typeDefs } from './graphql/schema.js';
 import { resolvers } from './graphql/resolvers.js';
@@ -26,9 +26,6 @@ import { AlgorandService } from './services/blockchain/algorand.js';
 import { LensService, LensServiceUnavailableError } from './services/communication/lens.js';
 import { EventStreamService } from './services/events/kafka.js';
 import { TonSettlementWorker } from './services/economy/ton-settlement-worker.js';
-import { prisma } from '../src/lib/db.js';
-
-dotenv.config();
 
 // Suppress known non-critical warnings
 process.env.KAFKAJS_NO_PARTITIONER_WARNING = '1';
@@ -51,6 +48,8 @@ function sendLensError(res: express.Response, error: unknown, fallbackMessage: s
 }
 
 async function startServer() {
+  const { prisma } = await import('../src/lib/db.js');
+
   // Initialize core services
   const dbService = new DatabaseService();
   const redisService = new RedisService();
