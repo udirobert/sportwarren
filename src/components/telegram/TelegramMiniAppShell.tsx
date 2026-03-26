@@ -637,44 +637,30 @@ export function TelegramMiniAppShell({
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
               <Link2 className="h-7 w-7" />
             </div>
-            <h1 className="mt-4 text-2xl font-bold text-white">Stop playing ghost matches.</h1>
+            <h1 className="mt-4 text-2xl font-bold text-white">Your squad. Right in Telegram.</h1>
             <p className="mt-3 text-sm leading-6 text-slate-300">
-              Log the score. Track your stats. Build your legacy. Every match. Every stat. Forever.
+              Track matches. Verify scores. Build your legacy. All without leaving Telegram.
             </p>
 
             {hasError ? (
               <div className="mt-5 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
                 <p className="text-sm font-medium text-amber-200">{error}</p>
               </div>
-            ) : telegramDataAvailable ? (
-              <p className="mt-5 text-sm text-slate-400">
-                We couldn&rsquo;t initialize your session. Try again or open the app from Telegram.
-              </p>
             ) : (
               <div className="mt-5 space-y-3 rounded-2xl border border-white/5 bg-white/5 p-4 text-sm text-slate-300">
-                <p>1. Create or join a squad — right here in Telegram.</p>
-                <p>2. Captains can link your group chat in Settings &gt; Connections.</p>
-                <p>3. Already linked? Just tap <span className="font-semibold text-emerald-300">Get Started</span>.</p>
+                <p>✅ Track matches & build your squad's legacy — right here in Telegram.</p>
+                <p>👋 Create a new squad or join an existing one to get started.</p>
               </div>
             )}
 
-            {telegramDataAvailable || hasError ? (
-              <button
-                onClick={handleRetry}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Retry
-              </button>
-            ) : (
-              <button
-                onClick={openSquadSetup}
-                className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
-              >
-                Get Started
-                <ArrowRight className="h-4 w-4" />
-              </button>
-            )}
+            <button
+              onClick={openSquadSetup}
+              disabled={loading}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:opacity-50"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />}
+              {loading ? 'Setting up...' : 'Get Started'}
+            </button>
           </div>
         </div>
       </main>
