@@ -11,9 +11,10 @@ import { submitMatchResult } from "../match-workflow.js";
 import {
   buildTelegramMiniAppUrl,
   connectTelegramChatByToken,
-  createTelegramMiniAppSession,
+  createIdentityMiniAppSession,
   extractTelegramConnectToken,
-  findTelegramConnectionByChatId,
+  findPlatformIdentityByChatId,
+  findSquadGroupByChatId,
   isTelegramConnectToken,
 } from "./platform-connections.js";
 import {
@@ -41,17 +42,17 @@ interface PendingMatchDraft extends ParsedTelegramMatchResult {
   createdAt: number;
 }
 
-type LinkedTelegramChat = NonNullable<
-  Awaited<ReturnType<typeof findTelegramConnectionByChatId>>
+type LinkedSquadGroup = NonNullable<
+  Awaited<ReturnType<typeof findSquadGroupByChatId>>
 >;
-type AuthorizedLinkedTelegramChat = LinkedTelegramChat & {
-  squadId: string;
+type AuthorizedSquadGroup = LinkedSquadGroup & {
   platformUserId: string;
+  userId: string;
 };
 type AuthorizedTelegramCaptainActor =
   | { error: string }
   | {
-      linkedChat: AuthorizedLinkedTelegramChat;
+      squadGroup: AuthorizedSquadGroup;
       membership: NonNullable<Awaited<ReturnType<typeof getSquadMembership>>>;
     };
 
@@ -168,9 +169,9 @@ export class TelegramService {
         return;
       }
 
-      const linkedChat = await this.requireLinkedChat(chatId);
-      if (linkedChat?.squadId) {
-        const summary = await this.buildSquadSummaryCard(linkedChat.squadId);
+      const squadGroup = await this.requireLinkedChat(chatId);
+      if (squadGroup?.squadId) {
+        const summary = await this.buildSquadSummaryCard(squadGroup.squadId);
         await this.bot.sendMessage(chatId, summary);
         return;
       }
@@ -221,15 +222,15 @@ export class TelegramService {
     });
 
     this.bot.onText(/\/treasury/, async (msg) => {
-      await this.handleMiniAppRequest(msg.chat.id, "treasury");
+      await this.handleMiniAppRequest(msg.chat.id, "treasury", msg.from?.id?.toString());
     });
 
     this.bot.onText(/\/app/, async (msg) => {
-      await this.handleMiniAppRequest(msg.chat.id, "squad");
+      await this.handleMiniAppRequest(msg.chat.id, "squad", msg.from?.id?.toString());
     });
 
     this.bot.onText(/\/profile/, async (msg) => {
-      await this.handleMiniAppRequest(msg.chat.id, "profile");
+      await this.handleMiniAppRequest(msg.chat.id, "profile", msg.from?.id?.toString());
     });
 
     this.bot.onText(/\/ask(?:\s+(.+))?/, async (msg, match) => {
@@ -302,10 +303,13 @@ export class TelegramService {
 
   private async handleMiniAppRequest(
     chatId: number,
-    tab: "squad" | "match" | "profile" | "treasury" = "squad",
+    tab: "squad" | "match" | "profile" | "treasury" | "ai" = "squad",
+    telegramUserId?: string,
   ): Promise<void> {
-    const linkedChat = await this.requireLinkedChat(chatId);
-    if (!linkedChat?.squadId) {
+    // Try user-scoped identity first, fall back to group-scoped
+    const identity = await this.resolvePlatformIdentity(chatId, telegramUserId);
+
+    if (!identity) {
       const onboardingUrl = buildTelegramMiniAppUrl({ mode: "onboarding" });
       const keyboard = onboardingUrl
         ? {
@@ -332,8 +336,37 @@ export class TelegramService {
       return;
     }
 
+    const memberships = identity.user.squads;
+    const activeSquadId = identity.activeSquadId;
+    const activeSquad = activeSquadId
+      ? memberships.find((m) => m.squad.id === activeSquadId)?.squad
+      : memberships[0]?.squad;
+
+    if (!activeSquad) {
+      const onboardingUrl = buildTelegramMiniAppUrl({ mode: "onboarding" });
+      const keyboard = onboardingUrl
+        ? {
+            inline_keyboard: [
+              [
+                {
+                  text: "Join or Create a Squad",
+                  web_app: { url: onboardingUrl },
+                },
+              ],
+            ],
+          }
+        : undefined;
+
+      await this.bot.sendMessage(
+        chatId,
+        "You don't belong to a squad yet. Open the Mini App to discover or create one.",
+        keyboard ? { reply_markup: keyboard } : undefined,
+      );
+      return;
+    }
+
     try {
-      const session = await createTelegramMiniAppSession(prisma, linkedChat.id);
+      const session = await createIdentityMiniAppSession(prisma, identity.id, activeSquad.id);
       const urlWithTab = `${session.url}&tab=${tab}`;
 
       const tabLabels: Record<string, string> = {
@@ -341,6 +374,7 @@ export class TelegramService {
         match: "Match Center",
         profile: "Player Profile",
         treasury: "Treasury",
+        ai: "AI Staff",
       };
 
       const tabEmojis: Record<string, string> = {
@@ -348,6 +382,7 @@ export class TelegramService {
         match: "⚽",
         profile: "👤",
         treasury: "💰",
+        ai: "🤖",
       };
 
       const keyboard = {
@@ -366,12 +401,17 @@ export class TelegramService {
         match: "Log matches, verify results, and track XP gains.",
         profile: "View your FIFA-style attributes and progression.",
         treasury: "Connect TON wallet and manage squad finances.",
+        ai: "Chat with AI staff for tactical and commercial guidance.",
       };
+
+      const squadLabel = memberships.length > 1
+        ? `${activeSquad.name} (${memberships.length} squads)`
+        : activeSquad.name || "Squad";
 
       await this.bot.sendMessage(
         chatId,
         [
-          `${tabEmojis[tab]} ${linkedChat.squad?.name || "Squad"} — ${tabLabels[tab]}`,
+          `${tabEmojis[tab]} ${squadLabel} — ${tabLabels[tab]}`,
           "",
           descriptions[tab],
         ].join("\n"),
@@ -390,8 +430,8 @@ export class TelegramService {
     chatId: number,
     query: string,
   ): Promise<void> {
-    const linkedChat = await this.requireLinkedChat(chatId);
-    if (!linkedChat?.squadId) {
+    const squadGroup = await this.requireLinkedChat(chatId);
+    if (!squadGroup?.squadId) {
       await this.bot.sendMessage(
         chatId,
         "Link this chat from SportWarren Settings before using AI Staff.",
@@ -423,7 +463,7 @@ export class TelegramService {
     await this.bot.sendChatAction(chatId, "typing");
 
     try {
-      const squadStats = await this.getSquadStatsForAi(linkedChat.squadId);
+      const squadStats = await this.getSquadStatsForAi(squadGroup.squadId);
 
       // Use Venice AI for a high-quality persona response
       const systemPrompt = AGENT_PERSONAS[staffMember.toUpperCase() as keyof typeof AGENT_PERSONAS]?.systemPrompt 
@@ -680,24 +720,35 @@ export class TelegramService {
     await this.redisService.del(this.getDraftKey(draftId));
   }
 
+  private async resolvePlatformIdentity(chatId: number, telegramUserId?: string) {
+    // Try user-scoped resolution first (DM context)
+    if (telegramUserId) {
+      const { findPlatformIdentityByUserId } = await import("./platform-connections.js");
+      const identity = await findPlatformIdentityByUserId(prisma, telegramUserId);
+      if (identity) return identity;
+    }
+    // Fall back to group-scoped resolution (group context)
+    return findPlatformIdentityByChatId(prisma, String(chatId));
+  }
+
   private async requireLinkedChat(chatId: number) {
-    return findTelegramConnectionByChatId(prisma, String(chatId));
+    return findSquadGroupByChatId(prisma, String(chatId));
   }
 
   private async requireLinkedCaptainActor(
     chatId: number,
     telegramUserId: string,
   ): Promise<AuthorizedTelegramCaptainActor> {
-    const linkedChat = await this.requireLinkedChat(chatId);
-    if (!linkedChat?.squadId) {
+    const squadGroup = await this.requireLinkedChat(chatId);
+    if (!squadGroup?.squadId) {
       return {
         error: "This chat is not linked to a SportWarren squad yet.",
       };
     }
 
     if (
-      !linkedChat.platformUserId ||
-      linkedChat.platformUserId !== telegramUserId
+      !squadGroup.platformUserId ||
+      squadGroup.platformUserId !== telegramUserId
     ) {
       return {
         error:
@@ -705,10 +756,18 @@ export class TelegramService {
       };
     }
 
+    // Resolve the user through PlatformIdentity
+    const identity = await findPlatformIdentityByChatId(prisma, String(chatId));
+    if (!identity?.userId) {
+      return {
+        error: "Could not resolve your SportWarren account from this Telegram chat.",
+      };
+    }
+
     const membership = await getSquadMembership(
       prisma,
-      linkedChat.squadId,
-      linkedChat.userId,
+      squadGroup.squadId,
+      identity.userId,
     );
     if (!membership || !isSquadLeader(membership.role)) {
       return {
@@ -717,7 +776,11 @@ export class TelegramService {
     }
 
     return {
-      linkedChat: linkedChat as AuthorizedLinkedTelegramChat,
+      squadGroup: {
+        ...squadGroup,
+        platformUserId: squadGroup.platformUserId!,
+        userId: identity.userId,
+      },
       membership,
     };
   }
@@ -762,11 +825,21 @@ export class TelegramService {
     try {
       this.pruneExpiredDrafts();
 
-      const linkedChat = await this.requireLinkedChat(chatId);
-      if (!linkedChat?.squadId) {
+      const squadGroup = await this.requireLinkedChat(chatId);
+      if (!squadGroup?.squadId) {
         await this.bot.sendMessage(
           chatId,
           "This chat is not linked to a SportWarren squad yet. Link Telegram from Settings before logging matches.",
+        );
+        return;
+      }
+
+      // Resolve the submitting user through PlatformIdentity
+      const identity = await findPlatformIdentityByChatId(prisma, String(chatId));
+      if (!identity?.userId) {
+        await this.bot.sendMessage(
+          chatId,
+          "Could not resolve your SportWarren account from this Telegram chat.",
         );
         return;
       }
@@ -791,8 +864,8 @@ export class TelegramService {
       const draft: PendingMatchDraft = {
         id: draftId,
         chatId,
-        squadId: linkedChat.squadId,
-        submittedBy: linkedChat.userId,
+        squadId: squadGroup.squadId,
+        submittedBy: identity.userId,
         createdAt: Date.now(),
         ...parsed,
       };
@@ -808,7 +881,7 @@ export class TelegramService {
         ],
       };
 
-      const squadLabel = linkedChat.squad?.name || "Your squad";
+      const squadLabel = squadGroup.squad?.name || "Your squad";
       const message = [
         "Match log draft",
         "",
@@ -917,8 +990,8 @@ export class TelegramService {
     chatId: number,
     playerName?: string,
   ): Promise<void> {
-    const linkedChat = await this.requireLinkedChat(chatId);
-    if (!linkedChat?.squadId) {
+    const squadGroup = await this.requireLinkedChat(chatId);
+    if (!squadGroup?.squadId) {
       await this.bot.sendMessage(
         chatId,
         "Link this chat from SportWarren Settings before requesting live stats.",
@@ -931,7 +1004,7 @@ export class TelegramService {
         where: {
           user: {
             squads: {
-              some: { squadId: linkedChat.squadId },
+              some: { squadId: squadGroup.squadId },
             },
             name: {
               contains: playerName,
@@ -970,7 +1043,7 @@ export class TelegramService {
     }
 
     const squad = await prisma.squad.findUnique({
-      where: { id: linkedChat.squadId },
+      where: { id: squadGroup.squadId },
       select: { name: true },
     });
 
@@ -978,8 +1051,8 @@ export class TelegramService {
       where: {
         status: { in: ["verified", "finalized"] },
         OR: [
-          { homeSquadId: linkedChat.squadId },
-          { awaySquadId: linkedChat.squadId },
+          { homeSquadId: squadGroup.squadId },
+          { awaySquadId: squadGroup.squadId },
         ],
       },
       select: {
@@ -992,7 +1065,7 @@ export class TelegramService {
 
     const totals = matches.reduce(
       (summary, m) => {
-        const isHome = m.homeSquadId === linkedChat.squadId;
+        const isHome = m.homeSquadId === squadGroup.squadId;
         const goalsFor = isHome
           ? (m.homeScore ?? 0)
           : (m.awayScore ?? 0);
@@ -1090,8 +1163,8 @@ export class TelegramService {
   }
 
   private async handleFixturesRequest(chatId: number): Promise<void> {
-    const linkedChat = await this.requireLinkedChat(chatId);
-    if (!linkedChat?.squadId) {
+    const squadGroup = await this.requireLinkedChat(chatId);
+    if (!squadGroup?.squadId) {
       await this.bot.sendMessage(
         chatId,
         "Link this chat from SportWarren Settings before requesting fixtures.",
@@ -1103,8 +1176,8 @@ export class TelegramService {
       where: {
         proposedDate: { gte: new Date() },
         OR: [
-          { fromSquadId: linkedChat.squadId },
-          { toSquadId: linkedChat.squadId },
+          { fromSquadId: squadGroup.squadId },
+          { toSquadId: squadGroup.squadId },
         ],
         status: { in: ["pending", "accepted"] },
       },
@@ -1127,7 +1200,7 @@ export class TelegramService {
 
     const message = challenges
       .map((challenge) => {
-        const isHome = challenge.fromSquadId === linkedChat.squadId;
+        const isHome = challenge.fromSquadId === squadGroup.squadId;
         const opponent = isHome
           ? challenge.toSquad.name
           : challenge.fromSquad.name;
@@ -1164,7 +1237,7 @@ export class TelegramService {
       return;
     }
 
-    const { linkedChat } = actor;
+    const { squadGroup } = actor;
 
     const parts = args.split(/\s+/);
     const matchId = parts[0]?.trim() || "";
@@ -1209,8 +1282,8 @@ export class TelegramService {
       }
 
       if (
-        match.homeSquadId !== linkedChat.squadId &&
-        match.awaySquadId !== linkedChat.squadId
+        match.homeSquadId !== squadGroup.squadId &&
+        match.awaySquadId !== squadGroup.squadId
       ) {
         await this.bot.sendMessage(
           chatId,
@@ -1219,7 +1292,7 @@ export class TelegramService {
         return;
       }
 
-      const treasury = await ensureSquadTreasury(prisma, linkedChat.squadId);
+      const treasury = await ensureSquadTreasury(prisma, squadGroup.squadId);
       if (treasury.balance < feeAmount) {
         await this.bot.sendMessage(
           chatId,
@@ -1228,10 +1301,10 @@ export class TelegramService {
         return;
       }
 
-      const feeReference = `telegram-match-fee:${linkedChat.squadId}:${match.id}:${feeAmount}`;
+      const feeReference = `telegram-match-fee:${squadGroup.squadId}:${match.id}:${feeAmount}`;
       const feeTx = await recordPendingTreasuryActivity({
         prisma,
-        squadId: linkedChat.squadId,
+        squadId: squadGroup.squadId,
         type: "expense",
         category: "match_fee_pending",
         amount: feeAmount,
@@ -1240,7 +1313,7 @@ export class TelegramService {
         metadata: {
           source: "telegram-match-fee",
           matchId: match.id,
-          proposedByUserId: linkedChat.userId,
+          proposedByUserId: squadGroup.userId,
           proposedByTelegramUserId: String(user.id),
           homeSquad: match.homeSquad.name,
           awaySquad: match.awaySquad.name,
@@ -1311,12 +1384,12 @@ export class TelegramService {
       return;
     }
 
-    const { linkedChat } = actor;
+    const { squadGroup } = actor;
     const pendingTransaction = await prisma.treasuryTransaction.findFirst({
       where: {
         id: transactionId,
         treasury: {
-          squadId: linkedChat.squadId,
+          squadId: squadGroup.squadId,
         },
       },
       include: {
@@ -1351,7 +1424,7 @@ export class TelegramService {
       if (action === "reject_fee") {
         await cancelPendingTreasuryActivity({
           prisma,
-          squadId: linkedChat.squadId,
+          squadId: squadGroup.squadId,
           transactionId,
           expectedType: "expense",
           expectedCategory: "match_fee_pending",
@@ -1378,9 +1451,9 @@ export class TelegramService {
 
       const settled = await settlePendingTreasuryActivity({
         prisma,
-        squadId: linkedChat.squadId,
+        squadId: squadGroup.squadId,
         transactionId,
-        settledByUserId: linkedChat.userId,
+        settledByUserId: squadGroup.userId,
         settledTxHash: pendingTransaction.txHash,
         expectedType: "expense",
         expectedCategory: "match_fee_pending",

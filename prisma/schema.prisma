@@ -31,10 +31,11 @@ model User {
   // Relations
   playerProfile    PlayerProfile?
   squads           SquadMember[]
-  platformConnections PlatformConnection[]
+  platformIdentities PlatformIdentity[]
   matchesSubmitted Match[]             @relation("MatchSubmitter")
   verifications    MatchVerification[]
   aiMemory         AiMemory?
+  squadContexts    SquadPlayerContext[]
 
   @@map("users")
 }
@@ -163,8 +164,9 @@ model Squad {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  members            SquadMember[]
-  platformConnections PlatformConnection[]
+  members       SquadMember[]
+  groups        SquadGroup[]
+  squadContexts SquadPlayerContext[]
   matchesHome        Match[]          @relation("MatchHomeSquad")
   matchesAway        Match[]          @relation("MatchAwaySquad")
   tactics            SquadTactics?
@@ -197,31 +199,83 @@ model SquadMember {
   @@map("squad_members")
 }
 
-model PlatformConnection {
-  id String @id @default(cuid())
+// ============================================================================
+// SQUAD PLAYER CONTEXT (Per-Squad Stats & Role Progression)
+// ============================================================================
 
-  platform String
-  status   String   @default("pending") // pending, connected
+model SquadPlayerContext {
+  id            String  @id @default(cuid())
+  userId        String  @map("user_id")
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  userId String @map("user_id")
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  squadId       String  @map("squad_id")
+  squad         Squad   @relation(fields: [squadId], references: [id], onDelete: Cascade)
 
-  squadId String? @map("squad_id")
-  squad   Squad?  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  // Position in THIS squad (can differ from global preference)
+  position      String? // GK, DF, MF, ST, WG
 
+  // Role in this squad
+  role          String  @default("player") // captain, vice_captain, player
+
+  // Per-squad XP (separate from global career XP)
+  squadXP       Int     @default(0) @map("squad_xp")
+
+  // Contextual stats (varies by squad)
+  sharpness     Int     @default(50) // 0-100, contextual fitness
+  form          String  @default("neutral") // hot, neutral, cold
+
+  // Per-squad match stats
+  matchesPlayed Int     @default(0) @map("matches_played")
+  goals         Int     @default(0)
+  assists       Int     @default(0)
+
+  // Timestamps
+  joinedAt      DateTime @default(now()) @map("joined_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, squadId])
+  @@map("squad_player_context")
+}
+
+model SquadGroup {
+  id            String    @id @default(cuid())
+  squadId       String    @map("squad_id")
+  squad         Squad     @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  platform      String
+  chatId        String?   @map("chat_id")
+  platformUserId String?  @map("platform_user_id")
+  username      String?
+  linkToken     String?   @unique @map("link_token")
+  linkedAt      DateTime? @map("linked_at")
+
+  @@unique([platform, chatId])
+  @@map("squad_groups")
+}
+
+// ============================================================================
+// PLATFORM IDENTITY (User-Scoped Telegram/Discord Identity)
+// ============================================================================
+
+model PlatformIdentity {
+  id             String   @id @default(cuid())
+  userId         String   @map("user_id")
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  platform       String   // telegram, discord
+  platformUserId String   @map("platform_user_id") // Telegram user ID (stable)
+  chatId         String?  @map("chat_id") // Last group chat context
   username       String?
-  chatId         String?   @map("chat_id")
-  platformUserId String?   @map("platform_user_id")
-  linkToken      String?   @unique @map("link_token")
-  miniAppToken   String?   @unique @map("mini_app_token")
+
+  // Session fields (moved from PlatformConnection)
+  miniAppToken         String?   @unique @map("mini_app_token")
   miniAppTokenExpiresAt DateTime? @map("mini_app_token_expires_at")
-  linkedAt       DateTime? @map("linked_at")
+  activeSquadId        String?   @map("active_squad_id") // Last-used squad context
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@unique([platform, squadId])
-  @@map("platform_connections")
+  @@unique([platform, platformUserId])
+  @@map("platform_identities")
 }
 
 // ============================================================================

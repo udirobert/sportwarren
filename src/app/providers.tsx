@@ -9,6 +9,7 @@ import { GuestMigrationPrompt } from "@/components/onboarding/GuestMigrationProm
 import { PrivyProvider } from '@privy-io/react-auth';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import { ToastProvider } from '@/contexts/ToastContext';
+import { ActiveSquadProvider } from "@/contexts/ActiveSquadContext";
 import { Suspense } from 'react';
 import { AnalyticsTracker } from '@/components/common/AnalyticsTracker';
 
@@ -46,11 +47,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
               <EnvironmentProvider>
                 <TRPCProvider>
                   <ToastProvider>
-                    <Suspense fallback={null}>
-                      <AnalyticsTracker />
-                    </Suspense>
-                    {children}
-                    <GuestMigrationPrompt />
+                    <ActiveSquadProvider>
+                      <Suspense fallback={null}>
+                        <AnalyticsTracker />
+                      </Suspense>
+                      {children}
+                      <GuestMigrationPrompt />
+                    </ActiveSquadProvider>
                   </ToastProvider>
                 </TRPCProvider>
               </EnvironmentProvider>

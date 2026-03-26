@@ -575,14 +575,25 @@ export interface UserPreferences {
   connections?: PlatformConnections;
 }
 
-// Platform connection types
+// Server response shape from getSquadGroupsForSquad
+export interface SquadGroupConnection {
+  platform: string;
+  chatId: string | null;
+  platformUserId: string | null;
+  username: string | null;
+  linkedAt: string | null;
+  linkUrl?: string;
+}
+export type SquadGroupConnections = Record<string, SquadGroupConnection>;
+
+// UI-derived view model (hook transforms server shape to this)
 export interface PlatformConnections {
   telegram?: PlatformConnection;
 }
 
 export interface PlatformConnection {
   connected: boolean;
-  status?: 'pending' | 'connected';
+  status: 'pending' | 'connected';
   connectedAt?: string;
   username?: string;
   chatId?: string;

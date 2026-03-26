@@ -3,10 +3,29 @@
 import { useMemo } from 'react';
 import { trpc } from '@/lib/trpc-client';
 import { useWallet } from '@/contexts/WalletContext';
-import type { PlatformConnections, PlatformType } from '@/types';
+import type { PlatformConnections, PlatformType, SquadGroupConnections } from '@/types';
 
 interface UsePlatformConnectionsOptions {
   squadId?: string;
+}
+
+function toPlatformConnections(groups: SquadGroupConnections): PlatformConnections {
+  const telegram = groups.telegram;
+  if (!telegram) return {};
+
+  const isConnected = !!telegram.chatId;
+  const isPending = !isConnected && !!telegram.linkUrl;
+
+  return {
+    telegram: {
+      connected: isConnected,
+      status: isConnected ? 'connected' : isPending ? 'pending' : 'connected',
+      connectedAt: telegram.linkedAt ?? undefined,
+      username: telegram.username ?? undefined,
+      chatId: telegram.chatId ?? undefined,
+      linkUrl: telegram.linkUrl,
+    },
+  };
 }
 
 export function usePlatformConnections({ squadId }: UsePlatformConnectionsOptions) {
@@ -21,12 +40,12 @@ export function usePlatformConnections({ squadId }: UsePlatformConnectionsOption
       retry: false,
       staleTime: 30 * 1000,
       refetchInterval: (queryState) => {
-        const data = queryState.state.data as PlatformConnections | undefined;
-        const hasPendingConnection = Object.values(data ?? {}).some(
-          (connection) => connection?.status === 'pending'
+        const data = queryState.state.data as SquadGroupConnections | undefined;
+        const hasPendingLink = Object.values(data ?? {}).some(
+          (group) => !group.chatId && !!group.linkUrl,
         );
 
-        return hasPendingConnection ? 5_000 : false;
+        return hasPendingLink ? 5_000 : false;
       },
     }
   );
@@ -47,7 +66,10 @@ export function usePlatformConnections({ squadId }: UsePlatformConnectionsOption
     },
   });
 
-  const connections = useMemo<PlatformConnections>(() => query.data ?? {}, [query.data]);
+  const connections = useMemo<PlatformConnections>(
+    () => toPlatformConnections((query.data as SquadGroupConnections) ?? {}),
+    [query.data],
+  );
 
   return {
     connections,

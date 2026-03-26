@@ -127,6 +127,11 @@ export function useDashboardData({
     { squadId, limit: 5 },
     { enabled: !!squadId, staleTime: 30 * 1000 }
   );
+  // Query SquadPlayerContext when a squad is active
+  const squadContextQuery = trpc.squad.getPlayerContext.useQuery(
+    { squadId: squadId! },
+    { enabled: !!squadId && hasAccount && isVerified, staleTime: 30 * 1000 }
+  );
 
   const dataState = useMemo<'preview' | 'empty' | 'live'>(() => {
     if (isGuest) {
@@ -149,10 +154,14 @@ export function useDashboardData({
       return EMPTY_STATS;
     }
 
+    // Use squad-scoped stats when a squad is active
+    const squadContext = squadContextQuery.data;
+    const useSquadStats = !!squadId && squadContext;
+
     return {
-      goals: profileQuery.data.totalGoals ?? 0,
-      assists: profileQuery.data.totalAssists ?? 0,
-      matches: profileQuery.data.totalMatches ?? 0,
+      goals: useSquadStats ? squadContext.goals : profileQuery.data.totalGoals ?? 0,
+      assists: useSquadStats ? squadContext.assists : profileQuery.data.totalAssists ?? 0,
+      matches: useSquadStats ? squadContext.matchesPlayed : profileQuery.data.totalMatches ?? 0,
       rating: formatRating(profileQuery.data.formHistory),
       recentMatches: formatRecentMatches(matchesQuery.data?.matches ?? [], squadId),
     };
@@ -162,13 +171,14 @@ export function useDashboardData({
     isVerified,
     matchesQuery.data?.matches,
     profileQuery.data,
+    squadContextQuery.data,
     squadId,
   ]);
 
   const loading = !isGuest && hasAccount && isVerified && (
-    profileQuery.isLoading || (!!squadId && matchesQuery.isLoading)
+    profileQuery.isLoading || (!!squadId && matchesQuery.isLoading) || (!!squadId && squadContextQuery.isLoading)
   );
-  const error = profileQuery.error?.message || matchesQuery.error?.message || null;
+  const error = profileQuery.error?.message || matchesQuery.error?.message || squadContextQuery.error?.message || null;
 
   return {
     ...createSuccessState(data),
@@ -179,6 +189,7 @@ export function useDashboardData({
       await profileQuery.refetch();
       if (squadId) {
         await matchesQuery.refetch();
+        await squadContextQuery.refetch();
       }
     },
   };

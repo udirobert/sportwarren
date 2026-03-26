@@ -231,6 +231,42 @@ export async function applyMatchXP(prisma: PrismaClient, matchId: string) {
       data: { xpEarned: totalXP },
     });
 
+    // Update SquadPlayerContext for both squads involved in the match
+    const userId = profile.userId;
+    const squadIds = [match.homeSquadId, match.awaySquadId];
+
+    for (const squadId of squadIds) {
+      // Check if user is a member of this squad
+      const membership = await prisma.squadMember.findUnique({
+        where: { squadId_userId: { squadId, userId } },
+      });
+
+      if (!membership) continue;
+
+      // Upsert SquadPlayerContext
+      await prisma.squadPlayerContext.upsert({
+        where: { userId_squadId: { userId, squadId } },
+        create: {
+          userId,
+          squadId,
+          squadXP: totalXP,
+          matchesPlayed: 1,
+          goals: stat.goals,
+          assists: stat.assists,
+          role: membership.role,
+          form: totalXP > 50 ? 'hot' : totalXP > 20 ? 'neutral' : 'cold',
+        },
+        update: {
+          squadXP: { increment: totalXP },
+          matchesPlayed: { increment: 1 },
+          goals: { increment: stat.goals },
+          assists: { increment: stat.assists },
+          form: totalXP > 50 ? 'hot' : totalXP > 20 ? 'neutral' : 'cold',
+          updatedAt: new Date(),
+        },
+      });
+    }
+
     results.push({
       profileId: profile.id,
       totalXP,

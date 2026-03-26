@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/db';
-import { findTelegramMiniAppConnectionByToken } from '@/server/services/communication/platform-connections';
+import { findPlatformIdentityByMiniAppToken } from '@/server/services/communication/platform-connections';
 import { generateStaffReply } from '@/server/services/ai/staff-chat';
 
 export const dynamic = 'force-dynamic';
@@ -25,18 +25,30 @@ export async function POST(request: NextRequest) {
 
   const { token, staffId: rawStaffId, message } = parsed.data;
 
-  // Validate token
-  const connection = await findTelegramMiniAppConnectionByToken(prisma, token);
-  if (!connection?.squadId || !connection.squad) {
+  // Validate token via PlatformIdentity
+  const identity = await findPlatformIdentityByMiniAppToken(prisma, token);
+  if (!identity?.userId) {
     return NextResponse.json(
       { error: 'That Telegram session expired. Re-open from Telegram.' },
       { status: 404 },
     );
   }
 
-  // Build light squad context from connection data
+  // Resolve active squad from identity
+  const activeSquad = identity.activeSquadId
+    ? identity.user.squads.find((m) => m.squad.id === identity.activeSquadId)?.squad
+    : identity.user.squads[0]?.squad;
+
+  if (!activeSquad) {
+    return NextResponse.json(
+      { error: 'No active squad found for this session.' },
+      { status: 404 },
+    );
+  }
+
+  // Build light squad context from identity data
   const squadMembers = await prisma.squadMember.findMany({
-    where: { squadId: connection.squadId },
+    where: { squadId: activeSquad.id },
     include: {
       user: {
         select: { name: true, position: true },
@@ -46,11 +58,11 @@ export async function POST(request: NextRequest) {
     take: 10,
   });
 
-  const treasury = connection.squad.treasury;
+  const treasury = activeSquad.treasury;
   const recentTransactions = treasury?.transactions ?? [];
 
   const contextLines = [
-    `Club: ${connection.squad.name}`,
+    `Club: ${activeSquad.name}`,
     `Squad size: ${squadMembers.length} players`,
     squadMembers.length > 0 &&
       `Squad: ${squadMembers.map((m) => `${m.user.name || 'Player'} (Lvl ${m.user.playerProfile?.level ?? 1}, ${m.user.playerProfile?.totalMatches ?? 0} matches)`).join(', ')}`,
@@ -65,7 +77,7 @@ export async function POST(request: NextRequest) {
   ].filter(Boolean).join('\n');
 
   const decisionBlock = recentTransactions.length
-    ? `\n\nRecent treasury actions (use this to personalise practical advice):\n${recentTransactions.slice(0, 5).map((transaction) => `- ${transaction.type} ${transaction.amount} TON on ${new Date(transaction.createdAt).toLocaleDateString()}`).join('\n')}`
+    ? `\n\nRecent treasury actions (use this to personalise practical advice):\n${recentTransactions.slice(0, 5).map((transaction: { type: string; amount: number; createdAt: Date }) => `- ${transaction.type} ${transaction.amount} TON on ${new Date(transaction.createdAt).toLocaleDateString()}`).join('\n')}`
     : '';
 
   try {

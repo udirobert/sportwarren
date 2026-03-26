@@ -126,22 +126,22 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          {/* Badge */}
-          <div className="inline-flex items-center space-x-2 bg-green-500/10 backdrop-blur-sm border border-green-500/20 text-green-400 px-6 py-3 rounded-full text-sm font-medium mb-8">
+          {/* Badge - removed until we have real users */}
+          {/* <div className="inline-flex items-center space-x-2 bg-green-500/10 backdrop-blur-sm border border-green-500/20 text-green-400 px-6 py-3 rounded-full text-sm font-medium mb-8">
             <Users className="w-4 h-4" />
             <span>Used by 5-a-side players in 12 cities</span>
-          </div>
+          </div> */}
 
           {/* Hero Headline */}
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-black mb-6 leading-tight">
-            <span className="block text-white">Your Sunday League,</span>
+            <span className="block text-white">Your Rec Squad,</span>
             <span className="block bg-gradient-to-r from-green-400 via-emerald-500 to-green-600 bg-clip-text text-transparent">
               Championship Manager Style
             </span>
           </h1>
 
           <p className="text-xl md:text-2xl text-gray-300 mb-12 max-w-3xl mx-auto">
-            Log your Sunday game in 30 seconds. Share verified results with your squad. Build your player reputation — season by season.
+            Log your weekend game in 30 seconds. Share verified results with your squad. Build your player reputation — season by season.
           </p>
 
           {/* CTA - Single primary action */}
@@ -154,14 +154,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               {journeyContent.hero.primaryCtaLabel}
               <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" />
             </button>
-
-            <button
-              onClick={() => problemRef.current?.scrollIntoView({ behavior: 'smooth' })}
-              className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-white/10 backdrop-blur-sm border-2 border-white/20 rounded-xl hover:bg-white/20 transition-all"
-            >
-              <Play className="w-5 h-5 mr-2" />
-              See How It Works
-            </button>
+            
+            {/* Removed secondary CTA - keeping design but reducing options */}
           </div>
 
           {journeyContent.hero.stageLine && (
@@ -396,157 +390,40 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             </h2>
           </div>
 
-          {/* Feature Cards with 3D Effect */}
-          <div className="grid md:grid-cols-3 gap-8">
+          {/* Feature Cards - simplified to 2 columns with concise content */}
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto">
             <div
-              className="group relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-green-500/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-green-500/20"
+              className="group relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-green-500/50 transition-all duration-500 hover:scale-105"
               style={{
-                transform: `translateY(${Math.max(0, (scrollY - 2000) * 0.05)}px) rotateY(${(scrollY - 2000) * 0.02}deg)`,
+                transform: `translateY(${Math.max(0, (scrollY - 2000) * 0.05)}px)`,
                 opacity: Math.min(1, (scrollY - 1900) / 200),
               }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-green-500/50">
-                  <Target className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-4">Play Real Matches</h3>
-                <p className="text-gray-300 mb-6 leading-relaxed">Your Sunday league matches drive the game. Score goals, win matches, build your reputation on-chain.</p>
-                <ul className="space-y-3">
-                  <li className="flex items-start text-gray-300">
-                    <span className="text-green-400 mr-3 mt-1">✓</span>
-                    <span>Chainlink oracle verification</span>
-                  </li>
-                  <li className="flex items-start text-gray-300">
-                    <span className="text-green-400 mr-3 mt-1">✓</span>
-                    <span>GPS + weather validation</span>
-                  </li>
-                  <li className="flex items-start text-gray-300">
-                    <span className="text-green-400 mr-3 mt-1">✓</span>
-                    <span>Soulbound reputation tokens</span>
-                  </li>
-                </ul>
+              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Target className="w-7 h-7 text-white" />
               </div>
+              <h3 className="text-xl font-bold text-white mb-3">Play Real Matches</h3>
+              <p className="text-gray-300">Your matches drive the game. Score goals, win, build reputation.</p>
             </div>
 
             <div
-              className="group relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-blue-500/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-blue-500/20"
+              className="group relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-blue-500/50 transition-all duration-500 hover:scale-105"
               style={{
-                transform: `translateY(${Math.max(0, (scrollY - 2000) * 0.05 - 30)}px) rotateY(${(scrollY - 2000) * 0.02}deg)`,
+                transform: `translateY(${Math.max(0, (scrollY - 2000) * 0.05 - 30)}px)`,
                 opacity: Math.min(1, (scrollY - 1900) / 200),
               }}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-blue-500/50">
-                  <TrendingUp className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-4">Earn Game Rewards</h3>
-                <p className="text-gray-300 mb-6 leading-relaxed">Real performance = in-game attributes. Your shooting, passing, defending stats evolve with every match.</p>
-                <ul className="space-y-3">
-                  <li className="flex items-start text-gray-300">
-                    <span className="text-blue-400 mr-3 mt-1">✓</span>
-                    <span>XP for goals, assists, clean sheets</span>
-                  </li>
-                  <li className="flex items-start text-gray-300">
-                    <span className="text-blue-400 mr-3 mt-1">✓</span>
-                    <span>Form tracking & attribute boosts</span>
-                  </li>
-                  <li className="flex items-start text-gray-300">
-                    <span className="text-blue-400 mr-3 mt-1">✓</span>
-                    <span>Derby bonuses & rivalry rewards</span>
-                  </li>
-                </ul>
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <TrendingUp className="w-7 h-7 text-white" />
               </div>
-            </div>
-
-            <div
-              className="group relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-purple-500/50 transition-all duration-500 hover:scale-105 hover:shadow-2xl hover:shadow-purple-500/20"
-              style={{
-                transform: `translateY(${Math.max(0, (scrollY - 2000) * 0.05 - 60)}px) rotateY(${(scrollY - 2000) * 0.02}deg)`,
-                opacity: Math.min(1, (scrollY - 1900) / 200),
-              }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity"></div>
-              <div className="relative z-10">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform shadow-lg shadow-purple-500/50">
-                  <Sparkles className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-white mb-4">AI Agent Assistance</h3>
-                <p className="text-gray-300 mb-6 leading-relaxed">Kite AI-powered agents analyze tactics, scout opponents, manage fitness, and boost team morale.</p>
-                <ul className="space-y-3">
-                  <li className="flex items-start text-gray-300">
-                    <span className="text-purple-400 mr-3 mt-1">✓</span>
-                    <span>Squad Manager for tactics</span>
-                  </li>
-                  <li className="flex items-start text-gray-300">
-                    <span className="text-purple-400 mr-3 mt-1">✓</span>
-                    <span>Scout for opponent analysis</span>
-                  </li>
-                  <li className="flex items-start text-gray-300">
-                    <span className="text-purple-400 mr-3 mt-1">✓</span>
-                    <span>Fitness Coach for training plans</span>
-                  </li>
-                </ul>
-              </div>
+              <h3 className="text-xl font-bold text-white mb-3">Track Your Progress</h3>
+              <p className="text-gray-300">Stats evolve with every match. Shooting, passing, defending.</p>
             </div>
           </div>
 
-          {/* Tech Stack */}
-          <div className="mt-24 text-center">
-            <p className="text-sm text-gray-400 mb-6 uppercase tracking-wider">Powered by industry-leading infrastructure</p>
-            <div className="flex flex-wrap items-center justify-center gap-4">
-              <div className="px-6 py-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-white/30 transition-all hover:scale-105">
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl">🔗</span>
-                  <div className="text-left">
-                    <div className="text-sm font-bold text-white">Chainlink</div>
-                    <div className="text-xs text-gray-400">Oracles</div>
-                  </div>
-                </div>
-              </div>
-              <div className="px-6 py-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-white/30 transition-all hover:scale-105">
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl">🤖</span>
-                  <div className="text-left">
-                    <div className="text-sm font-bold text-white">Kite AI</div>
-                    <div className="text-xs text-gray-400">17.8M+ Agents</div>
-                  </div>
-                </div>
-              </div>
-              <div className="px-6 py-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-white/30 transition-all hover:scale-105">
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl">⚡</span>
-                  <div className="text-left">
-                    <div className="text-sm font-bold text-white">Algorand</div>
-                    <div className="text-xs text-gray-400">Blockchain</div>
-                  </div>
-                </div>
-              </div>
-              <div className="px-6 py-4 bg-white/5 backdrop-blur-sm rounded-xl border border-white/10 hover:border-white/30 transition-all hover:scale-105">
-                <div className="flex items-center space-x-3">
-                  <span className="text-2xl">🏔️</span>
-                  <div className="text-left">
-                    <div className="text-sm font-bold text-white">Avalanche</div>
-                    <div className="text-xs text-gray-400">Subnet</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Tech Stack - moved to footer for minimal hero clutter */}
+          {/* Removed from hero - can be added to footer */}
 
-          {/* Final CTA */}
-          <div className="mt-20 text-center">
-            <button
-              onClick={onGetStarted}
-              className="group relative inline-flex items-center justify-center px-12 py-5 text-xl font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
-            >
-              <Zap className="w-6 h-6 mr-2" />
-              Start Your Parallel Season
-              <ArrowRight className="w-6 h-6 ml-2 group-hover:translate-x-1 transition-transform" />
-            </button>
-            <p className="text-gray-400 mt-4">No credit card required • Free to start</p>
-          </div>
         </div>
       </section>
     </div>

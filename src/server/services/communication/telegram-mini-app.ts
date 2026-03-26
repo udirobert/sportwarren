@@ -8,7 +8,7 @@ import {
   computeTonMessageHashFromBoc,
   verifyTonTopUpTransfer,
 } from "../blockchain/ton";
-import { findTelegramMiniAppConnectionByToken } from "./platform-connections";
+import { findPlatformIdentityByMiniAppToken } from "./platform-connections";
 import { getSquadMembership, isSquadLeader } from "../permissions";
 import {
   getRequiredMatchVerifications,
@@ -38,7 +38,7 @@ function formatWalletLabel(address: string): string {
 export interface TelegramMiniAppContext {
   squadId: string;
   squadName: string;
-  chatId: string | null;
+  chatId?: string | null;
   userId: string;
 
   // Player profile for current user
@@ -167,20 +167,39 @@ export interface VerifyTelegramMiniAppMatchInput {
   };
 }
 
+/**
+ * Resolve a Mini App session by token.
+ * Uses PlatformIdentity (user-scoped) instead of PlatformConnection (squad-scoped).
+ */
 async function requireTelegramMiniAppConnection(prisma: PrismaClient, token: string) {
-  const connection = await findTelegramMiniAppConnectionByToken(prisma, token);
-  if (!connection?.squadId) {
+  const identity = await findPlatformIdentityByMiniAppToken(prisma, token);
+  if (!identity) {
     throw new Error(
       "That Telegram Mini App session expired. Re-open it from Telegram and try again.",
     );
   }
 
-  return connection as typeof connection & { squadId: string };
+  // Derive active squad from identity's activeSquadId or first membership
+  const memberships = identity.user.squads;
+  const activeSquadId = identity.activeSquadId;
+  const activeSquad = activeSquadId
+    ? memberships.find((m) => m.squad.id === activeSquadId)?.squad
+    : memberships[0]?.squad;
+
+  if (!activeSquad) {
+    throw new Error("You don't belong to a squad yet.");
+  }
+
+  return {
+    ...identity,
+    squadId: activeSquad.id,
+    squad: activeSquad,
+  };
 }
 
 async function requireTelegramMiniAppLeader(prisma: PrismaClient, token: string) {
   const connection = await requireTelegramMiniAppConnection(prisma, token);
-  const membership = await getSquadMembership(prisma, connection.squadId!, connection.userId);
+  const membership = await getSquadMembership(prisma, connection.squadId, connection.user.id);
 
   if (!membership || !isSquadLeader(membership.role)) {
     throw new Error("Only squad captains or vice-captains can do that in Telegram.");
@@ -262,13 +281,14 @@ export async function getTelegramMiniAppContext(
   prisma: PrismaClient,
   token: string,
 ): Promise<TelegramMiniAppContext | null> {
-  const connection = await findTelegramMiniAppConnectionByToken(prisma, token);
+  // Use identity-based session (user-scoped, supports multi-squad)
+  const connection = await requireTelegramMiniAppConnection(prisma, token);
   if (!connection?.squadId || !connection.squad) {
     return null;
   }
 
+  const userId = connection.user.id;
   const squadId = connection.squadId;
-  const userId = connection.userId;
 
   // Fetch player profile with attributes
   const playerProfile = await prisma.playerProfile.findUnique({
@@ -360,7 +380,6 @@ export async function getTelegramMiniAppContext(
   return {
     squadId,
     squadName: connection.squad.name,
-    chatId: connection.chatId,
     userId,
 
     // Player profile
@@ -497,7 +516,7 @@ export async function submitTelegramMiniAppMatch(
     awaySquadId,
     homeScore: input.homeScore,
     awayScore: input.awayScore,
-    submittedBy: connection.userId,
+    submittedBy: connection.user.id,
     matchDate: input.matchDate ?? new Date(),
     yellowSettlement: input.yellowSettlement,
   });
@@ -515,7 +534,7 @@ export async function verifyTelegramMiniAppMatch(
   input: VerifyTelegramMiniAppMatchInput,
 ) {
   const connection = await requireTelegramMiniAppLeader(prisma, input.token);
-  const squadId = connection.squadId!;
+  const squadId = connection.squadId;
 
   const match = await prisma.match.findUnique({
     where: { id: input.matchId },
@@ -533,7 +552,7 @@ export async function verifyTelegramMiniAppMatch(
   const verification = await verifyMatchResult({
     prisma,
     matchId: input.matchId,
-    verifierId: connection.userId,
+    verifierId: connection.user.id,
     verified: input.verified,
     homeScore: match.homeScore ?? undefined,
     awayScore: match.awayScore ?? undefined,
@@ -553,7 +572,7 @@ export async function verifyTelegramMiniAppMatch(
   if (verification.newStatus === "verified") {
     const xpResult = await applyMatchXP(prisma, input.matchId);
     const playerProfile = await prisma.playerProfile.findUnique({
-      where: { userId: connection.userId },
+      where: { userId: connection.user.id },
       select: { id: true },
     });
 
@@ -610,7 +629,7 @@ export async function recordTelegramTonTopUp(
       boc: input.boc,
       messageHash,
       linkedChatId: connection.chatId,
-      platformConnectionId: connection.id,
+      platformIdentityId: connection.id,
     },
   });
 
