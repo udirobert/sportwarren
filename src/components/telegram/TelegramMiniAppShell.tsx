@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Home, Trophy, User, Wallet, Bot, Loader2, AlertCircle, RefreshCw, Link2, ArrowRight } from 'lucide-react';
+import { Home, Trophy, User, Wallet, Bot, Loader2, AlertCircle, RefreshCw, Link2, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 // Types for the enhanced Mini App context
 export interface PlayerContext {
@@ -119,6 +119,14 @@ interface Tab {
   badge?: number;
 }
 
+interface OnboardingSquadOption {
+  id: string;
+  name: string;
+  shortName: string | null;
+  memberCount: number;
+  alreadyMember: boolean;
+}
+
 interface TelegramMiniAppShellProps {
   children?: ReactNode;
   renderSquad?: (context: MiniAppContext, refresh: () => void, navigate: (tab: TabId) => void) => ReactNode;
@@ -138,10 +146,13 @@ export function TelegramMiniAppShell({
   const CONTEXT_CACHE_KEY = 'telegram-mini-app:last-context';
   const PULL_THRESHOLD = 72;
   const searchParams = useSearchParams();
-  const token = searchParams.get('token') || '';
+  const tokenFromUrl = searchParams.get('token') || '';
   const initialTab = (searchParams.get('tab') as TabId) || 'squad';
 
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+  const [sessionToken, setSessionToken] = useState(tokenFromUrl);
+  const [sessionBootstrapped, setSessionBootstrapped] = useState(Boolean(tokenFromUrl));
+  const [requiresSquadOnboarding, setRequiresSquadOnboarding] = useState(false);
   const [context, setContext] = useState<MiniAppContext | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -150,6 +161,15 @@ export function TelegramMiniAppShell({
   const [pullDistance, setPullDistance] = useState(0);
   const [isPulling, setIsPulling] = useState(false);
   const [isTabTransitioning, setIsTabTransitioning] = useState(false);
+  const [onboardingMode, setOnboardingMode] = useState<'menu' | 'create' | 'join'>('menu');
+  const [onboardingNotice, setOnboardingNotice] = useState<string | null>(null);
+  const [onboardingBusy, setOnboardingBusy] = useState(false);
+  const [createSquadName, setCreateSquadName] = useState('');
+  const [createShortName, setCreateShortName] = useState('');
+  const [createHomeGround, setCreateHomeGround] = useState('');
+  const [joinQuery, setJoinQuery] = useState('');
+  const [joinOptions, setJoinOptions] = useState<OnboardingSquadOption[]>([]);
+  const [joinLoading, setJoinLoading] = useState(false);
   const touchStartYRef = useRef<number | null>(null);
   const pullTriggeredRef = useRef(false);
 
@@ -166,9 +186,82 @@ export function TelegramMiniAppShell({
     }
   }, []);
 
+  useEffect(() => {
+    if (!tokenFromUrl || tokenFromUrl === sessionToken) {
+      return;
+    }
+
+    setSessionToken(tokenFromUrl);
+    setSessionBootstrapped(true);
+  }, [tokenFromUrl, sessionToken]);
+
+  useEffect(() => {
+    if (tokenFromUrl) {
+      setSessionBootstrapped(true);
+      return;
+    }
+
+    let cancelled = false;
+    const bootstrapSession = async () => {
+      const initData = window.Telegram?.WebApp?.initData;
+      if (!initData) {
+        if (!cancelled) {
+          setSessionBootstrapped(true);
+          setLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/telegram/mini-app/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ initData }),
+        });
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok || !data?.token) {
+          throw new Error(data?.error || 'Failed to initialize Telegram Mini App session.');
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setSessionToken(data.token as string);
+        setRequiresSquadOnboarding(Boolean(data?.hasSquad === false));
+        setSessionBootstrapped(true);
+
+        if (typeof window !== 'undefined') {
+          const url = new URL(window.location.href);
+          url.searchParams.set('token', data.token as string);
+          window.history.replaceState(window.history.state, '', url.toString());
+        }
+      } catch (err) {
+        if (cancelled) {
+          return;
+        }
+
+        setError(err instanceof Error ? err.message : 'Failed to initialize Telegram Mini App.');
+        setSessionBootstrapped(true);
+        setLoading(false);
+      }
+    };
+
+    void bootstrapSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [tokenFromUrl]);
+
   // Load context
   const loadContext = useCallback(async (showRefresh = false) => {
-    if (!token) {
+    if (!sessionBootstrapped) {
+      return;
+    }
+
+    if (!sessionToken) {
       setLoading(false);
       return;
     }
@@ -181,16 +274,23 @@ export function TelegramMiniAppShell({
     setError(null);
 
     try {
-      const response = await fetch(`/api/telegram/mini-app/context?token=${encodeURIComponent(token)}`, {
+      const response = await fetch(`/api/telegram/mini-app/context?token=${encodeURIComponent(sessionToken)}`, {
         cache: 'no-store',
       });
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        if (response.status === 409 && data?.code === 'NO_SQUAD') {
+          setRequiresSquadOnboarding(true);
+          setContext(null);
+          setError(null);
+          return;
+        }
         throw new Error(data.error || 'Failed to load context');
       }
 
       setContext(data);
+      setRequiresSquadOnboarding(false);
       if (typeof window !== 'undefined') {
         window.localStorage.setItem(CONTEXT_CACHE_KEY, JSON.stringify(data));
       }
@@ -223,12 +323,17 @@ export function TelegramMiniAppShell({
       setLoading(false);
       setRefreshing(false);
     }
-  }, [token, isOnline]);
+  }, [sessionToken, isOnline, sessionBootstrapped]);
 
   useEffect(() => {
-    loadContext();
+    if (!sessionBootstrapped || requiresSquadOnboarding) {
+      setLoading(false);
+      return;
+    }
+
+    void loadContext();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+  }, [sessionToken, sessionBootstrapped, requiresSquadOnboarding]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -341,6 +446,117 @@ export function TelegramMiniAppShell({
     window.open(squadUrl, '_blank', 'noopener,noreferrer');
   };
 
+  const fetchJoinOptions = useCallback(async () => {
+    if (!sessionToken) {
+      return;
+    }
+
+    setJoinLoading(true);
+    try {
+      const response = await fetch(
+        `/api/telegram/mini-app/onboarding/squads?token=${encodeURIComponent(sessionToken)}&q=${encodeURIComponent(joinQuery.trim())}`,
+        { cache: 'no-store' },
+      );
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Could not load squads.');
+      }
+
+      setJoinOptions(Array.isArray(data?.squads) ? data.squads as OnboardingSquadOption[] : []);
+    } catch (err) {
+      setOnboardingNotice(err instanceof Error ? err.message : 'Could not load squads.');
+      setJoinOptions([]);
+    } finally {
+      setJoinLoading(false);
+    }
+  }, [joinQuery, sessionToken]);
+
+  useEffect(() => {
+    if (!requiresSquadOnboarding || onboardingMode !== 'join') {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      void fetchJoinOptions();
+    }, 180);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [requiresSquadOnboarding, onboardingMode, fetchJoinOptions]);
+
+  const handleCreateSquad = async () => {
+    if (!sessionToken || onboardingBusy) {
+      return;
+    }
+
+    setOnboardingBusy(true);
+    setOnboardingNotice(null);
+    try {
+      const response = await fetch('/api/telegram/mini-app/onboarding/squad/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: sessionToken,
+          name: createSquadName,
+          shortName: createShortName,
+          homeGround: createHomeGround || undefined,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to create squad.');
+      }
+
+      setOnboardingNotice('Squad created. Loading your dashboard...');
+      setRequiresSquadOnboarding(false);
+      setCreateSquadName('');
+      setCreateShortName('');
+      setCreateHomeGround('');
+      setOnboardingMode('menu');
+      await loadContext();
+    } catch (err) {
+      setOnboardingNotice(err instanceof Error ? err.message : 'Failed to create squad.');
+    } finally {
+      setOnboardingBusy(false);
+    }
+  };
+
+  const handleJoinSquad = async (squadId: string) => {
+    if (!sessionToken || onboardingBusy) {
+      return;
+    }
+
+    setOnboardingBusy(true);
+    setOnboardingNotice(null);
+    try {
+      const response = await fetch('/api/telegram/mini-app/onboarding/squad/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: sessionToken,
+          squadId,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(data?.error || 'Failed to join squad.');
+      }
+
+      setOnboardingNotice('Squad joined. Loading your dashboard...');
+      setRequiresSquadOnboarding(false);
+      setOnboardingMode('menu');
+      await loadContext();
+    } catch (err) {
+      setOnboardingNotice(err instanceof Error ? err.message : 'Failed to join squad.');
+    } finally {
+      setOnboardingBusy(false);
+    }
+  };
+
   // Loading state
   if (loading) {
     return (
@@ -361,7 +577,7 @@ export function TelegramMiniAppShell({
     );
   }
 
-  if (!token) {
+  if (!sessionToken) {
     return (
       <main className="flex min-h-screen flex-col justify-center bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.12),_transparent_45%),linear-gradient(180deg,_#09111f_0%,_#0d1526_100%)] px-4 py-8">
         <div className="mx-auto w-full max-w-md">
@@ -389,6 +605,150 @@ export function TelegramMiniAppShell({
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>
+        </div>
+      </main>
+    );
+  }
+
+  if (requiresSquadOnboarding) {
+    return (
+      <main className="flex min-h-screen flex-col justify-center bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.12),_transparent_45%),linear-gradient(180deg,_#09111f_0%,_#0d1526_100%)] px-4 py-8">
+        <div className="mx-auto w-full max-w-md rounded-3xl border border-white/10 bg-slate-950/70 p-6 shadow-2xl shadow-black/30">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300">
+            <Link2 className="h-7 w-7" />
+          </div>
+          <h1 className="mt-4 text-2xl font-bold text-white">Complete Squad Setup</h1>
+          <p className="mt-3 text-sm leading-6 text-slate-300">
+            This Telegram account is ready. Create a squad or join one to unlock the full SportWarren Mini App.
+          </p>
+
+          {onboardingNotice && (
+            <div className="mt-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-200">
+              {onboardingNotice}
+            </div>
+          )}
+
+          {onboardingMode === 'menu' && (
+            <div className="mt-5 space-y-3">
+              <button
+                onClick={() => {
+                  setOnboardingNotice(null);
+                  setOnboardingMode('create');
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300"
+              >
+                Create New Squad
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => {
+                  setOnboardingNotice(null);
+                  setOnboardingMode('join');
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-4 py-3 font-semibold text-white transition hover:bg-white/10"
+              >
+                Join Existing Squad
+                <ArrowRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
+          {onboardingMode === 'create' && (
+            <div className="mt-5 space-y-3">
+              <input
+                value={createSquadName}
+                onChange={(event) => setCreateSquadName(event.target.value)}
+                placeholder="Squad name"
+                className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+              />
+              <input
+                value={createShortName}
+                onChange={(event) => setCreateShortName(event.target.value.toUpperCase())}
+                placeholder="Short name (2-5 chars)"
+                maxLength={5}
+                className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+              />
+              <input
+                value={createHomeGround}
+                onChange={(event) => setCreateHomeGround(event.target.value)}
+                placeholder="Home ground (optional)"
+                className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+              />
+              <button
+                onClick={() => void handleCreateSquad()}
+                disabled={onboardingBusy}
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:opacity-60"
+              >
+                {onboardingBusy ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Creating Squad...
+                  </>
+                ) : (
+                  'Create Squad'
+                )}
+              </button>
+              <button
+                onClick={() => setOnboardingMode('menu')}
+                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+              >
+                Back
+              </button>
+            </div>
+          )}
+
+          {onboardingMode === 'join' && (
+            <div className="mt-5 space-y-3">
+              <input
+                value={joinQuery}
+                onChange={(event) => setJoinQuery(event.target.value)}
+                placeholder="Search squads"
+                className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none"
+              />
+              <div className="max-h-60 space-y-2 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2">
+                {joinLoading && (
+                  <div className="flex items-center justify-center gap-2 px-2 py-4 text-xs text-slate-400">
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    Loading squads...
+                  </div>
+                )}
+                {!joinLoading && joinOptions.length === 0 && (
+                  <div className="px-2 py-4 text-xs text-slate-500">
+                    No squads found. Try another search.
+                  </div>
+                )}
+                {!joinLoading && joinOptions.map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => void handleJoinSquad(option.id)}
+                    disabled={onboardingBusy}
+                    className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-left text-white transition hover:bg-white/10 disabled:opacity-60"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold">{option.name}</p>
+                      <p className="text-[11px] text-slate-400">
+                        {option.shortName ? `${option.shortName} · ` : ''}{option.memberCount} members
+                      </p>
+                    </div>
+                    {option.alreadyMember ? (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-300">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Joined
+                      </span>
+                    ) : (
+                      <span className="text-xs font-semibold text-emerald-300">Join</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setOnboardingMode('menu')}
+                className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+              >
+                Back
+              </button>
+            </div>
+          )}
         </div>
       </main>
     );

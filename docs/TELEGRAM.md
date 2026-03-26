@@ -432,6 +432,7 @@ src/components/telegram/
 ```
 src/app/api/telegram/mini-app/
 ├── context/route.ts      # Enhanced: player, squad, matches, treasury
+├── session/route.ts      # NEW: Telegram initData bootstrap → miniApp token
 ├── match/submit/route.ts # Submit match for verification
 ├── match/verify/route.ts # Verify/dispute matches
 ├── top-up/route.ts       # TON treasury top-ups
@@ -443,6 +444,11 @@ src/app/api/telegram/mini-app/
 - Telegram bot match logs and the Mini App now reuse the same core submission path instead of maintaining separate match-finalization logic.
 - XP summaries in the Mini App are real data from `XPGain` records; they appear when verified matches have attached `PlayerMatchStats` (seeded automatically by the workflow).
 - UI now includes Trust Scores, Consensus Progress, and Technical Verification Logs mirroring the core web components.
+- Mini App now bootstraps sessions directly from Telegram `initData` (`/api/telegram/mini-app/session`) and no longer requires a pre-generated token to start.
+- First-time Telegram users can create or join squads inside the Mini App via onboarding routes:
+  - `GET /api/telegram/mini-app/onboarding/squads`
+  - `POST /api/telegram/mini-app/onboarding/squad/create`
+  - `POST /api/telegram/mini-app/onboarding/squad/join`
 
 ### ✅ Phase 3: AI Staff — COMPLETE
 
