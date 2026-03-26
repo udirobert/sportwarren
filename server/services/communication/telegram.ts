@@ -52,6 +52,17 @@ type AuthorizedTelegramCaptainActor =
 const MATCH_DRAFT_TTL_MS = 15 * 60 * 1000;
 const MATCH_FEE_TON = 1;
 
+// Rate limiting configuration
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute window
+const RATE_LIMIT_LOG_MAX = 5; // Max 5 /log commands per minute
+const RATE_LIMIT_ASK_MAX = 10; // Max 10 /ask commands per minute
+
+interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  resetAt: number;
+}
+
 function readMetadataString(metadata: unknown, key: string): string | null {
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
     return null;
@@ -65,6 +76,9 @@ export class TelegramService {
   private bot: TelegramBot;
   private redisService: RedisService | null;
   private pendingMatchDrafts = new Map<string, PendingMatchDraft>();
+  // In-memory rate limiting (userId -> { command: count })
+  private rateLimitLog = new Map<string, number[]>();
+  private rateLimitAsk = new Map<string, number[]>();
 
   constructor(redisService: RedisService | null = null) {
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -152,7 +166,21 @@ export class TelegramService {
 
     this.bot.onText(/\/log(?:\s+(.+))?/, async (msg, match) => {
       const chatId = msg.chat.id;
+      const userId = msg.from?.id?.toString();
       const matchText = match?.[1]?.trim();
+
+      // Rate limit check
+      if (userId) {
+        const rateLimit = this.checkRateLimit(userId, this.rateLimitLog, RATE_LIMIT_LOG_MAX);
+        if (!rateLimit.allowed) {
+          const waitSeconds = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
+          await this.bot.sendMessage(
+            chatId,
+            `⏳ Slow down! You've hit the limit for /log. Try again in ${waitSeconds}s.`,
+          );
+          return;
+        }
+      }
 
       if (!matchText) {
         await this.bot.sendMessage(
@@ -174,7 +202,24 @@ export class TelegramService {
     });
 
     this.bot.onText(/\/ask(?:\s+(.+))?/, async (msg, match) => {
-      await this.handleAiStaffQuery(msg.chat.id, match?.[1]?.trim());
+      const chatId = msg.chat.id;
+      const userId = msg.from?.id?.toString();
+      const query = match?.[1]?.trim();
+
+      // Rate limit check
+      if (userId) {
+        const rateLimit = this.checkRateLimit(userId, this.rateLimitAsk, RATE_LIMIT_ASK_MAX);
+        if (!rateLimit.allowed) {
+          const waitSeconds = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
+          await this.bot.sendMessage(
+            chatId,
+            `⏳ Slow down! You've hit the limit for /ask. Try again in ${waitSeconds}s.`,
+          );
+          return;
+        }
+      }
+
+      await this.handleAiStaffQuery(chatId, query);
     });
 
     this.bot.onText(/\/fee(?:\s+(.+))?/, async (msg, match) => {
@@ -216,25 +261,22 @@ export class TelegramService {
 
   private buildHelpMessage(): string {
     return [
-      'SportWarren Telegram',
+      'Stop playing ghost matches.',
       '',
-      'Stop ghost matches.',
       'Log the score. Track your stats. Build your legacy.',
-      'You can also send a normal message and I will guide you.',
+      'Every match. Every stat. Forever.',
       '',
       'Commands:',
-      '/app',
+      '/app — Open Mini App',
       '/log 4-2 win vs Red Lions',
-      '/stats',
-      '/stats Marcus',
-      '/fixtures',
-      '/ask coach how is the squad form?',
-      '/treasury',
-      '/help',
+      '/stats — Squad Stats',
+      '/fixtures — Upcoming Matches',
+      '/ask coach — AI Analysis',
+      '/treasury — Squad Economy',
+      '/help — Show this message',
       '',
       'Linking:',
-      '/app opens Telegram-native onboarding if you are new.',
-      'Captains can link squad chats from Settings > Connections > Telegram for team commands.',
+      'Captains can link group chats from Settings > Connections > Telegram for squad-wide commands.',
     ].join('\n');
   }
 
@@ -249,7 +291,7 @@ export class TelegramService {
         ? {
             inline_keyboard: [[
               {
-                text: 'Open SportWarren Mini App',
+                text: 'Start Your Legacy ⚽',
                 web_app: { url: onboardingUrl },
               },
             ]],
@@ -259,11 +301,12 @@ export class TelegramService {
       await this.bot.sendMessage(
         chatId,
         [
-          'No squad linked yet.',
+          'Stop playing ghost matches.',
           '',
-          'Open the Mini App to create or join a squad.',
+          'Log matches in 30 seconds. Stats that level up like FIFA. Banter with AI coaches.',
           'Every match. Every stat. Forever.',
-          'Need group-chat commands? Captains can link Telegram later in Settings > Connections.',
+          '',
+          'Tap below to create or join a squad — everything happens right here in Telegram.',
         ].join('\n'),
         keyboard ? { reply_markup: keyboard } : undefined,
       );
@@ -302,9 +345,8 @@ export class TelegramService {
           `${linkedChat.squad?.name || 'Squad'} ${tabLabels[tab]}`,
           '',
           descriptions[tab],
-          tab === 'treasury'
-            ? 'Top-ups are recorded as pending until they are reconciled on-chain.'
-            : 'Use /treasury if you want to jump directly into TON treasury actions.',
+          '',
+          'Every match. Every stat. Forever.',
         ].join('\n'),
         { reply_markup: keyboard }
       );
@@ -333,6 +375,32 @@ export class TelegramService {
 
   private getDraftKey(draftId: string): string {
     return `telegram:match-draft:${draftId}`;
+  }
+
+  private checkRateLimit(
+    userId: string,
+    limitMap: Map<string, number[]>,
+    maxRequests: number,
+  ): RateLimitResult {
+    const now = Date.now();
+    const timestamps = limitMap.get(userId) || [];
+
+    // Filter to within window
+    const recent = timestamps.filter(
+      (ts) => now - ts < RATE_LIMIT_WINDOW_MS,
+    );
+
+    const remaining = Math.max(0, maxRequests - recent.length);
+    const allowed = recent.length < maxRequests;
+
+    if (allowed) {
+      recent.push(now);
+    }
+
+    limitMap.set(userId, recent);
+    const resetAt = recent.length > 0 ? recent[0] + RATE_LIMIT_WINDOW_MS : now;
+
+    return { allowed, remaining, resetAt };
   }
 
   private async storePendingDraft(draft: PendingMatchDraft): Promise<void> {
