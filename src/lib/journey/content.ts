@@ -77,15 +77,15 @@ const DEFAULT_RIVAL = 'the next opponent';
 export function getJourneyNavigationSubtitle(stage: JourneyStage): string {
   switch (stage) {
     case 'guest_preview':
-      return 'Simulate your squad tactics and see the results';
+      return 'Simulate your squad tactics and see the result';
     case 'account_ready':
-      return 'Set up your tactical DNA to start your season';
+      return 'Set up your tactical DNA to inspire your squad';
     case 'wallet_unverified':
       return 'Verify once to unlock deeper tactical insights';
     case 'verified_no_squad':
       return 'Create the squad your tactical vision will run through';
     case 'season_kickoff':
-      return 'Make the first verified tactical plan stick';
+      return 'Invite your team to their first tactical briefing';
     case 'returning_manager':
       return 'Keep the tactical prep and match loop moving';
     case 'public_visitor':
@@ -105,7 +105,7 @@ export function getJourneyNextAction(stage: JourneyStage): JourneyAction {
     case 'verified_no_squad':
       return { label: 'Create squad', href: '/squad' };
     case 'season_kickoff':
-      return { label: 'Prepare for Match', href: '/match/preview' };
+      return { label: 'Team Briefing', href: '/match/briefing/next' };
     case 'returning_manager':
       return { label: 'Go to Match Center', href: '/match?mode=preview' };
     case 'public_visitor':

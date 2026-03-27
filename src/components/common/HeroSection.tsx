@@ -134,14 +134,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
 
           {/* Hero Headline */}
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-black mb-4 leading-tight">
-            <span className="block text-white">Stop playing</span>
+            <span className="block text-white">Your Squad,</span>
             <span className="block bg-gradient-to-r from-green-400 via-emerald-500 to-green-600 bg-clip-text text-transparent">
-              ghost matches
+              Tactically Elevated
             </span>
           </h1>
 
           <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
-            Log the score. Track your stats. Build your legacy.
+            Design your DNA. Simulate tactics. Dominate the pitch. 
+            <span className="hidden md:inline"> The ultimate tactical command center for your real-world squad.</span>
           </p>
 
           {/* CTA - Single primary action */}
