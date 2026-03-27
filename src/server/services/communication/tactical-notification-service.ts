@@ -1,4 +1,5 @@
 
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { TelegramService } from "./telegram";
 import { managerInsightService } from "../ai/manager-insights";
@@ -61,11 +62,11 @@ export class TacticalNotificationService {
         },
         status: "pending",
         OR: [
-          { agentInsights: { equals: null } },
+          { agentInsights: { equals: Prisma.AnyNull } },
           { 
             agentInsights: {
               path: ["tactical_notified"],
-              equals: null
+              equals: Prisma.AnyNull
             }
           }
         ]
