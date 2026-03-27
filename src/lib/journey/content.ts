@@ -77,20 +77,20 @@ const DEFAULT_RIVAL = 'the next opponent';
 export function getJourneyNavigationSubtitle(stage: JourneyStage): string {
   switch (stage) {
     case 'guest_preview':
-      return 'Preview the flow, then claim your own season';
+      return 'Simulate your squad tactics and see the results';
     case 'account_ready':
-      return 'Log one result to make the account feel real';
+      return 'Set up your tactical DNA to start your season';
     case 'wallet_unverified':
-      return 'Verify once to unlock protected actions';
+      return 'Verify once to unlock deeper tactical insights';
     case 'verified_no_squad':
-      return 'Create the squad your season will run through';
+      return 'Create the squad your tactical vision will run through';
     case 'season_kickoff':
-      return 'Make the first verified result stick';
+      return 'Make the first verified tactical plan stick';
     case 'returning_manager':
-      return 'Keep the weekly squad loop moving';
+      return 'Keep the tactical prep and match loop moving';
     case 'public_visitor':
     default:
-      return 'Turn Sunday results into proof, reputation, and squad momentum';
+      return 'Experience tactical depth, squad building, and on-chain results';
   }
 }
 
@@ -105,9 +105,9 @@ export function getJourneyNextAction(stage: JourneyStage): JourneyAction {
     case 'verified_no_squad':
       return { label: 'Create squad', href: '/squad' };
     case 'season_kickoff':
-      return { label: 'Log your first result', href: '/match?mode=capture' };
+      return { label: 'Prepare for Match', href: '/match/preview' };
     case 'returning_manager':
-      return { label: 'Review match center', href: '/match?mode=verify' };
+      return { label: 'Go to Match Center', href: '/match?mode=preview' };
     case 'public_visitor':
     default:
       return { label: 'Start your season', href: '/?connect=1' };
