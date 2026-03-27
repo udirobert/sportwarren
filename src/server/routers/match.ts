@@ -427,7 +427,7 @@ export const matchRouter = createTRPCRouter({
           return maskMatchIntel(response);
         }
 
-        return { ...response, intelLevel: INTEL_LEVELS.FULL as const };
+        return { ...response, intelLevel: INTEL_LEVELS.FULL };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({
