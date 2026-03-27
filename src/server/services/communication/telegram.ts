@@ -1794,4 +1794,60 @@ export class TelegramService {
       console.error("Failed to send verification nudge:", error);
     }
   }
+
+  public async sendPeerRatingPrompt(chatId: string | number, matchId: string, squadName: string): Promise<void> {
+    const url = buildTelegramMiniAppUrl(`match_${matchId}_rate`);
+    await this.bot.sendMessage(
+      chatId,
+      [
+        `⭐ *Post-Match Scout Report*`,
+        ``,
+        `The match for *${squadName}* is verified!`,
+        `It's time to rate your teammates' performance and vote for Man of the Match.`,
+        ``,
+        `Your feedback earns you Scout XP and helps your teammates level up.`,
+      ].join("\n"),
+      {
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "⭐ Rate Teammates",
+                web_app: { url },
+              },
+            ],
+          ],
+        },
+      },
+    );
+  }
+
+  public async sendConsensusResults(chatId: string | number, matchId: string, squadName: string): Promise<void> {
+    const url = buildTelegramMiniAppUrl(`match_${matchId}`);
+    await this.bot.sendMessage(
+      chatId,
+      [
+        `📊 *Scout Report Results*`,
+        ``,
+        `Peer ratings for *${squadName}* are in!`,
+        `The consensus has been calculated and XP has been awarded to all participants.`,
+        ``,
+        `Check the match center to see the final ratings and the Man of the Match.`,
+      ].join("\n"),
+      {
+        parse_mode: "Markdown",
+        reply_markup: {
+          inline_keyboard: [
+            [
+              {
+                text: "📊 View Results",
+                web_app: { url },
+              },
+            ],
+          ],
+        },
+      },
+    );
+  }
 }

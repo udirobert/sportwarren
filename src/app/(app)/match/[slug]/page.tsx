@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/Button";
 import { trpc } from "@/lib/trpc-client";
 import { useWallet } from "@/contexts/WalletContext";
 import { MatchEnginePreview } from "@/components/dashboard/MatchEnginePreview";
-import { Trophy, Shield, Share2, Copy, CheckCircle2, AlertCircle, ArrowLeft, MessageCircle } from "lucide-react";
+import { Trophy, Shield, Share2, Copy, CheckCircle2, AlertCircle, ArrowLeft, MessageCircle, Star } from "lucide-react";
 import { buildTelegramShareUrl } from "@/lib/telegram/deep-links";
 
 export default function PublicMatchPage() {
@@ -191,17 +191,43 @@ export default function PublicMatchPage() {
                 {match.verifications.length > 0 && (
                     <Card className="bg-gray-900 border-gray-800 p-4">
                         <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Verifications</h4>
-                        <div className="space-y-2">
+                        <div className="space-y-2 text-xs">
                             {match.verifications.map((v) => (
-                                <div key={v.id} className="flex items-center justify-between text-sm">
-                                    <span className="text-white">{v.verifier?.name ?? "Anonymous"}</span>
-                                    <span className={v.verified ? "text-green-400" : "text-red-400"}>
+                                <div key={v.id} className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-[10px] font-bold text-gray-400">
+                                            {v.verifier?.name?.[0] || 'A'}
+                                        </div>
+                                        <span className="text-white font-medium">{v.verifier?.name ?? "Anonymous"}</span>
+                                        {v.verifier?.playerProfile?.reputationScore !== undefined && (
+                                            <span className="text-gray-500">Rep: {v.verifier.playerProfile.reputationScore}</span>
+                                        )}
+                                    </div>
+                                    <span className={v.verified ? "text-green-400 font-bold" : "text-red-400 font-bold"}>
                                         {v.verified ? "Confirmed" : "Disputed"}
                                     </span>
                                 </div>
                             ))}
                         </div>
                     </Card>
+                )}
+
+                {/* Peer Ratings Section */}
+                {isVerified && (
+                  <Card className="bg-gradient-to-br from-gray-900 to-indigo-950/20 border-indigo-500/30 p-6 text-center shadow-lg shadow-indigo-500/10">
+                    <div className="mx-auto w-12 h-12 bg-indigo-500/20 rounded-xl flex items-center justify-center mb-4">
+                      <Star className="w-6 h-6 text-indigo-400" />
+                    </div>
+                    <h3 className="text-lg font-black text-white mb-2">Teammate Scouting</h3>
+                    <p className="text-gray-400 text-sm mb-6 max-w-sm mx-auto">
+                      Rate your teammates performance to award them XP and build your Scout reputation.
+                    </p>
+                    <Link href={`/match/${match.id}/rate`}>
+                      <Button className="w-full md:w-auto px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-11">
+                        Rate Teammates
+                      </Button>
+                    </Link>
+                  </Card>
                 )}
             </div>
         </div>

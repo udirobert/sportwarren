@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { CreateSquadFlow } from "@/components/squad/CreateSquadFlow";
+import { JoinSquadFlow } from "@/components/squad/JoinSquadFlow";
 import { SquadPreview } from "@/components/squad/SquadPreview";
 import { trpc } from "@/lib/trpc-client";
 import { useTreasury } from "@/hooks/squad/useTreasury";
@@ -77,6 +78,7 @@ export default function SquadPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<SquadTab>("overview");
   const [showCreateSquadFlow, setShowCreateSquadFlow] = useState(false);
+  const [showJoinSquadFlow, setShowJoinSquadFlow] = useState(false);
   const [inviteShareState, setInviteShareState] = useState<"idle" | "copied" | "shared" | "error">("idle");
   const { chain, hasAccount, hasWallet, isVerified } = useWallet();
   const { journeyStage, memberships, refreshSquads } = useJourneyState();
@@ -361,6 +363,20 @@ export default function SquadPage() {
           await refreshSquads();
           router.push('/squad?new=1');
         }}
+        onCancel={() => setShowCreateSquadFlow(false)}
+      />
+    );
+  }
+
+  if (showJoinSquadFlow) {
+    return (
+      <JoinSquadFlow
+        onJoined={async () => {
+          setShowJoinSquadFlow(false);
+          await refreshSquads();
+          router.push('/squad?new=1');
+        }}
+        onCancel={() => setShowJoinSquadFlow(false)}
       />
     );
   }
@@ -382,6 +398,7 @@ export default function SquadPage() {
             href: squadWorkspaceGate.secondaryAction.href
           } : undefined}
           onCreateSquad={squadWorkspaceGate.reason === 'missing_squad' ? () => setShowCreateSquadFlow(true) : undefined}
+          onJoinSquad={squadWorkspaceGate.reason === 'missing_squad' ? () => setShowJoinSquadFlow(true) : undefined}
         />
       </div>
     );

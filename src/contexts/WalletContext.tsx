@@ -3,8 +3,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { UserPreferences } from '@/types';
 import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { useSignMessage, useAccount, useConnect, useDisconnect } from 'wagmi';
 import { AUTH_STORAGE_KEYS, SIGNATURE_EXPIRY_MS } from '@/lib/auth/constants';
-import { getPrivyEmbeddedWallet, signWithPrivyEmbeddedWallet } from '@/lib/auth/embedded-wallet';
+import { getPrivyEmbeddedWallet } from '@/lib/auth/embedded-wallet';
 import { trackWalletConnection, trackGuestMode, trackFeatureUsed } from '@/lib/analytics';
 
 // Storage keys - centralized for consistency
@@ -86,18 +87,6 @@ const signWithMnemonic = async (mnemonic: string, messageBytes: Uint8Array): Pro
   const account = algosdk.mnemonicToSecretKey(mnemonic);
   const signatureBytes = algosdk.signBytes(messageBytes, account.sk);
   return toBase64(signatureBytes);
-};
-
-const signWithEvmProvider = async (walletAddress: string, message: string): Promise<string> => {
-  if (typeof window === 'undefined' || !(window as any).ethereum) {
-    throw new Error('No EVM wallet found. Please install MetaMask.');
-  }
-  const provider = (window as any).ethereum;
-  const signature: string = await provider.request({
-    method: 'personal_sign',
-    params: [message, walletAddress],
-  });
-  return signature;
 };
 
 type AuthState = 'none' | 'missing' | 'expired' | 'valid' | 'guest';
@@ -235,8 +224,13 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [embeddedWalletReady, setEmbeddedWalletReady] = useState(false);
 
   const { login, logout: privyLogout, authenticated, user, ready } = usePrivy();
-  // Use useWallets with proper null checks - wallets may be empty during initial auth
   const { wallets: privyWallets = [] } = useWallets() || {};
+  
+  // Wagmi hooks
+  const { signMessageAsync } = useSignMessage();
+  const { connector: activeConnector } = useAccount();
+  const { connectAsync, connectors } = useConnect();
+  const { disconnectAsync } = useDisconnect();
 
   const updateAuthStatus = useCallback((refreshingOverride?: boolean) => {
     setAuthStatus(prev => {
@@ -329,8 +323,11 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           try {
             const challengeRes = await fetch('/api/auth/challenge', { cache: 'no-store' });
             const { message, timestamp } = await challengeRes.json();
-            const { signature, address: signerAddress } = await signWithPrivyEmbeddedWallet(privyWallets, message, embeddedWalletAddress);
-            persistAuth(signature, message, timestamp, signerAddress, 'social');
+            
+            // Use wagmi signMessageAsync which is bridged to Privy
+            const signature = await signMessageAsync({ message });
+            
+            persistAuth(signature, message, timestamp, embeddedWalletAddress, 'social');
             setAuthStatus({
               state: 'valid',
               signedAt: timestamp,
@@ -387,7 +384,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         setChain(savedPrefs.preferredChain);
       }
     }
-  }, [loadPreferences, ready, authenticated, user, privyWallets]);
+  }, [loadPreferences, ready, authenticated, user, privyWallets, signMessageAsync]);
 
   useEffect(() => {
     // Skip if we're still provisioning the embedded wallet
@@ -455,11 +452,9 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           (await signWithAlgorandProvider(peraWallet, walletAddress, messageBytes, message)) ||
           (await signWithAlgorandProvider(deflyWallet, walletAddress, messageBytes, message)) ||
           (await signWithAlgoSigner(algoSigner, walletAddress, messageBytes));
-      } else if (chain === 'social') {
-        const signed = await signWithPrivyEmbeddedWallet(privyWallets, message, walletAddress);
-        signature = signed.signature;
       } else {
-        signature = await signWithEvmProvider(walletAddress, message);
+        // Unified signing for social (Privy embedded) and EVM (external wallets) via wagmi
+        signature = await signMessageAsync({ message });
       }
 
       if (!signature) {
@@ -476,7 +471,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     } finally {
       setAuthStatus(prev => ({ ...prev, isRefreshing: false }));
     }
-  }, [walletAddress, chain, isGuest, updateAuthStatus, privyWallets]);
+  }, [walletAddress, chain, isGuest, updateAuthStatus, signMessageAsync]);
 
   useEffect(() => {
     if (authStatus.state !== 'valid' || !authStatus.expiresAt || !authStatus.signedAt) return;
@@ -603,79 +598,41 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         trackWalletConnection('algorand', true);
         trackFeatureUsed('wallet_connect');
 
-      } else if (method === 'avalanche') {
-        // ── EIP-1193: MetaMask / any EVM wallet ──
-        if (typeof window === 'undefined' || !(window as any).ethereum) {
-          throw new Error('No EVM wallet found. Please install MetaMask.');
-        }
-        const provider = (window as any).ethereum;
-        const accounts: string[] = await provider.request({ method: 'eth_requestAccounts' });
+      } else if (method === 'avalanche' || method === 'lens') {
+        // ── Unified EVM Connection via wagmi ──
+        const targetChainId = method === 'avalanche' ? 43114 : 232;
+        
+        // Find appropriate connector (prefer injected for these chains if not using Privy social)
+        // Note: With Privy-Wagmi bridge, connectors[0] is often the Privy connector
+        const connector = connectors.find(c => c.id === 'injected') || connectors[0];
+        
+        if (!connector) throw new Error('No compatible wallet connector found.');
+        
+        const { accounts } = await connectAsync({ 
+          connector,
+          chainId: targetChainId
+        });
+        
         const walletAddress = accounts[0];
         if (!walletAddress) throw new Error('No accounts returned from wallet.');
 
-        // ── Fetch challenge & sign ──
+        // ── Fetch challenge & sign via wagmi ──
         const challengeRes = await fetch('/api/auth/challenge', { cache: 'no-store' });
         const { message, timestamp } = await challengeRes.json();
-        const signature = await signWithEvmProvider(walletAddress, message);
+        const signature = await signMessageAsync({ message });
 
         setAddress(walletAddress);
         setWalletAddress(walletAddress);
-        setChain('avalanche');
-        localStorage.setItem(STORAGE_KEYS.AVALANCHE_ADDRESS, walletAddress);
-        localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'avalanche');
-        persistAuth(signature, message, timestamp, walletAddress, 'avalanche');
+        setChain(method);
+        localStorage.setItem(method === 'avalanche' ? STORAGE_KEYS.AVALANCHE_ADDRESS : STORAGE_KEYS.LENS_ADDRESS, walletAddress);
+        localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, method);
+        persistAuth(signature, message, timestamp, walletAddress, method);
         setLoginMethod('wallet');
-        fetchAvalancheBalance(walletAddress);
-        trackWalletConnection('avalanche', true);
-        trackFeatureUsed('wallet_connect');
-
-      } else if (method === 'lens') {
-        // ── Lens Chain: also EVM via MetaMask ──
-        if (typeof window === 'undefined' || !(window as any).ethereum) {
-          throw new Error('No EVM wallet found. Please install MetaMask.');
-        }
-        const provider = (window as any).ethereum;
-
-        // Request Lens Network (Lens Chain - chain ID 232)
-        try {
-          await provider.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0xe8' }], // 232 in hex
-          });
-        } catch (switchErr: any) {
-          // Chain not added yet — add it
-          if (switchErr.code === 4902) {
-            await provider.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: '0xe8',
-                chainName: 'Lens Network Sepolia Testnet',
-                rpcUrls: ['https://rpc.testnet.lens.dev'],
-                nativeCurrency: { name: 'GRASS', symbol: 'GRASS', decimals: 18 },
-                blockExplorerUrls: ['https://block-explorer.testnet.lens.dev'],
-              }],
-            });
-          } else {
-            throw switchErr;
-          }
-        }
-
-        const accounts: string[] = await provider.request({ method: 'eth_requestAccounts' });
-        const walletAddress = accounts[0];
-
-        const challengeRes = await fetch('/api/auth/challenge', { cache: 'no-store' });
-        const { message, timestamp } = await challengeRes.json();
-        const signature = await signWithEvmProvider(walletAddress, message);
-
-        setAddress(walletAddress);
-        setWalletAddress(walletAddress);
-        setChain('lens');
-        localStorage.setItem(STORAGE_KEYS.LENS_ADDRESS, walletAddress);
-        localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, 'lens');
-        persistAuth(signature, message, timestamp, walletAddress, 'lens');
-        setLoginMethod('wallet');
-        fetchLensBalance(walletAddress);
-        trackWalletConnection('lens', true);
+        
+        if (method === 'avalanche') fetchAvalancheBalance(walletAddress);
+        else fetchLensBalance(walletAddress);
+        
+        trackWalletConnection(method, true);
         trackFeatureUsed('wallet_connect');
       }
     } catch (error) {
@@ -699,10 +656,20 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     trackFeatureUsed('guest_login');
   };
 
-  const disconnect = () => {
+  const disconnect = async () => {
     if (authenticated) {
-      privyLogout();
+      await privyLogout();
     }
+    
+    // Also disconnect wagmi if connected
+    if (activeConnector) {
+      try {
+        await disconnectAsync();
+      } catch (e) {
+        console.warn('Wagmi disconnect failed:', e);
+      }
+    }
+
     setAddress(null);
     setWalletAddress(null);
     setChain(null);

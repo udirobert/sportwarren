@@ -6,6 +6,7 @@ export type DashboardEntryActionIntent =
   | 'open_wallet'
   | 'verify_wallet'
   | 'create_squad'
+  | 'join_squad'
   | 'log_match'
   | 'preview_match'
   | 'open_match_center'
@@ -142,7 +143,7 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       headline: 'Create your squad',
       description: 'Your identity is secured. Create a squad, set your tactics, and prepare for your first match.',
       primaryAction: { intent: 'create_squad', label: 'Create your squad' },
-      secondaryAction: { intent: 'open_staff_room', label: 'Open Staff Room' },
+      secondaryAction: { intent: 'join_squad', label: 'Join a squad' },
       surfaceLabel: 'Identity Secured',
       queueLabel: getPendingLabel(input.pendingMatchesCount),
       identityLabel: 'Verified',
@@ -150,7 +151,7 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       isNewUser: true,
       steps: [
         { number: 1, label: 'Verify identity', completed: true },
-        { number: 2, label: 'Create squad', completed: false },
+        { number: 2, label: 'Create or join squad', completed: false },
         { number: 3, label: 'Set tactics', completed: false, href: '/squad?tab=tactics' },
       ],
     };

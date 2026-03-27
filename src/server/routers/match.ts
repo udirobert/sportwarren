@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
+import { createTRPCRouter, publicProcedure, protectedProcedure, adminProcedure } from '../trpc';
 import { chainlinkService } from '../services/blockchain/chainlink';
 import { yellowService } from '../services/blockchain/yellow';
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
@@ -636,6 +636,45 @@ export const matchRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Match simulation failed',
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Admin procedure to trigger consensus calculation for expired rating windows
+   */
+  triggerConsensus: adminProcedure
+    .input(z.object({ matchId: z.string().optional() }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { calculateConsensus } = await import('@/lib/match/peer-consensus');
+
+        if (input.matchId) {
+          return await calculateConsensus(ctx.prisma, input.matchId);
+        }
+
+        // Auto-discover expired windows
+        const expiredMatches = await ctx.prisma.match.findMany({
+          where: {
+            peerRatingsClosed: false,
+            peerRatingsCloseAt: { lte: new Date() },
+            status: 'verified',
+          },
+          select: { id: true }
+        });
+
+        const results = [];
+        for (const match of expiredMatches) {
+          const res = await calculateConsensus(ctx.prisma, match.id);
+          results.push({ matchId: match.id, ...res });
+        }
+
+        return { success: true, processed: results.length, results };
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to trigger consensus',
           cause: error,
         });
       }

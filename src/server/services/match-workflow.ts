@@ -13,6 +13,8 @@ import {
   postTreasuryLedgerEntryOnce,
 } from './economy/treasury-ledger';
 import { createPendingMatchSubmission } from './match-submission';
+import { PEER_RATING } from '@/lib/match/constants';
+import { telegramService } from './communication/telegram';
 
 export type MatchWorkflowErrorCode =
   | 'NOT_FOUND'
@@ -487,13 +489,28 @@ export async function verifyMatchResult({
       txId = await postVerifiedMatchToAlgorand(matchId);
     }
 
-    await prisma.match.update({
+    const updatedMatch = await prisma.match.update({
       where: { id: matchId },
       data: {
         status: newStatus,
         txId: txId || undefined,
+        peerRatingsCloseAt: newStatus === 'verified' ? new Date(Date.now() + PEER_RATING.WINDOW_HOURS * 60 * 60 * 1000) : undefined,
       },
+      include: {
+        homeSquad: { include: { squadGroups: { where: { platform: 'telegram' } } } },
+        awaySquad: { include: { squadGroups: { where: { platform: 'telegram' } } } },
+      }
     });
+
+    if (newStatus === 'verified') {
+      const notifySquads = [updatedMatch.homeSquad, updatedMatch.awaySquad];
+      for (const squad of notifySquads) {
+        const tgGroup = squad.squadGroups[0];
+        if (tgGroup?.chatId) {
+          await telegramService.sendPeerRatingPrompt(tgGroup.chatId, matchId, squad.name);
+        }
+      }
+    }
 
     if (newStatus === 'verified' || newStatus === 'disputed') {
       try {

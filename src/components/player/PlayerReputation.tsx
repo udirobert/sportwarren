@@ -2,11 +2,12 @@
 
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
-import { User, Shield, Trophy, Star, CheckCircle, TrendingUp, Award } from 'lucide-react';
+import { User, Shield, Trophy, Star, CheckCircle, TrendingUp, Award, Search } from 'lucide-react';
 import { usePlayerForm } from '@/hooks/player/usePlayerForm';
 import { AttributeProgress, AttributesSummary } from './AttributeProgress';
 import { FormIndicator, FormBadge } from './FormIndicator';
 import type { PlayerAttributes as PlayerReputationData } from '@/types';
+import { Badge } from '@/components/ui/badge';
 
 interface PlayerReputationProps {
   attributes: PlayerReputationData | null;
@@ -50,6 +51,9 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
   const scoutInterest = attributes.professionalInterest ?? [];
   const seasonProgress = Math.min((attributes.xp.seasonXP / attributes.xp.nextLevelXP) * 100, 100);
 
+  const scoutXPToNext = attributes.scoutTier === 'rookie' ? 100 : attributes.scoutTier === 'trusted' ? 500 : null;
+  const scoutProgress = scoutXPToNext ? Math.min((attributes.scoutXP / scoutXPToNext) * 100, 100) : 100;
+
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 space-y-6">
       {/* Player Header */}
@@ -75,29 +79,59 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
                   Rep: {attributes.reputationScore.toLocaleString()}
                 </span>
                 <FormBadge form={form.value} size="sm" />
+                <Badge variant="outline" className="flex items-center gap-1 bg-indigo-50 text-indigo-700 border-indigo-200">
+                  <Search className="w-3 h-3" />
+                  Scout: {attributes.scoutTier.toUpperCase()}
+                </Badge>
               </div>
             </div>
           </div>
 
-          {/* Level & XP */}
-          <div className="flex items-center space-x-4 bg-gray-50 p-4 rounded-xl">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600">{attributes.xp.level}</div>
-              <div className="text-xs text-gray-600 dark:text-gray-300">Level</div>
+          {/* Level & XP & Scout XP */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex items-center space-x-4 bg-gray-50 p-4 rounded-xl border border-gray-100">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-blue-600">{attributes.xp.level}</div>
+                <div className="text-xs text-gray-600 dark:text-gray-300 font-bold uppercase tracking-tighter">Level</div>
+              </div>
+              <div className="w-px h-10 bg-gray-300" />
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">Player XP</span>
+                  <span className="text-[10px] font-bold text-blue-600">{Math.round(seasonProgress)}%</span>
+                </div>
+                <div className="w-32 bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-blue-500 to-blue-600 h-full transition-all duration-500"
+                    style={{ width: `${seasonProgress}%` }}
+                  />
+                </div>
+                <div className="text-[9px] text-gray-500 mt-1 font-medium">
+                  {attributes.xp.seasonXP.toLocaleString()} / {attributes.xp.nextLevelXP.toLocaleString()}
+                </div>
+              </div>
             </div>
-            <div className="w-px h-10 bg-gray-300" />
-            <div>
-              <div className="flex items-center space-x-2 mb-1">
-                <span className="text-sm font-medium text-gray-700">{attributes.xp.totalXP.toLocaleString()} total XP</span>
+
+            <div className="flex items-center space-x-4 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100">
+              <div className="text-center">
+                <div className="text-3xl font-bold text-indigo-600">{attributes.scoutXP}</div>
+                <div className="text-xs text-indigo-600/70 font-black uppercase tracking-tighter">Scout XP</div>
               </div>
-              <div className="w-32 bg-gray-200 rounded-full h-2">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full"
-                  style={{ width: `${seasonProgress}%` }}
-                />
-              </div>
-              <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
-                Season: {attributes.xp.seasonXP.toLocaleString()} / {attributes.xp.nextLevelXP.toLocaleString()} XP
+              <div className="w-px h-10 bg-indigo-200" />
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500">Reputation</span>
+                  <span className="text-[10px] font-bold text-indigo-600">{Math.round(scoutProgress)}%</span>
+                </div>
+                <div className="w-32 bg-indigo-200 rounded-full h-1.5 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-indigo-500 to-violet-600 h-full transition-all duration-500"
+                    style={{ width: `${scoutProgress}%` }}
+                  />
+                </div>
+                <div className="text-[9px] text-indigo-500 mt-1 font-medium">
+                  {scoutXPToNext ? `${attributes.scoutXP} / ${scoutXPToNext} XP` : 'MAX TIER'}
+                </div>
               </div>
             </div>
           </div>
