@@ -256,7 +256,10 @@ export function TelegramSquadDashboard({ context, onNavigate }: TelegramSquadDas
             <>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Next Match</p>
               <p className="mt-1 truncate text-sm font-bold text-white">vs {nextMatch.opponent}</p>
-              <p className="mt-0.5 text-[10px] text-slate-400">{formatRelativeDate(nextMatch.matchDate)}</p>
+              <div className="mt-1 flex items-center gap-1.5">
+                 <span className="flex h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                 <p className="text-[9px] font-black uppercase tracking-widest text-cyan-400">Tactical Ready</p>
+              </div>
             </>
           ) : (
             <>
