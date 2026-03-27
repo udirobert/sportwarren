@@ -1,16 +1,14 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { 
   Clock, 
   Trophy, 
   Target, 
   TrendingUp, 
-  Sword,
   Star,
-  Calendar,
-  MapPin
+  Calendar
 } from 'lucide-react';
 
 interface MatchHypeProps {
@@ -20,153 +18,69 @@ interface MatchHypeProps {
   homeSquad: string;
   /** Away squad name */
   awaySquad: string;
-  /** Venue */
-  venue?: string;
-  /** Home squad recent form (W/D/L array) */
-  homeForm?: ('W' | 'D' | 'L')[];
-  /** Away squad recent form (W/D/L array) */
-  awayForm?: ('W' | 'D' | 'L')[];
-  /** Head to head record for home */
-  h2hHomeWins?: number;
-  /** Head to head record for away */
-  h2hAwayWins?: number;
-  /** Head to head draws */
-  h2hDraws?: number;
-  /** Is this a rivalry match */
-  isRivalry?: boolean;
-  /** Rivalry name (e.g., "North vs South") */
-  rivalryName?: string;
-  /** Key player to watch */
+  /** Home form (e.g. ['W', 'D', 'L']) */
+  homeForm: string[];
+  /** Away form */
+  awayForm: string[];
+  /** Home streak text */
+  homeStreak?: { text: string; color: string; bg: string };
+  /** Away streak text */
+  awayStreak?: { text: string; color: string; bg: string };
+  /** H2H dominance indicator */
+  h2hDominance?: { text: string };
+  /** Key player highlight */
   keyPlayer?: { name: string; team: 'home' | 'away'; reason: string };
-  /** Tactical insight */
+  /** Tactical insight snippet */
   tacticalInsight?: string;
-  /** Loading state */
-  loading?: boolean;
 }
 
 /**
- * MatchHype - Pre-match excitement UI component
- * Displays countdown, rivalry indicators, form, and scouting info
+ * Visual "hype" card for an upcoming match.
+ * Consolidates scouting, form, and tactical predictions.
  */
-export const MatchHype: React.FC<MatchHypeProps> = ({
+const MatchHype = ({
   matchDate,
   homeSquad,
   awaySquad,
-  venue,
-  homeForm = [],
-  awayForm = [],
-  h2hHomeWins = 0,
-  h2hAwayWins = 0,
-  h2hDraws = 0,
-  isRivalry = false,
-  rivalryName,
+  homeForm,
+  awayForm,
+  homeStreak,
+  awayStreak,
+  h2hDominance,
   keyPlayer,
-  tacticalInsight,
-  loading = false,
-}) => {
-  // Calculate countdown
-  const countdown = useMemo(() => {
-    const now = new Date();
-    const diff = matchDate.getTime() - now.getTime();
-    
-    if (diff <= 0) return { text: 'Today', value: 0, unit: 'match' };
-    
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    
-    if (days > 0) return { text: `${days}d ${hours}h`, value: days, unit: 'days' };
-    if (hours > 0) return { text: `${hours}h ${minutes}m`, value: hours, unit: 'hours' };
-    return { text: `${minutes}m`, value: minutes, unit: 'minutes' };
-  }, [matchDate]);
+  tacticalInsight
+}: MatchHypeProps) => {
+  // Simple form score calculation
+  const calculatePoints = (form: string[]) => {
+    return form.reduce((acc, curr) => {
+      if (curr === 'W') return acc + 3;
+      if (curr === 'D') return acc + 1;
+      return acc;
+    }, 0);
+  };
 
-  // Calculate form points
-  const homeFormPoints = useMemo(() => {
-    return homeForm.reduce((acc, r) => acc + (r === 'W' ? 3 : r === 'D' ? 1 : 0), 0);
-  }, [homeForm]);
-
-  const awayFormPoints = useMemo(() => {
-    return awayForm.reduce((acc, r) => acc + (r === 'W' ? 3 : r === 'D' ? 1 : 0), 0);
-  }, [awayForm]);
-
-  // Form streak
-  const homeStreak = useMemo(() => {
-    const wins = homeForm.filter(r => r === 'W').length;
-    const losses = homeForm.filter(r => r === 'L').length;
-    if (wins >= 3) return { text: `${wins} wins`, color: 'text-green-500', bg: 'bg-green-500/20' };
-    if (losses >= 3) return { text: `${losses} losses`, color: 'text-red-500', bg: 'bg-red-500/20' };
-    return null;
-  }, [homeForm]);
-
-  const awayStreak = useMemo(() => {
-    const wins = awayForm.filter(r => r === 'W').length;
-    const losses = awayForm.filter(r => r === 'L').length;
-    if (wins >= 3) return { text: `${wins} wins`, color: 'text-green-500', bg: 'bg-green-500/20' };
-    if (losses >= 3) return { text: `${losses} losses`, color: 'text-red-500', bg: 'bg-red-500/20' };
-    return null;
-  }, [awayForm]);
-
-  // H2H dominance
-  const h2hDominance = useMemo(() => {
-    const total = h2hHomeWins + h2hAwayWins + h2hDraws;
-    if (total === 0) return null;
-    if (h2hHomeWins > h2hAwayWins) return { team: 'home', text: `${homeSquad} leads ${h2hHomeWins}-${h2hAwayWins}` };
-    if (h2hAwayWins > h2hHomeWins) return { team: 'away', text: `${awaySquad} leads ${h2hAwayWins}-${h2hHomeWins}` };
-    return { team: 'draw', text: 'Even record' };
-  }, [h2hHomeWins, h2hAwayWins, h2hDraws, homeSquad, awaySquad]);
-
-  if (loading) {
-    return (
-      <Card className="animate-pulse">
-        <div className="h-64 bg-gray-200 rounded-lg" />
-      </Card>
-    );
-  }
+  const homeFormPoints = calculatePoints(homeForm.slice(0, 5));
+  const awayFormPoints = calculatePoints(awayForm.slice(0, 5));
 
   return (
-    <Card className="overflow-hidden">
-      {/* Header with countdown */}
-      <div className="bg-gradient-to-r from-amber-500/20 via-orange-500/20 to-red-500/20 px-6 py-4 border-b border-amber-500/20">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-amber-500/30 rounded-xl flex items-center justify-center">
-              <Clock className="w-6 h-6 text-amber-500" />
-            </div>
-            <div>
-              <p className="text-xs text-amber-600 dark:text-amber-400 font-bold uppercase tracking-wider">Kick-off</p>
-              <p className="text-2xl font-black text-gray-900 dark:text-white">{countdown.text}</p>
-            </div>
-          </div>
-          
-          {isRivalry && (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-red-500/20 border border-red-400/30 rounded-full">
-              <Sword className="w-4 h-4 text-red-500" />
-              <span className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wider">
-                {rivalryName || 'Rivalry'}
-              </span>
-            </div>
-          )}
+    <Card className="overflow-hidden border-2 border-slate-100 dark:border-slate-800 shadow-xl bg-white dark:bg-slate-950">
+      {/* Visual Header */}
+      <div className="bg-slate-900 px-6 py-4 flex items-center justify-between text-white">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-emerald-400" />
+          <span className="text-xs font-bold uppercase tracking-widest">Match Day</span>
         </div>
-
-        {/* Match info */}
-        <div className="flex items-center gap-4 mt-4 text-sm text-gray-600 dark:text-gray-400">
-          <div className="flex items-center gap-1">
-            <Calendar className="w-4 h-4" />
-            <span>{matchDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</span>
-          </div>
-          {venue && (
-            <div className="flex items-center gap-1">
-              <MapPin className="w-4 h-4" />
-              <span>{venue}</span>
-            </div>
-          )}
+        <div className="flex items-center gap-2">
+          <Clock className="w-4 h-4 text-emerald-400" />
+          <span className="text-xs font-bold uppercase tracking-widest">
+            {matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
         </div>
       </div>
 
-      {/* Teams comparison */}
-      <div className="px-6 py-4 space-y-4">
-        {/* Squad names */}
-        <div className="flex items-center justify-between">
+      <div className="p-6">
+        {/* Matchup row */}
+        <div className="flex items-center justify-between gap-4 mb-8">
           <div className="text-center flex-1">
             <h3 className="text-lg font-black text-gray-900 dark:text-white truncate">{homeSquad}</h3>
             {homeStreak && (
@@ -176,7 +90,7 @@ export const MatchHype: React.FC<MatchHypeProps> = ({
             )}
           </div>
           <div className="px-4">
-            <span className="text-2xl font-black text-gray-400">VS</span>
+            <span className="text-2xl font-black text-gray-400 italic">VS</span>
           </div>
           <div className="text-center flex-1">
             <h3 className="text-lg font-black text-gray-900 dark:text-white truncate">{awaySquad}</h3>
@@ -189,105 +103,107 @@ export const MatchHype: React.FC<MatchHypeProps> = ({
         </div>
 
         {/* Form indicators */}
-        <div className="flex items-center justify-between">
-          <div className="flex gap-1">
-            {homeForm.slice(0, 5).map((result, i) => (
-              <div
-                key={i}
-                className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${
-                  result === 'W' ? 'bg-green-500 text-white' :
-                  result === 'D' ? 'bg-gray-400 text-white' :
-                  'bg-red-500 text-white'
-                }`}
-              >
-                {result}
-              </div>
-            ))}
+        <div className="grid grid-cols-2 gap-8 mb-6">
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Home Form</p>
+            <div className="flex justify-center gap-1">
+              {homeForm.slice(0, 5).map((result, i) => (
+                <div
+                  key={i}
+                  className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-black ${
+                    result === 'W' ? 'bg-green-500 text-white' :
+                    result === 'D' ? 'bg-gray-400 text-white' :
+                    'bg-red-500 text-white'
+                  }`}
+                >
+                  {result}
+                </div>
+              ))}
+              {homeForm.length === 0 && <span className="text-xs text-gray-400">No data</span>}
+            </div>
+            <p className="text-xs font-bold text-gray-500 text-center">{homeFormPoints} pts</p>
           </div>
-          {homeForm.length === 0 && <span className="text-xs text-gray-400">No recent form</span>}
-          <span className="text-xs font-bold text-gray-500">{homeFormPoints} pts</span>
-        </div>
 
-        <div className="flex items-center justify-between">
-          <div className="flex gap-1">
-            {awayForm.slice(0, 5).map((result, i) => (
-              <div
-                key={i}
-                className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${
-                  result === 'W' ? 'bg-green-500 text-white' :
-                  result === 'D' ? 'bg-gray-400 text-white' :
-                  'bg-red-500 text-white'
-                }`}
-              >
-                {result}
-              </div>
-            ))}
+          <div className="space-y-2">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest text-center">Away Form</p>
+            <div className="flex justify-center gap-1">
+              {awayForm.slice(0, 5).map((result, i) => (
+                <div
+                  key={i}
+                  className={`w-6 h-6 rounded flex items-center justify-center text-[10px] font-black ${
+                    result === 'W' ? 'bg-green-500 text-white' :
+                    result === 'D' ? 'bg-gray-400 text-white' :
+                    'bg-red-500 text-white'
+                  }`}
+                >
+                  {result}
+                </div>
+              ))}
+              {awayForm.length === 0 && <span className="text-xs text-gray-400">No data</span>}
+            </div>
+            <p className="text-xs font-bold text-gray-500 text-center">{awayFormPoints} pts</p>
           </div>
-          {awayForm.length === 0 && <span className="text-xs text-gray-400">No recent form</span>}
-          <span className="text-xs font-bold text-gray-500">{awayFormPoints} pts</span>
         </div>
 
         {/* Head to Head */}
         {h2hDominance && (
-          <div className="flex items-center justify-center gap-2 py-2 px-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+          <div className="flex items-center justify-center gap-2 py-3 px-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800 mb-6">
             <Trophy className="w-4 h-4 text-amber-500" />
-            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
               {h2hDominance.text}
             </span>
           </div>
         )}
-      </div>
 
-      {/* Key Player Spotlight */}
-      {keyPlayer && (
-        <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-amber-600 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Star className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Player to Watch</p>
-              <p className="font-bold text-gray-900 dark:text-white">
-                {keyPlayer.name}
-                <span className="text-gray-400 font-normal"> ({keyPlayer.team === 'home' ? homeSquad : awaySquad})</span>
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-300">{keyPlayer.reason}</p>
+        {/* Player to Watch */}
+        {keyPlayer && (
+          <div className="mb-6 rounded-2xl bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-950 p-4 border border-slate-100 dark:border-slate-800">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-amber-100 dark:bg-amber-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Star className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-0.5">Player Spotlight</p>
+                <p className="font-bold text-sm text-gray-900 dark:text-white">
+                  {keyPlayer.name}
+                  <span className="text-gray-400 font-normal"> ({keyPlayer.team === 'home' ? homeSquad : awaySquad})</span>
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">{keyPlayer.reason}</p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Tactical Insight */}
-      {tacticalInsight && (
-        <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800">
-          <div className="flex items-start gap-3">
-            <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Target className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Scouting Report</p>
-              <p className="text-sm text-gray-700 dark:text-gray-300">{tacticalInsight}</p>
+        {/* Tactical Insight */}
+        {tacticalInsight && (
+          <div className="mb-6 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 p-4 border border-blue-100/50 dark:border-blue-900/20">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                <Target className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+              </div>
+              <div>
+                <p className="text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-0.5">AI Staff Prep</p>
+                <p className="text-xs text-blue-800 dark:text-blue-300 italic leading-relaxed">"{tacticalInsight}"</p>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Match prediction */}
-      <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30">
-        <div className="flex items-center justify-between">
+        {/* Prediction */}
+        <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <TrendingUp className="w-5 h-5 text-green-500" />
-            <span className="text-sm font-bold text-gray-700 dark:text-gray-300">Prediction</span>
+            <TrendingUp className="w-4 h-4 text-emerald-500" />
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Prediction</span>
           </div>
           <div className="flex items-center gap-1">
             {homeFormPoints > awayFormPoints && (
-              <span className="text-sm font-bold text-green-600">{homeSquad} favored</span>
+              <span className="text-xs font-black text-emerald-600 uppercase tracking-wider">{homeSquad} Favored</span>
             )}
             {awayFormPoints > homeFormPoints && (
-              <span className="text-sm font-bold text-green-600">{awaySquad} favored</span>
+              <span className="text-xs font-black text-emerald-600 uppercase tracking-wider">{awaySquad} Favored</span>
             )}
             {homeFormPoints === awayFormPoints && (
-              <span className="text-sm font-bold text-gray-500">Too close to call</span>
+              <span className="text-xs font-black text-slate-500 uppercase tracking-wider">Too Close to Call</span>
             )}
           </div>
         </div>

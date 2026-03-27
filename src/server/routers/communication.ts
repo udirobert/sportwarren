@@ -1,13 +1,14 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
-import { createTRPCRouter, protectedProcedure } from '../trpc';
+import { createTRPCRouter, protectedProcedure, adminProcedure } from '../trpc';
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
+import { TacticalNotificationService } from '../services/communication/tactical-notification-service';
+import { TelegramService } from '../services/communication/telegram';
 import {
   createTelegramLinkSession,
   disconnectSquadGroup,
   getSquadGroupsForSquad,
   updateActiveSquadContext,
-  findPlatformIdentityByMiniAppToken,
 } from '../services/communication/platform-connections';
 
 const platformSchema = z.enum(['telegram']);
@@ -105,5 +106,16 @@ export const communicationRouter = createTRPCRouter({
       }
 
       return { success: true, squadId: input.squadId };
+    }),
+
+  triggerTacticalBriefings: adminProcedure
+    .mutation(async ({ ctx }) => {
+      const telegramService = new TelegramService();
+      const tacticalService = new TacticalNotificationService(telegramService);
+      
+      console.log('[COMM-ROUTER] Triggering tactical briefings processing...');
+      await tacticalService.processUpcomingMatches();
+      
+      return { success: true };
     }),
 });

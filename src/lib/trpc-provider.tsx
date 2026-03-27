@@ -56,6 +56,7 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
       ],
     }),
      
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [address, chain, hasWallet, walletAddress, authStatus.state, authStatus.signedAt]); // re-create when wallet identity or auth state changes
 
   return (

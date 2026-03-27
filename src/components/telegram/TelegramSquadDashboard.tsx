@@ -167,7 +167,7 @@ export function TelegramSquadDashboard({ context, onNavigate }: TelegramSquadDas
   }, [formStats, player, matches.pending, treasury.pendingTopUps]);
 
   // Format relative date
-  const formatRelativeDate = (dateString: string) => {
+  const _formatRelativeDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
     const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
