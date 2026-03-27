@@ -23,7 +23,17 @@ import { FORMATIONS } from '@/lib/formations';
 
 type MatchPhase = 'first_half' | 'halftime' | 'second_half' | 'fulltime';
 
-export const MatchEnginePreview: React.FC<{ squadId?: string; awaySquadId?: string; formation?: Formation; playersPerSide?: number; hasKeeper?: boolean }> = ({ squadId, awaySquadId, formation, playersPerSide = 11, hasKeeper = true }) => {
+export const MatchEnginePreview: React.FC<{ 
+    squadId?: string; 
+    awaySquadId?: string; 
+    formation?: Formation; 
+    playersPerSide?: number; 
+    hasKeeper?: boolean;
+    homeColor?: string;
+}> = ({ squadId, awaySquadId, formation, playersPerSide = 11, hasKeeper = true, homeColor }) => {
+    const { preferences } = useUserPreferences();
+    const activeHomeColor = homeColor || preferences.squadBranding?.primaryColor || '#10b981';
+
     // ── React state (rendering only) ──────────────────────────────────────────
     const [isPlaying, setIsPlaying] = useState(false);
     const [matchPhase, setMatchPhase] = useState<MatchPhase>('first_half');
@@ -827,7 +837,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; awaySquadId?: stri
                                             y1={p.y}
                                             x2={p.intent?.x}
                                             y2={p.intent?.y}
-                                            stroke={p.team === 'home' ? '#60a5fa' : '#f87171'}
+                                            stroke={p.team === 'home' ? activeHomeColor : '#f87171'}
                                             strokeWidth="0.5"
                                             strokeDasharray="2 2"
                                             opacity="0.6"
@@ -850,7 +860,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; awaySquadId?: stri
                                 <div
                                     key={`trail-${p.id}-${i}`}
                                     className={`absolute w-2 h-2 rounded-full -translate-x-1/2 -translate-y-1/2 opacity-${(3 - i) * 20}`}
-                                    style={{ left: `${h.x}%`, top: `${h.y}%`, backgroundColor: p.team === 'home' ? '#3b82f6' : '#ef4444' }}
+                                    style={{ left: `${h.x}%`, top: `${h.y}%`, backgroundColor: p.team === 'home' ? activeHomeColor : '#ef4444' }}
                                 />
                             ))}
                             <motion.div
@@ -858,7 +868,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; awaySquadId?: stri
                                 transition={{ type: 'spring', stiffness: 60, damping: 15 }}
                                 className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
                             >
-                                <div className={`relative w-4 h-4 rounded-full border-2 ${p.team === 'home' ? 'bg-blue-500 border-blue-300' : 'bg-red-500 border-red-300'} shadow-lg group`}>
+                                <div className={`relative w-4 h-4 rounded-full border-2 ${p.team === 'home' ? 'border-white' : 'bg-red-500 border-red-300'} shadow-lg group`} style={p.team === 'home' ? { backgroundColor: activeHomeColor } : {}}>
                                     {hotPlayerIds.has(p.id) && (
                                         <div className="absolute inset-0 rounded-full border border-white/40 animate-pulse" />
                                     )}

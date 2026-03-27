@@ -576,6 +576,14 @@ export interface UserPreferences {
 
   // Platform connections (Telegram)
   connections?: PlatformConnections;
+
+  // Squad Personalization
+  squadBranding?: {
+    primaryColor: string;
+    secondaryColor: string;
+    nickname: string;
+    formation?: string;
+  };
 }
 
 // Server response shape from getSquadGroupsForSquad

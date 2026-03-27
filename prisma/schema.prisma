@@ -814,3 +814,18 @@ model PredictionBet {
   
   @@map("prediction_bets")
 }
+
+// ============================================================================
+// GROWTH: WAITLIST SIGNUPS
+// ============================================================================
+
+model WaitlistSignup {
+  id        String   @id @default(cuid())
+  email     String
+  source    String?
+  context   Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([email])
+  @@map("waitlist_signups")
+}
