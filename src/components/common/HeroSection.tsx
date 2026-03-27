@@ -338,17 +338,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               <span>The Solution</span>
             </div>
             <h2 className="text-4xl md:text-6xl font-black text-white mb-6">
-              A <span className="bg-gradient-to-r from-green-400 to-emerald-500 bg-clip-text text-transparent">Parallel Season</span> That Matters
+              A <span className="bg-gradient-to-r from-blue-400 to-cyan-500 bg-clip-text text-transparent">Tactical Simulation</span> That Matters
             </h2>
             <p className="text-xl text-gray-300 max-w-3xl mx-auto">
-              SportWarren creates a Championship Manager-style game layer on top of your real matches. Every match you play drives your in-game progression.
+              SportWarren brings a high-fidelity match engine to your real-world games. Scout your opponents, simulate tactics, and watch your squad's performance evolve.
             </p>
           </div>
 
           {/* Solution Visual */}
           <div className="relative">
             <div className="grid md:grid-cols-2 gap-12 items-center">
-              {/* Left: Real World */}
+              {/* Left: Tactical Simulation */}
               <div
                 className="space-y-6"
                 style={{
@@ -356,12 +356,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                   opacity: Math.min(1, (scrollY - 1100) / 200),
                 }}
               >
-                <h3 className="text-3xl font-bold text-white mb-6">Real World Match</h3>
+                <h3 className="text-3xl font-bold text-white mb-6">Tactical Preview</h3>
                 {[
-                  { label: 'Play 90 minutes', Icon: Timer },
-                  { label: 'Score 2 goals', Icon: Target },
-                  { label: 'Win 3-2 vs rivals', Icon: Trophy },
-                  { label: 'Team coordination', Icon: Users },
+                  { label: 'Simulate Match Engine', Icon: Cpu },
+                  { label: 'Scout Opponent Tactics', Icon: Target },
+                  { label: 'Optimize Lineups', Icon: Users },
+                  { label: 'AI Staff Briefings', Icon: Sparkles },
                 ].map((item, i) => (
                   <div key={i} className="flex items-center space-x-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-4">
                     <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center">
@@ -374,10 +374,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
 
               {/* Arrow */}
               <div className="hidden md:block absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-                <ArrowRight className="w-12 h-12 text-green-400 animate-pulse" />
+                <ArrowRight className="w-12 h-12 text-blue-400 animate-pulse" />
               </div>
 
-              {/* Right: Game Layer */}
+              {/* Right: Real World Impact */}
               <div
                 className="space-y-6"
                 style={{
@@ -385,12 +385,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                   opacity: Math.min(1, (scrollY - 1100) / 200),
                 }}
               >
-                <h3 className="text-3xl font-bold text-white mb-6">SportWarren Layer</h3>
+                <h3 className="text-3xl font-bold text-white mb-6">Real World Impact</h3>
                 {[
-                  { label: 'Result verified on-chain', Icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
+                  { label: 'Unlock Player Potential', Icon: Zap, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30' },
                   { label: 'Shooting XP +125', Icon: TrendingUp, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
-                  { label: 'Derby victory bonus', Icon: Zap, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30' },
-                  { label: 'Squad chemistry +10', Icon: Sparkles, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30' },
+                  { label: 'Squad Reputation +50', Icon: Trophy, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
+                  { label: 'On-Chain Verifiable Result', Icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
                 ].map((item, i) => (
                   <div key={i} className={`flex items-center space-x-4 ${item.bg} backdrop-blur-sm border ${item.border} rounded-xl p-4`}>
                     <div className={`w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center`}>
@@ -414,27 +414,27 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               <span>How It Works</span>
             </div>
             <h2 className="text-4xl md:text-6xl font-black text-white mb-6">
-              From Pitch to <span className="text-blue-400">Progress</span>
+              Experience the <span className="text-blue-400">Match Day</span>
             </h2>
             <p className="text-xl text-gray-300 max-w-2xl mx-auto">
-              Log your match. Watch your stats grow. Compete with your squad.
+              Simulate matches. Optimize your squad. Prove your results on-chain.
             </p>
           </div>
 
           {/* Feature Cards - 3 pillars */}
           <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div
-              className="group relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-green-500/50 transition-all duration-500 hover:scale-105"
+              className="group relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-blue-500/50 transition-all duration-500 hover:scale-105"
               style={{
                 transform: `translateY(${Math.max(0, (scrollY - 2000) * 0.05)}px)`,
                 opacity: Math.min(1, (scrollY - 1900) / 200),
               }}
             >
-              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Target className="w-7 h-7 text-white" />
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <Cpu className="w-7 h-7 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Log Your Match</h3>
-              <p className="text-gray-300">Takes 30 seconds. Score, assists, result — all tracked.</p>
+              <h3 className="text-xl font-bold text-white mb-3">Simulate Tactics</h3>
+              <p className="text-gray-300">Run our advanced match engine. Test formations and playstyles against any opponent.</p>
             </div>
 
             <div
@@ -452,17 +452,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             </div>
 
             <div
-              className="group relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-purple-500/50 transition-all duration-500 hover:scale-105"
+              className="group relative bg-white/5 backdrop-blur-xl rounded-3xl p-8 border border-white/10 hover:border-green-500/50 transition-all duration-500 hover:scale-105"
               style={{
                 transform: `translateY(${Math.max(0, (scrollY - 2000) * 0.05 - 60)}px)`,
                 opacity: Math.min(1, (scrollY - 1900) / 200),
               }}
             >
-              <div className="w-14 h-14 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                <Trophy className="w-7 h-7 text-white" />
+              <div className="w-14 h-14 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <CheckCircle2 className="w-7 h-7 text-white" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-3">Compete & Rise</h3>
-              <p className="text-gray-300">Leaderboards, achievements, and squad rivalries that matter.</p>
+              <h3 className="text-xl font-bold text-white mb-3">Confirm Results</h3>
+              <p className="text-gray-300">Log your real match. XP and reputation are awarded automatically upon verification.</p>
             </div>
           </div>
 

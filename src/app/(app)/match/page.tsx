@@ -38,13 +38,13 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { trackCoreGrowthEvent, trackFeatureUsed, trackMatchSubmission } from "@/lib/analytics";
 import { useCurrentPlayerAttributes } from "@/hooks/player/usePlayerAttributes";
 
-type ViewMode = "capture" | "verify" | "detail" | "xp-summary" | "history";
+type ViewMode = "preview" | "capture" | "verify" | "detail" | "xp-summary" | "history";
 type XPResultState = "idle" | "pending" | "available";
 
 export default function MatchPage() {
   const [requestedMode, setRequestedMode] = useState<string | null>(null);
   const [requestedMatchId, setRequestedMatchId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("capture");
+  const [viewMode, setViewMode] = useState<ViewMode>("preview");
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [showXPSummary, setShowXPSummary] = useState(false);
   const [xpSummaryData, setXpSummaryData] = useState<{ totalXP: number; attributeGains: { attribute: string; xp: number; oldRating: number; newRating: number }[] } | null>(null);
@@ -123,12 +123,12 @@ export default function MatchPage() {
       return;
     }
 
-    if (requestedMode === "verify" || requestedMode === "capture" || requestedMode === "history") {
-      setViewMode(requestedMode);
+    if (requestedMode === "verify" || requestedMode === "capture" || requestedMode === "history" || requestedMode === "preview") {
+      setViewMode(requestedMode as ViewMode);
       return;
     }
 
-    setViewMode(pendingMatches.length > 0 ? "verify" : settledMatches.length > 0 ? "history" : "capture");
+    setViewMode(pendingMatches.length > 0 ? "verify" : settledMatches.length > 0 ? "history" : "preview");
   }, [pendingMatches.length, settledMatches.length, requestedMatchId, requestedMode]);
 
   useEffect(() => {
@@ -368,6 +368,7 @@ export default function MatchPage() {
       <div className="sticky top-0 z-10 -mx-4 px-4 py-2 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-700 md:static md:mx-0 md:px-0 md:py-0 md:bg-transparent md:backdrop-blur-none md:border-0">
         <div className="flex flex-wrap gap-2 rounded-2xl bg-gray-100 p-1">
         {[
+          { key: "preview", label: "Match Preview", icon: Cpu },
           { key: "verify", label: `Review (${pendingMatches.length})`, icon: Shield },
           { key: "history", label: `History (${settledMatches.length})`, icon: Trophy },
           { key: "capture", label: "Submit Result", icon: Activity },
@@ -459,6 +460,60 @@ export default function MatchPage() {
             </button>
           </div>
         </Card>
+      )}
+
+      {viewMode === "preview" && (
+        <div className="space-y-6">
+          <Card className="border-blue-200 bg-blue-50/70 py-4">
+            <div className="flex items-start gap-3">
+              <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+              <div className="flex-1">
+                <p className="font-semibold text-blue-900">Prepare for your next match</p>
+                <p className="mt-1 text-sm text-blue-700">
+                  Scout your opponent, simulate tactics, and optimize your lineup before taking the pitch.
+                </p>
+              </div>
+              <Link href="/match/preview">
+                <Button size="sm">Open Preview</Button>
+              </Link>
+            </div>
+          </Card>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="p-0 overflow-hidden border-emerald-100">
+              <div className="bg-emerald-900 px-4 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-100 uppercase tracking-wider">Tactical Hub</span>
+                <Cpu className="w-4 h-4 text-emerald-400" />
+              </div>
+              <div className="p-4">
+                <h3 className="font-bold text-gray-900 mb-2">Simulation Engine</h3>
+                <p className="text-sm text-gray-600 mb-4">Run 1,000 simulations based on your current squad attributes and formation.</p>
+                <Link href="/match/preview?simulate=1">
+                  <Button variant="outline" size="sm" className="w-full">Run Simulation</Button>
+                </Link>
+              </div>
+            </Card>
+
+            <Card className="p-0 overflow-hidden border-blue-100">
+              <div className="bg-blue-900 px-4 py-2 flex items-center justify-between">
+                <span className="text-xs font-bold text-blue-100 uppercase tracking-wider">Scouting Report</span>
+                <Users className="w-4 h-4 text-blue-400" />
+              </div>
+              <div className="p-4">
+                <h3 className="font-bold text-gray-900 mb-2">Opponent Intel</h3>
+                <p className="text-sm text-gray-600 mb-4">Identify weaknesses in your next opponent's defensive line and exploit them.</p>
+                <Link href="/match/preview?tab=scouting">
+                  <Button variant="outline" size="sm" className="w-full">View Intel</Button>
+                </Link>
+              </div>
+            </Card>
+          </div>
+
+          <MatchEnginePreview 
+            squadId={activeSquadId} 
+            playersPerSide={activeSquad?.playersPerSide || 7}
+          />
+        </div>
       )}
 
       {viewMode === "capture" && (
