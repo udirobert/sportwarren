@@ -835,7 +835,7 @@ export class TelegramService {
   private async resolvePlatformIdentity(chatId: number, telegramUserId?: string) {
     // Try user-scoped resolution first (DM context)
     if (telegramUserId) {
-      const { findPlatformIdentityByUserId } = await import("./platform-connections.js");
+      const { findPlatformIdentityByUserId } = await import("./platform-connections");
       const identity = await findPlatformIdentityByUserId(prisma, telegramUserId);
       if (identity) return identity;
     }

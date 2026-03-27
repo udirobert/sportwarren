@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
@@ -28,6 +28,18 @@ import {
 } from 'lucide-react';
 
 export default function MatchPreviewPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <MatchPreviewContent />
+    </Suspense>
+  );
+}
+
+function MatchPreviewContent() {
   const searchParams = useSearchParams();
   const _router = useRouter();
   const { isGuest: _isGuest, isVerified: _isVerified } = useWallet();
@@ -45,8 +57,8 @@ export default function MatchPreviewPage() {
   const [showSimulation, setShowSimulation] = useState(false);
 
   // Fetch squad members for lineup
-  const { data: squadData, isLoading: squadLoading } = trpc.squad.getDetails.useQuery(
-    { squadId: activeSquadId || '' },
+  const { data: squadData, isLoading: squadLoading } = trpc.squad.getById.useQuery(
+    { id: activeSquadId || '' },
     { enabled: !!activeSquadId }
   );
 
@@ -66,12 +78,12 @@ export default function MatchPreviewPage() {
   const players: Player[] = useMemo(() => {
     if (!squadData?.members) return [];
     return squadData.members
-      .filter(m => m.user?.playerProfile)
+      .filter(m => m.user)
       .map(m => ({
         id: m.userId,
-        name: m.user.name || m.user.telegramName || 'Player',
-        position: m.user.playerProfile?.position || 'MF',
-        status: m.user.playerProfile?.status || 'available',
+        name: m.user.name || 'Player',
+        position: m.user.position || 'MF',
+        status: 'available',
         avatar: m.user.avatar,
       })) as Player[];
   }, [squadData]);
@@ -83,12 +95,21 @@ export default function MatchPreviewPage() {
     return formationPositions.map((role) => {
       const candidates = players.filter(p => !assigned.has(p.id));
       // Simple auto-assign based on position match
-      const rolePos = getRolePosition(role);
+      const rolePos = getRolePosition(role.role);
       const best = candidates.find(p => p.position === rolePos) || candidates[0];
       if (best) assigned.add(best.id);
       return best?.id || '';
     });
   }, [players, selectedFormation]);
+
+// Helper to map tactical role to player position
+function getRolePosition(role: string): string {
+  if (['GK'].includes(role)) return 'GK';
+  if (['LB', 'RB', 'CB', 'LWB', 'RWB'].includes(role)) return 'DF';
+  if (['CM', 'CDM', 'CAM', 'LM', 'RM'].includes(role)) return 'MF';
+  if (['ST', 'LW', 'RW'].includes(role)) return 'FW';
+  return 'MF';
+}
 
   // Calculate days until match (mock for now)
   const daysUntil = useMemo(() => {
