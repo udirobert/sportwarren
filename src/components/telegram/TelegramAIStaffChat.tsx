@@ -259,6 +259,7 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
             <button
               key={staff.id}
               onClick={() => handleSelectStaff(staff)}
+              aria-label={`Chat with ${staff.name}, ${staff.role}`}
               className="group w-full rounded-2xl border border-white/5 bg-white/[0.03] p-4 text-left transition-all active:scale-[0.98] hover:bg-white/[0.06] hover:border-white/10"
             >
               <div className="flex items-center gap-3">
@@ -294,7 +295,8 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
             window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
             setSelectedStaff(null);
           }}
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+          aria-label="Back to staff selection"
+          className="flex h-11 w-11 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
@@ -312,7 +314,7 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3" role="log" aria-label="Chat messages" aria-live="polite">
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -392,6 +394,7 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
                   setInputText(suggestion);
                   setTimeout(() => inputRef.current?.focus(), 50);
                 }}
+                aria-label={`Use suggestion: ${suggestion}`}
                 className="shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] text-slate-300 transition hover:bg-white/10 hover:text-white active:scale-95"
               >
                 {suggestion}
@@ -414,6 +417,7 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyDown={handleKeyDown}
+            aria-label={`Message to ${selectedStaff.name}`}
             placeholder={`Ask ${selectedStaff.name}...`}
             disabled={sending}
             maxLength={500}
@@ -424,6 +428,7 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
             <button
               onClick={handleSend}
               disabled={!inputText.trim() || sending}
+              aria-label={sending ? "Sending message" : "Send message"}
               className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500 text-white transition hover:bg-purple-400 active:scale-95 disabled:bg-white/5 disabled:text-slate-600"
             >
               {sending ? (

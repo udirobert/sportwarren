@@ -51,6 +51,8 @@ export const MARCUS_JOHNSON: PlayerAttributes = {
   totalGoals: 38,
   totalAssists: 24,
   reputationScore: 850,
+  scoutXP: 120,
+  scoutTier: 'trusted',
   verifiedStats: true,
   skills: DEFAULT_SKILL_RATINGS,
   form: DEFAULT_FORM_RATING,

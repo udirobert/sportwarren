@@ -13,13 +13,13 @@ import { buildTelegramShareUrl } from "@/lib/telegram/deep-links";
 
 export default function PublicMatchPage() {
     const params = useParams();
-    const slug = params?.slug as string;
+    const id = params?.id as string;
     const { isGuest, hasAccount } = useWallet();
     const [copied, setCopied] = useState(false);
 
-    const { data: match, isLoading, error } = trpc.match.getBySlug.useQuery(
-        { slug },
-        { enabled: !!slug }
+    const { data: match, isLoading, error } = trpc.match.getById.useQuery(
+        { id },
+        { enabled: !!id }
     );
 
     const handleCopyLink = async () => {

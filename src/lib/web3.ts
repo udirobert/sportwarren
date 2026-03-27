@@ -1,4 +1,5 @@
-import { createConfig, http } from '@privy-io/wagmi';
+import { createConfig } from '@privy-io/wagmi';
+import { http } from 'wagmi';
 import { polygon, polygonAmoy } from 'viem/chains';
 
 export const config = createConfig({

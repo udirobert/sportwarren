@@ -7,7 +7,6 @@ import { usePlayerForm } from '@/hooks/player/usePlayerForm';
 import { AttributeProgress, AttributesSummary } from './AttributeProgress';
 import { FormIndicator, FormBadge } from './FormIndicator';
 import type { PlayerAttributes as PlayerReputationData } from '@/types';
-import { Badge } from '@/components/ui/badge';
 
 interface PlayerReputationProps {
   attributes: PlayerReputationData | null;
@@ -79,10 +78,10 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
                   Rep: {attributes.reputationScore.toLocaleString()}
                 </span>
                 <FormBadge form={form.value} size="sm" />
-                <Badge variant="outline" className="flex items-center gap-1 bg-indigo-50 text-indigo-700 border-indigo-200">
+                <span className="inline-flex items-center gap-1 rounded-md border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">
                   <Search className="w-3 h-3" />
                   Scout: {attributes.scoutTier.toUpperCase()}
-                </Badge>
+                </span>
               </div>
             </div>
           </div>

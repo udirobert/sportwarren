@@ -1796,7 +1796,9 @@ export class TelegramService {
   }
 
   public async sendPeerRatingPrompt(chatId: string | number, matchId: string, squadName: string): Promise<void> {
-    const url = buildTelegramMiniAppUrl(`match_${matchId}_rate`);
+    const url = buildTelegramMiniAppUrl({ mode: `match_${matchId}_rate` });
+    if (!url) return;
+
     await this.bot.sendMessage(
       chatId,
       [
@@ -1824,7 +1826,9 @@ export class TelegramService {
   }
 
   public async sendConsensusResults(chatId: string | number, matchId: string, squadName: string): Promise<void> {
-    const url = buildTelegramMiniAppUrl(`match_${matchId}`);
+    const url = buildTelegramMiniAppUrl({ mode: `match_${matchId}` });
+    if (!url) return;
+
     await this.bot.sendMessage(
       chatId,
       [

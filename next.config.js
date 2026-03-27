@@ -55,6 +55,12 @@ const sentryWebpackPluginOptions = {
   silent: true,
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
+  disableLogger: true,
+  hideSourceMaps: true,
 };
 
-export default withSentryConfig(nextConfig, sentryWebpackPluginOptions);
+const finalConfig = process.env.DISABLE_SENTRY_BUILD === 'true' 
+  ? nextConfig 
+  : withSentryConfig(nextConfig, sentryWebpackPluginOptions);
+
+export default finalConfig;

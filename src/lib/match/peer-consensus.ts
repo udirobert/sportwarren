@@ -19,9 +19,33 @@ export async function calculateConsensus(prisma: PrismaClient, matchId: string) 
     include: {
       peerRatings: true,
       motmVotes: true,
-      homeSquad: { include: { members: { include: { user: { include: { playerProfile: true } } } }, squadGroups: { where: { platform: 'telegram' } } } },
-      awaySquad: { include: { members: { include: { user: { include: { playerProfile: true } } } }, squadGroups: { where: { platform: 'telegram' } } } },
-    },
+      homeSquad: {
+        include: {
+          members: {
+            include: {
+              user: {
+                include: {
+                  playerProfile: true
+                }
+              }
+            }
+          }
+        }
+      },
+      awaySquad: {
+        include: {
+          members: {
+            include: {
+              user: {
+                include: {
+                  playerProfile: true
+                }
+              }
+            }
+          }
+        }
+      }
+    }
   });
 
   if (!match) throw new Error('Match not found');
@@ -114,7 +138,7 @@ export async function calculateConsensus(prisma: PrismaClient, matchId: string) 
       }
 
       // Record MOTM XP Gain
-      await prisma.xpGain.create({
+      await prisma.xPGain.create({
         data: {
           profileId: player!.id,
           matchId,
@@ -139,7 +163,7 @@ export async function calculateConsensus(prisma: PrismaClient, matchId: string) 
         return acc;
       }, {} as any);
 
-      await prisma.xpGain.create({
+      await prisma.xPGain.create({
         data: {
           profileId: player!.id,
           matchId,
@@ -207,11 +231,22 @@ export async function calculateConsensus(prisma: PrismaClient, matchId: string) 
   });
 
   // 5. Notify results
-  const notifySquads = [match.homeSquad, match.awaySquad];
-  for (const squad of notifySquads) {
-    const tgGroup = squad.squadGroups[0];
-    if (tgGroup?.chatId) {
-      await telegramService.sendConsensusResults(tgGroup.chatId, matchId, squad.name);
+  const squadsToNotify = [
+    { id: match.homeSquadId, name: match.homeSquad.name },
+    { id: match.awaySquadId, name: match.awaySquad.name }
+  ];
+
+  for (const squadInfo of squadsToNotify) {
+    const squadWithGroups = await prisma.squad.findUnique({
+      where: { id: squadInfo.id },
+      include: { groups: { where: { platform: 'telegram' } } }
+    });
+
+    if (squadWithGroups?.groups && squadWithGroups.groups.length > 0) {
+      const tgGroup = squadWithGroups.groups[0];
+      if (tgGroup?.chatId) {
+        await telegramService.sendConsensusResults(tgGroup.chatId, matchId, squadInfo.name);
+      }
     }
   }
 

@@ -123,6 +123,8 @@ export function buildPlayerAttributesSnapshot(record: MarketPlayerRecord): Playe
     totalGoals: record.playerProfile.totalGoals,
     totalAssists: record.playerProfile.totalAssists,
     reputationScore: record.playerProfile.reputationScore,
+    scoutXP: record.playerProfile.scoutXP,
+    scoutTier: record.playerProfile.scoutTier as "rookie" | "trusted" | "elite",
     verifiedStats: true,
     skills,
     form: buildPlayerFormSnapshot(formEntries),

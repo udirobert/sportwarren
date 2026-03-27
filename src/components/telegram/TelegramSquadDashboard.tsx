@@ -36,14 +36,19 @@ function FormResult({ result, index }: { result: string; index: number }) {
     L: 'bg-rose-500 text-white',
   };
 
+  const labels: Record<string, string> = { W: 'Win', D: 'Draw', L: 'Loss' };
+  const label = labels[result] || result;
+
   return (
     <div
       className={`flex h-7 w-7 items-center justify-center rounded-lg text-xs font-bold ${
         colors[result as keyof typeof colors] || 'bg-slate-600 text-slate-300'
       }`}
       style={{ animationDelay: `${index * 50}ms` }}
+      aria-label={label}
     >
       {result}
+      <span className="sr-only">{label}</span>
     </div>
   );
 }
@@ -224,7 +229,14 @@ export function TelegramSquadDashboard({ context, onNavigate }: TelegramSquadDas
 
           {/* Form Percentage Bar */}
           <div className="mt-4">
-            <div className="h-1.5 overflow-hidden rounded-full bg-slate-700">
+            <div
+              className="h-1.5 overflow-hidden rounded-full bg-slate-700"
+              role="progressbar"
+              aria-valuenow={formStats.percentage}
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-label="Form points rate"
+            >
               <div
                 className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all duration-500"
                 style={{ width: `${formStats.percentage}%` }}
@@ -243,6 +255,7 @@ export function TelegramSquadDashboard({ context, onNavigate }: TelegramSquadDas
         <button
           onClick={() => onNavigate?.('match')}
           className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-900/30 to-slate-900/50 p-4 text-left transition hover:border-cyan-400/30"
+          aria-label="Next match details"
         >
           <div className="absolute right-2 top-2 opacity-0 transition group-hover:opacity-100">
             <ChevronRight className="h-4 w-4 text-cyan-400" />
@@ -274,6 +287,7 @@ export function TelegramSquadDashboard({ context, onNavigate }: TelegramSquadDas
         <button
           onClick={() => onNavigate?.('treasury')}
           className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-amber-900/30 to-slate-900/50 p-4 text-left transition hover:border-amber-400/30"
+          aria-label="Treasury overview"
         >
           <div className="absolute right-2 top-2 opacity-0 transition group-hover:opacity-100">
             <ChevronRight className="h-4 w-4 text-amber-400" />
@@ -298,6 +312,7 @@ export function TelegramSquadDashboard({ context, onNavigate }: TelegramSquadDas
         <button
           onClick={() => onNavigate?.('profile')}
           className="group relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-900/30 to-slate-900/50 p-4 text-left transition hover:border-emerald-400/30"
+          aria-label="Your season stats"
         >
           <div className="absolute right-2 top-2 opacity-0 transition group-hover:opacity-100">
             <ChevronRight className="h-4 w-4 text-emerald-400" />
@@ -408,6 +423,7 @@ export function TelegramSquadDashboard({ context, onNavigate }: TelegramSquadDas
         <button
           onClick={() => onNavigate?.('match')}
           className="group flex w-full items-center gap-3 rounded-2xl border border-rose-500/20 bg-rose-500/5 p-4 text-left transition hover:border-rose-500/40"
+          aria-label={`${matches.pending.length} match${matches.pending.length > 1 ? 'es' : ''} need verification`}
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-500/10">
             <Shield className="h-5 w-5 text-rose-400" />
