@@ -118,6 +118,7 @@ export interface MiniAppContext {
       keyThreats: string[];
       keyOpportunities: string[];
       tacticalInsight: string;
+      intelLevel: number;
       winProbability: {
         home: number;
         away: number;
