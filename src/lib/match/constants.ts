@@ -160,3 +160,34 @@ export const STYLE_MODIFIERS: Record<PlayStyle, Partial<Record<AttributeType, nu
     pace: 0.8,
   },
 };
+
+// ============================================================================
+// PEER RATINGS & MOTM
+// ============================================================================
+
+export const PEER_RATING = {
+  WINDOW_HOURS: 24,
+  MIN_QUORUM: 3,
+  TEAMMATES_TO_RATE: 3,
+  ATTRIBUTES_PER_TEAMMATE: 2,
+  XP_MULTIPLIER: 3,
+  MAX_PEER_XP_RATIO: 0.25,
+
+  SCOUT_XP: {
+    ACCURATE: 5,
+    NEUTRAL_RANGE: 2,
+    OUTLIER_PENALTY: -3,
+  },
+
+  SCOUT_TIERS: {
+    ROOKIE:  { minXP: 0,   weight: 1.0,  label: 'Rookie Scout' },
+    TRUSTED: { minXP: 50,  weight: 1.15, label: 'Trusted Scout' },
+    ELITE:   { minXP: 150, weight: 1.25, label: 'Elite Scout' },
+  },
+
+  NEGATIVE_WEIGHT: 0.75,
+} as const;
+
+export const MOTM = {
+  XP_BONUS: 15,
+} as const;

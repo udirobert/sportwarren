@@ -68,6 +68,10 @@ model PlayerProfile {
   // Reputation
   reputationScore Int @default(100) @map("reputation_score")
 
+  // Scout (Peer Rating)
+  scoutXP   Int    @default(0) @map("scout_xp")
+  scoutTier String @default("rookie") @map("scout_tier") // rookie, trusted, elite
+
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -77,6 +81,10 @@ model PlayerProfile {
   matchStats  PlayerMatchStats[]
   formHistory FormEntry[]
   activities  PhysicalActivity[]
+  ratingsGiven    PeerRating[] @relation("RatingGiven")
+  ratingsReceived PeerRating[] @relation("RatingReceived")
+  motmVotesGiven    MotmVote[] @relation("MotmVoteGiven")
+  motmVotesReceived MotmVote[] @relation("MotmVoteReceived")
 
   @@map("player_profiles")
 }
@@ -499,12 +507,65 @@ model Match {
   yellowFeeSessionId String? @map("yellow_fee_session_id")
   yellowFeeSettledAt DateTime? @map("yellow_fee_settled_at")
 
+  // Peer Rating Window
+  peerRatingsClosed  Boolean   @default(false) @map("peer_ratings_closed")
+  peerRatingsCloseAt DateTime? @map("peer_ratings_close_at")
+
   // Relations
   verifications MatchVerification[]
   playerStats   PlayerMatchStats[]
   xpGains       XPGain[]
+  peerRatings   PeerRating[]
+  motmVotes     MotmVote[]
 
   @@map("matches")
+}
+
+// ============================================================================
+// PEER RATINGS & MOTM
+// ============================================================================
+
+model PeerRating {
+  id String @id @default(cuid())
+
+  matchId String @map("match_id")
+  match   Match  @relation(fields: [matchId], references: [id])
+
+  raterId String        @map("rater_id")
+  rater   PlayerProfile @relation("RatingGiven", fields: [raterId], references: [id])
+
+  targetId String        @map("target_id")
+  target   PlayerProfile @relation("RatingReceived", fields: [targetId], references: [id])
+
+  attribute String // "pace", "shooting", "passing", "dribbling", "defending", "physical"
+  score     Int    // 1-10
+
+  // Consensus result (populated after window closes)
+  deviation Int? // How far this rating was from the median
+  scoutXP   Int? @map("scout_xp") // XP earned/lost for this rating
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([matchId, raterId, targetId, attribute])
+  @@map("peer_ratings")
+}
+
+model MotmVote {
+  id String @id @default(cuid())
+
+  matchId String @map("match_id")
+  match   Match  @relation(fields: [matchId], references: [id])
+
+  voterId String        @map("voter_id")
+  voter   PlayerProfile @relation("MotmVoteGiven", fields: [voterId], references: [id])
+
+  targetId String        @map("target_id")
+  target   PlayerProfile @relation("MotmVoteReceived", fields: [targetId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([matchId, voterId])
+  @@map("motm_votes")
 }
 
 model MatchVerification {
