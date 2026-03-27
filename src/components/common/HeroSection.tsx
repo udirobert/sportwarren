@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Trophy, Zap, Users, Target, TrendingUp, Sparkles, ArrowRight, Play, AlertCircle, CheckCircle2, Cpu, Ghost, TrendingDown, HelpCircle, Dumbbell, Shield, Timer } from 'lucide-react';
+import { Trophy, Zap, Users, Target, TrendingUp, Sparkles, ArrowRight, AlertCircle, CheckCircle2, Cpu, Ghost, TrendingDown, HelpCircle, Timer } from 'lucide-react';
 import Link from 'next/link';
 import { useWallet } from '@/contexts/WalletContext';
 import { getJourneyContent } from '@/lib/journey/content';

@@ -15,12 +15,10 @@ import {
   ArrowRight,
   Share2,
   Download,
-  Clock,
   Shield,
   Sword
 } from 'lucide-react';
 import type { Formation, Player } from '@/types';
-import { PLAY_STYLE_LABELS } from '@/lib/formations';
 
 interface MatchPreviewCardProps {
   /** Home squad name */
@@ -290,6 +288,53 @@ export const MatchPreviewCard: React.FC<MatchPreviewCardProps> = ({
               <div>
                 <h5 className="text-sm font-bold text-blue-900 dark:text-blue-100">Tactical Insight</h5>
                 <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">{tacticalInsight}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Scouting Report */}
+      {(scoutingReport || keyThreats.length > 0 || keyOpportunities.length > 0) && (
+        <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800">
+          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+            <div className="flex items-start gap-3">
+              <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                <Users className="w-4 h-4 text-white" />
+              </div>
+              <div className="flex-1">
+                <h5 className="text-sm font-bold text-amber-900 dark:text-amber-100">Scouting Report</h5>
+                {scoutingReport && (
+                  <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">{scoutingReport}</p>
+                )}
+                
+                {keyThreats.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wider mb-1">Key Threats</p>
+                    <ul className="space-y-1">
+                      {keyThreats.map((threat, idx) => (
+                        <li key={idx} className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                          <Sword className="w-3 h-3 text-red-500 mt-0.5 flex-shrink-0" />
+                          {threat}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {keyOpportunities.length > 0 && (
+                  <div className="mt-3">
+                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wider mb-1">Key Opportunities</p>
+                    <ul className="space-y-1">
+                      {keyOpportunities.map((opp, idx) => (
+                        <li key={idx} className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                          <Target className="w-3 h-3 text-green-500 mt-0.5 flex-shrink-0" />
+                          {opp}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
             </div>
           </div>

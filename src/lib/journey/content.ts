@@ -248,11 +248,11 @@ export function getJourneyContent(
         },
         personalization: {
           eyebrow: 'Preview Setup',
-          title: 'What would make this worth coming back to?',
-          description: 'Pick the role and first wins that would convince you this should become your real weekly workflow.',
-          interestsTitle: 'What should we optimize first?',
-          interestsDescription: 'Choose the moments that would make the product feel sticky from week one.',
-          completeLabel: 'Shape My Preview',
+          title: 'How will your squad win?',
+          description: 'Pick your formation and branding to see how your squad will look on match day.',
+          interestsTitle: 'Set Your Formation',
+          interestsDescription: 'Choose your tactical starting point. You can change this anytime.',
+          completeLabel: 'Brand My Squad',
         },
         checklist: {
           eyebrow: 'Preview Goals',
@@ -299,11 +299,11 @@ export function getJourneyContent(
         },
         personalization: {
           eyebrow: 'Season Kickoff',
-          title: 'How do you want to win first?',
-          description: 'Set the role and first outcomes that should make the product immediately useful after your first match.',
-          interestsTitle: 'What should Marcus optimize first?',
-          interestsDescription: 'Choose the actions that would make you come back next week.',
-          completeLabel: 'Set Up My Kickoff',
+          title: 'How will your squad win?',
+          description: 'Pick your formation and branding to see how your squad will look on match day.',
+          interestsTitle: 'Set Your Formation',
+          interestsDescription: 'Choose your tactical starting point. You can change this anytime.',
+          completeLabel: 'Brand My Squad',
         },
         checklist: {
           eyebrow: 'First Wins',

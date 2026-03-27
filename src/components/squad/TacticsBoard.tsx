@@ -8,7 +8,7 @@ import {
   Users, Target, Shield, Zap, MapPin, 
   Save, RotateCcw 
 } from 'lucide-react';
-import type { Tactics, Formation, PlayStyle, TeamInstructions, Player, PlayerPosition } from '@/types';
+import type { Tactics, Formation, PlayStyle, TeamInstructions, Player } from '@/types';
 import { POSITION_COLORS, POSITION_NAMES } from '@/lib/utils';
 import { 
   FORMATIONS, 
@@ -32,12 +32,6 @@ interface TacticsBoardProps {
   readOnly?: boolean;
 }
 
-const getStatusScore = (status: Player['status']) => {
-  if (status === 'available') return 3;
-  if (status === 'injured') return -2;
-  if (status === 'suspended') return -3;
-  return -1;
-};
 
 export const TacticsBoard: React.FC<TacticsBoardProps> = ({
   players,

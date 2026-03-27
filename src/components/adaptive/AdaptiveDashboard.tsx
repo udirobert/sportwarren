@@ -7,7 +7,7 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2, CheckCircle2, ArrowRight, Smartphone, ExternalLink, ChevronDown, Check } from 'lucide-react';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2, CheckCircle2, ArrowRight, Smartphone, ExternalLink, ChevronDown, Check, Activity } from 'lucide-react';
 import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
 import { AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
@@ -193,6 +193,20 @@ export const AdaptiveDashboard: React.FC = () => {
 
     widgets.push(
       {
+        id: 'match-engine',
+        priority: 500, // Top priority
+        requiredLevel: 'basic' as const,
+        category: 'matches' as const,
+        component: (
+          <div onClick={() => completeChecklistItem('view_match_engine')}>
+            <MatchEnginePreview 
+              squadId={primarySquadId} 
+              formation={squadTactics?.formation}
+            />
+          </div>
+        ),
+      },
+      {
       id: 'pending-actions',
       priority: 170,
       requiredLevel: 'basic',
@@ -346,14 +360,8 @@ export const AdaptiveDashboard: React.FC = () => {
               )}
             </div>
             <div className="flex items-center gap-2">
-              <Link href="/squad?tab=tactics">
-                <Button size="sm" variant="outline">Customize Lineup</Button>
-              </Link>
-              <Link href="/match?mode=verify">
-                <Button size="sm" variant="outline">Review</Button>
-              </Link>
-              <Link href="/match?mode=capture">
-                <Button size="sm">Log Result</Button>
+              <Link href="/match">
+                <Button size="sm">Match Center</Button>
               </Link>
             </div>
           </div>
@@ -402,13 +410,20 @@ export const AdaptiveDashboard: React.FC = () => {
               })}
             </div>
           ) : (
-            <EmptyState
-              icon={Trophy}
-              title={matchesZeroState.title}
-              description={matchesZeroState.description}
-              actionLabel={matchesZeroState.actionLabel}
-              actionHref={matchesZeroState.actionHref}
-            />
+            <div className="space-y-4">
+              <EmptyState
+                icon={Trophy}
+                title={matchesZeroState.title}
+                description={matchesZeroState.description}
+                actionLabel={matchesZeroState.actionLabel}
+                actionHref={matchesZeroState.actionHref}
+              />
+              <div className="flex justify-center">
+                <Link href="/match?mode=capture">
+                  <Button variant="outline" size="sm">Log your first result</Button>
+                </Link>
+              </div>
+            </div>
           )}
         </Card>
       ),
@@ -520,20 +535,6 @@ export const AdaptiveDashboard: React.FC = () => {
       ),
       },
       {
-        id: 'match-engine',
-        priority: 250,
-        requiredLevel: 'basic' as const,
-        category: 'matches' as const,
-        component: (
-          <div onClick={() => completeChecklistItem('view_match_engine')}>
-            <MatchEnginePreview 
-              squadId={primarySquadId} 
-              formation={squadTactics?.formation}
-            />
-          </div>
-        ),
-      },
-      {
       id: 'squad-dynamics',
       priority: 89,
       requiredLevel: 'basic',
@@ -549,43 +550,62 @@ export const AdaptiveDashboard: React.FC = () => {
       },
       {
         id: 'upcoming-fixtures',
-        priority: 240,
+        priority: 450, // Higher priority than stats
         requiredLevel: 'basic',
         category: 'matches',
         component: (
-          <Card className="border-emerald-200 bg-emerald-50/50">
+          <Card className="border-emerald-200 bg-gradient-to-br from-emerald-50 to-green-50/50 overflow-hidden shadow-lg shadow-emerald-500/10">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">Next Match</h2>
-              <Link href="/squad?tab=tactics" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
-                Customize →
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-emerald-600" />
+                <h2 className="text-lg font-bold text-gray-900">Next Match</h2>
+              </div>
+              <Link href="/match" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+                Full Schedule →
               </Link>
             </div>
-          {stats && stats.recentMatches && stats.recentMatches.length > 0 ? (
-            <div className="border border-gray-200 rounded-lg p-4">
-              <h3 className="font-semibold text-gray-900 mb-2">vs {stats.recentMatches[0]?.opponent || 'TBD'}</h3>
-              <div className="flex items-center space-x-4 text-sm text-gray-600">
-                <div className="flex items-center space-x-1">
-                  <Calendar className="w-4 h-4" />
-                  <span>{stats.recentMatches[0]?.date || 'TBD'}</span>
+            {stats && stats.recentMatches && stats.recentMatches.length > 0 ? (
+              <div className="rounded-xl border border-emerald-200 bg-white p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-1">Upcoming Fixture</p>
+                    <h3 className="text-xl font-black text-gray-900">vs {stats.recentMatches[0]?.opponent || 'TBD'}</h3>
+                    <div className="flex items-center gap-1 mt-2 text-sm text-gray-600">
+                      <Calendar className="w-4 h-4" />
+                      <span>{stats.recentMatches[0]?.date || 'TBD'}</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Link href="/squad?tab=tactics">
+                      <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
+                        <Users className="w-3.5 h-3.5 mr-1.5" />
+                        Customize Lineup
+                      </Button>
+                    </Link>
+                    <Link href="/squad?tab=tactics">
+                      <Button size="sm" variant="outline" className="font-bold border-2">
+                        Preview Match
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <EmptyState
-              icon={Calendar}
-              title={nextMatchZeroState.title}
-              description={nextMatchZeroState.description}
-              actionLabel={nextMatchZeroState.actionLabel}
-              actionHref={nextMatchZeroState.actionHref}
-            />
-          )}
-        </Card>
-      ),
+            ) : (
+              <EmptyState
+                icon={Calendar}
+                title={nextMatchZeroState.title}
+                description={nextMatchZeroState.description}
+                actionLabel={nextMatchZeroState.actionLabel}
+                actionHref={nextMatchZeroState.actionHref}
+              />
+            )}
+          </Card>
+        ),
       },
     );
 
     return widgets;
-  }, [allChecklistDone, completeChecklistItem, currentUserId, dataState, entryState.id, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, stats, trackFeatureUsage]);
+  }, [allChecklistDone, completeChecklistItem, currentUserId, dataState, entryState.id, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, squadTactics?.formation, stats, trackFeatureUsage]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {
@@ -604,8 +624,8 @@ export const AdaptiveDashboard: React.FC = () => {
     // For new users, show only essential widgets
     const isNewUser = preferences.featureDiscoveryLevel < 10 && preferences.dashboardLayout === 'minimal';
     const essentialWidgets = isGuest
-      ? ['onboarding-checklist', 'quick-stats', 'recent-matches', 'staff-feed', 'lens-social', 'match-engine']
-      : ['onboarding-checklist', 'quick-stats', 'recent-matches', 'match-engine'];
+      ? ['onboarding-checklist', 'match-engine', 'upcoming-fixtures', 'quick-stats', 'recent-matches', 'staff-feed', 'lens-social']
+      : ['onboarding-checklist', 'match-engine', 'upcoming-fixtures', 'quick-stats', 'recent-matches'];
 
     return allWidgets
       .filter(widget => {
@@ -1053,9 +1073,9 @@ export const AdaptiveDashboard: React.FC = () => {
       </AnimatePresence>
 
       {(() => {
-        const todayIds = ['onboarding-checklist', 'pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine', 'quick-stats', 'achievements'];
+        const todayIds = ['onboarding-checklist', 'pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine', 'quick-stats', 'achievements', 'upcoming-fixtures'];
         const squadIds = ['governance', 'squad-dynamics', 'captains-log', 'communication-hub'];
-        const progressIds = ['training', 'scouting-report', 'lens-social', 'nearby-squads', 'territory', 'upcoming-fixtures'];
+        const progressIds = ['training', 'scouting-report', 'lens-social', 'nearby-squads', 'territory'];
 
         const todayWidgets = visibleWidgets.filter(w => todayIds.includes(w.id));
         const squadWidgets = visibleWidgets.filter(w => squadIds.includes(w.id));
@@ -1064,8 +1084,11 @@ export const AdaptiveDashboard: React.FC = () => {
 
         const sectionLayouts: Record<string, Record<string, string>> = {
           Today: {
+            'match-engine': 'md:col-span-12',
+            'upcoming-fixtures': 'md:col-span-12',
             'pending-actions': 'md:col-span-12 lg:col-span-5 xl:col-span-4',
             'recent-matches': 'md:col-span-12 lg:col-span-7 xl:col-span-8',
+            'quick-stats': 'md:col-span-12',
             'event-feed': 'md:col-span-12 lg:col-span-6',
             'staff-feed': 'md:col-span-12 lg:col-span-6',
             'achievements': 'md:col-span-12 lg:col-span-6',
@@ -1079,7 +1102,6 @@ export const AdaptiveDashboard: React.FC = () => {
           Progress: {
             'training': 'md:col-span-12 lg:col-span-6',
             'scouting-report': 'md:col-span-12 lg:col-span-6',
-            'upcoming-fixtures': 'md:col-span-12 lg:col-span-6',
             'lens-social': 'md:col-span-12 lg:col-span-6',
             'nearby-squads': 'md:col-span-12 lg:col-span-6',
             'territory': 'md:col-span-12',
@@ -1087,7 +1109,7 @@ export const AdaptiveDashboard: React.FC = () => {
         };
 
         const featuredBySection: Record<string, string[]> = {
-          Today: ['onboarding-checklist', 'quick-stats', 'match-engine'],
+          Today: ['onboarding-checklist', 'match-engine', 'upcoming-fixtures'],
           Squad: [],
           Progress: [],
         };
@@ -1165,21 +1187,21 @@ export const AdaptiveDashboard: React.FC = () => {
 
       {/* Floating Action Button — primary action on mobile */}
       <Link
-        href="/match?mode=capture"
-        className="fixed bottom-6 left-6 z-50 md:hidden bg-green-600 hover:bg-green-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl shadow-green-600/40 transition-all active:scale-95"
-        aria-label="Log a match"
+        href="/squad?tab=tactics"
+        className="fixed bottom-6 left-6 z-50 md:hidden bg-emerald-600 hover:bg-emerald-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl shadow-emerald-600/40 transition-all active:scale-95"
+        aria-label="Set up your lineup"
       >
-        <Plus className="w-6 h-6" />
+        <Users className="w-6 h-6" />
       </Link>
 
       {/* Desktop right sidebar quick-actions strip — always visible */}
       <div className="hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 z-40 flex-col gap-2 pr-2">
         <Link
-          href="/match?mode=capture"
-          className="group flex flex-col items-center gap-1 bg-green-600 hover:bg-green-700 text-white rounded-l-xl px-3 py-3 shadow-lg shadow-green-600/30 transition-all"
-          title="Log a Match"
+          href="/match"
+          className="group flex flex-col items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-l-xl px-3 py-3 shadow-lg shadow-emerald-600/30 transition-all"
+          title="Match Center"
         >
-          <Plus className="w-5 h-5" />
+          <Activity className="w-5 h-5" />
           <span className="text-[9px] font-black uppercase tracking-widest leading-none">Match</span>
         </Link>
         <Link

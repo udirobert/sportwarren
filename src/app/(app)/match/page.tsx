@@ -37,7 +37,6 @@ import { useJourneyState } from "@/hooks/useJourneyState";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { trackCoreGrowthEvent, trackFeatureUsed, trackMatchSubmission } from "@/lib/analytics";
 import { useCurrentPlayerAttributes } from "@/hooks/player/usePlayerAttributes";
-import { useTactics } from "@/hooks/squad/useTactics";
 
 type ViewMode = "capture" | "verify" | "detail" | "xp-summary" | "history";
 type XPResultState = "idle" | "pending" | "available";
@@ -59,7 +58,6 @@ export default function MatchPage() {
   const activeMembership = memberships[0];
   const activeSquad = activeMembership?.squad;
   const activeSquadId = activeSquad?.id;
-  const { tactics: squadTactics } = useTactics(activeSquadId || undefined);
   const isSquadLeader = activeMembership?.role === "captain" || activeMembership?.role === "vice_captain";
   const matchCenterGate = getJourneyActionGate('match_center', {
     stage: journeyStage,
@@ -130,8 +128,8 @@ export default function MatchPage() {
       return;
     }
 
-    setViewMode(pendingMatches.length > 0 ? "verify" : "capture");
-  }, [pendingMatches.length, requestedMatchId, requestedMode]);
+    setViewMode(pendingMatches.length > 0 ? "verify" : settledMatches.length > 0 ? "history" : "capture");
+  }, [pendingMatches.length, settledMatches.length, requestedMatchId, requestedMode]);
 
   useEffect(() => {
     if (!selectedOpponentId && availableOpponents[0]?.id) {
@@ -321,21 +319,18 @@ export default function MatchPage() {
             <div className="section-kicker mb-3 bg-white/80 dark:bg-gray-800/80 text-emerald-700">
               Match Day
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Prepare for Match</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Match Preview</h1>
             <p className="mt-2 max-w-2xl text-gray-600">
-              Set your tactics, review your lineup, or log your result after the game.
+              Review tactics, scouting reports, and upcoming fixtures before you hit the pitch.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/squad?tab=tactics">
-              <Button variant="outline">Set Tactics</Button>
+              <Button>Customize Lineup</Button>
             </Link>
-            <Link href="/squad">
-              <Button variant="outline">Back to Squad</Button>
+            <Link href="/match/preview/next">
+              <Button variant="outline">Tactical Preview</Button>
             </Link>
-            <Button onClick={() => (pendingMatches.length > 0 ? openVerificationQueue() : setViewMode("capture"))}>
-              {pendingMatches.length > 0 ? "Review Reports" : "Log Result"}
-            </Button>
           </div>
         </div>
       </div>
@@ -373,9 +368,9 @@ export default function MatchPage() {
       <div className="sticky top-0 z-10 -mx-4 px-4 py-2 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-700 md:static md:mx-0 md:px-0 md:py-0 md:bg-transparent md:backdrop-blur-none md:border-0">
         <div className="flex flex-wrap gap-2 rounded-2xl bg-gray-100 p-1">
         {[
-          { key: "verify", label: `Verify (${pendingMatches.length})`, icon: Shield },
-          { key: "capture", label: "Log Result", icon: Activity },
+          { key: "verify", label: `Review (${pendingMatches.length})`, icon: Shield },
           { key: "history", label: `History (${settledMatches.length})`, icon: Trophy },
+          { key: "capture", label: "Submit Result", icon: Activity },
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -397,7 +392,7 @@ export default function MatchPage() {
         </div>
       </div>
 
-      {/* Season kickoff path: tactics -> play -> verify -> save */}
+      {/* Season kickoff path: submit -> share -> save */}
       {!(firstMatchSubmitted && verificationInviteShared && identityConnected) && (
         <Card className="border-emerald-200 bg-emerald-50/80 py-4">
           <div className="flex items-start gap-3">
@@ -409,7 +404,7 @@ export default function MatchPage() {
               </p>
               <div className="mt-3 space-y-2">
                 {[
-                  { label: "Set your formation", done: squadTactics?.formation != null },
+                  { label: "Set your formation", done: false },
                   { label: "Log your first match result", done: firstMatchSubmitted },
                   { label: "Verify with opponent", done: verificationInviteShared },
                   { label: "Save your progress", done: identityConnected },
@@ -421,12 +416,10 @@ export default function MatchPage() {
                 ))}
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                {!squadTactics?.formation && (
-                  <Link href="/squad?tab=tactics">
-                    <Button size="sm">Set your formation</Button>
-                  </Link>
-                )}
-                {squadTactics?.formation && !firstMatchSubmitted && (
+                <Link href="/squad?tab=tactics">
+                  <Button size="sm">Set your formation</Button>
+                </Link>
+                {!firstMatchSubmitted && (
                   <Button size="sm" onClick={() => setViewMode("capture")}>Log first match</Button>
                 )}
                 {firstMatchSubmitted && !verificationInviteShared && (
