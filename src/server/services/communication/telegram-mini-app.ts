@@ -23,7 +23,7 @@ import {
   getMatchXPSummariesForProfile,
 } from "../match-xp";
 
-import { maskMatchIntel } from "../../lib/match/intel-disclosure";
+import { maskMatchIntel } from "@/lib/match/intel-disclosure";
 
 const TON_TOP_UP_PRESETS = [1, 2, 5, 10];
 
@@ -125,6 +125,7 @@ export interface TelegramMiniAppContext {
       keyThreats: string[];
       keyOpportunities: string[];
       tacticalInsight: string;
+      intelLevel: number;
       winProbability: {
         home: number;
         away: number;

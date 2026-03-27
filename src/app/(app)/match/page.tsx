@@ -511,7 +511,6 @@ export default function MatchPage() {
 
           <MatchEnginePreview 
             squadId={activeSquadId} 
-            playersPerSide={activeSquad?.playersPerSide || 7}
           />
         </div>
       )}
