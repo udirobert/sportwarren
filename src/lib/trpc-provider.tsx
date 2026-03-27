@@ -8,7 +8,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { AUTH_STORAGE_KEYS } from '@/lib/auth/constants';
 
 export function TRPCProvider({ children }: { children: React.ReactNode }) {
-  const { address, chain, hasWallet } = useWallet();
+  const { address, chain, walletAddress, hasWallet, authStatus } = useWallet();
 
   const [queryClient] = useState(() => new QueryClient({
     defaultOptions: {
@@ -56,7 +56,7 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
       ],
     }),
      
-    [address, chain, hasWallet]); // re-create when wallet identity changes
+    [address, chain, hasWallet, walletAddress, authStatus.state, authStatus.signedAt]); // re-create when wallet identity or auth state changes
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>

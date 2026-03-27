@@ -1,4 +1,4 @@
-export const SIGNATURE_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
+export const SIGNATURE_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export const AUTH_STORAGE_KEYS = {
   SIGNATURE: 'sw_auth_signature',
