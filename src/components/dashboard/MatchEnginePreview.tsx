@@ -11,16 +11,19 @@ import { useEnvironment } from '@/contexts/EnvironmentContext';
 
 import {
     SIM_PARAMS, COMMENTARY_PARAMS,
-    buildFormation, distanceBetween, resolveCollisions,
+    distanceBetween, resolveCollisions,
     tickPlayer, selectPassTarget, executePass,
     computeSupportOptions, determineBallState, tryGkSave,
     type PlayerPuck, type BallState, type MatchCommentary,
     type MatchEvent, type SupportOptions,
 } from '@/lib/match/matchEngine';
 
+import type { Formation } from '@/types';
+import { FORMATIONS } from '@/lib/formations';
+
 type MatchPhase = 'first_half' | 'halftime' | 'second_half' | 'fulltime';
 
-export const MatchEnginePreview: React.FC<{ squadId?: string; awaySquadId?: string; playersPerSide?: number; hasKeeper?: boolean }> = ({ squadId, awaySquadId, playersPerSide = 11, hasKeeper = true }) => {
+export const MatchEnginePreview: React.FC<{ squadId?: string; awaySquadId?: string; formation?: Formation; playersPerSide?: number; hasKeeper?: boolean }> = ({ squadId, awaySquadId, formation, playersPerSide = 11, hasKeeper = true }) => {
     // ── React state (rendering only) ──────────────────────────────────────────
     const [isPlaying, setIsPlaying] = useState(false);
     const [matchPhase, setMatchPhase] = useState<MatchPhase>('first_half');
@@ -606,6 +609,11 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; awaySquadId?: stri
     const { members, loading: membersLoading } = useSquadDetails(squadId);
     const { members: awayMembers, loading: awayMembersLoading } = useSquadDetails(awaySquadId);
 
+    // Reset initialization when formation changes
+    useEffect(() => {
+        playersInitialised.current = false;
+    }, [formation]);
+
     // Initialize players (runs once after members load)
     useEffect(() => {
         if (playersInitialised.current) return;
@@ -619,7 +627,10 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; awaySquadId?: stri
             cooldownUntil: 0,
         });
 
-        const homeFormation = buildFormation(playersPerSide, hasKeeper);
+        // Use saved tactics formation if provided, otherwise default to 4-4-2
+        const formationKey = formation || '4-4-2';
+        const formationData = FORMATIONS[formationKey] || FORMATIONS['4-4-2'];
+        const homeFormation: Array<[number, number, string]> = formationData.map((s) => [s.x, s.y, s.role]);
         const awayFormation = homeFormation.map(([x, y, role]) => [100 - x, y, role]) as Array<[number, number, string]>;
         const allNames = ['GK', 'Tunde', 'Kofi', 'Diallo', 'Eze', 'Yusuf', 'Marcus', 'Jamie', 'Kwame', 'Alex', 'Seun', 'Bayo', 'Chidi', 'Emeka', 'Femi', 'Gbenga'];
         const homeNames = allNames.slice(0, playersPerSide);
@@ -670,7 +681,7 @@ export const MatchEnginePreview: React.FC<{ squadId?: string; awaySquadId?: stri
             setLatestEvent(`${kickoffStarter.name} takes the kickoff.`);
         }
         playersInitialised.current = true;
-    }, [members, membersLoading, awayMembers, awayMembersLoading, playersPerSide, hasKeeper]);
+    }, [members, membersLoading, awayMembers, awayMembersLoading, formation, playersPerSide, hasKeeper]);
 
     // Game loop — interval is stable because movePlayers has no deps
     useEffect(() => {

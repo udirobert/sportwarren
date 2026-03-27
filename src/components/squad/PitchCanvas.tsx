@@ -1,0 +1,425 @@
+'use client';
+
+import React, { useRef, useCallback, useMemo } from 'react';
+import { Download, Share2 } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { exportElementAsImage } from '@/lib/utils/export';
+import { FORMATIONS, ROLE_LABELS } from '@/lib/formations';
+import type { Formation, Player, PlayerPosition } from '@/types';
+import { POSITION_COLORS } from '@/lib/utils';
+
+export interface PitchCanvasProps {
+  /** Formation to display */
+  formation: Formation;
+  /** Player IDs assigned to each position slot */
+  lineup: string[];
+  /** Player data for resolving names/avatars */
+  players: Player[];
+  /** Squad name for export filename */
+  squadName?: string;
+  /** Disable drag-and-drop interactions */
+  readOnly?: boolean;
+  /** Show export button */
+  showExport?: boolean;
+  /** Callback when lineup changes via drag-drop */
+  onLineupChange?: (lineup: string[]) => void;
+  /** Custom callback when export is triggered */
+  onExport?: (dataUrl: string) => void;
+  /** Additional CSS classes */
+  className?: string;
+  /** Visual size variant */
+  size?: 'sm' | 'md' | 'lg';
+  /** Optional title displayed above pitch */
+  title?: string;
+  /** Show player names below dots */
+  showPlayerNames?: boolean;
+}
+
+interface PlayerSlotData {
+  player?: Player;
+  role: string;
+  index: number;
+}
+
+const SIZE_CONFIG = {
+  sm: { container: 'pb-[50%]', dot: 'w-7 h-7', text: 'text-[8px]', nameText: 'text-[8px]' },
+  md: { container: 'pb-[65%]', dot: 'w-10 h-10', text: 'text-[10px]', nameText: 'text-xs' },
+  lg: { container: 'pb-[75%]', dot: 'w-12 h-12', text: 'text-xs', nameText: 'text-sm' },
+};
+
+/**
+ * PitchCanvas - Reusable pitch visualization component
+ * 
+ * Renders a football pitch with player positions based on formation.
+ * Supports avatars (with initials fallback), drag-and-drop, and image export.
+ * 
+ * Used by:
+ * - TacticsBoard (formation editor)
+ * - TelegramSquadDashboard (mini app preview)
+ * - MatchEnginePreview (match visualization)
+ */
+export const PitchCanvas: React.FC<PitchCanvasProps> = ({
+  formation,
+  lineup,
+  players,
+  squadName = 'lineup',
+  readOnly = false,
+  showExport = false,
+  onLineupChange,
+  onExport,
+  className = '',
+  size = 'md',
+  title,
+  showPlayerNames = false,
+}) => {
+  const pitchRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = React.useState(false);
+
+  const formationPositions = FORMATIONS[formation];
+  const playerById = useMemo(() => {
+    const map = new Map<string, Player>();
+    players.forEach((p) => map.set(p.id, p));
+    return map;
+  }, [players]);
+
+  const slots: PlayerSlotData[] = useMemo(() => {
+    return formationPositions.map((pos, idx) => ({
+      player: lineup[idx] ? playerById.get(lineup[idx]) : undefined,
+      role: pos.role,
+      index: idx,
+    }));
+  }, [formationPositions, lineup, playerById]);
+
+  const sizeConfig = SIZE_CONFIG[size];
+
+  /**
+   * Get display content for a player slot
+   * Priority: Avatar image → Initials → Role abbreviation
+   */
+  const getSlotDisplay = (slot: PlayerSlotData): { content: React.ReactNode; bgClass: string; borderClass: string } => {
+    if (slot.player) {
+      const initials = slot.player.name
+        .split(' ')
+        .map((p) => p[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase();
+
+      const hasAvatar = 'avatar' in slot.player && slot.player.avatar;
+
+      return {
+        content: hasAvatar ? (
+          <img
+            src={slot.player.avatar as string}
+            alt={slot.player.name}
+            className="w-full h-full rounded-full object-cover"
+          />
+        ) : (
+          <span className={`${sizeConfig.text} font-bold text-white`}>{initials}</span>
+        ),
+        bgClass: 'bg-gray-900',
+        borderClass: 'border-yellow-300',
+      };
+    }
+
+    return {
+      content: <span className={`${sizeConfig.text} font-bold text-green-700`}>{slot.role}</span>,
+      bgClass: 'bg-white',
+      borderClass: 'border-green-500',
+    };
+  };
+
+  /**
+   * Handle drag start from player list
+   */
+  const handlePlayerDragStart = (e: React.DragEvent, playerId: string) => {
+    if (readOnly) return;
+    e.dataTransfer.setData('application/sportwarren-player', JSON.stringify({ playerId }));
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  /**
+   * Handle drag start from an assigned slot (moving existing player)
+   */
+  const handleSlotDragStart = (e: React.DragEvent, slotIndex: number, playerId: string) => {
+    if (readOnly) return;
+    e.dataTransfer.setData(
+      'application/sportwarren-player',
+      JSON.stringify({ playerId, fromSlot: slotIndex })
+    );
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  /**
+   * Handle drop on a slot
+   */
+  const handleSlotDrop = useCallback(
+    (e: React.DragEvent, slotIndex: number) => {
+      if (readOnly || !onLineupChange) return;
+      e.preventDefault();
+
+      try {
+        const raw = e.dataTransfer.getData('application/sportwarren-player');
+        if (!raw) return;
+        const payload = JSON.parse(raw) as { playerId?: string; fromSlot?: number };
+
+        // Moving within slots - swap or clear source
+        if (payload.fromSlot !== undefined && payload.fromSlot === slotIndex) {
+          return; // Dropped on same slot
+        }
+
+        const newLineup = [...lineup];
+
+        // If coming from another slot, clear that slot
+        if (payload.fromSlot !== undefined) {
+          newLineup[payload.fromSlot] = '';
+        }
+
+        // If target slot has a player and we're dragging from another slot, swap
+        const targetPlayer = newLineup[slotIndex];
+        if (targetPlayer && payload.fromSlot !== undefined) {
+          newLineup[payload.fromSlot] = targetPlayer;
+        }
+
+        // Place player in new slot
+        if (payload.playerId) {
+          // Remove from any other slot (prevent duplicates)
+          const existingIndex = newLineup.findIndex((id) => id === payload.playerId);
+          if (existingIndex >= 0 && existingIndex !== slotIndex) {
+            newLineup[existingIndex] = '';
+          }
+          newLineup[slotIndex] = payload.playerId;
+        }
+
+        onLineupChange(newLineup);
+      } catch {
+        // Invalid drop payload, ignore
+      }
+    },
+    [lineup, onLineupChange, readOnly]
+  );
+
+  /**
+   * Handle drag over (required for drop to work)
+   */
+  const handleDragOver = (e: React.DragEvent) => {
+    if (!readOnly) {
+      e.preventDefault();
+    }
+  };
+
+  /**
+   * Export pitch as image
+   */
+  const handleExport = async () => {
+    if (!pitchRef.current) return;
+    setIsExporting(true);
+
+    try {
+      const success = await exportElementAsImage(
+        pitchRef.current,
+        `${squadName.toLowerCase().replace(/\s+/g, '-')}-lineup`,
+        'png'
+      );
+
+      // Note: exportElementAsImage triggers download automatically
+      // onExport callback is for additional handling if needed
+      if (success && onExport) {
+        onExport(''); // Callback only - image already downloaded
+      }
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  /**
+   * Share via native share API if available
+   */
+  const handleShare = async () => {
+    if (!pitchRef.current) return;
+
+    try {
+      // Use html-to-image directly for sharing (we need the data URL)
+      const { toPng } = await import('html-to-image');
+      const dataUrl = await toPng(pitchRef.current, { quality: 0.95, cacheBust: true });
+
+      // Convert data URL to blob for sharing
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      const file = new File([blob], 'lineup.png', { type: 'image/png' });
+
+      if (navigator.share && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `${squadName} Lineup`,
+          text: `Check out our ${formation} formation!`,
+          files: [file],
+        });
+      } else {
+        // Fallback: download the image
+        const link = document.createElement('a');
+        link.download = `${squadName.toLowerCase().replace(/\s+/g, '-')}-lineup.png`;
+        link.href = dataUrl;
+        link.click();
+      }
+    } catch {
+      // Share failed, ignore
+    }
+  };
+
+  const assignedCount = lineup.filter(Boolean).length;
+  const totalSlots = formationPositions.length;
+
+  return (
+    <div className={`space-y-4 ${className}`}>
+      {/* Header with title and export */}
+      {(title || showExport) && (
+        <div className="flex items-center justify-between">
+          {title && (
+            <h3 className="text-lg font-semibold text-gray-900">
+              {title}
+            </h3>
+          )}
+          {showExport && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExport}
+                disabled={isExporting}
+                className="text-xs"
+              >
+                {isExporting ? (
+                  <span className="animate-pulse">Exporting...</span>
+                ) : (
+                  <>
+                    <Download className="w-3 h-3 mr-1" />
+                    Export
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleShare}
+                className="text-xs"
+              >
+                <Share2 className="w-3 h-3 mr-1" />
+                Share
+              </Button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Formation Badge */}
+      <div className="flex items-center justify-between text-sm">
+        <span className="font-medium text-gray-700">{formation}</span>
+        <span className="text-gray-500">
+          {assignedCount}/{totalSlots - 1} outfield + GK
+        </span>
+      </div>
+
+      {/* Pitch Container */}
+      <div
+        ref={pitchRef}
+        className={`relative bg-gradient-to-b from-green-600 to-green-700 rounded-xl overflow-hidden ${sizeConfig.container}`}
+        style={{ paddingBottom: size === 'sm' ? '50%' : size === 'lg' ? '75%' : '65%' }}
+      >
+        {/* Pitch Markings */}
+        <div className="absolute inset-0 pointer-events-none">
+          {/* Center circle */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white/30 rounded-full" />
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white/50 rounded-full" />
+          
+          {/* Center line */}
+          <div className="absolute top-0 left-1/2 w-0.5 h-full bg-white/30 transform -translate-x-1/2" />
+          
+          {/* Penalty areas */}
+          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-48 h-24 border-2 border-white/30 border-t-0" />
+          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-48 h-24 border-2 border-white/30 border-b-0" />
+          
+          {/* Corner arcs */}
+          <div className="absolute top-0 left-0 w-8 h-8 border-2 border-white/30 rounded-br-full border-t-0 border-l-0" />
+          <div className="absolute top-0 right-0 w-8 h-8 border-2 border-white/30 rounded-bl-full border-t-0 border-r-0" />
+          <div className="absolute bottom-0 left-0 w-8 h-8 border-2 border-white/30 rounded-tr-full border-b-0 border-l-0" />
+          <div className="absolute bottom-0 right-0 w-8 h-8 border-2 border-white/30 rounded-tl-full border-b-0 border-r-0" />
+        </div>
+
+        {/* Player Positions */}
+        {slots.map((slot, idx) => {
+          const pos = formationPositions[idx];
+          const display = getSlotDisplay(slot);
+          const player = slot.player;
+
+          return (
+            <div
+              key={idx}
+              className="absolute transform -translate-x-1/2 -translate-y-1/2"
+              style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
+              onDragOver={handleDragOver}
+              onDrop={(e) => handleSlotDrop(e, idx)}
+            >
+              {/* Player Dot */}
+              <div
+                draggable={!readOnly && !!player}
+                onDragStart={(e) => player && handleSlotDragStart(e, idx, player.id)}
+                className={`
+                  ${sizeConfig.dot} rounded-full flex items-center justify-center 
+                  shadow-lg border-2 cursor-pointer
+                  transition-transform hover:scale-110
+                  ${display.bgClass} ${display.borderClass}
+                  ${readOnly ? '' : 'cursor-grab active:cursor-grabbing'}
+                `}
+                title={player ? player.name : ROLE_LABELS[slot.role]}
+              >
+                {display.content}
+              </div>
+
+              {/* Player Name (optional) */}
+              {showPlayerNames && player && (
+                <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 whitespace-nowrap">
+                  <span className={`${sizeConfig.nameText} font-medium text-white bg-black/60 px-1.5 py-0.5 rounded`}>
+                    {player.name.split(' ')[0]}
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Unassigned Players Pool (for drag source) */}
+      {!readOnly && players.length > 0 && (
+        <div className="pt-2">
+          <p className="text-xs text-gray-500 mb-2">Drag players to positions:</p>
+          <div className="flex flex-wrap gap-2">
+            {players.map((player) => {
+              const isAssigned = lineup.includes(player.id);
+              const positionColor = POSITION_COLORS[player.position as PlayerPosition] || 'bg-gray-100 text-gray-700';
+
+              return (
+                <div
+                  key={player.id}
+                  draggable={!isAssigned}
+                  onDragStart={(e) => handlePlayerDragStart(e, player.id)}
+                  className={`
+                    flex items-center gap-2 px-2.5 py-1.5 rounded-full border text-xs
+                    transition-opacity
+                    ${isAssigned ? 'opacity-40 cursor-not-allowed bg-gray-50 border-gray-200' : 'cursor-grab bg-white border-gray-200 hover:border-gray-300'}
+                  `}
+                >
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${positionColor}`}>
+                    {player.position}
+                  </span>
+                  <span className="text-gray-700">{player.name}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default PitchCanvas;
