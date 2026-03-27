@@ -99,7 +99,7 @@ export function getJourneyNextAction(stage: JourneyStage): JourneyAction {
     case 'guest_preview':
       return { label: 'Start your own season', href: '/?connect=1' };
     case 'account_ready':
-      return { label: 'Log your first match', href: '/match?mode=capture' };
+      return { label: 'Set up your tactics', href: '/match/preview' };
     case 'wallet_unverified':
       return { label: 'Verify wallet', href: '/settings?tab=wallet' };
     case 'verified_no_squad':
@@ -137,10 +137,10 @@ export function getJourneyZeroState(
       };
     case 'dashboard_next_match':
       return {
-        title: 'No next match on the board',
-        description: 'Use the match flow to log the next fixture or result so the squad has a live operating rhythm.',
-        actionLabel: nextAction.label,
-        actionHref: nextAction.href,
+        title: 'No next match scheduled',
+        description: 'Preview your next match, set your tactics, and visualize your squad before scheduling.',
+        actionLabel: 'Preview Match',
+        actionHref: '/match/preview',
       };
     case 'stats_locked':
       return {
@@ -263,12 +263,12 @@ export function getJourneyContent(
     case 'account_ready':
       return {
         hero: {
-          primaryCtaLabel: 'Continue Your Kickoff',
-          stageLine: 'Log a match to start building your season history.',
+          primaryCtaLabel: 'Preview Your First Match',
+          stageLine: 'Set up your tactics and formation before the first match.',
           highlights: [
-            'Log your first match in under a minute',
-            'Send a verification link',
-            'Build your season proof',
+            'Choose your formation and play style',
+            'Preview how your squad will play',
+            'Then log your first match',
           ],
         },
         authModal: {

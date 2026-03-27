@@ -7,6 +7,7 @@ export type DashboardEntryActionIntent =
   | 'verify_wallet'
   | 'create_squad'
   | 'log_match'
+  | 'preview_match'
   | 'open_match_center'
   | 'open_staff_room';
 
@@ -79,7 +80,7 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       headline: 'Explore the platform before you commit',
       description: 'You are in an interactive preview. Log a result, inspect the flow, then start your own season when you are ready to save real progress.',
       primaryAction: { intent: 'open_wallet', label: 'Start your own season', href: '/?connect=1' },
-      secondaryAction: { intent: 'log_match', label: 'Try the match flow', href: '/match?mode=capture' },
+      secondaryAction: { intent: 'preview_match', label: 'Preview your next match', href: '/match/preview' },
       surfaceLabel: 'Preview',
       queueLabel: 'Preview queue ready',
       identityLabel: 'Guest mode',
@@ -97,8 +98,8 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       id: 'account_ready',
       eyebrow: 'Season Kickoff',
       headline: 'Start your season',
-      description: 'Your account is ready. Log your first match in under a minute — you can add a wallet later when you want protected actions.',
-      primaryAction: { intent: 'log_match', label: 'Log your first match', href: '/match?mode=capture' },
+      description: 'Your account is ready. Set up your squad tactics and preview your first match — you can log results after you play.',
+      primaryAction: { intent: 'preview_match', label: 'Preview your match', href: '/squad?tab=tactics' },
       secondaryAction: { intent: 'open_staff_room', label: 'Explore the Staff Room' },
       surfaceLabel: 'Account Ready',
       queueLabel: 'First result not logged yet',
@@ -106,9 +107,9 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       squadLabel: input.squadCount > 0 ? 'Squad linked' : 'No squad yet',
       isNewUser: true,
       steps: [
-        { number: 1, label: 'Log a match', completed: input.totalMatches > 0, href: '/match?mode=capture' },
-        { number: 2, label: 'Get verified', completed: false, href: '/match?mode=verify' },
-        { number: 3, label: 'Join a squad', completed: input.squadCount > 0, href: '/squad' },
+        { number: 1, label: 'Set your tactics', completed: false, href: '/squad?tab=tactics' },
+        { number: 2, label: 'Play a match', completed: false, href: '/match?mode=capture' },
+        { number: 3, label: 'Get verified', completed: false, href: '/settings?tab=wallet' },
       ],
     };
   }
@@ -118,8 +119,8 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       id: 'wallet_unverified',
       eyebrow: 'Verification Optional',
       headline: 'Your wallet is connected',
-      description: 'You can log matches now. Verify your wallet later when you want protected squad actions and on-chain progression.',
-      primaryAction: { intent: 'log_match', label: 'Log a match', href: '/match?mode=capture' },
+      description: 'You can set up your tactics now. Preview your squad, choose your formation, and get ready for match day.',
+      primaryAction: { intent: 'preview_match', label: 'Set up tactics', href: '/squad?tab=tactics' },
       secondaryAction: { intent: 'verify_wallet', label: 'Verify wallet' },
       surfaceLabel: 'Wallet Connected',
       queueLabel: getPendingLabel(input.pendingMatchesCount),
@@ -127,7 +128,7 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       squadLabel: input.squadCount > 0 ? 'Squad linked' : 'No squad yet',
       isNewUser: true,
       steps: [
-        { number: 1, label: 'Log a match', completed: input.totalMatches > 0, href: '/match?mode=capture' },
+        { number: 1, label: 'Set tactics', completed: false, href: '/squad?tab=tactics' },
         { number: 2, label: 'Verify wallet', completed: false },
         { number: 3, label: 'Join a squad', completed: input.squadCount > 0, href: '/squad' },
       ],
@@ -139,8 +140,8 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       id: 'verified_no_squad',
       eyebrow: 'Squad Setup',
       headline: 'Create your squad',
-      description: 'Your identity is secured. The next step is creating a squad so results, invites, and reputation can compound around a real team.',
-      primaryAction: { intent: 'create_squad', label: 'Create squad' },
+      description: 'Your identity is secured. Create a squad, set your tactics, and prepare for your first match.',
+      primaryAction: { intent: 'create_squad', label: 'Create your squad' },
       secondaryAction: { intent: 'open_staff_room', label: 'Open Staff Room' },
       surfaceLabel: 'Identity Secured',
       queueLabel: getPendingLabel(input.pendingMatchesCount),
@@ -149,8 +150,8 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       isNewUser: true,
       steps: [
         { number: 1, label: 'Verify identity', completed: true },
-        { number: 2, label: 'Create a squad', completed: false },
-        { number: 3, label: 'Log first match', completed: input.totalMatches > 0, href: '/match?mode=capture' },
+        { number: 2, label: 'Create squad', completed: false },
+        { number: 3, label: 'Set tactics', completed: false, href: '/squad?tab=tactics' },
       ],
     };
   }
@@ -158,11 +159,11 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
   if (stage === 'season_kickoff') {
     return {
       id: 'season_kickoff',
-      eyebrow: 'Season Kickoff',
-      headline: 'Log the first result that makes this season real',
-      description: 'You have the essentials in place. One verified match creates the first real proof, reputation, and momentum that make the product sticky for the whole squad.',
-      primaryAction: { intent: 'log_match', label: 'Log your first result', href: '/match?mode=capture' },
-      secondaryAction: { intent: 'open_match_center', label: 'Open Match Center', href: '/match?mode=verify' },
+      eyebrow: 'Match Day Ready',
+      headline: 'Prepare for your first match',
+      description: 'Your squad is ready. Set your tactics, choose your formation, and preview how your team will line up before the whistle blows.',
+      primaryAction: { intent: 'preview_match', label: 'Preview your squad', href: '/squad?tab=tactics' },
+      secondaryAction: { intent: 'open_match_center', label: 'Match Center', href: '/match' },
       surfaceLabel: 'Season Live',
       queueLabel: getPendingLabel(input.pendingMatchesCount),
       identityLabel: 'Verified',
@@ -170,25 +171,25 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       isNewUser: true,
       steps: [
         { number: 1, label: 'Set up squad', completed: true },
-        { number: 2, label: 'Log first match', completed: input.totalMatches > 0, href: '/match?mode=capture' },
-        { number: 3, label: 'Get verified', completed: false, href: '/match?mode=verify' },
+        { number: 2, label: 'Choose formation', completed: false, href: '/squad?tab=tactics' },
+        { number: 3, label: 'Play match', completed: input.totalMatches > 0, href: '/match?mode=capture' },
       ],
     };
   }
 
   return {
     id: 'returning_manager',
-    eyebrow: 'Manager Console',
+    eyebrow: 'Match Day',
     headline: input.pendingMatchesCount > 0
       ? `${input.pendingMatchesCount} match report${input.pendingMatchesCount === 1 ? '' : 's'} need review`
-      : 'Welcome back to your squad console',
+      : 'Ready for your next match',
     description: input.pendingMatchesCount > 0
-      ? 'Clear the queue, confirm the latest results, and keep the season moving.'
-      : 'Your squad is live. Review operations, log the next result, or use the Staff Room to coordinate what happens next.',
+      ? 'Review the queue, confirm results, and keep the season moving.'
+      : 'Your squad is set. Preview your tactics, check your lineup, or head to the pitch.',
     primaryAction: input.pendingMatchesCount > 0
-      ? { intent: 'open_match_center', label: 'Review pending reports', href: '/match?mode=verify' }
-      : { intent: 'log_match', label: 'Log a new match', href: '/match?mode=capture' },
-    secondaryAction: { intent: 'open_staff_room', label: 'Open Staff Room' },
+      ? { intent: 'open_match_center', label: 'Review reports', href: '/match?mode=verify' }
+      : { intent: 'preview_match', label: 'Preview next match', href: '/squad?tab=tactics' },
+    secondaryAction: { intent: 'open_staff_room', label: 'Staff Room' },
     surfaceLabel: 'Live',
     queueLabel: getPendingLabel(input.pendingMatchesCount),
     identityLabel: 'Verified',

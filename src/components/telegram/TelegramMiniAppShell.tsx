@@ -42,6 +42,7 @@ export interface SquadContext {
   memberCount: number;
   members: SquadMember[];
   form: string[];
+  formation?: string;
 }
 
 export interface PendingMatch {

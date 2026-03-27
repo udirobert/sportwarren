@@ -346,11 +346,14 @@ export const AdaptiveDashboard: React.FC = () => {
               )}
             </div>
             <div className="flex items-center gap-2">
+              <Link href="/squad?tab=tactics">
+                <Button size="sm" variant="outline">Customize Lineup</Button>
+              </Link>
               <Link href="/match?mode=verify">
                 <Button size="sm" variant="outline">Review</Button>
               </Link>
               <Link href="/match?mode=capture">
-                <Button size="sm">Submit</Button>
+                <Button size="sm">Log Result</Button>
               </Link>
             </div>
           </div>
@@ -518,7 +521,7 @@ export const AdaptiveDashboard: React.FC = () => {
       },
       {
         id: 'match-engine',
-        priority: 160,
+        priority: 250,
         requiredLevel: 'basic' as const,
         category: 'matches' as const,
         component: (
@@ -545,13 +548,18 @@ export const AdaptiveDashboard: React.FC = () => {
       component: <ScoutingReport squadId={primarySquadId} />,
       },
       {
-      id: 'upcoming-fixtures',
-      priority: 80,
-      requiredLevel: 'basic',
-      category: 'matches',
-      component: (
-        <Card>
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Next Match</h2>
+        id: 'upcoming-fixtures',
+        priority: 240,
+        requiredLevel: 'basic',
+        category: 'matches',
+        component: (
+          <Card className="border-emerald-200 bg-emerald-50/50">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">Next Match</h2>
+              <Link href="/squad?tab=tactics" className="text-sm text-emerald-600 hover:text-emerald-700 font-medium">
+                Customize →
+              </Link>
+            </div>
           {stats && stats.recentMatches && stats.recentMatches.length > 0 ? (
             <div className="border border-gray-200 rounded-lg p-4">
               <h3 className="font-semibold text-gray-900 mb-2">vs {stats.recentMatches[0]?.opponent || 'TBD'}</h3>
@@ -722,6 +730,20 @@ export const AdaptiveDashboard: React.FC = () => {
           key={action.label}
           size="sm"
           onClick={handleOpenOffice}
+          className={className}
+          variant={tone === 'secondary' ? 'outline' : undefined}
+        >
+          {action.label}
+        </Button>
+      );
+    }
+
+    if (action.intent === 'preview_match') {
+      return (
+        <Button
+          key={action.label}
+          size="sm"
+          onClick={() => router.push(action.href || '/squad?tab=tactics')}
           className={className}
           variant={tone === 'secondary' ? 'outline' : undefined}
         >

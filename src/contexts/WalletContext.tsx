@@ -396,7 +396,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   }, [walletAddress, chain, isGuest, embeddedWalletReady, updateAuthStatus]);
 
   useEffect(() => {
-    if (authStatus.state !== 'valid' || !authStatus.expiresAt) return;
+    if (authStatus.state !== 'valid' || !authStatus.expiresAt || !authStatus.signedAt) return;
     const remainingMs = authStatus.expiresAt - Date.now();
     if (remainingMs <= 0) {
       updateAuthStatus(false);
@@ -404,8 +404,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     }
     // Proactive refresh: refresh signature when 90% of validity period has passed
     // This prevents unexpected expiration during active usage
-    const validityPeriod = authStatus.expiresAt - authStatus.signedAt!;
-    const proactiveRefreshTime = authStatus.signedAt! + validityPeriod * 0.9; // 90% through validity period
+    const validityPeriod = authStatus.expiresAt - authStatus.signedAt;
+    const proactiveRefreshTime = authStatus.signedAt + validityPeriod * 0.9; // 90% through validity period
     const timeUntilProactiveRefresh = proactiveRefreshTime - Date.now();
     
     if (timeUntilProactiveRefresh > 0) {

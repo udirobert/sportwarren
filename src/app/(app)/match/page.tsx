@@ -37,6 +37,7 @@ import { useJourneyState } from "@/hooks/useJourneyState";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { trackCoreGrowthEvent, trackFeatureUsed, trackMatchSubmission } from "@/lib/analytics";
 import { useCurrentPlayerAttributes } from "@/hooks/player/usePlayerAttributes";
+import { useTactics } from "@/hooks/squad/useTactics";
 
 type ViewMode = "capture" | "verify" | "detail" | "xp-summary" | "history";
 type XPResultState = "idle" | "pending" | "available";
@@ -58,6 +59,7 @@ export default function MatchPage() {
   const activeMembership = memberships[0];
   const activeSquad = activeMembership?.squad;
   const activeSquadId = activeSquad?.id;
+  const { tactics: squadTactics } = useTactics(activeSquadId || undefined);
   const isSquadLeader = activeMembership?.role === "captain" || activeMembership?.role === "vice_captain";
   const matchCenterGate = getJourneyActionGate('match_center', {
     stage: journeyStage,
@@ -317,19 +319,22 @@ export default function MatchPage() {
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="section-kicker mb-3 bg-white/80 dark:bg-gray-800/80 text-emerald-700">
-              Match Operations
+              Match Day
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Match Center</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Prepare for Match</h1>
             <p className="mt-2 max-w-2xl text-gray-600">
-              Submit results, clear pending verifications, and track fee settlement for {activeSquad.name}.
+              Set your tactics, review your lineup, or log your result after the game.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
+            <Link href="/squad?tab=tactics">
+              <Button variant="outline">Set Tactics</Button>
+            </Link>
             <Link href="/squad">
               <Button variant="outline">Back to Squad</Button>
             </Link>
             <Button onClick={() => (pendingMatches.length > 0 ? openVerificationQueue() : setViewMode("capture"))}>
-              {pendingMatches.length > 0 ? "Review Pending Matches" : "Submit a Match"}
+              {pendingMatches.length > 0 ? "Review Reports" : "Log Result"}
             </Button>
           </div>
         </div>
@@ -369,7 +374,7 @@ export default function MatchPage() {
         <div className="flex flex-wrap gap-2 rounded-2xl bg-gray-100 p-1">
         {[
           { key: "verify", label: `Verify (${pendingMatches.length})`, icon: Shield },
-          { key: "capture", label: "Submit Match", icon: Activity },
+          { key: "capture", label: "Log Result", icon: Activity },
           { key: "history", label: `History (${settledMatches.length})`, icon: Trophy },
         ].map(({ key, label, icon: Icon }) => (
           <button
@@ -392,7 +397,7 @@ export default function MatchPage() {
         </div>
       </div>
 
-      {/* Season kickoff path: submit -> share -> save */}
+      {/* Season kickoff path: tactics -> play -> verify -> save */}
       {!(firstMatchSubmitted && verificationInviteShared && identityConnected) && (
         <Card className="border-emerald-200 bg-emerald-50/80 py-4">
           <div className="flex items-start gap-3">
@@ -400,12 +405,13 @@ export default function MatchPage() {
             <div className="flex-1">
               <p className="font-semibold text-emerald-900">Season Kickoff Path</p>
               <p className="mt-1 text-sm text-emerald-700">
-                Three steps to lock in value: log a match, share the link, save your progress.
+                Set your tactics, play your match, verify the result, then save your progress.
               </p>
               <div className="mt-3 space-y-2">
                 {[
+                  { label: "Set your formation", done: squadTactics?.formation != null },
                   { label: "Log your first match result", done: firstMatchSubmitted },
-                  { label: "Share the match link with your opponent", done: verificationInviteShared },
+                  { label: "Verify with opponent", done: verificationInviteShared },
                   { label: "Save your progress", done: identityConnected },
                 ].map((step) => (
                   <div key={step.label} className="flex items-center gap-2 text-sm">
@@ -415,7 +421,12 @@ export default function MatchPage() {
                 ))}
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                {!firstMatchSubmitted && (
+                {!squadTactics?.formation && (
+                  <Link href="/squad?tab=tactics">
+                    <Button size="sm">Set your formation</Button>
+                  </Link>
+                )}
+                {squadTactics?.formation && !firstMatchSubmitted && (
                   <Button size="sm" onClick={() => setViewMode("capture")}>Log first match</Button>
                 )}
                 {firstMatchSubmitted && !verificationInviteShared && (
