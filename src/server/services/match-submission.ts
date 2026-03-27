@@ -17,6 +17,7 @@ export interface PendingMatchSubmissionInput {
   locationVerified?: boolean;
   verificationDetails?: unknown;
   agentInsights?: unknown;
+  sessionId?: string;
 }
 
 export async function createPendingMatchSubmission({
@@ -33,6 +34,7 @@ export async function createPendingMatchSubmission({
   locationVerified = false,
   verificationDetails = null,
   agentInsights = null,
+  sessionId,
 }: PendingMatchSubmissionInput) {
   const shareSlug = randomBytes(4).toString('base64url');
 
@@ -52,6 +54,7 @@ export async function createPendingMatchSubmission({
       locationVerified,
       verificationDetails,
       agentInsights,
+      sessionId,
     } as any,
     include: {
       homeSquad: true,

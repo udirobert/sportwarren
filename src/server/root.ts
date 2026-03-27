@@ -3,6 +3,7 @@ import { matchRouter } from './routers/match';
 import { playerRouter } from './routers/player';
 import { squadRouter } from './routers/squad';
 import { marketRouter } from './routers/market';
+import { sessionRouter } from './routers/session';
 import { authRouter } from './routers/auth';
 import { agentRouter } from './routers/agent';
 import { memoryRouter } from './routers/memory';
@@ -15,6 +16,7 @@ export const appRouter = createTRPCRouter({
   player: playerRouter,
   squad: squadRouter,
   market: marketRouter,
+  session: sessionRouter,
   auth: authRouter,
   agent: agentRouter,
   memory: memoryRouter,

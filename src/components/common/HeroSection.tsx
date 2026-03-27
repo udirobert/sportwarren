@@ -7,10 +7,12 @@ import { useWallet } from '@/contexts/WalletContext';
 import { getJourneyContent } from '@/lib/journey/content';
 import { getJourneyStage } from '@/lib/journey/stage';
 import { AccountStatusControl } from '@/components/common/AccountStatusControl';
+import { WaitlistForm } from '@/components/common/WaitlistForm';
 
 interface HeroSectionProps {
   onGetStarted?: () => void;
   onGuestStart?: () => void;
+  autoFocusWaitlist?: boolean;
 }
 
 interface PlatformStats {
@@ -19,7 +21,7 @@ interface PlatformStats {
   totalAgents: number;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestStart }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestStart, autoFocusWaitlist }) => {
   const [stats, setStats] = useState<PlatformStats>({
     totalPlayers: 0,
     totalMatches: 0,
@@ -197,6 +199,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                 {highlight}
               </span>
             ))}
+          </div>
+
+          {/* Waitlist capture — enhancement to hero, minimal footprint */}
+          <div className="mb-8">
+            <div className="text-center text-sm text-gray-400 mb-2">No wallet needed — join the early access list</div>
+            <WaitlistForm variant="hero" source="hero" autoFocus={autoFocusWaitlist} />
           </div>
 
           {!hasAccount && journeyContent.hero.previewLinkLabel && (
@@ -467,9 +475,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             </div>
           </div>
 
-          {/* Tech Stack - moved to footer for minimal hero clutter */}
-          {/* Removed from hero - can be added to footer */}
+      {/* Tech Stack - moved to footer for minimal hero clutter */}
+      {/* Removed from hero - can be added to footer */}
 
+    </div>
+  </section>
+
+      {/* Inline Waitlist Capture */}
+      <section className="py-16 bg-gray-900/40 border-t border-white/5">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h3 className="text-2xl font-extrabold text-white mb-2">Be a founding member</h3>
+          <p className="text-sm text-gray-400 mb-6">Get early access updates and perks. No wallet required.</p>
+          <div className="flex justify-center">
+            <WaitlistForm variant="inline" source="inline" />
+          </div>
         </div>
       </section>
 
@@ -506,10 +525,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             <p className="text-xs text-gray-600">
               © {new Date().getFullYear()} SportWarren. All rights reserved.
             </p>
-            <div className="flex items-center gap-4 text-xs text-gray-600">
-              <span>Built for 5-a-side warriors</span>
-              <span className="w-1 h-1 rounded-full bg-gray-700" />
-              <span className="text-green-500/60">Early Access</span>
+            <div className="flex items-center gap-4 text-xs text-gray-600 w-full md:w-auto md:justify-end">
+              <div className="hidden md:block">Built for 5-a-side warriors</div>
+              <span className="hidden md:block w-1 h-1 rounded-full bg-gray-700" />
+              <div className="w-full md:w-auto">
+                <WaitlistForm variant="footer" source="footer" />
+              </div>
             </div>
           </div>
         </div>
