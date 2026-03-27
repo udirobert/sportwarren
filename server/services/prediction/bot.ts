@@ -9,12 +9,6 @@ import {
   settleMarket,
 } from "./market";
 
-interface PredictionBotContext {
-  userId: string;
-  userName?: string;
-  chatId: number;
-  messageId?: number;
-}
 
 // ============================================================================
 // COMMAND HANDLERS
@@ -34,12 +28,12 @@ export async function handleCreateMarket(
     await bot.sendMessage(
       chatId,
       `📋 Create a prediction market:\n\n` +
-        `/predict create "Who will win the match?" "Team A" "Draw" "Team B" --deadline 24h\n\n` +
-        `Options:\n` +
-        `- Category: --category sports (default: sports)\n` +
-        `- Sport: --sport football\n` +
-        `- Deadline: --deadline 24h (hours)\n` +
-        `- Settle by: --settle 48h (hours from now)`
+      `/predict create "Who will win the match?" "Team A" "Draw" "Team B" --deadline 24h\n\n` +
+      `Options:\n` +
+      `- Category: --category sports (default: sports)\n` +
+      `- Sport: --sport football\n` +
+      `- Deadline: --deadline 24h (hours)\n` +
+      `- Settle by: --settle 48h (hours from now)`
     );
     return;
   }
@@ -88,6 +82,11 @@ export async function handleCreateMarket(
       creatorName: userName,
     });
 
+    if (!market) {
+      await bot.sendMessage(chatId, "❌ Failed to create market. Please try again.");
+      return;
+    }
+
     const optionsText = market.options
       .map((o, i) => `${i + 1}. ${o.text} (odds: ${o.odds.toFixed(2)})`)
       .join("\n");
@@ -95,11 +94,11 @@ export async function handleCreateMarket(
     await bot.sendMessage(
       chatId,
       `🎯 *Prediction Market Created!*\n\n` +
-        `*Question:* ${market.question}\n\n` +
-        `*Options:*\n${optionsText}\n\n` +
-        `💰 Total pool: ${(market.totalPool / 1e9).toFixed(2)} TON\n` +
-        `⏰ Betting closes: ${market.deadline.toLocaleString()}\n\n` +
-        `ID: \`${market.id}\``,
+      `*Question:* ${market.question}\n\n` +
+      `*Options:*\n${optionsText}\n\n` +
+      `💰 Total pool: ${(market.totalPool / 1e9).toFixed(2)} TON\n` +
+      `⏰ Betting closes: ${market.deadline.toLocaleString()}\n\n` +
+      `ID: \`${market.id}\``,
       { parse_mode: "Markdown" }
     );
   } catch (error) {
@@ -118,10 +117,10 @@ export async function handleListMarkets(
   const category = args.includes("--sports")
     ? "sports"
     : args.includes("--politics")
-    ? "politics"
-    : args.includes("--crypto")
-    ? "crypto"
-    : undefined;
+      ? "politics"
+      : args.includes("--crypto")
+        ? "crypto"
+        : undefined;
 
   const markets = await getActiveMarkets({ category, limit: 10 });
 
@@ -132,7 +131,6 @@ export async function handleListMarkets(
 
   const marketsText = await Promise.all(
     markets.slice(0, 5).map(async (m, i) => {
-      const optionsPreview = m.options.slice(0, 3).map((o) => o.text).join(" vs ");
       return `${i + 1}. ${m.question.substring(0, 50)}...\n` +
         `   💰 ${(m.totalPool / 1e9).toFixed(2)} TON · ${m._count.bets} bets\n` +
         `   ID: \`${m.id.substring(0, 8)}...\``;
@@ -142,7 +140,7 @@ export async function handleListMarkets(
   await bot.sendMessage(
     chatId,
     `🎯 *Active Prediction Markets*\n\n${marketsText.join("\n\n")}\n\n` +
-      `Use /predict bet <market_id> <option> <amount> to place a bet.`,
+    `Use /predict bet <market_id> <option> <amount> to place a bet.`,
     { parse_mode: "Markdown" }
   );
 }
@@ -161,9 +159,9 @@ export async function handlePlaceBet(
     await bot.sendMessage(
       chatId,
       `📝 Place a bet:\n\n` +
-        `/predict bet <market_id> <option_number> <amount>\n\n` +
-        `Example: /predict bet abc123 1 5\n\n` +
-        `This bets 5 TON on option 1.`
+      `/predict bet <market_id> <option_number> <amount>\n\n` +
+      `Example: /predict bet abc123 1 5\n\n` +
+      `This bets 5 TON on option 1.`
     );
     return;
   }
@@ -207,10 +205,10 @@ export async function handlePlaceBet(
     await bot.sendMessage(
       chatId,
       `✅ *Bet Placed!*\n\n` +
-        `Market: ${market.question.substring(0, 40)}...\n` +
-        `Bet: ${amountTON} TON on "${option.text}"\n` +
-        `💎 Potential win: ${potentialWin} TON\n` +
-        `Odds: ${option.odds.toFixed(2)}`,
+      `Market: ${market.question.substring(0, 40)}...\n` +
+      `Bet: ${amountTON} TON on "${option.text}"\n` +
+      `💎 Potential win: ${potentialWin} TON\n` +
+      `Odds: ${option.odds.toFixed(2)}`,
       { parse_mode: "Markdown" }
     );
   } catch (error: any) {
@@ -250,11 +248,11 @@ export async function handleMarketInfo(
   await bot.sendMessage(
     chatId,
     `🎯 *${stats.question.substring(0, 50)}...*\n\n` +
-      `💎 *Total Pool:* ${(stats.totalPool / 1e9).toFixed(2)} TON\n` +
-      `👥 *Betters:* ${stats.totalBetters}\n` +
-      `🎫 *Total Bets:* ${stats.betCount}\n\n` +
-      `*Options:*\n${optionsText}\n\n` +
-      `Use /predict bet ${marketId.substring(0, 8)} <option> <amount> to bet!`,
+    `💎 *Total Pool:* ${(stats.totalPool / 1e9).toFixed(2)} TON\n` +
+    `👥 *Betters:* ${stats.totalBetters}\n` +
+    `🎫 *Total Bets:* ${stats.betCount}\n\n` +
+    `*Options:*\n${optionsText}\n\n` +
+    `Use /predict bet ${marketId.substring(0, 8)} <option> <amount> to bet!`,
     { parse_mode: "Markdown" }
   );
 }
@@ -265,21 +263,19 @@ export async function handleSettleMarket(
   args: string[]
 ) {
   const chatId = msg.chat.id;
-  const userId = msg.from?.id?.toString() || "";
 
   // Parse: /predict settle <market_id> <option_number>
   if (args.length < 3) {
     await bot.sendMessage(
       chatId,
       `⚖️ Settle a market:\n\n` +
-        `/predict settle <market_id> <option_number>\n\n` +
-        `This will verify with AI and settle the market.`
+      `/predict settle <market_id> <option_number>\n\n` +
+      `This will verify with AI and settle the market.`
     );
     return;
   }
 
   const marketId = args[1];
-  const optionNumber = parseInt(args[2]);
 
   try {
     // First, verify with AI
@@ -290,8 +286,8 @@ export async function handleSettleMarket(
     await bot.sendMessage(
       chatId,
       `🤖 *AI Verification Result*\n\n` +
-        `Confidence: ${(verification.confidence * 100).toFixed(0)}%\n` +
-        `Reasoning: ${verification.reasoning.substring(0, 200)}...`,
+      `Confidence: ${(verification.confidence * 100).toFixed(0)}%\n` +
+      `Reasoning: ${verification.reasoning.substring(0, 200)}...`,
       { parse_mode: "Markdown" }
     );
 
@@ -307,9 +303,9 @@ export async function handleSettleMarket(
     await bot.sendMessage(
       chatId,
       `✅ *Market Settled!*\n\n` +
-        `🏆 Winner: ${winningOption?.text || "Unknown"}\n` +
-        `💰 Total pool: ${(market?.totalPool || 0) / 1e9} TON\n` +
-        `👤 Creator fee: ${((market?.creatorFee || 0) / 1e9).toFixed(2)} TON`,
+      `🏆 Winner: ${winningOption?.text || "Unknown"}\n` +
+      `💰 Total pool: ${(market?.totalPool || 0) / 1e9} TON\n` +
+      `👤 Creator fee: ${((market?.creatorFee || 0) / 1e9).toFixed(2)} TON`,
       { parse_mode: "Markdown" }
     );
   } catch (error: any) {
@@ -350,16 +346,16 @@ export function setupPredictionCommands(bot: TelegramBot) {
         await bot.sendMessage(
           msg.chat.id,
           `🎯 *Prediction Markets*\n\n` +
-            `/predict create "Question" "Option1" "Option2" --deadline 24h\n` +
-            `  Create a new prediction market\n\n` +
-            `/predict list\n` +
-            `  Show active markets\n\n` +
-            `/predict bet <id> <option> <amount>\n` +
-            `  Place a bet\n\n` +
-            `/predict info <id>\n` +
-            `  View market details\n\n` +
-            `/predict settle <id> <option>\n` +
-            `  Settle a market (creator only)`,
+          `/predict create "Question" "Option1" "Option2" --deadline 24h\n` +
+          `  Create a new prediction market\n\n` +
+          `/predict list\n` +
+          `  Show active markets\n\n` +
+          `/predict bet <id> <option> <amount>\n` +
+          `  Place a bet\n\n` +
+          `/predict info <id>\n` +
+          `  View market details\n\n` +
+          `/predict settle <id> <option>\n` +
+          `  Settle a market (creator only)`,
           { parse_mode: "Markdown" }
         );
     }
