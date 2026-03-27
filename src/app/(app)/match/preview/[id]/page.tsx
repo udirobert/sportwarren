@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -29,8 +30,11 @@ export default function MatchPreviewPage() {
     { enabled: !!activeSquadId }
   );
 
-  const opponentName = stats?.matches?.[0]?.opponent || "Upcoming Opponent";
-  const matchDate = stats?.matches?.[0]?.timestamp ? new Date(stats.matches[0].timestamp) : new Date();
+  const match = stats?.matches?.[0];
+  const opponentName = match
+    ? (match.homeSquadId === activeSquadId ? match.awaySquad?.name : match.homeSquad?.name) || "Upcoming Opponent"
+    : "Upcoming Opponent";
+  const matchDate = match?.matchDate ? new Date(match.matchDate) : new Date();
 
   if (isLoading) {
     return (

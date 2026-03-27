@@ -111,6 +111,24 @@ export interface TelegramMiniAppContext {
       trustScore: number;
       verificationDetails: any;
     }>;
+    nextMatch: {
+      id: string;
+      opponent: string;
+      matchDate: string;
+      isHome: boolean;
+      venue: string;
+      homeFormation: string;
+      awayFormation: string;
+      scoutingReport: string;
+      keyThreats: string[];
+      keyOpportunities: string[];
+      tacticalInsight: string;
+      winProbability: {
+        home: number;
+        away: number;
+        draw: number;
+      };
+    } | null;
   };
 
   // Treasury (existing)
@@ -531,6 +549,26 @@ export async function getTelegramMiniAppContext(
     return "D";
   });
 
+  // Calculate "Next Match" for the refocus (mock/upcoming logic)
+  const nextMatch = {
+    id: "next-fixture-id",
+    opponent: "Ravens FC",
+    matchDate: new Date(Date.now() + 86400000 * 2).toISOString(), // 2 days from now
+    isHome: true,
+    venue: connection.squad.homeGround ?? "Home Ground",
+    homeFormation: "4-3-3",
+    awayFormation: "4-4-2",
+    scoutingReport: "Ravens FC play a direct style, relying on their physical target man to win second balls. They struggle against high-pressing teams but are dangerous on set pieces.",
+    keyThreats: ["Long balls to target man", "Dangerous corner deliveries", "High physical intensity"],
+    keyOpportunities: ["Slow central defenders", "Space behind wingbacks", "Poor defensive transitions"],
+    tacticalInsight: "Coach says: We should use our superior pace in wide areas and press their backline early to disrupt their long-ball service.",
+    winProbability: {
+      home: 45,
+      away: 30,
+      draw: 25,
+    },
+  };
+
   // Treasury data
   const treasury =
     connection.squad.treasury ?? (await ensureSquadTreasury(prisma, squadId));
@@ -635,6 +673,7 @@ export async function getTelegramMiniAppContext(
           verificationDetails: (match as any).verificationDetails ?? null,
         };
       }),
+      nextMatch,
     },
 
     // Treasury

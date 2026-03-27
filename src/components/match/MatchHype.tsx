@@ -7,11 +7,7 @@ import {
   Trophy, 
   Target, 
   TrendingUp, 
-  Zap,
-  Shield,
   Sword,
-  Users,
-  Flame,
   Star,
   Calendar,
   MapPin
@@ -207,6 +203,7 @@ export const MatchHype: React.FC<MatchHypeProps> = ({
                 {result}
               </div>
             ))}
+          </div>
           {homeForm.length === 0 && <span className="text-xs text-gray-400">No recent form</span>}
           <span className="text-xs font-bold text-gray-500">{homeFormPoints} pts</span>
         </div>
@@ -225,7 +222,8 @@ export const MatchHype: React.FC<MatchHypeProps> = ({
                 {result}
               </div>
             ))}
-            {awayForm.length === 0 && <span className="text-xs text-gray-400">No recent form</span>}
+          </div>
+          {awayForm.length === 0 && <span className="text-xs text-gray-400">No recent form</span>}
           <span className="text-xs font-bold text-gray-500">{awayFormPoints} pts</span>
         </div>
 

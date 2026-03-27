@@ -106,6 +106,24 @@ export interface MiniAppContext {
   matches: {
     pending: PendingMatch[];
     recent: RecentMatch[];
+    nextMatch: {
+      id: string;
+      opponent: string;
+      matchDate: string;
+      isHome: boolean;
+      venue: string;
+      homeFormation: string;
+      awayFormation: string;
+      scoutingReport: string;
+      keyThreats: string[];
+      keyOpportunities: string[];
+      tacticalInsight: string;
+      winProbability: {
+        home: number;
+        away: number;
+        draw: number;
+      };
+    } | null;
   };
   treasury: TreasuryContext;
   ton: TonContext;

@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { MatchPreviewCard } from '@/components/match/MatchPreviewCard';
 import { MatchEnginePreview } from '@/components/dashboard/MatchEnginePreview';
-import { PitchCanvas } from '@/components/squad/PitchCanvas';
 import { trpc } from '@/lib/trpc-client';
 import { useActiveSquad } from '@/contexts/ActiveSquadContext';
 import { useWallet } from '@/contexts/WalletContext';
@@ -16,19 +15,13 @@ import { FORMATIONS, PLAY_STYLE_LABELS, TACTICAL_PRESETS } from '@/lib/formation
 import type { Formation, PlayStyle, Player } from '@/types';
 import { 
   ArrowLeft, 
-  Calendar, 
-  MapPin, 
   Users, 
   Target, 
-  TrendingUp, 
   Zap,
   Shield,
-  Sword,
   Share2,
-  Download,
   Play,
   Settings,
-  Lightbulb,
   Clock,
   Trophy,
   Activity
@@ -36,15 +29,15 @@ import {
 
 export default function MatchPreviewPage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const { isGuest, isVerified } = useWallet();
+  const _router = useRouter();
+  const { isGuest: _isGuest, isVerified: _isVerified } = useWallet();
   const { venue } = useEnvironment();
   const { activeSquad, activeSquadId } = useActiveSquad();
 
   // Get query params
   const homeSquadName = searchParams.get('home') || activeSquad?.squad?.name || 'Your Squad';
   const awaySquadName = searchParams.get('away') || 'Opponent';
-  const matchId = searchParams.get('match');
+  const _matchId = searchParams.get('match');
 
   // State for formation selection
   const [selectedFormation, setSelectedFormation] = useState<Formation>('4-4-2');
@@ -58,7 +51,7 @@ export default function MatchPreviewPage() {
   );
 
   // Fetch match preview/simulation data
-  const { data: previewData, isLoading: previewLoading, refetch: refreshPreview } = trpc.match.preview.useQuery(
+  const { data: previewData, isLoading: previewLoading, refetch: _refreshPreview } = trpc.match.preview.useQuery(
     { 
       homeSquadId: activeSquadId || '', 
       awaySquadId: 'opponent' // Would come from match or opponent selection
