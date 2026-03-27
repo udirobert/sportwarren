@@ -25,6 +25,7 @@ import { QuickPersonalization } from '@/components/onboarding/QuickPersonalizati
 import { GuestTour } from '@/components/onboarding/GuestTour';
 import { trpc } from '@/lib/trpc-client';
 import { getDashboardEntryState, type DashboardEntryAction } from '@/lib/dashboard/entry-state';
+import { useTactics } from '@/hooks/squad/useTactics';
 
 import dynamic from 'next/dynamic';
 
@@ -117,6 +118,9 @@ export const AdaptiveDashboard: React.FC = () => {
   });
   const { completeChecklistItem, allChecklistDone, completedCount, totalCount } = useOnboarding();
   const currentUserId = currentProfile?.userId;
+
+  // Fetch squad tactics for MatchEnginePreview
+  const { tactics: squadTactics } = useTactics(primarySquadId || undefined);
 
   // Ticker data queries
   const { data: matchData } = trpc.match.list.useQuery(
@@ -519,7 +523,10 @@ export const AdaptiveDashboard: React.FC = () => {
         category: 'matches' as const,
         component: (
           <div onClick={() => completeChecklistItem('view_match_engine')}>
-            <MatchEnginePreview squadId={primarySquadId} />
+            <MatchEnginePreview 
+              squadId={primarySquadId} 
+              formation={squadTactics?.formation}
+            />
           </div>
         ),
       },

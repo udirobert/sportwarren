@@ -18,6 +18,9 @@ import {
   Sparkles,
 } from 'lucide-react';
 import type { MiniAppContext } from './TelegramMiniAppShell';
+import type { Player, PlayerPosition } from '@/types';
+import { FORMATIONS, buildAutoLineup } from '@/lib/formations';
+import { PitchCanvas } from '@/components/squad/PitchCanvas';
 
 interface TelegramSquadDashboardProps {
   context: MiniAppContext;
@@ -87,6 +90,23 @@ export function TelegramSquadDashboard({ context, onNavigate }: TelegramSquadDas
 
   // Get next match (first pending or first recent if no pending)
   const nextMatch = matches.pending[0];
+
+  // Build player objects for pitch visualization
+  const squadPlayers: Player[] = useMemo(() => {
+    return squad.members.map((m) => ({
+      id: m.userId,
+      address: '',
+      name: m.name || 'Player',
+      position: (m.position || 'MF') as PlayerPosition,
+      status: 'available' as const,
+    }));
+  }, [squad.members]);
+
+  // Auto-assign players to 4-3-3 slots
+  const squadPitchLineup: string[] = useMemo(() => {
+    const roles = FORMATIONS['4-3-3'].map((s) => s.role);
+    return buildAutoLineup(roles, squadPlayers);
+  }, [squadPlayers]);
 
   // AI Insights based on context
   const aiInsights = useMemo(() => {
@@ -311,6 +331,29 @@ export function TelegramSquadDashboard({ context, onNavigate }: TelegramSquadDas
           </p>
         </div>
       </div>
+
+      {/* Formation Pitch */}
+      {squad.memberCount >= 3 && (
+        <section className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-green-900/20 to-slate-900/50">
+          <div className="border-b border-white/5 px-4 py-3">
+            <div className="flex items-center gap-2">
+              <Target className="h-4 w-4 text-green-400" />
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Formation</span>
+              <span className="ml-auto text-xs text-slate-500">4-3-3</span>
+            </div>
+          </div>
+          <div className="p-4">
+            <PitchCanvas
+              formation="4-3-3"
+              lineup={squadPitchLineup}
+              players={squadPlayers}
+              readOnly
+              size="sm"
+              showPlayerNames
+            />
+          </div>
+        </section>
+      )}
 
       {/* AI Insights Card */}
       <section className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-violet-900/20 to-slate-900/50">

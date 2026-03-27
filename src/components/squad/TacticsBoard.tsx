@@ -10,6 +10,19 @@ import {
 } from 'lucide-react';
 import type { Tactics, Formation, PlayStyle, TeamInstructions, Player, PlayerPosition } from '@/types';
 import { POSITION_COLORS, POSITION_NAMES } from '@/lib/utils';
+import { 
+  FORMATIONS, 
+  ROLE_LABELS,
+  PLAY_STYLES,
+  PLAY_STYLE_LABELS,
+  TACTICAL_PRESETS,
+  SET_PIECE_OPTIONS,
+  buildAutoLineup,
+  reconcileLineup,
+  scorePlayerForRole,
+  getRolePosition,
+} from '@/lib/formations';
+import { PitchCanvas } from './PitchCanvas';
 
 interface TacticsBoardProps {
   players: Player[];
@@ -19,226 +32,11 @@ interface TacticsBoardProps {
   readOnly?: boolean;
 }
 
-// Formation definitions with positions
-const FORMATIONS: Record<Formation, Array<{ x: number; y: number; role: string }>> = {
-  '4-4-2': [
-    { x: 50, y: 90, role: 'GK' },
-    { x: 20, y: 70, role: 'LB' }, { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RB' },
-    { x: 20, y: 45, role: 'LM' }, { x: 40, y: 45, role: 'CM' }, { x: 60, y: 45, role: 'CM' }, { x: 80, y: 45, role: 'RM' },
-    { x: 40, y: 20, role: 'ST' }, { x: 60, y: 20, role: 'ST' },
-  ],
-  '4-3-3': [
-    { x: 50, y: 90, role: 'GK' },
-    { x: 20, y: 70, role: 'LB' }, { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RB' },
-    { x: 35, y: 50, role: 'CM' }, { x: 50, y: 45, role: 'CM' }, { x: 65, y: 50, role: 'CM' },
-    { x: 25, y: 25, role: 'LW' }, { x: 50, y: 20, role: 'ST' }, { x: 75, y: 25, role: 'RW' },
-  ],
-  '4-2-3-1': [
-    { x: 50, y: 90, role: 'GK' },
-    { x: 20, y: 70, role: 'LB' }, { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RB' },
-    { x: 40, y: 55, role: 'CDM' }, { x: 60, y: 55, role: 'CDM' },
-    { x: 25, y: 35, role: 'CAM' }, { x: 50, y: 30, role: 'CAM' }, { x: 75, y: 35, role: 'CAM' },
-    { x: 50, y: 15, role: 'ST' },
-  ],
-  '3-5-2': [
-    { x: 50, y: 90, role: 'GK' },
-    { x: 30, y: 70, role: 'CB' }, { x: 50, y: 70, role: 'CB' }, { x: 70, y: 70, role: 'CB' },
-    { x: 15, y: 50, role: 'LWB' }, { x: 35, y: 50, role: 'CM' }, { x: 50, y: 45, role: 'CM' }, { x: 65, y: 50, role: 'CM' }, { x: 85, y: 50, role: 'RWB' },
-    { x: 40, y: 20, role: 'ST' }, { x: 60, y: 20, role: 'ST' },
-  ],
-  '5-3-2': [
-    { x: 50, y: 90, role: 'GK' },
-    { x: 15, y: 70, role: 'LWB' }, { x: 32, y: 70, role: 'CB' }, { x: 50, y: 70, role: 'CB' }, { x: 68, y: 70, role: 'CB' }, { x: 85, y: 70, role: 'RWB' },
-    { x: 35, y: 45, role: 'CM' }, { x: 50, y: 40, role: 'CM' }, { x: 65, y: 45, role: 'CM' },
-    { x: 40, y: 20, role: 'ST' }, { x: 60, y: 20, role: 'ST' },
-  ],
-  '4-5-1': [
-    { x: 50, y: 90, role: 'GK' },
-    { x: 20, y: 70, role: 'LB' }, { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RB' },
-    { x: 20, y: 50, role: 'LM' }, { x: 35, y: 45, role: 'CM' }, { x: 50, y: 40, role: 'CM' }, { x: 65, y: 45, role: 'CM' }, { x: 80, y: 50, role: 'RM' },
-    { x: 50, y: 20, role: 'ST' },
-  ],
-  '4-1-4-1': [
-    { x: 50, y: 90, role: 'GK' },
-    { x: 20, y: 70, role: 'LB' }, { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RB' },
-    { x: 50, y: 55, role: 'CDM' },
-    { x: 20, y: 40, role: 'LM' }, { x: 40, y: 40, role: 'CM' }, { x: 60, y: 40, role: 'CM' }, { x: 80, y: 40, role: 'RM' },
-    { x: 50, y: 20, role: 'ST' },
-  ],
-  '3-4-3': [
-    { x: 50, y: 90, role: 'GK' },
-    { x: 30, y: 70, role: 'CB' }, { x: 50, y: 70, role: 'CB' }, { x: 70, y: 70, role: 'CB' },
-    { x: 20, y: 50, role: 'LM' }, { x: 40, y: 50, role: 'CM' }, { x: 60, y: 50, role: 'CM' }, { x: 80, y: 50, role: 'RM' },
-    { x: 25, y: 25, role: 'LW' }, { x: 50, y: 20, role: 'ST' }, { x: 75, y: 25, role: 'RW' },
-  ],
-  '4-3-1-2': [
-    { x: 50, y: 90, role: 'GK' },
-    { x: 20, y: 70, role: 'LB' }, { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RB' },
-    { x: 35, y: 50, role: 'CM' }, { x: 50, y: 50, role: 'CM' }, { x: 65, y: 50, role: 'CM' },
-    { x: 50, y: 35, role: 'CAM' },
-    { x: 40, y: 20, role: 'ST' }, { x: 60, y: 20, role: 'ST' },
-  ],
-  '5-4-1': [
-    { x: 50, y: 90, role: 'GK' },
-    { x: 15, y: 70, role: 'LWB' }, { x: 32, y: 70, role: 'CB' }, { x: 50, y: 70, role: 'CB' }, { x: 68, y: 70, role: 'CB' }, { x: 85, y: 70, role: 'RWB' },
-    { x: 25, y: 45, role: 'LM' }, { x: 42, y: 45, role: 'CM' }, { x: 58, y: 45, role: 'CM' }, { x: 75, y: 45, role: 'RM' },
-    { x: 50, y: 20, role: 'ST' },
-  ],
-};
-
-const PLAY_STYLES: PlayStyle[] = ['balanced', 'possession', 'direct', 'counter', 'high_press', 'low_block'];
-
-const PLAY_STYLE_LABELS: Record<PlayStyle, { name: string; description: string; icon: string }> = {
-  balanced: { name: 'Balanced', description: 'Mix of attack and defense', icon: '⚖️' },
-  possession: { name: 'Possession', description: 'Keep the ball, build slowly', icon: '🎯' },
-  direct: { name: 'Direct', description: 'Quick transitions, long balls', icon: '🚀' },
-  counter: { name: 'Counter Attack', description: 'Defend deep, attack fast', icon: '⚡' },
-  high_press: { name: 'High Press', description: 'Press high, win ball early', icon: '🔥' },
-  low_block: { name: 'Low Block', description: 'Defend deep, compact shape', icon: '🛡️' },
-};
-
-const TACTICAL_PRESETS: Array<{
-  id: string;
-  name: string;
-  description: string;
-  formation: Formation;
-  style: PlayStyle;
-  instructions: TeamInstructions;
-}> = [
-  {
-    id: 'pressure',
-    name: 'Pressure Lock',
-    description: 'Suffocate build-up, win the ball early.',
-    formation: '4-3-3',
-    style: 'high_press',
-    instructions: { width: 'wide', tempo: 'fast', passing: 'mixed', pressing: 'high', defensiveLine: 'high' },
-  },
-  {
-    id: 'possession',
-    name: 'Control Room',
-    description: 'Dominate midfield, stretch the pitch.',
-    formation: '4-3-3',
-    style: 'possession',
-    instructions: { width: 'wide', tempo: 'slow', passing: 'short', pressing: 'medium', defensiveLine: 'normal' },
-  },
-  {
-    id: 'counter',
-    name: 'Counter Wire',
-    description: 'Stay compact, break fast.',
-    formation: '4-5-1',
-    style: 'counter',
-    instructions: { width: 'narrow', tempo: 'fast', passing: 'long', pressing: 'low', defensiveLine: 'deep' },
-  },
-  {
-    id: 'direct',
-    name: 'Vertical Punch',
-    description: 'Direct routes, win second balls.',
-    formation: '4-4-2',
-    style: 'direct',
-    instructions: { width: 'normal', tempo: 'fast', passing: 'long', pressing: 'medium', defensiveLine: 'normal' },
-  },
-];
-
-const SET_PIECE_OPTIONS = {
-  corners: [
-    { value: 'near_post', label: 'Near post' },
-    { value: 'far_post', label: 'Far post' },
-    { value: 'edge_of_box', label: 'Edge of box' },
-    { value: 'short', label: 'Short' },
-  ],
-  freeKicks: [
-    { value: 'shoot', label: 'Shoot' },
-    { value: 'cross', label: 'Cross' },
-    { value: 'short_pass', label: 'Short pass' },
-  ],
-};
-
-const ROLE_LABELS: Record<string, string> = {
-  GK: 'Goalkeeper',
-  CB: 'Center Back',
-  LB: 'Left Back',
-  RB: 'Right Back',
-  LWB: 'Left Wing-Back',
-  RWB: 'Right Wing-Back',
-  CDM: 'Defensive Mid',
-  CM: 'Central Mid',
-  CAM: 'Attacking Mid',
-  LM: 'Left Mid',
-  RM: 'Right Mid',
-  LW: 'Left Wing',
-  RW: 'Right Wing',
-  ST: 'Striker',
-  DEF: 'Defender',
-  MID: 'Midfielder',
-  ATT: 'Attacker',
-};
-
-const ROLE_TO_POSITION: Record<string, PlayerPosition> = {
-  GK: 'GK',
-  CB: 'DF',
-  LB: 'DF',
-  RB: 'DF',
-  LWB: 'DF',
-  RWB: 'DF',
-  CDM: 'MF',
-  CM: 'MF',
-  CAM: 'MF',
-  LM: 'MF',
-  RM: 'MF',
-  LW: 'WG',
-  RW: 'WG',
-  ST: 'ST',
-  DEF: 'DF',
-  MID: 'MF',
-  ATT: 'ST',
-};
-
-const getRolePosition = (role: string): PlayerPosition => ROLE_TO_POSITION[role] ?? 'MF';
-
 const getStatusScore = (status: Player['status']) => {
   if (status === 'available') return 3;
   if (status === 'injured') return -2;
   if (status === 'suspended') return -3;
   return -1;
-};
-
-const scorePlayerForRole = (player: Player, role: string) => {
-  const rolePos = getRolePosition(role);
-  const positionScore = player.position === rolePos ? 6 : player.position === 'WG' && rolePos === 'ST' ? 2 : 0;
-  return positionScore + getStatusScore(player.status);
-};
-
-const buildAutoLineup = (roles: string[], players: Player[], locked: Set<string> = new Set()) => {
-  const result: string[] = Array.from({ length: roles.length }).map(() => '');
-  roles.forEach((role, idx) => {
-    const candidates = players
-      .map((p) => ({ player: p, score: scorePlayerForRole(p, role) }))
-      .sort((a, b) => b.score - a.score);
-    const pick = candidates.find((c) => !locked.has(c.player.id));
-    if (pick) {
-      result[idx] = pick.player.id;
-      locked.add(pick.player.id);
-    }
-  });
-  return result;
-};
-
-const reconcileLineup = (roles: string[], pool: Player[], current: string[]) => {
-  const valid = new Set(pool.map((p) => p.id));
-  const used = new Set<string>();
-  const next = Array.from({ length: roles.length }).map(() => '');
-  roles.forEach((role, idx) => {
-    const id = current[idx];
-    if (id && valid.has(id) && !used.has(id)) {
-      next[idx] = id;
-      used.add(id);
-    }
-  });
-  const autoFill = buildAutoLineup(roles, pool, used);
-  autoFill.forEach((id, idx) => {
-    if (!next[idx]) next[idx] = id;
-  });
-  return next;
 };
 
 export const TacticsBoard: React.FC<TacticsBoardProps> = ({
@@ -310,7 +108,7 @@ export const TacticsBoard: React.FC<TacticsBoardProps> = ({
       ...prev,
       formation: preset.formation,
       style: preset.style,
-      instructions: preset.instructions,
+      instructions: { ...prev.instructions, ...preset.instructions },
     }));
     setHasChanges(true);
   };
@@ -463,46 +261,14 @@ export const TacticsBoard: React.FC<TacticsBoardProps> = ({
           )}
         </div>
 
-        {/* Pitch Visualization */}
-        <div className="relative bg-gradient-to-b from-green-600 to-green-700 rounded-xl overflow-hidden" style={{ paddingBottom: '65%' }}>
-          {/* Pitch markings */}
-          <div className="absolute inset-0">
-            {/* Center circle */}
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white/30 rounded-full" />
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white/50 rounded-full" />
-            
-            {/* Center line */}
-            <div className="absolute top-0 left-1/2 w-0.5 h-full bg-white/30 transform -translate-x-1/2" />
-            
-            {/* Penalty areas */}
-            <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-48 h-24 border-2 border-white/30 border-t-0" />
-            <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-48 h-24 border-2 border-white/30 border-b-0" />
-          </div>
-
-          {/* Player positions */}
-          {formationPositions.map((pos, idx) => {
-            const assignedId = lineup[idx];
-            const assigned = assignedId ? playerById.get(assignedId) : undefined;
-            return (
-            <div
-              key={idx}
-              className="absolute transform -translate-x-1/2 -translate-y-1/2"
-              style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={(e) => {
-                e.preventDefault();
-                const payload = getDragPayload(e);
-                if (payload) handleDropOnSlot(idx, payload);
-              }}
-            >
-              <div className={`w-10 h-10 rounded-full flex items-center justify-center shadow-lg border-2 ${assigned ? 'bg-gray-900 border-yellow-300' : 'bg-white border-green-500'}`}>
-                <span className={`text-[10px] font-bold ${assigned ? 'text-white' : 'text-green-700'}`}>
-                  {assigned ? assigned.name.split(' ').map(p => p[0]).join('').slice(0, 2) : pos.role}
-                </span>
-              </div>
-            </div>
-          )})}
-        </div>
+        {/* Pitch Visualization - Now using reusable PitchCanvas */}
+        <PitchCanvas
+          formation={selectedFormation}
+          lineup={lineup}
+          players={players}
+          readOnly={readOnly}
+          onLineupChange={setLineup}
+        />
 
         <p className="text-sm text-gray-600 mt-3">
           {formationPositions.length - 1} outfield players + 1 goalkeeper
