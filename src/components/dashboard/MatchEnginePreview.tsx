@@ -20,6 +20,7 @@ import {
 
 import type { Formation } from '@/types';
 import { FORMATIONS } from '@/lib/formations';
+import { useUserPreferences } from '@/hooks/useUserPreferences';
 
 type MatchPhase = 'first_half' | 'halftime' | 'second_half' | 'fulltime';
 
