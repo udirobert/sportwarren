@@ -23,6 +23,8 @@ import {
   getMatchXPSummariesForProfile,
 } from "../match-xp";
 
+import { maskMatchIntel } from "../../lib/match/intel-disclosure";
+
 const TON_TOP_UP_PRESETS = [1, 2, 5, 10];
 
 function getDefaultTonTreasuryAddress(): string | null {
@@ -549,25 +551,45 @@ export async function getTelegramMiniAppContext(
     return "D";
   });
 
-  // Calculate "Next Match" for the refocus (mock/upcoming logic)
-  const nextMatch = {
-    id: "next-fixture-id",
-    opponent: "Ravens FC",
-    matchDate: new Date(Date.now() + 86400000 * 2).toISOString(), // 2 days from now
-    isHome: true,
-    venue: connection.squad.homeGround ?? "Home Ground",
-    homeFormation: "4-3-3",
-    awayFormation: "4-4-2",
-    scoutingReport: "Ravens FC play a direct style, relying on their physical target man to win second balls. They struggle against high-pressing teams but are dangerous on set pieces.",
-    keyThreats: ["Long balls to target man", "Dangerous corner deliveries", "High physical intensity"],
-    keyOpportunities: ["Slow central defenders", "Space behind wingbacks", "Poor defensive transitions"],
-    tacticalInsight: "Coach says: We should use our superior pace in wide areas and press their backline early to disrupt their long-ball service.",
-    winProbability: {
-      home: 45,
-      away: 30,
-      draw: 25,
+  // Calculate "Next Match" for the refocus (real upcoming logic)
+  const upcomingMatch = await prisma.match.findFirst({
+    where: {
+      OR: [{ homeSquadId: squadId }, { awaySquadId: squadId }],
+      status: "pending",
+      matchDate: { gt: new Date() },
     },
-  };
+    include: {
+      homeSquad: { select: { name: true, homeGround: true } },
+      awaySquad: { select: { name: true } },
+    },
+    orderBy: { matchDate: "asc" },
+  });
+
+  let nextMatch = null;
+  if (upcomingMatch) {
+    const isHome = upcomingMatch.homeSquadId === squadId;
+    const masked = maskMatchIntel(upcomingMatch);
+    
+    nextMatch = {
+      id: upcomingMatch.id,
+      opponent: isHome ? upcomingMatch.awaySquad.name : upcomingMatch.homeSquad.name,
+      matchDate: upcomingMatch.matchDate.toISOString(),
+      isHome,
+      venue: upcomingMatch.homeSquad.homeGround ?? "TBD",
+      homeFormation: (masked as any).homeFormation ?? "4-4-2",
+      awayFormation: (masked as any).awayFormation ?? "4-4-2",
+      scoutingReport: (masked as any).scoutingReport ?? "Scouting intelligence locked.",
+      keyThreats: (masked as any).keyThreats ?? [],
+      keyOpportunities: (masked as any).keyOpportunities ?? [],
+      tacticalInsight: (masked as any).tacticalInsight ?? "Tactical briefing pending.",
+      intelLevel: masked.intelLevel,
+      winProbability: {
+        home: (masked as any).homeWinPct ?? 0,
+        away: (masked as any).awayWinPct ?? 0,
+        draw: (masked as any).drawPct ?? 0,
+      },
+    };
+  }
 
   // Treasury data
   const treasury =

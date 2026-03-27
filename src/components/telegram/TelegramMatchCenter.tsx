@@ -434,6 +434,9 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
 
   if (viewMode === 'preview' && matches.nextMatch) {
     const nextMatch = matches.nextMatch;
+    const intelLevel = nextMatch.intelLevel ?? 4; // Default to full if missing
+    const INTEL_LEVELS = { BASIC: 0, SQUAD: 1, SCOUTING: 2, TACTICAL: 3, FULL: 4 };
+
     return (
       <div className="p-4 space-y-6 pb-20">
         <div className="flex items-center gap-3">
@@ -444,72 +447,103 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
           </div>
         </div>
 
-        <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/50">
-          <div className="border-b border-white/5 bg-white/5 px-4 py-3">
-             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Target className="h-4 w-4 text-emerald-400" />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Formation Setup</span>
-                </div>
-                <span className="text-xs font-black text-white italic">{nextMatch.homeFormation}</span>
+        {/* Formation Setup - Level 1+ */}
+        {intelLevel >= INTEL_LEVELS.SQUAD ? (
+          <section className="overflow-hidden rounded-[2rem] border border-white/10 bg-slate-900/50">
+            <div className="border-b border-white/5 bg-white/5 px-4 py-3">
+               <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-emerald-400" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Formation Setup</span>
+                  </div>
+                  <span className="text-xs font-black text-white italic">{nextMatch.homeFormation}</span>
+               </div>
+            </div>
+            <div className="p-4 bg-slate-950/50">
+              <PitchCanvas formation={nextMatch.homeFormation as any} lineup={[]} players={[]} readOnly size="sm" showPlayerNames={false} />
+            </div>
+          </section>
+        ) : (
+          <section className="rounded-2xl border border-white/10 bg-slate-800/20 p-8 text-center">
+            <Users className="mx-auto h-8 w-8 text-slate-600 mb-2" />
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Squad Intel Locked</p>
+            <p className="text-[10px] text-slate-600 mt-1">Check back 5 days before kickoff</p>
+          </section>
+        )}
+
+        {/* Win Probability - Level 4 only */}
+        {intelLevel >= INTEL_LEVELS.FULL ? (
+          <section className="rounded-2xl border border-white/10 bg-slate-800/30 p-4">
+             <div className="mb-3 flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Win Probability</span>
+                <span className="text-[10px] font-bold text-emerald-400">AI Model v2.4</span>
              </div>
-          </div>
-          <div className="p-4 bg-slate-950/50">
-            <PitchCanvas formation={nextMatch.homeFormation as any} lineup={[]} players={[]} readOnly size="sm" showPlayerNames={false} />
-          </div>
-        </section>
+             <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-700">
+                <div className="h-full bg-emerald-500" style={{ width: `${nextMatch.winProbability.home}%` }} />
+                <div className="h-full bg-slate-500" style={{ width: `${nextMatch.winProbability.draw}%` }} />
+                <div className="h-full bg-rose-500" style={{ width: `${nextMatch.winProbability.away}%` }} />
+             </div>
+             <div className="mt-2 flex justify-between text-[10px] font-bold text-slate-400">
+                <span>Win {nextMatch.winProbability.home}%</span>
+                <span>Draw {nextMatch.winProbability.draw}%</span>
+                <span>Loss {nextMatch.winProbability.away}%</span>
+             </div>
+          </section>
+        ) : (
+          <section className="rounded-2xl border border-white/5 bg-slate-900/20 p-4 border-dashed">
+            <p className="text-[10px] font-bold text-slate-600 uppercase text-center tracking-widest">Win Prediction Locked</p>
+          </section>
+        )}
 
-        <section className="rounded-2xl border border-white/10 bg-slate-800/30 p-4">
-           <div className="mb-3 flex items-center justify-between">
-              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Win Probability</span>
-              <span className="text-[10px] font-bold text-emerald-400">AI Model v2.4</span>
-           </div>
-           <div className="flex h-3 w-full overflow-hidden rounded-full bg-slate-700">
-              <div className="h-full bg-emerald-500" style={{ width: `${nextMatch.winProbability.home}%` }} />
-              <div className="h-full bg-slate-500" style={{ width: `${nextMatch.winProbability.draw}%` }} />
-              <div className="h-full bg-rose-500" style={{ width: `${nextMatch.winProbability.away}%` }} />
-           </div>
-           <div className="mt-2 flex justify-between text-[10px] font-bold text-slate-400">
-              <span>Win {nextMatch.winProbability.home}%</span>
-              <span>Draw {nextMatch.winProbability.draw}%</span>
-              <span>Loss {nextMatch.winProbability.away}%</span>
-           </div>
-        </section>
+        {/* AI Briefing - Level 3+ */}
+        {intelLevel >= INTEL_LEVELS.TACTICAL ? (
+          <section className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5">
+             <div className="mb-3 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-violet-400" />
+                <span className="text-[10px] font-black uppercase tracking-widest text-violet-400">AI Staff Briefing</span>
+             </div>
+             <p className="text-sm italic leading-relaxed text-slate-300">"{nextMatch.tacticalInsight}"</p>
+          </section>
+        ) : (
+          <section className="rounded-2xl border border-violet-500/5 bg-slate-900/10 p-4 text-center">
+            <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest italic">Coach Kite: "Briefing is pending intel..."</p>
+          </section>
+        )}
 
-        <section className="rounded-2xl border border-violet-500/20 bg-violet-500/5 p-5">
-           <div className="mb-3 flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-violet-400" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-violet-400">AI Staff Briefing</span>
-           </div>
-           <p className="text-sm italic leading-relaxed text-slate-300">"{nextMatch.tacticalInsight}"</p>
-        </section>
-
+        {/* Scouting Report - Level 2+ */}
         <section className="space-y-4">
            <div className="flex items-center gap-2">
               <Shield className="h-4 w-4 text-cyan-400" />
               <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Opposition Scouting</span>
            </div>
-           <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-5">
-              <p className="text-xs leading-relaxed text-slate-400 mb-4">{nextMatch.scoutingReport}</p>
-              <div className="space-y-3">
-                 <div>
-                    <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-rose-400/70">Key Threats</p>
-                    <div className="flex flex-wrap gap-2">
-                       {nextMatch.keyThreats.map((threat, i) => (
-                         <span key={i} className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 text-[10px] font-bold text-rose-300">{threat}</span>
-                       ))}
-                    </div>
-                 </div>
-                 <div>
-                    <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-emerald-400/70">Opportunities</p>
-                    <div className="flex flex-wrap gap-2">
-                       {nextMatch.keyOpportunities.map((opp, i) => (
-                         <span key={i} className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-[10px] font-bold text-emerald-300">{opp}</span>
-                       ))}
-                    </div>
-                 </div>
-              </div>
-           </div>
+           {intelLevel >= INTEL_LEVELS.SCOUTING ? (
+             <div className="rounded-2xl border border-white/10 bg-slate-900/40 p-5">
+                <p className="text-xs leading-relaxed text-slate-400 mb-4">{nextMatch.scoutingReport}</p>
+                <div className="space-y-3">
+                   <div>
+                      <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-rose-400/70">Key Threats</p>
+                      <div className="flex flex-wrap gap-2">
+                         {nextMatch.keyThreats.map((threat, i) => (
+                           <span key={i} className="rounded-lg bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 text-[10px] font-bold text-rose-300">{threat}</span>
+                         ))}
+                      </div>
+                   </div>
+                   <div>
+                      <p className="mb-2 text-[9px] font-black uppercase tracking-widest text-emerald-400/70">Opportunities</p>
+                      <div className="flex flex-wrap gap-2">
+                         {nextMatch.keyOpportunities.map((opp, i) => (
+                           <span key={i} className="rounded-lg bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 text-[10px] font-bold text-emerald-300">{opp}</span>
+                         ))}
+                      </div>
+                   </div>
+                </div>
+             </div>
+           ) : (
+             <div className="rounded-2xl border border-white/5 bg-slate-900/30 p-8 text-center border-dashed">
+                <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Opposition Intel Locked</p>
+                <p className="text-[9px] text-slate-700 mt-1">Unlock 3 days before match</p>
+             </div>
+           )}
         </section>
 
         <button onClick={() => setViewMode('overview')} className="w-full rounded-2xl bg-white/5 border border-white/10 py-4 text-sm font-bold text-slate-300">Close Preview</button>
