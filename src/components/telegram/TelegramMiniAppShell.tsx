@@ -174,6 +174,24 @@ export function TelegramMiniAppShell({
   const touchStartYRef = useRef<number | null>(null);
   const pullTriggeredRef = useRef(false);
 
+  const createValidationError = useMemo(() => {
+    const trimmedName = createSquadName.trim();
+    const trimmedShortName = createShortName.trim();
+
+    if (trimmedName.length < 2) {
+      return 'Squad name must be at least 2 characters.';
+    }
+
+    if (trimmedShortName.length < 2 || trimmedShortName.length > 5) {
+      return 'Short name must be between 2 and 5 characters.';
+    }
+
+    return null;
+  }, [createShortName, createSquadName]);
+
+  const showCreateValidationError = Boolean(createValidationError)
+    && (createSquadName.trim().length > 0 || createShortName.trim().length > 0);
+
   // Initialize Telegram WebApp
   useEffect(() => {
     const webApp = window.Telegram?.WebApp;
@@ -542,6 +560,11 @@ export function TelegramMiniAppShell({
       return;
     }
 
+    if (createValidationError) {
+      setOnboardingNotice(createValidationError);
+      return;
+    }
+
     setOnboardingBusy(true);
     setOnboardingNotice(null);
     try {
@@ -550,9 +573,9 @@ export function TelegramMiniAppShell({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token: sessionToken,
-          name: createSquadName,
-          shortName: createShortName,
-          homeGround: createHomeGround || undefined,
+          name: createSquadName.trim(),
+          shortName: createShortName.trim().toUpperCase(),
+          homeGround: createHomeGround.trim() || undefined,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -561,7 +584,7 @@ export function TelegramMiniAppShell({
         throw new Error(data?.error || 'Failed to create squad.');
       }
 
-      setOnboardingNotice('Squad created. Loading your dashboard...');
+      setOnboardingNotice(`${data?.squad?.name || 'Squad'} created. Loading your dashboard...`);
       setRequiresSquadOnboarding(false);
       setCreateSquadName('');
       setCreateShortName('');
@@ -575,7 +598,7 @@ export function TelegramMiniAppShell({
     }
   };
 
-  const handleJoinSquad = async (squadId: string) => {
+  const handleJoinSquad = async (option: OnboardingSquadOption) => {
     if (!sessionToken || onboardingBusy) {
       return;
     }
@@ -588,7 +611,7 @@ export function TelegramMiniAppShell({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           token: sessionToken,
-          squadId,
+          squadId: option.id,
         }),
       });
       const data = await response.json().catch(() => ({}));
@@ -597,7 +620,14 @@ export function TelegramMiniAppShell({
         throw new Error(data?.error || 'Failed to join squad.');
       }
 
-      setOnboardingNotice('Squad joined. Loading your dashboard...');
+      const joinedSquad = data?.squad;
+      const squadName = joinedSquad?.name || option.name;
+      const alreadyMember = Boolean(joinedSquad?.alreadyMember ?? option.alreadyMember);
+      setOnboardingNotice(
+        alreadyMember
+          ? `Switched to ${squadName}. Loading your dashboard...`
+          : `Joined ${squadName}. Loading your dashboard...`,
+      );
       setRequiresSquadOnboarding(false);
       setOnboardingMode('menu');
       await loadContext();
@@ -735,7 +765,7 @@ export function TelegramMiniAppShell({
               />
               <button
                 onClick={() => void handleCreateSquad()}
-                disabled={onboardingBusy}
+                disabled={onboardingBusy || Boolean(createValidationError)}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:opacity-60"
               >
                 {onboardingBusy ? (
@@ -747,6 +777,9 @@ export function TelegramMiniAppShell({
                   'Create Squad'
                 )}
               </button>
+              {showCreateValidationError && (
+                <p className="px-1 text-xs text-amber-300">{createValidationError}</p>
+              )}
               <button
                 onClick={() => setOnboardingMode('menu')}
                 className="w-full rounded-2xl border border-white/15 bg-white/5 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
@@ -779,7 +812,7 @@ export function TelegramMiniAppShell({
                 {!joinLoading && joinOptions.map((option) => (
                   <button
                     key={option.id}
-                    onClick={() => void handleJoinSquad(option.id)}
+                    onClick={() => void handleJoinSquad(option)}
                     disabled={onboardingBusy}
                     className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-left text-white transition hover:bg-white/10 disabled:opacity-60"
                   >
@@ -790,9 +823,9 @@ export function TelegramMiniAppShell({
                       </p>
                     </div>
                     {option.alreadyMember ? (
-                      <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-1 text-[10px] font-semibold text-emerald-300">
+                      <span className="inline-flex items-center gap-1 rounded-full border border-cyan-400/30 bg-cyan-400/10 px-2 py-1 text-[10px] font-semibold text-cyan-300">
                         <CheckCircle2 className="h-3 w-3" />
-                        Joined
+                        Open
                       </span>
                     ) : (
                       <span className="text-xs font-semibold text-emerald-300">Join</span>
