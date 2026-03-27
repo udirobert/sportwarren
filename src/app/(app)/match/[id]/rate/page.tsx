@@ -2,15 +2,11 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { trpc } from '@/utils/trpc';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Slider } from '@/components/ui/slider';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import { toast } from 'sonner';
-import { Star, CheckCircle2, Trophy, Loader2, ArrowRight, User } from 'lucide-react';
+import { trpc } from '@/lib/trpc-client';
+import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { Star, CheckCircle2, Trophy, Loader2, ArrowRight, User, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function RateTeammatesPage({ params }: { params: { id: string } }) {
@@ -27,7 +23,7 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
       setStep(3);
     },
     onError: (err) => {
-      toast.error(err.message || 'Failed to submit ratings');
+      console.error(err.message || 'Failed to submit ratings');
     }
   });
 
@@ -43,12 +39,10 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
   if (!assignments || assignments.teammates.length === 0) {
     return (
       <div className="container max-w-2xl py-12 text-center">
-        <Card>
-          <CardContent className="pt-6">
-            <CardTitle>No Assignments</CardTitle>
-            <CardDescription>You don't have any teammates to rate for this match, or the window is closed.</CardDescription>
-            <Button className="mt-4" onClick={() => router.back()}>Go Back</Button>
-          </CardContent>
+        <Card className="p-6">
+          <h3 className="text-xl font-bold">No Assignments</h3>
+          <p className="text-muted-foreground mt-2">You don't have any teammates to rate for this match, or the window is closed.</p>
+          <Button className="mt-4" onClick={() => router.back()}>Go Back</Button>
         </Card>
       </div>
     );
@@ -101,19 +95,19 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
           >
-            <Card className="border-2 border-primary/20 shadow-xl overflow-hidden">
+            <Card className="border-2 border-primary/20 shadow-xl overflow-hidden p-0">
               <div className="bg-primary/10 h-32 flex items-center justify-center">
                 <div className="bg-white p-4 rounded-full shadow-lg">
                   <CheckCircle2 className="w-12 h-12 text-primary" />
                 </div>
               </div>
-              <CardHeader className="text-center pt-10">
-                <CardTitle className="text-3xl font-bold">Post-Match Scout Report</CardTitle>
-                <CardDescription className="text-lg">
+              <div className="text-center pt-10 px-6">
+                <h3 className="text-3xl font-bold">Post-Match Scout Report</h3>
+                <p className="text-lg text-muted-foreground mt-2">
                   Rate your teammates' performance. Your objective feedback earns you Scout XP and helps them level up.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
+                </p>
+              </div>
+              <div className="space-y-6 p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="flex items-center gap-3 p-4 bg-muted rounded-lg border border-border">
                     <div className="bg-primary/20 p-2 rounded-full"><User className="w-5 h-5 text-primary" /></div>
@@ -127,7 +121,7 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
                 <Button className="w-full text-lg h-12" onClick={() => setStep(1)}>
                   Start Scouting <ArrowRight className="ml-2 w-5 h-5" />
                 </Button>
-              </CardContent>
+              </div>
             </Card>
           </motion.div>
         )}
@@ -139,32 +133,36 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
           >
-            <Card className="shadow-lg border-2 border-primary/10">
-              <CardHeader className="flex flex-row items-center gap-4 border-b pb-6">
-                <Avatar className="h-16 w-16 border-2 border-primary/20">
-                  <AvatarImage src={currentTeammate.avatar} />
-                  <AvatarFallback>{currentTeammate.name[0]}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <Badge variant="outline" className="mb-1">{currentTeammate.position}</Badge>
-                  <CardTitle className="text-2xl">{currentTeammate.name}</CardTitle>
-                  <CardDescription>Scouting {teammateIndex + 1} of {assignments.teammates.length}</CardDescription>
+            <Card className="shadow-lg border-2 border-primary/10 p-0">
+              <div className="flex flex-row items-center gap-4 border-b pb-6 p-6">
+                <div className="h-16 w-16 border-2 border-primary/20 rounded-full bg-gray-800 flex items-center justify-center text-xl font-bold">
+                  {currentTeammate.avatar ? (
+                    <img src={currentTeammate.avatar} alt="" className="w-full h-full rounded-full" />
+                  ) : (
+                    currentTeammate.name[0]
+                  )}
                 </div>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-8">
+                <div>
+                  <span className="inline-flex items-center rounded-md border border-gray-700 px-2 py-0.5 text-xs font-semibold mb-1 text-gray-400">{currentTeammate.position}</span>
+                  <h3 className="text-2xl font-bold">{currentTeammate.name}</h3>
+                  <p className="text-sm text-muted-foreground">Scouting {teammateIndex + 1} of {assignments.teammates.length}</p>
+                </div>
+              </div>
+              <div className="pt-6 space-y-8 p-6">
                 {assignments.attributes.map((attr) => (
                   <div key={attr} className="space-y-4">
                     <div className="flex justify-between items-center">
                       <label className="text-sm font-bold uppercase tracking-wider text-muted-foreground">{attr}</label>
                       <span className="text-xl font-black text-primary">{(ratings[currentTeammate.id]?.[attr] || 6)}</span>
                     </div>
-                    <Slider
+                    <input
+                      type="range"
                       min={1}
                       max={10}
                       step={1}
-                      defaultValue={[ratings[currentTeammate.id]?.[attr] || 6]}
-                      onValueChange={(val) => handleRate(currentTeammate.id, attr, val[0])}
-                      className="py-4"
+                      value={ratings[currentTeammate.id]?.[attr] || 6}
+                      onChange={(e) => handleRate(currentTeammate.id, attr, parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-800 rounded-lg appearance-none cursor-pointer accent-primary"
                     />
                     <div className="flex justify-between text-xs text-muted-foreground px-1">
                       <span>Poor</span>
@@ -176,7 +174,7 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
                 
                 <div className="flex gap-4 pt-4">
                   {teammateIndex > 0 && (
-                    <Button variant="outline" className="flex-1" onClick={() => setTeammateIndex(prev => prev - 1)}>
+                    <Button variant="secondary" className="flex-1" onClick={() => setTeammateIndex(prev => prev - 1)}>
                       Back
                     </Button>
                   )}
@@ -184,7 +182,7 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
                     {isLastTeammate ? "Next: MOTM" : "Next Teammate"} <ArrowRight className="ml-2 w-5 h-5" />
                   </Button>
                 </div>
-              </CardContent>
+              </div>
             </Card>
           </motion.div>
         )}
@@ -196,27 +194,30 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
           >
-            <Card className="shadow-lg border-2 border-yellow-500/20">
-              <CardHeader className="text-center">
+            <Card className="shadow-lg border-2 border-yellow-500/20 p-6">
+              <div className="text-center">
                 <div className="mx-auto bg-yellow-100 p-4 rounded-full w-20 h-20 flex items-center justify-center mb-4">
                   <Trophy className="w-10 h-10 text-yellow-600" />
                 </div>
-                <CardTitle className="text-2xl font-black">Man of the Match</CardTitle>
-                <CardDescription>Who was the standout performer today?</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
+                <h3 className="text-2xl font-black uppercase">Man of the Match</h3>
+                <p className="text-sm text-muted-foreground mb-6">Who was the standout performer today?</p>
+              </div>
+              <div className="space-y-4">
                 <div className="grid grid-cols-1 gap-2">
                   {assignments.teammates.map((t) => (
                     <Button
                       key={t.id}
-                      variant={motmVote === t.id ? "default" : "outline"}
+                      variant={motmVote === t.id ? "primary" : "secondary"}
                       className={`h-16 justify-start gap-4 text-lg ${motmVote === t.id ? "ring-2 ring-yellow-500 ring-offset-2" : ""}`}
                       onClick={() => setMotmVote(t.id)}
                     >
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage src={t.avatar} />
-                        <AvatarFallback>{t.name[0]}</AvatarFallback>
-                      </Avatar>
+                      <div className="h-10 w-10 bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
+                        {t.avatar ? (
+                          <img src={t.avatar} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          t.name[0]
+                        )}
+                      </div>
                       <div className="flex flex-col items-start">
                         <span className="font-bold">{t.name}</span>
                         <span className="text-xs opacity-70">{t.position}</span>
@@ -239,11 +240,11 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
                     )}
                     Submit Report
                   </Button>
-                  <Button variant="ghost" className="w-full" onClick={() => setStep(1)}>
+                  <Button variant="secondary" className="w-full" onClick={() => setStep(1)}>
                     Back to Ratings
                   </Button>
                 </div>
-              </CardContent>
+              </div>
             </Card>
           </motion.div>
         )}
@@ -254,16 +255,16 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
           >
-            <Card className="text-center py-12 border-2 border-green-500/20 shadow-2xl">
-              <CardContent className="space-y-6">
+          <Card className="text-center py-12 border-2 border-green-500/20 shadow-2xl p-6">
+              <div className="space-y-6">
                 <div className="mx-auto bg-green-100 p-6 rounded-full w-24 h-24 flex items-center justify-center animate-bounce">
                   <CheckCircle2 className="w-12 h-12 text-green-600" />
                 </div>
                 <div className="space-y-2">
-                  <CardTitle className="text-4xl font-black text-green-700">Scout Report Sent!</CardTitle>
-                  <CardDescription className="text-lg font-medium">
+                  <h3 className="text-4xl font-black text-green-700">Scout Report Sent!</h3>
+                  <p className="text-lg font-medium">
                     You've earned <span className="text-primary font-black">+25 Scout XP</span> for your contribution.
-                  </CardDescription>
+                  </p>
                 </div>
                 <p className="text-muted-foreground max-w-sm mx-auto">
                   Teammate attributes will update once the rating window closes in 24 hours.
@@ -273,7 +274,7 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
                     Return to Dashboard
                   </Button>
                 </div>
-              </CardContent>
+              </div>
             </Card>
           </motion.div>
         )}

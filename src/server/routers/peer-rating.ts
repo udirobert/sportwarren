@@ -210,13 +210,17 @@ export const peerRatingRouter = createTRPCRouter({
           return { attribute: attr, median, count: scores.length };
         }).filter(m => m.count >= PEER_RATING.MIN_QUORUM);
 
-        const motmVotes = match.motmVotes.filter(v => v.targetId === profile!.id).length;
+        const motmVotesCount = match.motmVotes.filter(v => v.targetId === profile!.id).length;
+
+        // Find the user for this profile from either squad
+        const allMembers = [...match.homeSquad.members, ...match.awaySquad.members];
+        const member = allMembers.find(m => m.user.playerProfile?.id === profile!.id);
 
         return {
           profileId: profile!.id,
-          name: profile!.user.name,
+          name: member?.user.name || 'Anonymous',
           medians,
-          motmVotes,
+          motmVotes: motmVotesCount,
         };
       });
 

@@ -10,9 +10,11 @@ interface DashboardStats {
   matches: number;
   rating: string;
   recentMatches: Array<{
+    id?: string;
     opponent: string;
     result: string;
     date: string;
+    status?: string;
   }>;
 }
 
@@ -92,9 +94,11 @@ function formatRecentMatches(matches: any[], squadId?: string) {
     .map((match) => {
       const summary = describeMatchForSquad(match, squadId);
       return {
+        id: match.id,
         opponent: summary.opponent,
         result: `${summary.result} ${summary.goalsFor}-${summary.goalsAgainst}`,
         date: formatRelativeDate(match.matchDate),
+        status: match.status,
       };
     });
 }

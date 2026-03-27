@@ -489,7 +489,7 @@ export async function verifyMatchResult({
       txId = await postVerifiedMatchToAlgorand(matchId);
     }
 
-    const updatedMatch = await prisma.match.update({
+    const resultMatch = await prisma.match.update({
       where: { id: matchId },
       data: {
         status: newStatus,
@@ -497,15 +497,15 @@ export async function verifyMatchResult({
         peerRatingsCloseAt: newStatus === 'verified' ? new Date(Date.now() + PEER_RATING.WINDOW_HOURS * 60 * 60 * 1000) : undefined,
       },
       include: {
-        homeSquad: { include: { squadGroups: { where: { platform: 'telegram' } } } },
-        awaySquad: { include: { squadGroups: { where: { platform: 'telegram' } } } },
+        homeSquad: { include: { groups: { where: { platform: 'telegram' } } } },
+        awaySquad: { include: { groups: { where: { platform: 'telegram' } } } },
       }
     });
 
     if (newStatus === 'verified') {
-      const notifySquads = [updatedMatch.homeSquad, updatedMatch.awaySquad];
+      const notifySquads = [resultMatch.homeSquad, resultMatch.awaySquad];
       for (const squad of notifySquads) {
-        const tgGroup = squad.squadGroups[0];
+        const tgGroup = squad.groups[0];
         if (tgGroup?.chatId) {
           await telegramService.sendPeerRatingPrompt(tgGroup.chatId, matchId, squad.name);
         }
@@ -517,14 +517,14 @@ export async function verifyMatchResult({
         if (verifiedSettlement) {
           const settlementResult = await settleMatchFee(
             prisma,
-            updatedMatch,
+            resultMatch,
             newStatus,
             verifiedSettlement,
           );
           yellowSettled = settlementResult.settled || yellowSettled;
         } else if (
-          updatedMatch.yellowFeeSessionId
-          && !updatedMatch.yellowFeeSettledAt
+          resultMatch.yellowFeeSessionId
+          && !resultMatch.yellowFeeSettledAt
         ) {
           console.warn(
             'Yellow fee session remains unsettled until the client submits a signed settlement.',
@@ -532,8 +532,8 @@ export async function verifyMatchResult({
         }
 
         if (newStatus === 'verified') {
-          const homeFinalScore = homeScore ?? updatedMatch.homeScore ?? 0;
-          const awayFinalScore = awayScore ?? updatedMatch.awayScore ?? 0;
+          const homeFinalScore = homeScore ?? resultMatch.homeScore ?? 0;
+          const awayFinalScore = awayScore ?? resultMatch.awayScore ?? 0;
           const isDraw = homeFinalScore === awayFinalScore;
 
           // Seeding participation stats before rewards distribution
@@ -544,8 +544,8 @@ export async function verifyMatchResult({
 
           await distributeMatchRewards({
             prisma,
-            squadId: updatedMatch.homeSquadId,
-            matchId: updatedMatch.id,
+            squadId: resultMatch.homeSquadId,
+            matchId: resultMatch.id,
             isWinner: homeFinalScore > awayFinalScore,
             isDraw,
             playerStats: seededStats, // Using seeded participation stats
@@ -553,8 +553,8 @@ export async function verifyMatchResult({
 
           await distributeMatchRewards({
             prisma,
-            squadId: updatedMatch.awaySquadId,
-            matchId: updatedMatch.id,
+            squadId: resultMatch.awaySquadId,
+            matchId: resultMatch.id,
             isWinner: awayFinalScore > homeFinalScore,
             isDraw,
             playerStats: seededStats, // Using seeded participation stats
