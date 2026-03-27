@@ -325,7 +325,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           }
 
           try {
-            const challengeRes = await fetch('/api/auth/challenge');
+            const challengeRes = await fetch('/api/auth/challenge', { cache: 'no-store' });
             const { message, timestamp } = await challengeRes.json();
             const { signature, address: signerAddress } = await signWithPrivyEmbeddedWallet(wallets, message, embeddedWalletAddress);
             persistAuth(signature, message, timestamp, signerAddress, 'social');
@@ -402,11 +402,26 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       updateAuthStatus(false);
       return;
     }
+    // Proactive refresh: refresh signature when 90% of validity period has passed
+    // This prevents unexpected expiration during active usage
+    const validityPeriod = authStatus.expiresAt - authStatus.signedAt!;
+    const proactiveRefreshTime = authStatus.signedAt! + validityPeriod * 0.9; // 90% through validity period
+    const timeUntilProactiveRefresh = proactiveRefreshTime - Date.now();
+    
+    if (timeUntilProactiveRefresh > 0) {
+      // Schedule proactive refresh before expiry
+      const proactiveTimer = window.setTimeout(() => {
+        refreshAuthSignature();
+      }, timeUntilProactiveRefresh);
+      return () => window.clearTimeout(proactiveTimer);
+    }
+    
+    // Fallback: just update status when expired
     const timeout = window.setTimeout(() => {
       updateAuthStatus(false);
     }, remainingMs + 25);
     return () => window.clearTimeout(timeout);
-  }, [authStatus.expiresAt, authStatus.state, updateAuthStatus]);
+  }, [authStatus.expiresAt, authStatus.state, authStatus.signedAt, updateAuthStatus, refreshAuthSignature]);
 
   const fetchAlgorandBalance = async (addr: string) => {
     try {
@@ -453,7 +468,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     setAuthStatus(prev => ({ ...prev, isRefreshing: true }));
 
     try {
-      const challengeRes = await fetch('/api/auth/challenge');
+      const challengeRes = await fetch('/api/auth/challenge', { cache: 'no-store' });
       const { message, timestamp } = await challengeRes.json();
 
       let signature = '';
@@ -543,7 +558,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         if (!walletAddress) throw new Error('No Algorand wallet found. Please install Pera or Defly wallet.');
 
         // ── Step 2: Fetch challenge from server ──
-        const challengeRes = await fetch('/api/auth/challenge');
+        const challengeRes = await fetch('/api/auth/challenge', { cache: 'no-store' });
         const { message, timestamp } = await challengeRes.json();
 
         // ── Step 3: Sign client-side ──
@@ -597,7 +612,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         if (!walletAddress) throw new Error('No accounts returned from wallet.');
 
         // ── Fetch challenge & sign ──
-        const challengeRes = await fetch('/api/auth/challenge');
+        const challengeRes = await fetch('/api/auth/challenge', { cache: 'no-store' });
         const { message, timestamp } = await challengeRes.json();
         const signature = await signWithEvmProvider(walletAddress, message);
 
@@ -646,7 +661,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         const accounts: string[] = await provider.request({ method: 'eth_requestAccounts' });
         const walletAddress = accounts[0];
 
-        const challengeRes = await fetch('/api/auth/challenge');
+        const challengeRes = await fetch('/api/auth/challenge', { cache: 'no-store' });
         const { message, timestamp } = await challengeRes.json();
         const signature = await signWithEvmProvider(walletAddress, message);
 

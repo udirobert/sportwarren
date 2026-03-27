@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { generateAuthMessage } from '@/server/trpc';
 
+export const dynamic = 'force-dynamic';
+
 /**
  * GET /api/auth/challenge
  * Returns a time-limited signed message challenge for wallet authentication.
