@@ -32,6 +32,7 @@ import dynamic from 'next/dynamic';
 // Statically imported (small / always visible)
 import { AgentProvider } from '@/context/AgentContext';
 import { CreateSquadFlow } from '@/components/squad/CreateSquadFlow';
+import { JoinSquadFlow } from '@/components/squad/JoinSquadFlow';
 import { PendingActionsPanel } from '@/components/operations/PendingActionsPanel';
 
 // Dynamically imported (code-split, loaded on demand)
@@ -67,6 +68,7 @@ export const AdaptiveDashboard: React.FC = () => {
   const [isStaffRoomOpen, setIsStaffRoomOpen] = React.useState(false);
   const [isTourActive, setIsTourActive] = React.useState(false);
   const [showCreateSquadFlow, setShowCreateSquadFlow] = React.useState(false);
+  const [showJoinSquadFlow, setShowJoinSquadFlow] = React.useState(false);
   const [isSquadPickerOpen, setIsSquadPickerOpen] = React.useState(false);
   const squadPickerRef = React.useRef<HTMLDivElement>(null);
   const isVerified = !isGuest && authStatus.state === 'valid';
@@ -397,6 +399,13 @@ export const AdaptiveDashboard: React.FC = () => {
                       }`}>
                         {match.result}
                       </span>
+                      {match.status === 'verified' && (
+                        <Link href={`/match/${match.id}/rate`}>
+                          <Button size="sm" variant="outline" className="h-7 px-2 text-[10px] font-bold border-primary/30 text-primary hover:bg-primary/10">
+                            Rate
+                          </Button>
+                        </Link>
+                      )}
                       <Link
                         href={`/settings?tab=connections`}
                         className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
@@ -689,6 +698,21 @@ export const AdaptiveDashboard: React.FC = () => {
           await refreshSquads();
           router.push('/squad?tab=overview&new=1');
         }}
+        onCancel={() => setShowCreateSquadFlow(false)}
+      />
+    );
+  }
+
+  if (showJoinSquadFlow) {
+    return (
+      <JoinSquadFlow
+        onJoined={async (id) => {
+          setActiveSquad(id);
+          setShowJoinSquadFlow(false);
+          await refreshSquads();
+          router.push('/squad?tab=overview&new=1');
+        }}
+        onCancel={() => setShowJoinSquadFlow(false)}
       />
     );
   }
@@ -736,6 +760,20 @@ export const AdaptiveDashboard: React.FC = () => {
           key={action.label}
           size="sm"
           onClick={() => setShowCreateSquadFlow(true)}
+          className={className}
+          variant={tone === 'secondary' ? 'outline' : undefined}
+        >
+          {action.label}
+        </Button>
+      );
+    }
+
+    if (action.intent === 'join_squad') {
+      return (
+        <Button
+          key={action.label}
+          size="sm"
+          onClick={() => setShowJoinSquadFlow(true)}
           className={className}
           variant={tone === 'secondary' ? 'outline' : undefined}
         >

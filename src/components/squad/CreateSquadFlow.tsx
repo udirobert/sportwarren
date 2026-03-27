@@ -2,12 +2,13 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Trophy, Zap, ChevronRight, Loader2 } from 'lucide-react';
+import { Users, Trophy, Zap, ChevronRight, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { useCreateSquad } from '@/hooks/squad/useSquad';
 
 interface CreateSquadFlowProps {
     onCreated: (squadId: string) => void;
+    onCancel?: () => void;
 }
 
 const SQUAD_ARCHETYPES = [
@@ -16,7 +17,7 @@ const SQUAD_ARCHETYPES = [
     { id: 'community', emoji: '🤝', label: 'Community Club', description: 'Reputation-first. Grow your Lens following.' },
 ];
 
-export const CreateSquadFlow: React.FC<CreateSquadFlowProps> = ({ onCreated }) => {
+export const CreateSquadFlow: React.FC<CreateSquadFlowProps> = ({ onCreated, onCancel }) => {
     const [step, setStep] = useState<1 | 2 | 3>(1);
     const [squadName, setSquadName] = useState('');
     const [archetype, setArchetype] = useState('');
@@ -59,6 +60,15 @@ export const CreateSquadFlow: React.FC<CreateSquadFlowProps> = ({ onCreated }) =
                     {[1, 2, 3].map(s => (
                         <div key={s} className={`h-1 flex-1 rounded-full transition-all duration-500 ${s <= step ? 'bg-blue-500' : 'bg-white/10'}`} />
                     ))}
+                    {onCancel && (
+                        <button
+                            onClick={onCancel}
+                            className="ml-4 p-2 rounded-lg text-gray-500 hover:text-white hover:bg-white/10 transition-colors"
+                            aria-label="Cancel squad creation"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    )}
                 </div>
 
                 <AnimatePresence mode="wait">

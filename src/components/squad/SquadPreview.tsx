@@ -17,6 +17,7 @@ interface SquadAction {
 
 interface SquadPreviewProps {
   onCreateSquad?: () => void;
+  onJoinSquad?: () => void;
   title?: string;
   description?: string;
   primaryAction?: SquadAction;
@@ -32,6 +33,7 @@ const PREVIEW_FORMATION = [
 
 export const SquadPreview: React.FC<SquadPreviewProps> = ({ 
   onCreateSquad,
+  onJoinSquad,
   title = "Start Your Captain's Journey",
   description = "Build your squad, set your tactics, and lead your team to glory in the local league.",
   primaryAction,
@@ -82,6 +84,11 @@ export const SquadPreview: React.FC<SquadPreviewProps> = ({
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-2">
           {renderAction(primaryAction || defaultPrimaryAction, 'primary')}
+          {onJoinSquad && (
+            <Button size="lg" variant="outline" onClick={onJoinSquad} className="h-14 px-8 text-lg font-bold transition-all">
+              Join Existing Squad
+            </Button>
+          )}
           {secondaryAction && renderAction(secondaryAction, 'secondary')}
         </div>
       </div>

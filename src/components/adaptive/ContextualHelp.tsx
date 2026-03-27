@@ -136,7 +136,7 @@ export const ContextualHelp: React.FC<ContextualHelpProps> = ({
                   Don't show again
                 </button>
                 <button
-                  onClick={() => setActiveTip(null)}
+                  onClick={handleDismiss}
                   className="flex items-center space-x-1 text-xs text-blue-600 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-green-500 rounded px-1"
                 >
                   <span>Got it</span>

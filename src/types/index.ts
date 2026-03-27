@@ -145,6 +145,9 @@ export interface PlayerAttributes {
   // Extended fields for reputation display
   endorsements?: Endorsement[];
   professionalInterest?: ProfessionalInterest[];
+  // Scout fields
+  scoutXP: number;
+  scoutTier: 'rookie' | 'trusted' | 'elite';
 }
 
 export interface Endorsement {

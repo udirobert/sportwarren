@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Target, BarChart3, Users, MessageCircle, X, Plus, Activity, Settings, MoreHorizontal, Sun, Moon } from 'lucide-react';
@@ -182,7 +182,7 @@ export const SmartNavigation: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
 
-  const helpTips = [
+  const helpTips = useMemo(() => [
     {
       id: 'navigation-help',
       title: 'Navigation Tips',
@@ -191,7 +191,7 @@ export const SmartNavigation: React.FC = () => {
       position: 'bottom' as const,
       showCondition: () => preferences.featureDiscoveryLevel < 20 || needsJourneySetup,
     },
-  ];
+  ], [nextAction.label, preferences.featureDiscoveryLevel, needsJourneySetup]);
 
   return (
     <>

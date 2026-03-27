@@ -86,6 +86,8 @@ function transformProfile(profile: any): PlayerAttributes {
     form: buildPlayerFormSnapshot(formEntries),
     endorsements,
     professionalInterest,
+    scoutXP: profile.scoutXP || 0,
+    scoutTier: profile.scoutTier || 'rookie',
   };
 }
 
