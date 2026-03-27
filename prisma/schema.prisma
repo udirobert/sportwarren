@@ -85,6 +85,7 @@ model PlayerProfile {
   ratingsReceived PeerRating[] @relation("RatingReceived")
   motmVotesGiven    MotmVote[] @relation("MotmVoteGiven")
   motmVotesReceived MotmVote[] @relation("MotmVoteReceived")
+  sessionsAttended  SessionAttendee[]
 
   @@map("player_profiles")
 }
@@ -183,6 +184,7 @@ model Squad {
   transferOffersTo   TransferOffer[]  @relation("TransferToSquad")
   challengesFrom     MatchChallenge[] @relation("ChallengeFromSquad")
   challengesTo       MatchChallenge[] @relation("ChallengeToSquad")
+  sessions           Session[]
 
   // On-chain Governance
   governorAddress String? @map("governor_address")
@@ -502,6 +504,10 @@ model Match {
   pitchId String? @map("pitch_id")
   pitch   Pitch?  @relation(fields: [pitchId], references: [id])
 
+  // Session Relation (for ad-hoc "Bibs vs Non-Bibs" games)
+  sessionId String?  @map("session_id")
+  session   Session? @relation(fields: [sessionId], references: [id])
+
   // Blockchain
   txId String? @map("tx_id") // Algorand transaction ID
   yellowFeeSessionId String? @map("yellow_fee_session_id")
@@ -686,6 +692,50 @@ model PlayerAchievement {
 
   @@unique([profileId, achievementId])
   @@map("player_achievements")
+}
+
+// ============================================================================
+// SESSIONS (Ad-hoc "Weekly Games")
+// ============================================================================
+
+model Session {
+  id        String   @id @default(cuid())
+  squadId   String   @map("squad_id")
+  squad     Squad    @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  
+  name      String   // e.g. "Wednesday Night Football"
+  date      DateTime @default(now())
+  
+  // Attendance (pool of players available for this session)
+  attendees SessionAttendee[]
+
+  // Matches generated from this session (Bibs vs No Bibs)
+  matches   Match[]
+
+  // Status: open (collecting players), balanced (teams picked), completed
+  status    String   @default("open")
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("sessions")
+}
+
+model SessionAttendee {
+  id        String        @id @default(cuid())
+  sessionId String        @map("session_id")
+  session   Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  profileId String        @map("profile_id")
+  profile   PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  // Preferred color/team for this session
+  teamPreference String? @map("team_preference") // "bibs", "no_bibs"
+
+  createdAt DateTime      @default(now()) @map("created_at")
+
+  @@unique([sessionId, profileId])
+  @@map("session_attendees")
 }
 
 // ============================================================================

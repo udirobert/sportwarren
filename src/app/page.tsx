@@ -13,6 +13,7 @@ export default function Home() {
   const router = useRouter();
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState(false);
+  const [focusWaitlist, setFocusWaitlist] = useState(false);
 
   const hasRealSession = hasAccount || authenticated;
 
@@ -22,6 +23,11 @@ export default function Home() {
     if (params.get('connect') === '1') {
       setShowWalletModal(true);
       setPendingRedirect(true);
+      const nextUrl = window.location.pathname;
+      window.history.replaceState({}, '', nextUrl);
+    }
+    if (params.get('wl') === '1') {
+      setFocusWaitlist(true);
       const nextUrl = window.location.pathname;
       window.history.replaceState({}, '', nextUrl);
     }
@@ -49,6 +55,7 @@ export default function Home() {
       <HeroSection
         onGetStarted={handleEnterApp}
         onGuestStart={() => router.push('/dashboard')}
+        autoFocusWaitlist={focusWaitlist}
       />
       <WalletConnectModal 
         isOpen={showWalletModal} 

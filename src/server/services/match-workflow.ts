@@ -49,6 +49,7 @@ interface SubmitMatchResultInput {
   latitude?: number;
   longitude?: number;
   yellowSettlement?: YellowSettlementInput;
+  sessionId?: string;
 }
 
 interface VerifyMatchResultInput {
@@ -250,6 +251,7 @@ export async function submitMatchResult({
   latitude,
   longitude,
   yellowSettlement,
+  sessionId,
 }: SubmitMatchResultInput) {
   const [homeSquad, awaySquad] = await Promise.all([
     prisma.squad.findUnique({ where: { id: homeSquadId } }),
@@ -318,6 +320,7 @@ export async function submitMatchResult({
     locationVerified,
     verificationDetails,
     agentInsights,
+    sessionId,
   });
 
   if (yellowSettlement) {
