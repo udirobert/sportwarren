@@ -12,6 +12,7 @@ import {
   verifyMatchResult,
 } from '../services/match-workflow';
 import { simulateMatch, calculateWinProbabilities } from '@/lib/match/simulation-engine';
+import { INTEL_LEVELS, maskMatchIntel } from '@/lib/match/intel-disclosure';
 import { Tactics, PlayerAttributes } from '@/types';
 
 const MatchStatus = z.enum(['pending', 'verified', 'disputed', 'finalized']);
@@ -409,7 +410,7 @@ export const matchRouter = createTRPCRouter({
           }
         }
 
-        return {
+        const response = {
           ...match,
           creResult,
           agentInsights: (match as any).agentInsights,
@@ -420,6 +421,13 @@ export const matchRouter = createTRPCRouter({
             feeAmount: yellowService.getMatchFeeAmount(),
           },
         };
+
+        // Apply progressive intel masking for pending matches
+        if (match.status === 'pending') {
+          return maskMatchIntel(response);
+        }
+
+        return { ...response, intelLevel: INTEL_LEVELS.FULL as const };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         throw new TRPCError({

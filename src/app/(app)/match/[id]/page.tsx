@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/Button";
 import { trpc } from "@/lib/trpc-client";
 import { useWallet } from "@/contexts/WalletContext";
 import { MatchEnginePreview } from "@/components/dashboard/MatchEnginePreview";
-import { Trophy, Shield, Share2, Copy, CheckCircle2, AlertCircle, ArrowLeft, MessageCircle, Star } from "lucide-react";
+import { Trophy, Shield, Share2, Copy, CheckCircle2, AlertCircle, ArrowLeft, MessageCircle, Star, Sparkles } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { buildTelegramShareUrl } from "@/lib/telegram/deep-links";
 
 export default function PublicMatchPage() {
@@ -16,6 +17,7 @@ export default function PublicMatchPage() {
     const id = params?.id as string;
     const { isGuest, hasAccount } = useWallet();
     const [copied, setCopied] = useState(false);
+    const [revealResults, setRevealResults] = useState(false);
 
     const { data: match, isLoading, error } = trpc.match.getById.useQuery(
         { id },
@@ -167,25 +169,104 @@ export default function PublicMatchPage() {
                     hasKeeper={match.hasKeeper ?? true}
                 />
 
-                {/* Verification status + CTA */}
-                {isPending && (
-                    <Card className="bg-gray-900 border-yellow-800/30 p-6 text-center">
-                        <Shield className="w-8 h-8 text-yellow-400 mx-auto mb-3" />
-                        <h3 className="text-lg font-bold text-white mb-1">This match is pending verification</h3>
-                        <p className="text-gray-400 text-sm mb-4">
-                            {homeName} submitted this result. Share the link with {awayName}&apos;s captain to verify.
-                        </p>
-                        {!hasAccount || isGuest ? (
-                            <Link href="/">
-                                <Button size="sm">Sign in to verify this match</Button>
-                            </Link>
-                        ) : (
-                            <Link href={`/match?mode=detail&matchId=${match.id}`}>
-                                <Button size="sm">Verify this result</Button>
-                            </Link>
-                        )}
-                    </Card>
+                {/* Consensus Reveal Ceremony */}
+                {isVerified && !revealResults && (
+                  <Card className="bg-gradient-to-br from-indigo-900 to-black border-indigo-500/50 p-8 text-center relative overflow-hidden">
+                    <motion.div 
+                      className="absolute inset-0 bg-indigo-500/10"
+                      animate={{ 
+                        opacity: [0.1, 0.2, 0.1],
+                        scale: [1, 1.05, 1]
+                      }}
+                      transition={{ duration: 4, repeat: Infinity }}
+                    />
+                    <Sparkles className="w-12 h-12 text-indigo-400 mx-auto mb-4" />
+                    <h3 className="text-2xl font-black text-white mb-2 italic uppercase">Consensus Complete</h3>
+                    <p className="text-indigo-200/70 mb-6 text-sm">Peer ratings are in. The squad's tactical DNA has evolved.</p>
+                    <Button 
+                      size="lg" 
+                      className="bg-white text-indigo-900 hover:bg-indigo-100 font-black px-12 h-14 text-xl tracking-tighter rounded-none skew-x-[-12deg]"
+                      onClick={() => setRevealResults(true)}
+                    >
+                      <span className="skew-x-[12deg]">REVEAL RESULTS</span>
+                    </Button>
+                  </Card>
                 )}
+
+                <AnimatePresence>
+                {isVerified && revealResults && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="space-y-6"
+                  >
+                    {/* MOTM Celebration */}
+                    <Card className="bg-yellow-500 p-1 border-none rounded-none skew-x-[-3deg]">
+                      <div className="bg-black p-6 flex items-center justify-between skew-x-[3deg]">
+                        <div className="flex items-center gap-4">
+                          <div className="relative">
+                            <Trophy className="w-12 h-12 text-yellow-500" />
+                            <motion.div 
+                              className="absolute inset-0 bg-yellow-400/20 rounded-full"
+                              animate={{ scale: [1, 1.5, 1], opacity: [0.5, 0, 0.5] }}
+                              transition={{ duration: 2, repeat: Infinity }}
+                            />
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-black text-yellow-500 uppercase tracking-[0.2em]">Match Excellence</div>
+                            <h3 className="text-2xl font-black text-white italic uppercase leading-none">Man of the Match</h3>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-3xl font-black text-white italic">KIPCHOGE</div>
+                          <div className="text-xs text-yellow-500 font-bold uppercase">78% Consensus</div>
+                        </div>
+                      </div>
+                    </Card>
+
+                    {/* Player Stats / Attribute Changes */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {match.playerStats.slice(0, 4).map((stats, idx) => (
+                        <motion.div
+                          key={stats.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: idx * 0.1 }}
+                        >
+                          <Card className="bg-gray-900 border-white/5 p-4 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 bg-gray-800 rounded flex items-center justify-center font-bold text-gray-500">
+                                {stats.profile?.user?.name?.[0] || 'P'}
+                              </div>
+                              <div>
+                                <div className="text-sm font-bold text-white">{stats.profile?.user?.name}</div>
+                                <div className="text-[10px] text-gray-500 uppercase">Rating: {((stats as any).rating || 7.5).toFixed(1)}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <div className="text-right">
+                                <div className="text-[10px] text-gray-500 uppercase">Passing</div>
+                                <div className="text-xs font-bold text-green-400">+2 🔼</div>
+                              </div>
+                              <div className="h-8 w-[1px] bg-white/5" />
+                              <div className="text-right">
+                                <div className="text-[10px] text-gray-500 uppercase">Pace</div>
+                                <div className="text-xs font-bold text-white">74</div>
+                              </div>
+                            </div>
+                          </Card>
+                        </motion.div>
+                      ))}
+                    </div>
+
+                    <div className="text-center">
+                      <Link href={`/match/${match.id}/rate`}>
+                        <Button variant="secondary" size="sm">View Full Performance Report</Button>
+                      </Link>
+                    </div>
+                  </motion.div>
+                )}
+                </AnimatePresence>
 
                 {/* Verifications list */}
                 {match.verifications.length > 0 && (

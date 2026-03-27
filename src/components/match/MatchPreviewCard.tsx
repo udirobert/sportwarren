@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PitchCanvas } from '@/components/squad/PitchCanvas';
+import { motion, AnimatePresence } from 'framer-motion';
+import { INTEL_LEVELS, type IntelLevel } from '@/lib/match/intel-disclosure';
 import { 
   Calendar, 
   MapPin, 
@@ -69,6 +71,8 @@ interface MatchPreviewCardProps {
   onShare?: () => void;
   /** Callback when export is clicked */
   onExport?: () => void;
+  /** Progressive Intel Level (0-4) */
+  intelLevel?: IntelLevel;
   /** Hide action buttons */
   readOnly?: boolean;
 }
@@ -95,6 +99,7 @@ export const MatchPreviewCard: React.FC<MatchPreviewCardProps> = ({
   keyThreats = [],
   keyOpportunities = [],
   daysUntil,
+  intelLevel = INTEL_LEVELS.FULL,
   loading = false,
   onShare,
   onExport,
@@ -141,9 +146,14 @@ export const MatchPreviewCard: React.FC<MatchPreviewCardProps> = ({
   }
 
   return (
-    <Card className="overflow-hidden">
-      {/* Header - Match Info */}
-      <div className="bg-gradient-to-r from-green-900 to-emerald-900 px-6 py-4">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <Card className="overflow-hidden">
+        {/* Header - Match Info */}
+        <div className="bg-gradient-to-r from-green-900 to-emerald-900 px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-green-100 text-sm">
             <Calendar className="w-4 h-4" />
@@ -205,141 +215,182 @@ export const MatchPreviewCard: React.FC<MatchPreviewCardProps> = ({
         )}
       </div>
 
-      {/* Win Probability Bar */}
-      {homeWinPct !== undefined && awayWinPct !== undefined && (
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-800">
-          <div className="flex items-center justify-between text-xs mb-2">
-            <span className="font-medium text-gray-600 dark:text-gray-400">{homeWinPct}%</span>
-            <span className="text-gray-400">Draw {drawPct}%</span>
-            <span className="font-medium text-gray-600 dark:text-gray-400">{awayWinPct}%</span>
+      {/* Win Probability Bar - Level 4 only */}
+      <AnimatePresence>
+        {intelLevel >= INTEL_LEVELS.FULL && homeWinPct !== undefined && awayWinPct !== undefined && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="px-6 py-4 border-b border-gray-100 dark:border-gray-800"
+          >
+            <div className="flex items-center justify-between text-xs mb-2">
+              <span className="font-medium text-gray-600 dark:text-gray-400">{homeWinPct}%</span>
+              <span className="text-gray-400">Draw {drawPct}%</span>
+              <span className="font-medium text-gray-600 dark:text-gray-400">{awayWinPct}%</span>
+            </div>
+            <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${homeWinPct}%` }}
+                transition={{ duration: 1, delay: 0.2 }}
+                className="h-full bg-blue-500" 
+              />
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${drawPct}%` }}
+                transition={{ duration: 1, delay: 0.2 }}
+                className="h-full bg-gray-400" 
+              />
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${awayWinPct}%` }}
+                transition={{ duration: 1, delay: 0.2 }}
+                className="h-full bg-red-500" 
+              />
+            </div>
+            {confidence && (
+              <p className="text-center text-xs text-gray-500 mt-2">
+                {confidence.level === 'high' && <TrendingUp className="w-3 h-3 inline mr-1 text-green-500" />}
+                {confidence.level === 'medium' && <Zap className="w-3 h-3 inline mr-1 text-yellow-500" />}
+                {confidence.label}
+              </p>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Formation Comparison - Level 1+ */}
+      {intelLevel >= INTEL_LEVELS.SQUAD ? (
+        <div className="px-6 py-4">
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Shield className="w-4 h-4 text-green-600" />
+            Tactical Preview
+          </h4>
+          
+          <div className="grid grid-cols-2 gap-4">
+            {/* Home Formation */}
+            <motion.div
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{homeFormation}</span>
+                <span className="text-xs text-gray-400">{homeLineup.filter(Boolean).length} players</span>
+              </div>
+              <PitchCanvas
+                formation={homeFormation}
+                lineup={homeLineup}
+                players={homePlayers}
+                size="sm"
+                readOnly={true}
+              />
+            </motion.div>
+
+            {/* Away Formation */}
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{awayFormation}</span>
+                <span className="text-xs text-gray-400">{awayLineup.filter(Boolean).length} players</span>
+              </div>
+              <PitchCanvas
+                formation={awayFormation}
+                lineup={awayLineup}
+                players={awayPlayers}
+                size="sm"
+                readOnly={true}
+              />
+            </motion.div>
           </div>
-          <div className="h-3 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex">
-            <div 
-              className="h-full bg-blue-500" 
-              style={{ width: `${homeWinPct}%` }}
-            />
-            <div 
-              className="h-full bg-gray-400" 
-              style={{ width: `${drawPct}%` }}
-            />
-            <div 
-              className="h-full bg-red-500" 
-              style={{ width: `${awayWinPct}%` }}
-            />
-          </div>
-          {confidence && (
-            <p className="text-center text-xs text-gray-500 mt-2">
-              {confidence.level === 'high' && <TrendingUp className="w-3 h-3 inline mr-1 text-green-500" />}
-              {confidence.level === 'medium' && <Zap className="w-3 h-3 inline mr-1 text-yellow-500" />}
-              {confidence.label}
-            </p>
-          )}
+        </div>
+      ) : (
+        <div className="px-6 py-12 text-center bg-gray-50 dark:bg-gray-900/50">
+          <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white">Squad Intelligence Locked</h4>
+          <p className="text-xs text-gray-500 mt-1">Check back in 5 days for likely lineups</p>
         </div>
       )}
 
-      {/* Formation Comparison */}
-      <div className="px-6 py-4">
-        <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-          <Shield className="w-4 h-4 text-green-600" />
-          Tactical Preview
-        </h4>
-        
-        <div className="grid grid-cols-2 gap-4">
-          {/* Home Formation */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{homeFormation}</span>
-              <span className="text-xs text-gray-400">{homeLineup.filter(Boolean).length} players</span>
-            </div>
-            <PitchCanvas
-              formation={homeFormation}
-              lineup={homeLineup}
-              players={homePlayers}
-              size="sm"
-              readOnly={true}
-            />
-          </div>
-
-          {/* Away Formation */}
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-500 uppercase tracking-wider">{awayFormation}</span>
-              <span className="text-xs text-gray-400">{awayLineup.filter(Boolean).length} players</span>
-            </div>
-            <PitchCanvas
-              formation={awayFormation}
-              lineup={awayLineup}
-              players={awayPlayers}
-              size="sm"
-              readOnly={true}
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Tactical Insight */}
-      {tacticalInsight && (
-        <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800">
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Target className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <h5 className="text-sm font-bold text-blue-900 dark:text-blue-100">Tactical Insight</h5>
-                <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">{tacticalInsight}</p>
+      {/* Tactical Insight - Level 3+ */}
+      <AnimatePresence>
+        {intelLevel >= INTEL_LEVELS.TACTICAL && tacticalInsight && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="px-6 py-4 border-t border-gray-100 dark:border-gray-800"
+          >
+            <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-800">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Target className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                  <h5 className="text-sm font-bold text-blue-900 dark:text-blue-100">Tactical Insight</h5>
+                  <p className="text-sm text-blue-800 dark:text-blue-200 mt-1">{tacticalInsight}</p>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-      {/* Scouting Report */}
-      {(scoutingReport || keyThreats.length > 0 || keyOpportunities.length > 0) && (
-        <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-800">
-          <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
-            <div className="flex items-start gap-3">
-              <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center flex-shrink-0">
-                <Users className="w-4 h-4 text-white" />
-              </div>
-              <div className="flex-1">
-                <h5 className="text-sm font-bold text-amber-900 dark:text-amber-100">Scouting Report</h5>
-                {scoutingReport && (
-                  <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">{scoutingReport}</p>
-                )}
-                
-                {keyThreats.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wider mb-1">Key Threats</p>
-                    <ul className="space-y-1">
-                      {keyThreats.map((threat, idx) => (
-                        <li key={idx} className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
-                          <Sword className="w-3 h-3 text-red-500 mt-0.5 flex-shrink-0" />
-                          {threat}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+      {/* Scouting Report - Level 2+ */}
+      <AnimatePresence>
+        {intelLevel >= INTEL_LEVELS.SCOUTING && (scoutingReport || keyThreats.length > 0 || keyOpportunities.length > 0) && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="px-6 py-4 border-t border-gray-100 dark:border-gray-800"
+          >
+            <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 bg-amber-500 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="w-4 h-4 text-white" />
+                </div>
+                <div className="flex-1">
+                  <h5 className="text-sm font-bold text-amber-900 dark:text-amber-100">Scouting Report</h5>
+                  {scoutingReport && (
+                    <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">{scoutingReport}</p>
+                  )}
+                  
+                  {keyThreats.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wider mb-1">Key Threats</p>
+                      <ul className="space-y-1">
+                        {keyThreats.map((threat, idx) => (
+                          <li key={idx} className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                            <Sword className="w-3 h-3 text-red-500 mt-0.5 flex-shrink-0" />
+                            {threat}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
-                {keyOpportunities.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wider mb-1">Key Opportunities</p>
-                    <ul className="space-y-1">
-                      {keyOpportunities.map((opp, idx) => (
-                        <li key={idx} className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
-                          <Target className="w-3 h-3 text-green-500 mt-0.5 flex-shrink-0" />
-                          {opp}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                  {keyOpportunities.length > 0 && (
+                    <div className="mt-3">
+                      <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wider mb-1">Key Opportunities</p>
+                      <ul className="space-y-1">
+                        {keyOpportunities.map((opp, idx) => (
+                          <li key={idx} className="text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+                            <Target className="w-3 h-3 text-green-500 mt-0.5 flex-shrink-0" />
+                            {opp}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Simulation Summary */}
       {simulationSummary && (
@@ -369,16 +420,19 @@ export const MatchPreviewCard: React.FC<MatchPreviewCardProps> = ({
             <Download className="w-4 h-4 mr-2" />
             Export
           </Button>
-          <Link href={`/match/preview?home=${encodeURIComponent(homeSquad)}&away=${encodeURIComponent(awaySquad)}`} className="flex-1">
-            <Button size="sm" className="w-full">
-              Full Preview
-              <ArrowRight className="w-4 h-4 ml-2" />
-            </Button>
-          </Link>
+          {matchDate && (
+            <Link href={`/match/preview?home=${encodeURIComponent(homeSquad)}&away=${encodeURIComponent(awaySquad)}`} className="flex-1">
+              <Button size="sm" className="w-full">
+                Full Preview
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
+          )}
         </div>
       )}
     </Card>
-  );
+  </motion.div>
+);
 };
 
 export default MatchPreviewCard;
