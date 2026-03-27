@@ -1725,15 +1725,18 @@ export class TelegramService {
     }
   }
 
-  async sendMatchNotification(chatId: string, message: string): Promise<void> {
-    const numericChatId = Number.parseInt(chatId, 10);
+  async sendMatchNotification(chat_id: string, message: string, options: TelegramBot.SendMessageOptions = {}): Promise<void> {
+    const numericChatId = Number.parseInt(chat_id, 10);
     if (Number.isNaN(numericChatId)) {
-      console.warn("Invalid Telegram chat ID:", chatId);
+      console.warn("Invalid Telegram chat ID:", chat_id);
       return;
     }
 
     try {
-      await this.bot.sendMessage(numericChatId, message);
+      await this.bot.sendMessage(numericChatId, message, {
+        parse_mode: "Markdown",
+        ...options
+      });
     } catch (error) {
       console.error("Failed to send Telegram notification:", error);
     }

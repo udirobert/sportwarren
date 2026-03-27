@@ -435,7 +435,7 @@ export function TelegramMiniAppShell({
     loadContext(true);
   };
 
-  const handleRetry = () => {
+  const _handleRetry = () => {
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(CONTEXT_CACHE_KEY);
     }
@@ -678,7 +678,7 @@ export function TelegramMiniAppShell({
 
   if (!sessionToken) {
     const hasError = Boolean(error);
-    const telegramDataAvailable = Boolean(window.Telegram?.WebApp?.initData);
+    const _telegramDataAvailable = Boolean(window.Telegram?.WebApp?.initData);
 
     return (
       <main className="flex min-h-screen flex-col justify-center bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.12),_transparent_45%),linear-gradient(180deg,_#09111f_0%,_#0d1526_100%)] px-4 py-8">
