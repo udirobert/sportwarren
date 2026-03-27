@@ -28,8 +28,11 @@ export const sessionRouter = createTRPCRouter({
       teamPreference: z.enum(['bibs', 'no_bibs']).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
+      if (!ctx.userId) {
+        throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
+      }
       const profile = await ctx.prisma.playerProfile.findUnique({
-        where: { userId: ctx.session.user.id },
+        where: { userId: ctx.userId },
       });
 
       if (!profile) {
