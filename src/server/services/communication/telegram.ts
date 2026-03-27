@@ -32,7 +32,6 @@ import {
   settlePendingTreasuryActivity,
   TreasuryBalanceError,
 } from "../economy/treasury-ledger.js";
-import type { RedisService } from "../redis.js";
 
 interface PendingMatchDraft extends ParsedTelegramMatchResult {
   id: string;
@@ -70,6 +69,12 @@ interface RateLimitResult {
   resetAt: number;
 }
 
+interface TelegramRedisStore {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, ttl?: number): Promise<void>;
+  del(key: string): Promise<void>;
+}
+
 function readMetadataString(metadata: unknown, key: string): string | null {
   if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
     return null;
@@ -81,13 +86,13 @@ function readMetadataString(metadata: unknown, key: string): string | null {
 
 export class TelegramService {
   private bot: TelegramBot;
-  private redisService: RedisService | null;
+  private redisService: TelegramRedisStore | null;
   private pendingMatchDrafts = new Map<string, PendingMatchDraft>();
   // In-memory rate limiting (userId -> { command: count })
   private rateLimitLog = new Map<string, number[]>();
   private rateLimitAsk = new Map<string, number[]>();
 
-  constructor(redisService: RedisService | null = null) {
+  constructor(redisService: TelegramRedisStore | null = null) {
     const token = process.env.TELEGRAM_BOT_TOKEN;
     if (!token) {
       throw new Error("TELEGRAM_BOT_TOKEN environment variable is required");
@@ -367,7 +372,9 @@ export class TelegramService {
           "Log matches in 30 seconds. Stats that level up like FIFA. Banter with AI coaches.",
           "Every match. Every stat. Forever.",
           "",
-          "Tap below to create or join a squad — everything happens right here in Telegram.",
+          keyboard
+            ? "Tap below to create or join a squad — everything happens right here in Telegram."
+            : "Mini App launch is unavailable right now. Ask support to configure NEXT_PUBLIC_CLIENT_URL or CLIENT_URL.",
         ].join("\n"),
         keyboard ? { reply_markup: keyboard } : undefined,
       );
@@ -402,6 +409,9 @@ export class TelegramService {
           "",
           "You're in, but you need a squad. Log matches in 30 seconds. Build your legacy.",
           "Every match. Every stat. Forever.",
+          keyboard
+            ? "Tap below to create or join a squad."
+            : "Mini App launch is unavailable right now. Ask support to configure NEXT_PUBLIC_CLIENT_URL or CLIENT_URL.",
         ].join("\n"),
         keyboard ? { reply_markup: keyboard } : undefined,
       );
@@ -527,7 +537,7 @@ export class TelegramService {
       // Fallback to static templates if AI fails
       const staffResponses: Record<string, (q: string, stats: any) => string> =
         {
-          coach: (q, stats) =>
+          coach: (_q, stats) =>
             [
               `🎯 Coach Analysis`,
               "",
@@ -552,7 +562,7 @@ export class TelegramService {
               `For detailed analysis, use the Mini App Match Center.`,
             ].join("\n"),
 
-          physio: (q, stats) =>
+          physio: (_q, stats) =>
             [
               `💪 Physio Report`,
               "",
@@ -563,7 +573,7 @@ export class TelegramService {
               `Rest players with low sharpness before big matches.`,
             ].join("\n"),
 
-          analyst: (q, stats) =>
+          analyst: (_q, stats) =>
             [
               `📊 Performance Analysis`,
               "",
