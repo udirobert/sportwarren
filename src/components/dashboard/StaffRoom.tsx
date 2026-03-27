@@ -572,7 +572,9 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     },
                     {
                         onSuccess: (data) => {
-                            setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Staff', text: data.reply }]);
+                            if (data) {
+                                setChatHistory(prev => [...prev, { sender: selectedStaff?.name || 'Staff', text: data.reply }]);
+                            }
                             setIsTyping(false);
                         },
                         onError: () => {

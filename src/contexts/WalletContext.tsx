@@ -235,7 +235,8 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [embeddedWalletReady, setEmbeddedWalletReady] = useState(false);
 
   const { login, logout: privyLogout, authenticated, user, ready } = usePrivy();
-  const { wallets } = useWallets();
+  // Use useWallets with proper null checks - wallets may be empty during initial auth
+  const { wallets: privyWallets = [] } = useWallets() || {};
 
   const updateAuthStatus = useCallback((refreshingOverride?: boolean) => {
     setAuthStatus(prev => {
@@ -310,11 +311,11 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           setAuthStatus({ state: 'missing', isRefreshing: true });
 
           // Wait for wallets array to populate (it may be empty initially)
-          let embeddedWallet = getPrivyEmbeddedWallet(wallets, embeddedWalletAddress);
+          let embeddedWallet = getPrivyEmbeddedWallet(privyWallets, embeddedWalletAddress);
           let attempts = 0;
           while (!embeddedWallet && attempts < 10) {
             await new Promise((resolve) => setTimeout(resolve, 100));
-            embeddedWallet = getPrivyEmbeddedWallet(wallets, embeddedWalletAddress);
+            embeddedWallet = getPrivyEmbeddedWallet(privyWallets, embeddedWalletAddress);
             attempts++;
           }
 
@@ -328,7 +329,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           try {
             const challengeRes = await fetch('/api/auth/challenge', { cache: 'no-store' });
             const { message, timestamp } = await challengeRes.json();
-            const { signature, address: signerAddress } = await signWithPrivyEmbeddedWallet(wallets, message, embeddedWalletAddress);
+            const { signature, address: signerAddress } = await signWithPrivyEmbeddedWallet(privyWallets, message, embeddedWalletAddress);
             persistAuth(signature, message, timestamp, signerAddress, 'social');
             setAuthStatus({
               state: 'valid',
@@ -386,7 +387,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         setChain(savedPrefs.preferredChain);
       }
     }
-  }, [loadPreferences, ready, authenticated, user, wallets]);
+  }, [loadPreferences, ready, authenticated, user, privyWallets]);
 
   useEffect(() => {
     // Skip if we're still provisioning the embedded wallet
@@ -455,7 +456,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
           (await signWithAlgorandProvider(deflyWallet, walletAddress, messageBytes, message)) ||
           (await signWithAlgoSigner(algoSigner, walletAddress, messageBytes));
       } else if (chain === 'social') {
-        const signed = await signWithPrivyEmbeddedWallet(wallets, message, walletAddress);
+        const signed = await signWithPrivyEmbeddedWallet(privyWallets, message, walletAddress);
         signature = signed.signature;
       } else {
         signature = await signWithEvmProvider(walletAddress, message);
@@ -475,7 +476,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     } finally {
       setAuthStatus(prev => ({ ...prev, isRefreshing: false }));
     }
-  }, [walletAddress, chain, isGuest, updateAuthStatus, wallets]);
+  }, [walletAddress, chain, isGuest, updateAuthStatus, privyWallets]);
 
   useEffect(() => {
     if (authStatus.state !== 'valid' || !authStatus.expiresAt || !authStatus.signedAt) return;
