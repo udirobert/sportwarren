@@ -2,6 +2,7 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { TelegramService } from "./telegram";
+import { INTEL_LEVELS, getIntelLevel } from "@/lib/match/intel-disclosure";
 import { managerInsightService } from "../ai/manager-insights";
 import { AGENT_PERSONAS } from "../ai/prompts";
 
@@ -50,26 +51,16 @@ export class TacticalNotificationService {
    */
   async processUpcomingMatches() {
     const now = new Date();
-    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
-    // 1. Find matches starting in the next 1 hour that haven't been notified
-    // We check agentInsights for a 'tactical_notified' flag
+    // 1. Find matches in the next 7 days that are still pending
     const upcomingMatches = await prisma.match.findMany({
       where: {
         matchDate: {
           gt: now,
-          lte: oneHourFromNow,
+          lte: sevenDaysFromNow,
         },
         status: "pending",
-        OR: [
-          { agentInsights: { equals: Prisma.AnyNull } },
-          { 
-            agentInsights: {
-              path: ["tactical_notified"],
-              equals: Prisma.AnyNull
-            }
-          }
-        ]
       },
       include: {
         homeSquad: {
@@ -123,18 +114,24 @@ export class TacticalNotificationService {
       }
     });
 
-    console.log(`[TACTICAL-NOTIF] Found ${upcomingMatches.length} upcoming matches to process.`);
+    console.log(`[TACTICAL-NOTIF] Found ${upcomingMatches.length} matches in 7-day window.`);
 
     for (const match of upcomingMatches) {
       try {
-        await this.notifyMatch(match);
+        const intelLevel = getIntelLevel(match.matchDate, now);
+        const agentInsights = (match.agentInsights as any) || {};
+        const lastNotifiedLevel = agentInsights.last_notified_intel_level ?? -1;
+
+        if (intelLevel > lastNotifiedLevel) {
+          await this.notifyMatchAtLevel(match, intelLevel);
+        }
       } catch (err) {
-        console.error(`[TACTICAL-NOTIF] Failed to notify match ${match.id}:`, err);
+        console.error(`[TACTICAL-NOTIF] Failed to process match ${match.id}:`, err);
       }
     }
   }
 
-  private async notifyMatch(match: any) {
+  private async notifyMatchAtLevel(match: any, level: number) {
     // 1. Generate Insight via AI (ManagerInsightService)
     const insight = await managerInsightService.generateTacticalPreview(
       match.homeSquad,
@@ -146,53 +143,65 @@ export class TacticalNotificationService {
       return;
     }
 
+    let title = `🛡️ *Tactical Briefing*`;
+    let detail = "";
+
+    switch (level) {
+      case INTEL_LEVELS.BASIC:
+        title = `⚽ *New Opponent Revealed*`;
+        detail = `Next up: *${match.homeSquad.name}* vs *${match.awaySquad.name}*.\nTime to start studying the tape!`;
+        break;
+      case INTEL_LEVELS.SQUAD:
+        title = `📋 *Squad Intelligence Unlock*`;
+        detail = `We've got their likely formation and lineup. Check the PitchCanvas for details.`;
+        break;
+      case INTEL_LEVELS.SCOUTING:
+        title = `🔍 *Scouting Report Ready*`;
+        detail = `Key threats and opportunities identified. AI Staff has highlighted their weak spots.`;
+        break;
+      case INTEL_LEVELS.TACTICAL:
+        title = `🧠 *Tactical DNA Finalized*`;
+        detail = `Coach Kite has a specific game plan for this matchup. review it before kick-off!`;
+        break;
+      case INTEL_LEVELS.FULL:
+        title = `🔥 *Match Day: Final Briefing*`;
+        detail = `Win probabilities are in. ${insight.message}`;
+        break;
+    }
+
     // 2. Format the Telegram message
     const message = [
-      `🛡️ *Tactical Briefing: Match Prep*`,
+      title,
       `🆚 *${match.homeSquad.name}* vs *${match.awaySquad.name}*`,
-      `⏰ Kickoff: ${match.matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+      `⏰ Kickoff: ${match.matchDate.toLocaleDateString()} ${match.matchDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
       '',
-      `👤 *${AGENT_PERSONAS.COACH_KITE.name} says:*`,
-      `_${insight.message}_`,
-      '',
-      `📊 *Win Probability:*`,
-      `🏠 ${match.homeSquad.name}: *${Math.round((insight.metadata?.probs?.homeWin || 0) * 100)}%*`,
-      `🚀 ${match.awaySquad.name}: *${Math.round((insight.metadata?.probs?.awayWin || 0) * 100)}%*`,
-      `🤝 Draw: *${Math.round((insight.metadata?.probs?.draw || 0) * 100)}%*`,
+      detail,
       '',
       `🔗 [Open Match Preview in Mini App](https://t.me/sportwarren_bot/app?startapp=match_${match.id})`,
     ].join("\n");
 
-    // 3. Send to both squads' Telegram groups if they exist
+    // 3. Send to both squads
     const squadsToNotify = [match.homeSquad, match.awaySquad];
-    let notifiedAny = false;
-
     for (const squad of squadsToNotify) {
       const telegramGroup = squad.groups.find((g: any) => g.platform === "telegram" && g.chatId);
       if (telegramGroup?.chatId) {
         await this.telegramService.sendMatchNotification(telegramGroup.chatId, message);
-        notifiedAny = true;
       }
     }
 
-    // 4. Mark match as notified in agentInsights
+    // 4. Update notified level
     const currentInsights = (match.agentInsights as any) || {};
     await prisma.match.update({
       where: { id: match.id },
       data: {
         agentInsights: {
           ...currentInsights,
-          tactical_notified: true,
-          notified_at: new Date().toISOString(),
-          preview_insight: insight.message
+          last_notified_intel_level: level,
+          [`notified_level_${level}_at`]: new Date().toISOString(),
         }
       }
     });
 
-    if (notifiedAny) {
-      console.log(`[TACTICAL-NOTIF] Successfully notified squads for match ${match.id}`);
-    } else {
-      console.log(`[TACTICAL-NOTIF] No Telegram groups found for match ${match.id}, marked as notified.`);
-    }
+    console.log(`[TACTICAL-NOTIF] Notified level ${level} for match ${match.id}`);
   }
 }
