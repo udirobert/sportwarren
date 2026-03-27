@@ -7,7 +7,7 @@ import {
   getSquadMembership,
   isSquadLeader,
 } from "@/server/services/permissions";
-import { submitMatchResult } from "../match-workflow.js";
+import { submitMatchResult } from "../match-workflow";
 import {
   buildTelegramMiniAppUrl,
   connectTelegramChatByToken,
@@ -16,11 +16,11 @@ import {
   findPlatformIdentityByChatId,
   findSquadGroupByChatId,
   isTelegramConnectToken,
-} from "./platform-connections.js";
+} from "./platform-connections";
 import {
   parseTelegramMatchResult,
   type ParsedTelegramMatchResult,
-} from "./telegram-match-parser.js";
+} from "./telegram-match-parser";
 import {
   buildVerificationNudgeMessage,
   shouldSendNudge,
@@ -31,7 +31,7 @@ import {
   recordPendingTreasuryActivity,
   settlePendingTreasuryActivity,
   TreasuryBalanceError,
-} from "../economy/treasury-ledger.js";
+} from "../economy/treasury-ledger";
 
 interface PendingMatchDraft extends ParsedTelegramMatchResult {
   id: string;
