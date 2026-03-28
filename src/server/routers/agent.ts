@@ -7,6 +7,10 @@ export const agentRouter = createTRPCRouter({
     .input(z.object({
       staffId: z.string(),
       message: z.string().max(500),
+      chatHistory: z.array(z.object({
+        role: z.enum(['user', 'assistant', 'system']),
+        content: z.string(),
+      })).optional(),
       squadContext: z.object({
         squadName: z.string().optional(),
         balance: z.number().optional(),
@@ -28,7 +32,7 @@ export const agentRouter = createTRPCRouter({
     })).optional(),
     }))
     .mutation(async ({ input }) => {
-      const { staffId, message, squadContext, recentDecisions } = input;
+      const { staffId, message, chatHistory, squadContext, recentDecisions } = input;
 
       const contextBlock = squadContext ? [
         squadContext.squadName && `Club: ${squadContext.squadName}`,
@@ -47,6 +51,7 @@ export const agentRouter = createTRPCRouter({
         const { reply } = await generateStaffReply({
           staffId,
           message,
+          chatHistory,
           contextBlock,
           decisionBlock,
         });

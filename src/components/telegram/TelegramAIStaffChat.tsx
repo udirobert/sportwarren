@@ -128,6 +128,15 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
     window.Telegram?.WebApp?.MainButton?.showProgress();
 
     try {
+      // Prepare history for the AI (last 6 messages to keep context without hitting token limits)
+      const chatHistory = messages
+        .filter(msg => msg.id !== `welcome-${selectedStaff.id}`) // Skip the generic welcome
+        .slice(-6)
+        .map(msg => ({
+          role: msg.sender === 'user' ? 'user' : 'assistant',
+          content: msg.text
+        }));
+
       const response = await fetch('/api/telegram/mini-app/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -135,6 +144,7 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
           token,
           staffId: selectedStaff.id,
           message: userMessage.text,
+          history: chatHistory,
         }),
       });
 
@@ -170,7 +180,7 @@ export function TelegramAIStaffChat({ context }: TelegramAIStaffChatProps) {
       setSending(false);
       window.Telegram?.WebApp?.MainButton?.hideProgress();
     }
-  }, [inputText, selectedStaff, sending, token]);
+  }, [inputText, selectedStaff, sending, token, messages]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {

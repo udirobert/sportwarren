@@ -10,6 +10,7 @@ import { TelegramPlayerProfile } from "@/components/telegram/TelegramPlayerProfi
 import { TelegramTreasuryTab } from "@/components/telegram/TelegramTreasuryTab";
 import { TelegramAIStaffChat } from "@/components/telegram/TelegramAIStaffChat";
 import { TelegramMediaTab } from "@/components/telegram/TelegramMediaTab";
+import { TelegramGovernanceTab } from "@/components/telegram/TelegramGovernanceTab";
 import type { MiniAppContext } from "@/components/telegram/TelegramMiniAppShell";
 
 function MiniAppLoading() {
@@ -47,6 +48,9 @@ function MiniAppContent() {
       )}
       renderAI={(context: MiniAppContext, refresh: () => void) => (
         <TelegramAIStaffChat context={context} onRefresh={refresh} />
+      )}
+      renderGovernance={(context: MiniAppContext, refresh: () => void) => (
+        <TelegramGovernanceTab context={context} onRefresh={refresh} />
       )}
     />
   );

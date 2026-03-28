@@ -18,21 +18,23 @@ interface DeepLinkOptions {
  */
 export function buildTelegramDeepLink(options: DeepLinkOptions = {}): string {
   const botUsername = process.env.NEXT_PUBLIC_TELEGRAM_BOT_USERNAME || 'sportwarrenbot';
+  // Use /app link for named Mini Apps
   const baseUrl = `https://t.me/${botUsername}/app`;
-  const params = new URLSearchParams();
+  const startappParams = new URLSearchParams();
 
   if (options.tab) {
-    params.set('startapp', options.tab);
+    startappParams.set('tab', options.tab);
   }
 
   if (options.prefilled) {
     Object.entries(options.prefilled).forEach(([key, value]) => {
-      params.set(key, value);
+      startappParams.set(key, value);
     });
   }
 
-  const queryString = params.toString();
-  return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+  const startParam = startappParams.toString();
+  // Telegram startapp param is passed as ?startapp=...
+  return startParam ? `${baseUrl}?startapp=${encodeURIComponent(startParam)}` : baseUrl;
 }
 
 /**

@@ -10,6 +10,10 @@ const bodySchema = z.object({
   token: z.string().min(1, 'Mini App token is required'),
   staffId: z.string().min(1),
   message: z.string().min(1).max(500),
+  history: z.array(z.object({
+    role: z.enum(['user', 'assistant']),
+    content: z.string(),
+  })).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -23,7 +27,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { token, staffId: rawStaffId, message } = parsed.data;
+  const { token, staffId: rawStaffId, message, history: chatHistory } = parsed.data;
 
   // Validate token via PlatformIdentity
   const identity = await findPlatformIdentityByMiniAppToken(prisma, token);
@@ -84,6 +88,7 @@ export async function POST(request: NextRequest) {
     const { reply, staff } = await generateStaffReply({
       staffId: rawStaffId,
       message,
+      chatHistory: chatHistory as any,
       contextBlock: contextLines,
       signalContext,
       decisionBlock,

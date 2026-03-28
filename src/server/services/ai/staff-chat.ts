@@ -68,9 +68,15 @@ STAFF_PERSONAS['coach-1'] = STAFF_PERSONAS['coach'];
 STAFF_PERSONAS['physio-1'] = STAFF_PERSONAS['physio'];
 STAFF_PERSONAS['commercial-1'] = STAFF_PERSONAS['commercial'];
 
+export interface StaffMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+
 export interface GenerateStaffReplyParams {
   staffId: string;
   message: string;
+  chatHistory?: StaffMessage[];
   contextBlock?: string;
   decisionBlock?: string;
   signalContext?: string;
@@ -79,6 +85,7 @@ export interface GenerateStaffReplyParams {
 export async function generateStaffReply({
   staffId,
   message,
+  chatHistory,
   contextBlock,
   decisionBlock,
   signalContext,
@@ -112,6 +119,12 @@ export async function generateStaffReply({
 
   const systemPrompt = promptParts.filter(Boolean).join('');
 
+  const messages: StaffMessage[] = [
+    { role: 'system', content: systemPrompt },
+    ...(chatHistory || []),
+    { role: 'user', content: message },
+  ];
+
   const client = veniceClient ?? openaiClient;
   const model = veniceClient ? VENICE_MODEL : OPENAI_MODEL;
 
@@ -126,10 +139,7 @@ export async function generateStaffReply({
   try {
     const completion = await client.chat.completions.create({
       model,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: message },
-      ],
+      messages: messages as any,
       max_tokens: 200,
       temperature: 0.7,
     });
@@ -140,10 +150,7 @@ export async function generateStaffReply({
       try {
         const fallback = await openaiClient.chat.completions.create({
           model: OPENAI_MODEL,
-          messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: message },
-          ],
+          messages: messages as any,
           max_tokens: 200,
           temperature: 0.7,
         });
