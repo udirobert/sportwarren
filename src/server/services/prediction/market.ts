@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { openaiService } from "../openai";
+import { generateInference } from "@/lib/ai/inference";
 
 // ============================================================================
 // TYPES
@@ -257,25 +257,23 @@ Respond in JSON format:
 }`;
 
   try {
-    const response = await openaiService.openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        {
-          role: "system",
-          content:
-            "You are a sports prediction verification AI. Search for the actual result and verify the outcome.",
-        },
-        { role: "user", content: prompt },
-      ],
-      response_format: { type: "json_object" },
-    });
+    const result = await generateInference([
+      {
+        role: "system",
+        content:
+          "You are a sports prediction verification AI. Search for the actual result and verify the outcome. Respond ONLY with a valid JSON object.",
+      },
+      { role: "user", content: prompt },
+    ]);
 
-    const result = JSON.parse(response.choices[0]?.message?.content || "{}");
+    if (!result) throw new Error("AI verification failed - no response");
+
+    const parsed = JSON.parse(result.content || "{}");
 
     return {
-      recommendedOptionId: market.options[result.winningOption - 1]?.id || "",
-      reasoning: result.reasoning || "No reasoning provided",
-      confidence: result.confidence || 0.5,
+      recommendedOptionId: market.options[parsed.winningOption - 1]?.id || "",
+      reasoning: parsed.reasoning || "No reasoning provided",
+      confidence: parsed.confidence || 0.5,
     };
   } catch (error) {
     console.error("AI verification failed:", error);

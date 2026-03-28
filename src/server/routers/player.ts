@@ -524,31 +524,27 @@ export const playerRouter = createTRPCRouter({
           `Player Stats: ${profile.attributes.map(a => `${a.attribute}: ${a.rating}`).join(', ')}` :
           'No profile data available.';
 
-        // Call OpenAI service
+        // Call Unified Inference service
         try {
-          const { openaiService } = await import('../../../server/services/openai');
-          const response = await openaiService.openai.chat.completions.create({
-            model: "gpt-4-turbo-preview",
-            messages: [
-              {
-                role: "system",
-                content: `You are Coach Kite, a supportive but firm Sunday league football coach. 
+          const { generateInference } = await import('@/lib/ai/inference');
+          const result = await generateInference([
+            {
+              role: "system",
+              content: `You are Coach Kite, a supportive but firm Sunday league football coach. 
                 Your goal is to help players improve their real-world game.
                 Use football terminology. Be concise and encouraging.
                 Current Player Context: ${statsContext}
                 Previous Advice Context: ${context || 'None'}`
-              },
-              { role: "user", content: message }
-            ],
-            max_tokens: 150,
-          });
+            },
+            { role: "user", content: message }
+          ], { max_tokens: 150 });
 
           return {
-            reply: response.choices[0]?.message.content || "I'm focusing on the next match, let's talk later!",
+            reply: result?.content || "I'm focusing on the next match, let's talk later!",
             agentName: "Coach Kite"
           };
-        } catch (openaiError) {
-          console.error('OpenAI call failed:', openaiError);
+        } catch (inferenceError) {
+          console.error('Coach Kite inference failed:', inferenceError);
           return {
             reply: "The locker room is a bit noisy right now. To give you the best advice: focus on your positioning and keep your head up!",
             agentName: "Coach Kite (Offline)"

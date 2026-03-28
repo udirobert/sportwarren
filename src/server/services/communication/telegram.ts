@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { veniceAI } from "../ai/venice";
+import { generateInference } from "@/lib/ai/venice";
 import { AGENT_PERSONAS } from "../ai/prompts";
 import TelegramBot from "node-telegram-bot-api";
 import { prisma } from "@/lib/db";
@@ -520,17 +520,17 @@ export class TelegramService {
     try {
       const squadStats = await this.getSquadStatsForAi(squadGroup.squadId);
 
-      // Use Venice AI for a high-quality persona response
+      // Use unified prioritized inference
       const systemPrompt = AGENT_PERSONAS[staffMember.toUpperCase() as keyof typeof AGENT_PERSONAS]?.systemPrompt 
         || AGENT_PERSONAS.COACH_KITE.systemPrompt;
 
-      const aiResponse = await veniceAI.generateCompletion([
+      const aiResponse = await generateInference([
         { role: 'system', content: systemPrompt },
         { role: 'user', content: `Squad Context: ${JSON.stringify(squadStats)}. User Query: ${cleanQuery}` }
       ]);
 
       if (aiResponse) {
-        await this.bot.sendMessage(chatId, aiResponse);
+        await this.bot.sendMessage(chatId, aiResponse.content);
         return;
       }
 
@@ -631,7 +631,7 @@ export class TelegramService {
         "Do not pretend an action has already happened.",
       ].join("\n");
 
-      const response = await veniceAI.generateCompletion([
+      const response = await generateInference([
         {
           role: "system",
           content: guidanceRules,
@@ -640,7 +640,7 @@ export class TelegramService {
       ]);
 
       if (response) {
-        await this.bot.sendMessage(chatId, response);
+        await this.bot.sendMessage(chatId, response.content);
         return;
       }
     } catch (error) {

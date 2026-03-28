@@ -3,9 +3,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { useCreateSquad } from '@/hooks/squad/useSquad';
 import { PitchCanvas } from '@/components/squad/PitchCanvas';
-import { FORMATIONS, PLAY_STYLE_LABELS } from '@/lib/formations';
-import type { Formation, PlayStyle, Player } from '@/types';
+import { FORMATIONS, PLAY_STYLE_LABELS, getFormationsBySquadSize, getDefaultFormationForSize } from '@/lib/formations';
+import type { Formation, PlayStyle, Player, SquadSize } from '@/types';
 import { useSearchParams } from 'next/navigation';
 import { trackCoreGrowthEvent, trackFeatureUsed } from '@/lib/analytics';
 import { 
@@ -49,8 +50,16 @@ export const InteractiveMatchPreview: React.FC = () => {
   }, []);
 
   // Initial state from URL or defaults
+  const [squadSize, setSquadSize] = useState<SquadSize>(() => {
+    const size = searchParams.get('size');
+    if (size && ['5', '6', '7', '11'].includes(size)) {
+      return parseInt(size) as SquadSize;
+    }
+    return 11;
+  });
   const [formation, setFormation] = useState<Formation>((searchParams.get('formation') as Formation) || '4-4-2');
   const [playStyle, setPlayStyle] = useState<PlayStyle>((searchParams.get('style') as PlayStyle) || 'balanced');
+  const [pitchTheme, setPitchTheme] = useState<string>('premier-league');
   const [primaryColor, setPrimaryColor] = useState(searchParams.get('color') || '#10b981');
   
   const [isExporting, setIsExporting] = useState(false);
@@ -58,8 +67,16 @@ export const InteractiveMatchPreview: React.FC = () => {
   const pitchRef = React.useRef<HTMLDivElement>(null);
   const [showEditor, setShowEditor] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
-  const [names, setNames] = useState<string[]>(['Tunde','Kofi','Diallo','Eze','Yusuf','GK']);
-  const [avatars, setAvatars] = useState<(string | null)[]>([null,null,null,null,null,null]);
+  const [names, setNames] = useState<string[]>([]);
+  const [avatars, setAvatars] = useState<(string | null)[]>([]);
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number | undefined>(undefined);
+
+  // Initialize names/avatars based on squad size
+  useEffect(() => {
+    const defaultNames = ['Tunde', 'Kofi', 'Diallo', 'Eze', 'Yusuf', 'Baba', 'Zico', 'Chidi', 'Seydou', 'Moussa', 'GK'];
+    setNames(defaultNames.slice(0, squadSize));
+    setAvatars(new Array(squadSize).fill(null));
+  }, [squadSize]);
   const [showNames, setShowNames] = useState(false);
   const [blurFaces, setBlurFaces] = useState(false);
   const [isFs, setIsFs] = useState(false);
@@ -81,6 +98,10 @@ export const InteractiveMatchPreview: React.FC = () => {
     return v === 'panel' ? 'panel' : 'card';
   });
   const leftPanelRef = React.useRef<HTMLDivElement>(null);
+  const [showSquadModal, setShowSquadModal] = useState(false);
+  const [squadName, setSquadName] = useState('');
+  const [squadCreated, setSquadCreated] = useState<string | null>(null);
+  const { createSquad: createSquadMutation, isCreating: isCreatingSquad } = useCreateSquad();
 
   // Update URL when state changes
   useEffect(() => {
@@ -88,14 +109,16 @@ export const InteractiveMatchPreview: React.FC = () => {
     params.set('formation', formation);
     params.set('style', playStyle);
     params.set('color', primaryColor);
+    params.set('size', squadSize.toString());
     
     // Use replace to avoid polluting history with every micro-change
     const newPathname = `${window.location.pathname}?${params.toString()}`;
     window.history.replaceState(null, '', newPathname);
-  }, [formation, playStyle, primaryColor]);
+  }, [formation, playStyle, primaryColor, squadSize]);
 
-  const formationList = Object.keys(FORMATIONS) as Formation[];
-  const formationIndex = formationList.indexOf(formation);
+  // Get formations filtered by squad size
+  const formationList = useMemo(() => getFormationsBySquadSize(squadSize), [squadSize]);
+  const formationIndex = useMemo(() => formationList.indexOf(formation), [formationList, formation]);
   useEffect(() => {
     if (typeof window === 'undefined') return;
     setUnlocked(window.localStorage.getItem('sw_pitch_personalize_unlocked') === '1');
@@ -105,15 +128,27 @@ export const InteractiveMatchPreview: React.FC = () => {
   }, []);
 
   const nextFormation = () => {
-    const nextIdx = (formationIndex + 1) % formationList.length;
+    if (formationList.length === 0) return;
+    const current = Math.max(0, formationIndex);
+    const nextIdx = (current + 1) % formationList.length;
     setFormation(formationList[nextIdx]);
     trackFeatureUsed('tactics_preview_change', { type: 'formation', value: formationList[nextIdx] });
   };
 
   const prevFormation = () => {
-    const prevIdx = (formationIndex - 1 + formationList.length) % formationList.length;
+    if (formationList.length === 0) return;
+    const current = Math.max(0, formationIndex);
+    const prevIdx = (current - 1 + formationList.length) % formationList.length;
     setFormation(formationList[prevIdx]);
     trackFeatureUsed('tactics_preview_change', { type: 'formation', value: formationList[prevIdx] });
+  };
+
+  // Handle squad size change - reset formation to default for that size
+  const handleSquadSizeChange = (newSize: SquadSize) => {
+    setSquadSize(newSize);
+    const def = getDefaultFormationForSize(newSize);
+    setFormation(def);
+    trackFeatureUsed('tactics_preview_change', { type: 'squadSize', value: newSize.toString() });
   };
 
   const handleExport = async () => {
@@ -275,9 +310,29 @@ export const InteractiveMatchPreview: React.FC = () => {
   };
 
   const lineup = useMemo(() => {
-    // Just a mock lineup for the preview
-    return ['1', '2', '3', '4', '5', '6'].slice(0, FORMATIONS[formation].length);
+    // Just a mock lineup for the preview - match the formation length
+    return ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'].slice(0, FORMATIONS[formation].length);
   }, [formation]);
+
+  // Dynamic mock players based on squad size
+  const mockPlayersForSize = useMemo(() => {
+    const names = ['Tunde', 'Kofi', 'Diallo', 'Eze', 'Yusuf', 'Baba', 'Zico', 'Chidi', 'Seydou', 'Moussa', 'GK'];
+    const positions = squadSize === 11 
+      ? ['ST', 'ST', 'LW', 'RW', 'CM', 'CM', 'CM', 'CDM', 'CB', 'CB', 'GK']
+      : squadSize === 7
+      ? ['ST', 'CM', 'CM', 'CM', 'CB', 'CB', 'GK']
+      : squadSize === 6
+      ? ['ST', 'CM', 'CM', 'CB', 'CB', 'GK']
+      : ['ST', 'CM', 'CM', 'CB', 'GK'];
+    
+    return names.slice(0, squadSize).map((name, i) => ({
+      id: String(i + 1),
+      name,
+      position: positions[i],
+      status: 'available' as const,
+      address: `0x${i + 1}`,
+    }));
+  }, [squadSize]);
 
   // Persist personalization (local only). Use per-formation keys when available.
   useEffect(() => {
@@ -342,11 +397,31 @@ export const InteractiveMatchPreview: React.FC = () => {
               </div>
             </div>
 
+            {/* Squad Size Selector */}
+            <div className="flex items-center gap-2 mb-3">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-gray-300">Squad Size</label>
+              <div className="flex gap-1">
+                {([5, 6, 7, 11] as SquadSize[]).map((size) => (
+                  <button
+                    key={size}
+                    onClick={() => handleSquadSizeChange(size)}
+                    className={`px-2 py-1 rounded text-[10px] font-bold transition-all ${
+                      squadSize === size
+                        ? 'bg-green-500/20 border border-green-500/50 text-green-300'
+                        : 'bg-white/5 border border-white/10 text-gray-400 hover:border-white/30'
+                    }`}
+                  >
+                    {size}v{size}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div ref={pitchRef} className="rounded-xl overflow-hidden shadow-2xl">
               <PitchCanvas
                 formation={formation}
                 lineup={lineup}
-                players={MOCK_PLAYERS.map((p, i) => ({ ...p, name: names[i] || p.name, avatar: avatars[i] || (p as any).avatar }))}
+                players={mockPlayersForSize.map((p, i) => ({ ...p, name: names[i] || p.name, avatar: avatars[i] || (p as any).avatar, position: p.position as any }))}
                 size="sm"
                 readOnly={true}
                 className="bg-transparent"
@@ -355,15 +430,88 @@ export const InteractiveMatchPreview: React.FC = () => {
                 theme="hero"
                 showPlayerNames={showNames}
                 blurAvatars={blurFaces}
+                selectedSlotIndex={selectedSlotIndex}
+                onPlayerSelect={(idx) => setSelectedSlotIndex(idx === selectedSlotIndex ? undefined : idx)}
               />
             </div>
+            
+            {selectedSlotIndex !== undefined && (
+              <div className="mt-3 p-3 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-blue-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">Edit Player</span>
+                  <button 
+                    onClick={() => setSelectedSlotIndex(undefined)}
+                    className="text-xs text-gray-400 hover:text-white"
+                  >
+                    Close
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className="relative w-10 h-10 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-white/10">
+                      {avatars[selectedSlotIndex] ? (
+                        <img src={avatars[selectedSlotIndex] as string} alt="avatar" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-lg font-bold text-gray-400">{names[selectedSlotIndex]?.[0] || '?'}</span>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="absolute inset-0 opacity-0 cursor-pointer"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const url = URL.createObjectURL(file);
+                          const img = new Image();
+                          img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            const max = 128;
+                            const scale = Math.min(max / (img.width || max), max / (img.height || max));
+                            canvas.width = Math.max(1, Math.round((img.width || max) * scale));
+                            canvas.height = Math.max(1, Math.round((img.height || max) * scale));
+                            const ctx = canvas.getContext('2d');
+                            if (!ctx) return;
+                            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                            const dataUrl = canvas.toDataURL('image/webp', 0.8);
+                            setAvatars((prev) => { const n = [...prev]; n[selectedSlotIndex] = dataUrl; return n; });
+                            URL.revokeObjectURL(url);
+                          };
+                          img.src = url;
+                        }}
+                      />
+                    </div>
+                    <input
+                      className="flex-1 rounded-lg border border-white/10 bg-white/5 px-2 py-1.5 text-xs text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
+                      value={names[selectedSlotIndex] || ''}
+                      onChange={(e) => setNames((prev) => { const n = [...prev]; n[selectedSlotIndex!] = e.target.value; return n; })}
+                      placeholder="Name"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[9px] text-gray-400">Position</span>
+                    <span className="text-xs font-bold text-white bg-white/10 px-2 py-1 rounded">{FORMATIONS[formation][selectedSlotIndex]?.role || '?'}</span>
+                  </div>
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <button 
+                    onClick={() => {
+                      setNames((prev) => { const n = [...prev]; n[selectedSlotIndex!] = ''; return n; });
+                      setAvatars((prev) => { const n = [...prev]; n[selectedSlotIndex!] = null; return n; });
+                    }}
+                    className="text-[10px] text-gray-400 hover:text-red-400"
+                  >
+                    Clear Player
+                  </button>
+                </div>
+              </div>
+            )}
             
             <div className="mt-4 p-3 bg-white/5 rounded-lg border border-white/5">
               <div className="flex items-center gap-2 mb-1">
                 <Sparkles className="w-3 h-3 text-blue-400" />
                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">AI Insight</span>
               </div>
-              <p className="text-xs text-gray-300 italic">
+              <p className="text-xs text-white/90 italic">
                 {(playStyle as string) === 'attacking' ? "High defensive line will squeeze the pitch." :
                  (playStyle as string) === 'defensive' ? "Deep block makes you impossible to break down." :
                  playStyle === 'counter' ? "Sprinting into space on the transition is key." :
@@ -401,6 +549,31 @@ export const InteractiveMatchPreview: React.FC = () => {
                       >
                         <div className="text-xs font-bold capitalize">{style.replace('_', ' ')}</div>
                         <div className="text-[9px] opacity-60 truncate">{PLAY_STYLE_LABELS[style]?.name}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-300 block mb-2">Pitch Theme</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { value: 'premier-league', label: 'Premier League', color: 'from-green-600 to-green-700' },
+                      { value: 'sunday-league', label: 'Sunday League', color: 'from-amber-800 to-amber-950' },
+                      { value: 'night-match', label: 'Night Match', color: 'from-slate-800 to-slate-900' },
+                      { value: 'easy-on-eyes', label: 'Easy on Eyes', color: 'from-emerald-500 to-teal-700' },
+                    ].map((pt) => (
+                      <button
+                        key={pt.value}
+                        onClick={() => setPitchTheme(pt.value)}
+                        className={`px-3 py-1.5 md:py-2 rounded-lg border text-left transition-all ${
+                          pitchTheme === pt.value 
+                            ? 'bg-blue-500/20 border-blue-500/50 text-white' 
+                            : 'bg-white/5 border-white/20 text-gray-200 hover:border-white/40'
+                        }`}
+                      >
+                        <div className="text-xs font-bold">{pt.label}</div>
+                        <div className={`h-1.5 rounded-full bg-gradient-to-r ${pt.color} mt-1 opacity-70`} />
                       </button>
                     ))}
                   </div>
@@ -520,11 +693,11 @@ export const InteractiveMatchPreview: React.FC = () => {
                   {isFs ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </Button>
               </div>
-              <p className="text-[10px] text-center text-gray-400">
+              <p className="text-[10px] text-center text-white/90">
                 Share as image or link to your squad group chat
               </p>
               <div className="mt-1 flex items-center justify-center gap-3">
-                <span className="text-[10px] text-gray-400">Tip: PNG = lossless. WebP = smaller, widely supported.</span>
+                <span className="text-[10px] text-white/80">Tip: PNG = lossless. WebP = smaller, widely supported.</span>
                 {blurFaces && (
                   <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
                     <EyeOff className="h-3 w-3" /> Faces blurred
@@ -558,6 +731,7 @@ export const InteractiveMatchPreview: React.FC = () => {
                   <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[11px]" onClick={() => void shareWithNames(false)}>Share Clean</Button>
                   <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[11px]" onClick={() => void shareWithNames(true)}>Share + Names</Button>
                   <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[11px]" onClick={() => void shareWithNamesAndBlur()}>Share + Names + Blur</Button>
+                  <Button variant="outline" className="border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 text-[11px]" onClick={() => setShowSquadModal(true)}>Create Squad</Button>
                 </div>
               )}
             </div>
@@ -696,6 +870,81 @@ export const InteractiveMatchPreview: React.FC = () => {
                   </div>
                 </div>
               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Create Squad Modal */}
+      {showSquadModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md rounded-2xl border border-white/10 bg-gray-900 p-5">
+            {!squadCreated ? (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="text-sm font-bold uppercase tracking-widest text-white">Create Squad from Pitch</div>
+                  <button className="text-gray-400 hover:text-white" onClick={() => setShowSquadModal(false)}>Close</button>
+                </div>
+                <p className="text-xs text-gray-400 mb-4">Name your squad to turn these players into a real team. Each player will get an invite link.</p>
+                <input
+                  className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 mb-4"
+                  value={squadName}
+                  onChange={(e) => setSquadName(e.target.value)}
+                  placeholder="Squad name (e.g., Sunday FC)"
+                />
+                <Button
+                  className="w-full bg-emerald-600 hover:bg-emerald-500"
+                  onClick={async () => {
+                    if (!squadName.trim()) return;
+                    try {
+                      const shortName = squadName.trim().split(/\s+/).map(p => p[0]).join('').slice(0,5).toUpperCase() || squadName.trim().slice(0,5).toUpperCase();
+                      const squad = await createSquadMutation({ name: squadName.trim(), shortName, homeGround: 'street' });
+                      setSquadCreated(squad.id);
+                      const members = names.filter(n => n).map((name, i) => ({ name, avatar: avatars[i], position: FORMATIONS[formation]?.[i]?.role || 'ST' }));
+                      localStorage.setItem('sw_pending_squad_members', JSON.stringify(members));
+                    } catch (e) {
+                      console.error('Failed to create squad:', e);
+                    }
+                  }}
+                >
+                  Create Squad
+                </Button>
+              </>
+            ) : (
+              <>
+                <div className="mb-4 flex items-center justify-between">
+                  <div className="text-sm font-bold uppercase tracking-widest text-emerald-400">Squad Created!</div>
+                  <button className="text-gray-400 hover:text-white" onClick={() => { setShowSquadModal(false); setSquadCreated(null); setSquadName(''); }}>Close</button>
+                </div>
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg mb-4">
+                  <p className="text-xs text-emerald-200 mb-2">Share these invite links with your squad:</p>
+                  <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
+                    {names.filter(n => n).map((name, i) => (
+                      <div key={i} className="flex items-center justify-between bg-white/5 px-3 py-2 rounded text-xs">
+                        <span className="text-white">{name}</span>
+                        <button 
+                          className="text-emerald-400 hover:text-emerald-300"
+                          onClick={async () => {
+                            const url = `${window.location.origin}/join/${squadCreated}?player=${encodeURIComponent(name)}`;
+                            await navigator.clipboard.writeText(url);
+                            alert(`Invite link for ${name} copied!`);
+                          }}
+                        >
+                          Copy Link
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <Button
+                  className="w-full bg-emerald-600 hover:bg-emerald-500"
+                  onClick={() => {
+                    window.location.href = `/dashboard/squads/${squadCreated}`;
+                  }}
+                >
+                  Go to Squad Dashboard
+                </Button>
+              </>
             )}
           </div>
         </div>

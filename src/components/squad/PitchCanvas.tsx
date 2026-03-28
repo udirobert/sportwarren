@@ -27,6 +27,10 @@ export interface PitchCanvasProps {
   onLineupChange?: (lineup: string[]) => void;
   /** Custom callback when export is triggered */
   onExport?: (dataUrl: string) => void;
+  /** Callback when a player slot is clicked (for editing) */
+  onPlayerSelect?: (slotIndex: number, player: Player | undefined) => void;
+  /** Currently selected slot index */
+  selectedSlotIndex?: number;
   /** Additional CSS classes */
   className?: string;
   /** Visual size variant */
@@ -50,6 +54,8 @@ export interface PitchCanvasProps {
   }>;
   /** Optional theme preset for markings and presentation */
   theme?: 'default' | 'hero';
+  /** Pitch grass/stadium theme */
+  pitchTheme?: 'premier-league' | 'sunday-league' | 'night-match' | 'easy-on-eyes';
   /** Blur avatars (privacy-friendly export) */
   blurAvatars?: boolean;
   /** Blur radius in px when blurAvatars=true */
@@ -123,6 +129,8 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
   showExport = false,
   onLineupChange,
   onExport,
+  onPlayerSelect,
+  selectedSlotIndex,
   className = '',
   size = 'md',
   title,
@@ -131,6 +139,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
   playStyle = 'balanced',
   markings,
   theme = 'default',
+  pitchTheme = 'premier-league',
   blurAvatars = false,
   blurRadius = 3,
 }) => {
@@ -191,9 +200,9 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
     }
 
     return {
-      content: <span className={`${sizeConfig.text} font-bold text-green-700`}>{slot.role}</span>,
-      bgClass: 'bg-white',
-      borderClass: 'border-green-500',
+      content: <span className={`${sizeConfig.text} font-bold text-green-300`}>{slot.role}</span>,
+      bgClass: 'bg-gray-900/80',
+      borderClass: 'border-green-500/60',
       ringClass: '',
     };
   };
@@ -382,8 +391,8 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
 
       {/* Formation Badge */}
       <div className="flex items-center justify-between text-sm">
-        <span className="font-medium text-gray-700">{formation}</span>
-        <span className="text-gray-500">
+        <span className="font-medium text-white">{formation}</span>
+        <span className="text-white/80">
           {assignedCount}/{totalSlots - 1} outfield + GK
         </span>
       </div>
@@ -391,7 +400,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
       {/* Pitch Container */}
       <div
         ref={pitchRef}
-        className={`relative bg-gradient-to-b from-green-600 to-green-700 rounded-xl overflow-hidden ${sizeConfig.container}`}
+        className={`relative ${pitchTheme === 'sunday-league' ? 'bg-gradient-to-b from-amber-800 to-amber-950' : pitchTheme === 'night-match' ? 'bg-gradient-to-b from-slate-800 to-slate-900' : pitchTheme === 'easy-on-eyes' ? 'bg-gradient-to-b from-emerald-500 to-teal-700' : 'bg-gradient-to-b from-green-600 to-green-700'} rounded-xl overflow-hidden ${sizeConfig.container}`}
       >
         {/* Pitch Markings (SVG, true-to-scale) */}
         {(() => {
@@ -481,11 +490,13 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
               <div
                 draggable={!readOnly && !!player}
                 onDragStart={(e) => player && handleSlotDragStart(e, idx, player.id)}
+                onClick={() => onPlayerSelect?.(idx, player)}
                 className={`
                   ${sizeConfig.dot} rounded-full flex items-center justify-center 
                   shadow-lg border-2 cursor-pointer
                   transition-transform hover:scale-110
                   ${display.bgClass} ${display.borderClass} ${display.ringClass}
+                  ${selectedSlotIndex === idx ? 'ring-4 ring-white/70 ring-offset-2 ring-offset-black/40' : ''}
                   ${readOnly ? '' : 'cursor-grab active:cursor-grabbing'}
                 `}
                 style={{
