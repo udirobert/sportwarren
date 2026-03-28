@@ -101,6 +101,7 @@ export const InteractiveMatchPreview: React.FC = () => {
   const [showSquadModal, setShowSquadModal] = useState(false);
   const [squadName, setSquadName] = useState('');
   const [squadCreated, setSquadCreated] = useState<string | null>(null);
+  const [squadError, setSquadError] = useState<string | null>(null);
   const { createSquad: createSquadMutation, isCreating: isCreatingSquad } = useCreateSquad();
 
   // Update URL when state changes
@@ -452,7 +453,7 @@ export const InteractiveMatchPreview: React.FC = () => {
                       {avatars[selectedSlotIndex] ? (
                         <img src={avatars[selectedSlotIndex] as string} alt="avatar" className="w-full h-full object-cover" />
                       ) : (
-                        <span className="text-lg font-bold text-gray-400">{names[selectedSlotIndex]?.[0] || '?'}</span>
+                        <span className="text-lg font-bold text-green-400">{FORMATIONS[formation]?.[selectedSlotIndex]?.role.slice(0, 2) || 'ST'}</span>
                       )}
                       <input
                         type="file"
@@ -889,25 +890,28 @@ export const InteractiveMatchPreview: React.FC = () => {
                 <input
                   className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 mb-4"
                   value={squadName}
-                  onChange={(e) => setSquadName(e.target.value)}
+                  onChange={(e) => { setSquadName(e.target.value); setSquadError(null); }}
                   placeholder="Squad name (e.g., Sunday FC)"
                 />
+                {squadError && <p className="text-xs text-red-400 mb-3">{squadError}</p>}
                 <Button
-                  className="w-full bg-emerald-600 hover:bg-emerald-500"
+                  className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50"
+                  disabled={isCreatingSquad || !squadName.trim()}
                   onClick={async () => {
-                    if (!squadName.trim()) return;
+                    if (!squadName.trim()) { setSquadError('Please enter a squad name'); return; }
+                    setSquadError(null);
                     try {
                       const shortName = squadName.trim().split(/\s+/).map(p => p[0]).join('').slice(0,5).toUpperCase() || squadName.trim().slice(0,5).toUpperCase();
                       const squad = await createSquadMutation({ name: squadName.trim(), shortName, homeGround: 'street' });
                       setSquadCreated(squad.id);
                       const members = names.filter(n => n).map((name, i) => ({ name, avatar: avatars[i], position: FORMATIONS[formation]?.[i]?.role || 'ST' }));
-                      localStorage.setItem('sw_pending_squad_members', JSON.stringify(members));
+                      localStorage.setItem(`sw_pending_squad_members_${squad.id}`, JSON.stringify(members));
                     } catch (e) {
-                      console.error('Failed to create squad:', e);
+                      setSquadError(e instanceof Error ? e.message : 'Failed to create squad. Please try again.');
                     }
                   }}
                 >
-                  Create Squad
+                  {isCreatingSquad ? 'Creating...' : 'Create Squad'}
                 </Button>
               </>
             ) : (
@@ -919,21 +923,33 @@ export const InteractiveMatchPreview: React.FC = () => {
                 <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg mb-4">
                   <p className="text-xs text-emerald-200 mb-2">Share these invite links with your squad:</p>
                   <div className="flex flex-col gap-2 max-h-48 overflow-y-auto">
-                    {names.filter(n => n).map((name, i) => (
-                      <div key={i} className="flex items-center justify-between bg-white/5 px-3 py-2 rounded text-xs">
-                        <span className="text-white">{name}</span>
-                        <button 
-                          className="text-emerald-400 hover:text-emerald-300"
-                          onClick={async () => {
-                            const url = `${window.location.origin}/join/${squadCreated}?player=${encodeURIComponent(name)}`;
-                            await navigator.clipboard.writeText(url);
-                            alert(`Invite link for ${name} copied!`);
-                          }}
-                        >
-                          Copy Link
-                        </button>
-                      </div>
-                    ))}
+                    {names.filter(n => n).map((name, i) => {
+                      const avatar = avatars[i];
+                      return (
+                        <div key={i} className="flex items-center justify-between bg-white/5 px-3 py-2 rounded text-xs">
+                          <div className="flex items-center gap-2">
+                            {avatar ? (
+                              <img src={avatar as string} alt={name} className="w-6 h-6 rounded-full object-cover border border-white/20" />
+                            ) : (
+                              <div className="w-6 h-6 rounded-full bg-emerald-500/30 flex items-center justify-center border border-emerald-500/20">
+                                <span className="text-[10px] font-bold text-emerald-300">{name[0]}</span>
+                              </div>
+                            )}
+                            <span className="text-white">{name}</span>
+                          </div>
+                          <button 
+                            className="text-emerald-400 hover:text-emerald-300"
+                            onClick={async () => {
+                              const url = `${window.location.origin}/join/${squadCreated}?player=${encodeURIComponent(name)}`;
+                              await navigator.clipboard.writeText(url);
+                              alert(`Invite link for ${name} copied!`);
+                            }}
+                          >
+                            Copy Link
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
                 <Button

@@ -172,14 +172,13 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
     const roleGroup = ROLE_GROUPS[slot.role] || DEFAULT_ROLE_GROUP;
 
     if (slot.player) {
-      const initials = slot.player.name
-        .split(' ')
-        .map((p) => p[0])
-        .join('')
-        .slice(0, 2)
-        .toUpperCase();
-
+      const hasName = slot.player.name && slot.player.name.trim().length > 0;
+      const initials = hasName
+        ? slot.player.name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()
+        : slot.role.slice(0, 2);
+      
       const hasAvatar = 'avatar' in slot.player && slot.player.avatar;
+      const displayInitials = hasName ? initials : initials;
 
       return {
         content: hasAvatar ? (
@@ -190,12 +189,19 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
             style={blurAvatars ? { filter: `blur(${Math.max(1, Math.min(12, blurRadius))}px)` } : undefined}
           />
         ) : (
-          <span className={`${sizeConfig.text} font-bold text-white`}>{initials}</span>
+          <span className={`${sizeConfig.text} font-bold text-white`}>{displayInitials}</span>
         ),
         bgClass: 'bg-gray-900',
         borderClass: roleGroup.border,
         ringClass: roleGroup.ring,
-        style: primaryColor ? { backgroundColor: primaryColor } : undefined,
+        style: hasName ? (primaryColor ? { backgroundColor: primaryColor } : undefined) : (() => {
+          const roleColors: Record<string, string> = {
+            GK: '#f59e0b', CB: '#0ea5e9', LB: '#0ea5e9', RB: '#0ea5e9', LWB: '#0ea5e9', RWB: '#0ea5e9',
+            CDM: '#8b5cf6', CM: '#8b5cf6', CAM: '#8b5cf6', LM: '#8b5cf6', RM: '#8b5cf6',
+            ST: '#f43f5e', LW: '#f43f5e', RW: '#f43f5e', CF: '#f43f5e',
+          };
+          return { backgroundColor: roleColors[slot.role] || '#6b7280' };
+        })(),
       };
     }
 
@@ -494,9 +500,9 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
                 className={`
                   ${sizeConfig.dot} rounded-full flex items-center justify-center 
                   shadow-lg border-2 cursor-pointer
-                  transition-transform hover:scale-110
+                  transition-all duration-150 hover:scale-110
                   ${display.bgClass} ${display.borderClass} ${display.ringClass}
-                  ${selectedSlotIndex === idx ? 'ring-4 ring-white/70 ring-offset-2 ring-offset-black/40' : ''}
+                  ${selectedSlotIndex === idx ? 'scale-115 ring-4 ring-white/70 ring-offset-2 ring-offset-black/40 z-10' : ''}
                   ${readOnly ? '' : 'cursor-grab active:cursor-grabbing'}
                 `}
                 style={{

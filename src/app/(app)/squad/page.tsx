@@ -152,14 +152,30 @@ export default function SquadPage() {
     }));
   }, [members, activeSquad]);
 
+  const VALID_FORMATIONS: readonly Formation[] = [
+    '4-4-2', '4-3-3', '4-2-3-1', '4-5-1', '4-1-4-1',
+    '3-5-2', '3-4-3', '5-3-2', '5-4-1', '4-3-1-2',
+    '1-2-1', '1-1-2', '1-3-1', '1-2-2', '1-2-1-1',
+    '1-4-1', '1-3-2', '1-3-1-1', '2-3-1',
+  ];
+
+  const isValidFormation = (f: unknown): f is Formation => {
+    return typeof f === 'string' && VALID_FORMATIONS.includes(f as Formation);
+  };
+
   const initialTactics: Tactics | undefined = useMemo(() => {
     if (!tacticsData) return undefined;
-    const data = tacticsData as unknown;
+    const raw = tacticsData as { formation?: unknown; playStyle?: unknown; instructions?: unknown; setPieces?: unknown };
+    if (!isValidFormation(raw.formation)) return undefined;
     return {
-      formation: (data as { formation: unknown }).formation as Formation,
-      style: (data as { playStyle: unknown }).playStyle as PlayStyle,
-      instructions: (data as { instructions: unknown }).instructions as TeamInstructions,
-      setPieces: (data as { setPieces: unknown }).setPieces as Tactics['setPieces'],
+      formation: raw.formation,
+      style: (typeof raw.playStyle === 'string' ? raw.playStyle : 'balanced') as PlayStyle,
+      instructions: (typeof raw.instructions === 'object' && raw.instructions !== null) 
+        ? raw.instructions as TeamInstructions 
+        : { width: 'normal', tempo: 'normal', passing: 'mixed', pressing: 'medium', defensiveLine: 'normal' },
+      setPieces: (typeof raw.setPieces === 'object' && raw.setPieces !== null)
+        ? raw.setPieces as Tactics['setPieces']
+        : { corners: 'near_post', freeKicks: 'shoot', penalties: '' },
     };
   }, [tacticsData]);
 

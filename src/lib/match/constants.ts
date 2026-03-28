@@ -116,7 +116,7 @@ export const MARKET_CONSTANTS = {
  * Formation modifiers for different areas of the pitch
  * [Defense, Midfield, Attack]
  */
-export const FORMATION_MODIFIERS: Record<Formation, [number, number, number]> = {
+export const FORMATION_MODIFIERS: Partial<Record<Formation, [number, number, number]>> = {
   '4-4-2': [1.0, 1.0, 1.0],      // Balanced
   '4-3-3': [0.9, 1.0, 1.2],      // Attacking
   '4-2-3-1': [1.0, 1.1, 1.0],    // Controlled
