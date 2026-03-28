@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import { PEER_RATING, MOTM } from './constants';
 import { AttributeType } from '@/types';
-import { telegramService } from '@/server/services/communication/telegram';
+import { getTelegramService } from '@/server/services/communication/telegram';
 
 /**
  * Peer Consensus Engine
@@ -238,7 +238,10 @@ export async function calculateConsensus(prisma: PrismaClient, matchId: string) 
     if (squadWithGroups?.groups && squadWithGroups.groups.length > 0) {
       const tgGroup = squadWithGroups.groups[0];
       if (tgGroup?.chatId) {
-        await telegramService.sendConsensusResults(tgGroup.chatId, matchId, squadInfo.name);
+        const telegramService = getTelegramService();
+        if (telegramService) {
+          await telegramService.sendConsensusResults(tgGroup.chatId, matchId, squadInfo.name);
+        }
       }
     }
   }
