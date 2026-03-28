@@ -1,4 +1,4 @@
-import { trackEvent } from '@/lib/analytics';
+import { trackEvent, trackCoreGrowthEvent } from '@/lib/analytics';
 
 export interface WaitlistPayload {
   email: string;
@@ -20,10 +20,10 @@ export async function submitWaitlist({ email, source, context }: WaitlistPayload
       return { ok: false, error: data?.error || 'Failed' };
     }
     trackEvent('waitlist_submitted', { source: source || 'unknown' });
+    trackCoreGrowthEvent('identity_connected', { method: 'waitlist', source: source || 'unknown' });
     return { ok: true, id: data.id };
   } catch (e: any) {
     trackEvent('waitlist_submit_failed', { source: source || 'unknown', error: e?.message || 'network' });
     return { ok: false, error: 'Network error' };
   }
 }
-
