@@ -27,6 +27,10 @@ cd sportwarren
 npm install
 cp .env.example .env.local
 
+# Required for encrypted squad media (generate a 32-byte base64 key)
+# openssl rand -base64 32
+echo "MEDIA_MASTER_KEY=$(openssl rand -base64 32)" >> .env.local
+
 # Start PostgreSQL
 brew services start postgresql@14
 psql sportwarren < prisma/migrations/001_init.sql
@@ -47,6 +51,7 @@ npm run dev
 | **[UX_REFOCUS.md](docs/UX_REFOCUS.md)** | Strategy for prioritizing tactical experience over match logging |
 | **[PEER_RATINGS.md](docs/PEER_RATINGS.md)** | Peer consensus engine, MOTM voting, and Scout reputation progression |
 | **[TELEGRAM.md](docs/TELEGRAM.md)** | Telegram bot + Mini App architecture, tactical notifications, and TON integration |
+| **[SOCIAL.md](docs/SOCIAL.md)** | Private squad media sharing and Lens integration |
 | **[YELLOW_INTEGRATION.md](docs/YELLOW_INTEGRATION.md)** | Yellow Network integration details and operational notes |
 
 ---

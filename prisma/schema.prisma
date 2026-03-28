@@ -186,6 +186,10 @@ model Squad {
   challengesTo       MatchChallenge[] @relation("ChallengeToSquad")
   sessions           Session[]
 
+  // Media (private/squad/public)
+  media SquadMedia[]
+  secrets SquadSecret[]
+
   // On-chain Governance
   governorAddress String? @map("governor_address")
   tokenAddress    String? @map("token_address")
@@ -374,6 +378,66 @@ model TreasuryTransaction {
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("treasury_transactions")
+}
+
+// ============================================================================
+// SOCIAL: SQUAD MEDIA (PRIVATE SHARING)
+// ============================================================================
+
+model SquadMedia {
+  id        String @id @default(cuid())
+
+  squadId   String @map("squad_id")
+  squad     Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  uploaderId String @map("uploader_id")
+  uploader   User   @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  // Title/caption
+  title     String?
+
+  // Media details
+  kind      String  @default("image") // image, video
+  mimeType  String  @map("mime_type")
+  size      Int     // bytes
+  storageKey String @map("storage_key") // opaque key/path, not public URL
+
+  // Optional thumbnail
+  thumbStorageKey String? @map("thumb_storage_key")
+  thumbMimeType   String? @map("thumb_mime_type")
+  thumbSize       Int?    @map("thumb_size")
+
+  // Visibility: private (uploader only), squad (default), public
+  visibility String @default("squad")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Soft delete
+  deletedAt DateTime? @map("deleted_at")
+  deletedBy String?   @map("deleted_by")
+
+  @@index([squadId])
+  @@index([uploaderId])
+  @@map("squad_media")
+}
+
+// ============================================================================
+// SECURITY: SQUAD SECRETS (e.g., media encryption keys)
+// ============================================================================
+
+model SquadSecret {
+  id        String @id @default(cuid())
+
+  squadId   String @map("squad_id")
+  squad     Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  kind      String  // 'media_enc'
+  keyEnc    String  @map("key_enc") // base64 of encrypted key material
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([squadId, kind])
+  @@map("squad_secrets")
 }
 
 // ============================================================================

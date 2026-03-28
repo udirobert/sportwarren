@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { Target, History, CheckCircle, Clock, Trophy, Shield, Star } from "lucide-react";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
 import { VerificationBanner } from "@/components/common/VerificationBanner";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { getJourneyZeroState } from "@/lib/journey/content";
 import { describeMatchForSquad, isSettledMatchStatus } from "@/lib/match/summary";
 import { useJourneyState } from "@/hooks/useJourneyState";
@@ -144,7 +145,7 @@ function ReputationPageInner() {
                 className="py-8"
               />
             ) : matchesLoading || attributesLoading ? (
-              <div className="space-y-3">{[...Array(4)].map((_, i) => <div key={i} className="h-14 bg-gray-100 rounded animate-pulse" />)}</div>
+              <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
             ) : matches.length > 0 ? (
               <div className="space-y-2">
                 {matches.map((match: any) => {

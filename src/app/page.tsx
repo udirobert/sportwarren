@@ -6,6 +6,8 @@ import { useEffect, useState } from "react";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
+import { MessageSquare } from "lucide-react";
+import { trackEvent } from "@/lib/analytics";
 
 export default function Home() {
   const { hasAccount } = useWallet();
@@ -57,6 +59,23 @@ export default function Home() {
         onGuestStart={() => router.push('/dashboard')}
         autoFocusWaitlist={focusWaitlist}
       />
+      
+      {/* Floating Feedback Button */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <a 
+          href="https://t.me/sportwarren_support"
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={() => trackEvent('feedback_clicked', { source: 'floating_button' })}
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 transition-transform hover:scale-110 active:scale-95 group relative"
+        >
+          <MessageSquare className="h-6 w-6" />
+          <span className="absolute right-full mr-3 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-bold text-white opacity-0 transition-opacity group-hover:opacity-100 border border-white/10 shadow-xl pointer-events-none">
+            Send Feedback
+          </span>
+        </a>
+      </div>
+
       <WalletConnectModal 
         isOpen={showWalletModal} 
         onClose={() => {

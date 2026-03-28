@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Home, Trophy, User, Wallet, Bot, Loader2, AlertCircle, RefreshCw, Link2, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Home, Trophy, User, Wallet, Bot, Image as ImageIcon, Loader2, AlertCircle, RefreshCw, Link2, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 // Types for the enhanced Mini App context
 export interface PlayerContext {
@@ -130,7 +130,7 @@ export interface MiniAppContext {
   ton: TonContext;
 }
 
-type TabId = 'squad' | 'match' | 'profile' | 'treasury' | 'ai';
+type TabId = 'squad' | 'match' | 'profile' | 'treasury' | 'media' | 'ai';
 
 interface Tab {
   id: TabId;
@@ -153,6 +153,7 @@ interface TelegramMiniAppShellProps {
   renderMatch?: (context: MiniAppContext, refresh: () => void) => ReactNode;
   renderProfile?: (context: MiniAppContext, refresh: () => void) => ReactNode;
   renderTreasury?: (context: MiniAppContext, refresh: () => void) => ReactNode;
+  renderMedia?: (context: MiniAppContext, refresh: () => void) => ReactNode;
   renderAI?: (context: MiniAppContext, refresh: () => void) => ReactNode;
 }
 
@@ -161,6 +162,7 @@ export function TelegramMiniAppShell({
   renderMatch,
   renderProfile,
   renderTreasury,
+  renderMedia,
   renderAI,
 }: TelegramMiniAppShellProps) {
   const CONTEXT_CACHE_KEY = 'telegram-mini-app:last-context';
@@ -413,6 +415,7 @@ export function TelegramMiniAppShell({
       { id: 'match', label: 'Match', icon: Trophy, badge: pendingCount > 0 ? pendingCount : undefined },
       { id: 'profile', label: 'Profile', icon: User },
       { id: 'treasury', label: 'TON', icon: Wallet, badge: pendingTopUps > 0 ? pendingTopUps : undefined },
+      { id: 'media', label: 'Media', icon: ImageIcon },
       { id: 'ai', label: 'Staff', icon: Bot },
     ];
   }, [context]);
@@ -900,6 +903,8 @@ export function TelegramMiniAppShell({
         return renderProfile ? renderProfile(context, handleRefresh) : <DefaultProfileTab context={context} />;
       case 'treasury':
         return renderTreasury ? renderTreasury(context, handleRefresh) : <DefaultTreasuryTab context={context} />;
+      case 'media':
+        return renderMedia ? renderMedia(context, handleRefresh) : null;
       case 'ai':
         return renderAI ? renderAI(context, handleRefresh) : <DefaultAITab context={context} />;
       default:

@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { Target, Users, Trophy, Star, Shield, Swords, Clock } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
+import { Skeleton, SkeletonLines } from "@/components/ui/Skeleton";
 import { getJourneyZeroState } from "@/lib/journey/content";
 import { getMatchStatusLabel, isSettledMatchStatus } from "@/lib/match/summary";
 import { useSeasonSnapshot } from "@/hooks/useSeasonSnapshot";
@@ -85,7 +86,7 @@ function CommunityPageInner() {
             <Link href="/stats"><Button size="sm" variant="outline">My Stats</Button></Link>
           </div>
           {loadingLeaderboard ? (
-            <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}</div>
+            <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
           ) : leaderboard && leaderboard.length > 0 ? (
             <div className="space-y-2">
               {leaderboard.map((player: any, i: number) => (
@@ -127,7 +128,7 @@ function CommunityPageInner() {
             <Link href="/squad"><Button size="sm" variant="outline">My Squad</Button></Link>
           </div>
           {loadingSquads ? (
-            <div className="space-y-3">{[...Array(4)].map((_, i) => <div key={i} className="h-12 bg-gray-100 rounded animate-pulse" />)}</div>
+            <div className="space-y-3">{[...Array(4)].map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}</div>
           ) : squadsData?.squads && squadsData.squads.length > 0 ? (
             <div className="space-y-2">
               {squadsData.squads.map((squad: any) => (
@@ -183,8 +184,8 @@ function CommunityPageInner() {
           <h2 className="text-lg font-bold text-gray-900">Recent Matches</h2>
           <Link href="/match"><Button size="sm" variant="outline">All Matches</Button></Link>
         </div>
-        {loadingMatches ? (
-          <div className="space-y-3">{[...Array(3)].map((_, i) => <div key={i} className="h-14 bg-gray-100 rounded animate-pulse" />)}</div>
+          {loadingMatches ? (
+            <div className="space-y-3">{[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 rounded-lg" />)}</div>
         ) : recentMatches?.matches && recentMatches.matches.length > 0 ? (
           <div className="space-y-2">
             {recentMatches.matches.map((match: any) => (

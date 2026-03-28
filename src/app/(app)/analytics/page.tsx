@@ -9,6 +9,7 @@ import { trpc } from "@/lib/trpc-client";
 import { useWallet } from "@/contexts/WalletContext";
 import { usePlayerAttributes } from "@/hooks/player/usePlayerAttributes";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
+import { Skeleton } from "@/components/ui/Skeleton";
 import {
   clearStoredEvents,
   getCoreGrowthRecords,
@@ -252,7 +253,7 @@ function AnalyticsPageInner() {
               )}
             </div>
             {loadingForm ? (
-              <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-10 bg-gray-100 rounded animate-pulse" />)}</div>
+              <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
             ) : form && form.length > 0 ? (
               <div className="space-y-2">
                 {form.map((entry: { rating: number; notes?: string | null; createdAt: string | Date }, i: number) => (
@@ -283,7 +284,7 @@ function AnalyticsPageInner() {
           <Card>
             <h2 className="text-lg font-bold text-gray-900 mb-4">Attribute Ratings</h2>
             {loadingAttrs ? (
-              <div className="space-y-3">{[...Array(5)].map((_, i) => <div key={i} className="h-8 bg-gray-100 rounded animate-pulse" />)}</div>
+              <div className="space-y-3">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-8 rounded-lg" />)}</div>
             ) : attributes && attributes.skills && attributes.skills.length > 0 ? (
               <div className="space-y-3">
                 {attributes.skills.map((attr: any) => (

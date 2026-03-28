@@ -15,6 +15,7 @@ import {
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/common/EmptyState";
 import { StatCard } from "@/components/common/StatCard";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { getJourneyZeroState } from "@/lib/journey/content";
 import { describeMatchForSquad } from "@/lib/match/summary";
 import { useJourneyState } from "@/hooks/useJourneyState";
@@ -59,14 +60,14 @@ export default function StatsPage() {
   if (attributesLoading || matchesLoading) {
     return (
       <main className="max-w-4xl mx-auto px-4 py-12 nav-spacer-top nav-spacer-bottom text-gray-900 dark:text-gray-100">
-        <div className="animate-pulse space-y-4">
-          <div className="h-20 bg-gray-100 rounded-2xl" />
+        <div className="space-y-4">
+          <Skeleton className="h-20 rounded-2xl" />
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[...Array(4)].map((_, i) => (
-              <div key={i} className="h-24 bg-gray-100 rounded-2xl" />
+            {Array.from({ length: 4 }, (_, i) => (
+              <Skeleton key={i} className="h-24 rounded-2xl" />
             ))}
           </div>
-          <div className="h-56 bg-gray-100 rounded-2xl" />
+          <Skeleton className="h-56 rounded-2xl" />
         </div>
       </main>
     );

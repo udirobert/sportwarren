@@ -2,6 +2,7 @@
 
 import React, { useRef, useCallback, useMemo } from 'react';
 import { Download, Share2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { exportElementAsImage } from '@/lib/utils/export';
 import { FORMATIONS, ROLE_LABELS } from '@/lib/formations';
@@ -33,6 +34,10 @@ export interface PitchCanvasProps {
   title?: string;
   /** Show player names below dots */
   showPlayerNames?: boolean;
+  /** Primary color for players (overrides default) */
+  primaryColor?: string;
+  /** Play style offset strategy */
+  playStyle?: string;
 }
 
 interface PlayerSlotData {
@@ -45,6 +50,18 @@ const SIZE_CONFIG = {
   sm: { container: 'pb-[50%]', dot: 'w-7 h-7', text: 'text-[8px]', nameText: 'text-[8px]' },
   md: { container: 'pb-[65%]', dot: 'w-10 h-10', text: 'text-[10px]', nameText: 'text-xs' },
   lg: { container: 'pb-[75%]', dot: 'w-12 h-12', text: 'text-xs', nameText: 'text-sm' },
+};
+
+/**
+ * Strategy-based coordinate offsets for play styles
+ */
+const PLAY_STYLE_OFFSETS: Record<string, { x?: number; y?: number; roleFilter?: string[] }> = {
+  attacking: { y: -10, roleFilter: ['ST', 'LW', 'RW', 'CAM', 'CM', 'LM', 'RM'] },
+  defensive: { y: 10, roleFilter: ['CB', 'LB', 'RB', 'LWB', 'RWB', 'CDM', 'CM'] },
+  counter: { y: 15, roleFilter: ['CB', 'LB', 'RB', 'LWB', 'RWB', 'CDM'] },
+  possession: { y: -5, roleFilter: ['CM', 'CAM', 'CDM', 'LM', 'RM'] },
+  high_press: { y: -15, roleFilter: ['ST', 'LW', 'RW', 'CAM', 'CM', 'LM', 'RM'] },
+  low_block: { y: 20, roleFilter: ['CB', 'LB', 'RB', 'LWB', 'RWB', 'CDM'] },
 };
 
 /**
@@ -71,6 +88,8 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
   size = 'md',
   title,
   showPlayerNames = false,
+  primaryColor,
+  playStyle = 'balanced',
 }) => {
   const pitchRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = React.useState(false);
@@ -96,7 +115,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
    * Get display content for a player slot
    * Priority: Avatar image → Initials → Role abbreviation
    */
-  const getSlotDisplay = (slot: PlayerSlotData): { content: React.ReactNode; bgClass: string; borderClass: string } => {
+  const getSlotDisplay = (slot: PlayerSlotData): { content: React.ReactNode; bgClass: string; borderClass: string; style?: React.CSSProperties } => {
     if (slot.player) {
       const initials = slot.player.name
         .split(' ')
@@ -119,6 +138,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
         ),
         bgClass: 'bg-gray-900',
         borderClass: 'border-yellow-300',
+        style: primaryColor ? { backgroundColor: primaryColor } : undefined,
       };
     }
 
@@ -351,11 +371,33 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
           const display = getSlotDisplay(slot);
           const player = slot.player;
 
+          // Apply play style offsets
+          let offsetX = 0;
+          let offsetY = 0;
+          const styleConfig = PLAY_STYLE_OFFSETS[playStyle];
+          
+          if (styleConfig && (!styleConfig.roleFilter || styleConfig.roleFilter.includes(pos.role))) {
+            if (styleConfig.x) offsetX = styleConfig.x;
+            if (styleConfig.y) offsetY = styleConfig.y;
+          }
+
           return (
-            <div
-              key={idx}
+            <motion.div
+              key={`${formation}-${idx}`}
+              layout
+              initial={{ left: `${pos.x}%`, top: `${pos.y}%`, opacity: 0 }}
+              animate={{ 
+                left: `${pos.x + offsetX}%`, 
+                top: `${pos.y + offsetY}%`, 
+                opacity: 1 
+              }}
+              transition={{ 
+                type: 'spring', 
+                stiffness: 300, 
+                damping: 30,
+                layout: { duration: 0.3 }
+              }}
               className="absolute transform -translate-x-1/2 -translate-y-1/2"
-              style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
               onDragOver={handleDragOver}
               onDrop={(e) => handleSlotDrop(e, idx)}
             >
@@ -370,6 +412,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
                   ${display.bgClass} ${display.borderClass}
                   ${readOnly ? '' : 'cursor-grab active:cursor-grabbing'}
                 `}
+                style={display.style}
                 title={player ? player.name : ROLE_LABELS[slot.role]}
               >
                 {display.content}
@@ -383,7 +426,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
                   </span>
                 </div>
               )}
-            </div>
+            </motion.div>
           );
         })}
       </div>

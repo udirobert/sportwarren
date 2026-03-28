@@ -12,6 +12,7 @@ export const CORE_GROWTH_EVENTS = {
   channel_connected: { stage: 'retention' as GrowthStage },
   identity_connected: { stage: 'conversion' as GrowthStage },
   verification_queue_reviewed: { stage: 'retention' as GrowthStage },
+  waitlist_joined: { stage: 'conversion' as GrowthStage },
 } as const;
 
 export type CoreGrowthEvent = keyof typeof CORE_GROWTH_EVENTS;
