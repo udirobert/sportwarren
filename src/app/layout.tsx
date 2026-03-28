@@ -3,11 +3,25 @@ import "./globals.css";
 import { Providers } from "./providers";
 
 export const metadata: Metadata = {
-  title: "SportWarren",
-  description: "Rec football stats that stick. Simulate tactics, verify real results, and grow your squad’s reputation. Early access.",
+  title: "SportWarren — Rec Football, Tactically Elevated",
+  description: "Design your squad DNA. Simulate tactics. Dominate the pitch. The ultimate tactical command center for your real-world squad.",
   icons: {
     icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚽</text></svg>",
   },
+  openGraph: {
+    title: "SportWarren — Rec Football, Tactically Elevated",
+    description: "Design your squad DNA. Simulate tactics. Dominate the pitch. The ultimate tactical command center for your real-world squad.",
+    type: "website",
+    siteName: "SportWarren",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "SportWarren — Rec Football, Tactically Elevated",
+    description: "Design your squad DNA. Simulate tactics. Dominate the pitch.",
+    creator: "@sportwarren",
+  },
+  keywords: ["football", "soccer", "tactics", "squad", "5-a-side", "recreational football", "stats", "simulation"],
 };
 
 export default function RootLayout({

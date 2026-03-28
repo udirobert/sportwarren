@@ -20,7 +20,8 @@ import {
   UserPlus,
   Image as ImageIcon,
   Maximize2,
-  Minimize2
+  Minimize2,
+  EyeOff
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { exportElementAsImage } from '@/lib/utils/export';
@@ -37,6 +38,15 @@ const MOCK_PLAYERS: Player[] = [
 
 export const InteractiveMatchPreview: React.FC = () => {
   const searchParams = useSearchParams();
+  const [squadCount, setSquadCount] = useState<number | null>(null);
+
+  // Fetch live stats for social proof
+  useEffect(() => {
+    fetch('/api/platform/stats')
+      .then(res => res.json())
+      .then(data => setSquadCount(data.waitlistTotal ?? 0))
+      .catch(() => setSquadCount(null));
+  }, []);
 
   // Initial state from URL or defaults
   const [formation, setFormation] = useState<Formation>((searchParams.get('formation') as Formation) || '4-4-2');
@@ -55,6 +65,19 @@ export const InteractiveMatchPreview: React.FC = () => {
   const [isFs, setIsFs] = useState(false);
   const [fsOverlay, setFsOverlay] = useState(false);
   const supportsFs = typeof document !== 'undefined' && typeof (document as any).fullscreenEnabled !== 'undefined';
+  const [blurLevel, setBlurLevel] = useState<'low'|'med'|'high'>('med');
+  const [exportFormat, setExportFormat] = useState<'png'|'webp'>(() => {
+    if (typeof window === 'undefined') return 'png';
+    const v = window.localStorage.getItem('sw_pitch_export_format');
+    return v === 'webp' ? 'webp' : 'png';
+  });
+  const [hdExport, setHdExport] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('sw_pitch_hd') === '1';
+  });
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [exportScope, setExportScope] = useState<'card' | 'panel'>('card');
+  const leftPanelRef = React.useRef<HTMLDivElement>(null);
 
   // Update URL when state changes
   useEffect(() => {
@@ -93,9 +116,44 @@ export const InteractiveMatchPreview: React.FC = () => {
   const handleExport = async () => {
     if (!pitchRef.current) return;
     setIsExporting(true);
-    trackFeatureUsed('tactics_preview_export', { formation, style: playStyle });
     try {
-      await exportElementAsImage(pitchRef.current, `sportwarren-tactics-${formation}`, 'png');
+      const target = exportScope === 'panel' && leftPanelRef.current ? leftPanelRef.current : pitchRef.current;
+      const devicePR = (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
+      const dm = (typeof navigator !== 'undefined' && (navigator as any).deviceMemory) || 0;
+      const isDesktop = typeof window !== 'undefined' ? (window.matchMedia && window.matchMedia('(min-width: 1024px)').matches) : false;
+      const allowedMax = (isDesktop || dm >= 4) ? 3 : 2;
+      const basePR = exportFormat === 'webp' ? Math.max(1.5, devicePR) : Math.max(1, devicePR);
+      let pixelRatio = Math.min(allowedMax, hdExport ? Math.max(2, basePR * 1.5) : Math.min(2, basePR));
+
+      let success = false;
+      let finalFormat: 'png'|'webp' = exportFormat as any;
+      try {
+        success = await exportElementAsImage(target, `sportwarren-tactics-${formation}`, finalFormat, { pixelRatio, backgroundColor: '#0b1322' });
+      } catch {}
+      if (!success && finalFormat === 'webp') {
+        finalFormat = 'png';
+        try { success = await exportElementAsImage(target, `sportwarren-tactics-${formation}`, 'png', { pixelRatio, backgroundColor: '#0b1322' }); } catch {}
+      }
+      if (!success && pixelRatio > 2) {
+        pixelRatio = 2;
+        try { success = await exportElementAsImage(target, `sportwarren-tactics-${formation}`, 'png', { pixelRatio, backgroundColor: '#0b1322' }); } catch {}
+      }
+      if (!success) {
+        try { success = await exportElementAsImage(target, `sportwarren-tactics-${formation}`, 'png', { pixelRatio: 1, backgroundColor: '#0b1322' }); } catch {}
+      }
+
+      // Analytics with export metadata
+      trackFeatureUsed('tactics_preview_export', {
+        formation,
+        style: playStyle,
+        format: finalFormat,
+        pixelRatio,
+        hd: hdExport,
+        scope: exportScope,
+        namesShown: showNames,
+        blurred: blurFaces,
+        success,
+      });
     } finally {
       setIsExporting(false);
     }
@@ -143,6 +201,51 @@ export const InteractiveMatchPreview: React.FC = () => {
     setShowNames(prev);
   };
 
+  const shareWithNamesAndBlur = async () => {
+    const prevNames = showNames;
+    const prevBlur = blurFaces;
+    setShowNames(true);
+    setBlurFaces(true);
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    await handleShare();
+    setShowNames(prevNames);
+    setBlurFaces(prevBlur);
+  };
+
+  // Reset helpers
+  const resetCurrentFormation = () => {
+    setNames(['Tunde','Kofi','Diallo','Eze','Yusuf','GK']);
+    setAvatars([null,null,null,null,null,null]);
+    setShowNames(false);
+    setBlurFaces(false);
+    try {
+      if (typeof window !== 'undefined') {
+        const key = (k:string) => `${k}_${formation}`;
+        ['sw_pitch_names','sw_pitch_avatars','sw_pitch_show_names','sw_pitch_blur_faces','sw_pitch_blur_level']
+          .forEach((k)=> window.localStorage.removeItem(key(k)));
+      }
+    } catch {}
+  };
+
+  const resetAllFormations = () => {
+    // Reset UI state
+    setNames(['Tunde','Kofi','Diallo','Eze','Yusuf','GK']);
+    setAvatars([null,null,null,null,null,null]);
+    setShowNames(false);
+    setBlurFaces(false);
+    setBlurLevel('med');
+    try {
+      if (typeof window !== 'undefined') {
+        const fmList = Object.keys(FORMATIONS) as Formation[];
+        const keys = ['sw_pitch_names','sw_pitch_avatars','sw_pitch_show_names','sw_pitch_blur_faces','sw_pitch_blur_level'];
+        fmList.forEach((fm) => keys.forEach((k) => window.localStorage.removeItem(`${k}_${fm}`)));
+        // Also remove any legacy global keys just in case
+        keys.forEach((k) => window.localStorage.removeItem(k));
+      }
+    } catch {}
+  };
+
   const lineup = useMemo(() => {
     // Just a mock lineup for the preview
     return ['1', '2', '3', '4', '5', '6'].slice(0, FORMATIONS[formation].length);
@@ -156,8 +259,13 @@ export const InteractiveMatchPreview: React.FC = () => {
       window.localStorage.setItem(key('sw_pitch_names'), JSON.stringify(names));
       window.localStorage.setItem(key('sw_pitch_avatars'), JSON.stringify(avatars));
       window.localStorage.setItem(key('sw_pitch_show_names'), showNames ? '1' : '0');
+      window.localStorage.setItem(key('sw_pitch_blur_faces'), blurFaces ? '1' : '0');
+      window.localStorage.setItem(key('sw_pitch_blur_level'), blurLevel);
+      window.localStorage.setItem('sw_pitch_export_format', exportFormat);
+      window.localStorage.setItem('sw_pitch_hd', hdExport ? '1' : '0');
+      window.localStorage.setItem('sw_pitch_export_scope', exportScope);
     } catch {}
-  }, [names, avatars, showNames, formation]);
+  }, [names, avatars, showNames, blurFaces, blurLevel, exportFormat, hdExport, exportScope, formation]);
 
   useEffect(() => {
     try {
@@ -166,6 +274,8 @@ export const InteractiveMatchPreview: React.FC = () => {
       const n = window.localStorage.getItem(key('sw_pitch_names')) || window.localStorage.getItem('sw_pitch_names');
       const a = window.localStorage.getItem(key('sw_pitch_avatars')) || window.localStorage.getItem('sw_pitch_avatars');
       const s = window.localStorage.getItem(key('sw_pitch_show_names')) || window.localStorage.getItem('sw_pitch_show_names');
+      const b = window.localStorage.getItem(key('sw_pitch_blur_faces')) || window.localStorage.getItem('sw_pitch_blur_faces');
+      const bl = window.localStorage.getItem(key('sw_pitch_blur_level')) || window.localStorage.getItem('sw_pitch_blur_level');
       if (n) {
         try { const v = JSON.parse(n); if (Array.isArray(v) && v.length) setNames(v); } catch {}
       }
@@ -173,6 +283,8 @@ export const InteractiveMatchPreview: React.FC = () => {
         try { const v = JSON.parse(a); if (Array.isArray(v) && v.length) setAvatars(v); } catch {}
       }
       if (s) setShowNames(s === '1');
+      if (b) setBlurFaces(b === '1');
+      if (bl === 'low' || bl === 'med' || bl === 'high') setBlurLevel(bl as any);
     } catch {}
   }, [formation]);
 
@@ -181,7 +293,7 @@ export const InteractiveMatchPreview: React.FC = () => {
       <Card className="bg-gray-900/40 border-white/10 backdrop-blur-md overflow-hidden">
         <div className="grid md:grid-cols-2 gap-0">
           {/* Left: Pitch Preview */}
-          <div className="p-6 border-b md:border-b-0 md:border-r border-white/10">
+          <div ref={leftPanelRef} className="p-6 border-b md:border-b-0 md:border-r border-white/10">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-bold uppercase tracking-widest text-green-400 flex items-center gap-2">
                 <Shield className="w-4 h-4" />
@@ -315,14 +427,48 @@ export const InteractiveMatchPreview: React.FC = () => {
                     )}
                   </AnimatePresence>
                 </Button>
-                <Button 
-                  variant="outline" 
-                  className="border-white/10 text-white hover:bg-white/5"
-                  onClick={handleExport}
-                  disabled={isExporting}
-                >
-                  <Download className={`w-4 h-4 ${isExporting ? 'animate-pulse' : ''}`} />
-                </Button>
+                <div className="flex items-center gap-2">
+                  <select
+                    className="rounded-md bg-white/5 border border-white/10 text-white text-[11px] px-2 py-1"
+                    value={exportFormat}
+                    onChange={(e) => setExportFormat((e.target.value as any) || 'png')}
+                    title="Export format (PNG: lossless, WebP: smaller)"
+                  >
+                    <option value="png">PNG</option>
+                    <option value="webp">WebP</option>
+                  </select>
+                  <select
+                    className="rounded-md bg-white/5 border border-white/10 text-white text-[11px] px-2 py-1"
+                    value={exportScope}
+                    onChange={(e) => setExportScope((e.target.value as any) || 'card')}
+                    title="Export area"
+                  >
+                    <option value="card">Card only</option>
+                    <option value="panel">Card + header</option>
+                  </select>
+                  <label className="flex items-center gap-1 text-[11px] text-white/80" title="Higher pixel ratio for crisper export (larger file)">
+                    <input type="checkbox" checked={hdExport} onChange={(e) => setHdExport(e.target.checked)} /> HD
+                  </label>
+                  <Button 
+                    variant="outline" 
+                    className="border-white/10 text-white hover:bg-white/5"
+                    onClick={handleExport}
+                    disabled={isExporting}
+                    title="Save card"
+                  >
+                    <Download className={`w-4 h-4 ${isExporting ? 'animate-pulse' : ''}`} />
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="border-white/10 text-white hover:bg-white/5 text-[11px]"
+                    onClick={async () => {
+                      try { await navigator.clipboard.writeText(window.location.href); setShowShareSuccess(true); setTimeout(() => setShowShareSuccess(false), 1500); } catch {}
+                    }}
+                    title="Copy link with current setup"
+                  >
+                    Copy Link
+                  </Button>
+                </div>
                 <Button 
                   variant="outline" 
                   className="border-white/10 text-white hover:bg-white/5"
@@ -339,6 +485,14 @@ export const InteractiveMatchPreview: React.FC = () => {
               <p className="text-[10px] text-center text-gray-500">
                 Share as image or link to your squad group chat
               </p>
+              <div className="mt-1 flex items-center justify-center gap-3">
+                <span className="text-[10px] text-gray-500">Tip: PNG = lossless. WebP = smaller, widely supported.</span>
+                {blurFaces && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
+                    <EyeOff className="h-3 w-3" /> Faces blurred
+                  </span>
+                )}
+              </div>
               <div className="flex items-center justify-center gap-2">
                 <Button
                   variant="ghost"
@@ -347,6 +501,14 @@ export const InteractiveMatchPreview: React.FC = () => {
                 >
                   <UserPlus className="w-3 h-3 mr-1" /> Personalize: Names & Faces
                 </Button>
+                <Button
+                  variant="ghost"
+                  className="text-xs text-white/70 hover:bg-white/10"
+                  onClick={resetAllFormations}
+                  title="Clear personalization for all formations"
+                >
+                  Reset All
+                </Button>
                 {unlocked && (
                   <label className="flex items-center gap-2 text-[11px] text-gray-300">
                     <input type="checkbox" checked={showNames} onChange={(e) => setShowNames(e.target.checked)} /> Show names on card
@@ -354,9 +516,10 @@ export const InteractiveMatchPreview: React.FC = () => {
                 )}
               </div>
               {unlocked && (
-                <div className="mt-2 flex items-center justify-center gap-2">
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
                   <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[11px]" onClick={() => void shareWithNames(false)}>Share Clean</Button>
                   <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[11px]" onClick={() => void shareWithNames(true)}>Share + Names</Button>
+                  <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[11px]" onClick={() => void shareWithNamesAndBlur()}>Share + Names + Blur</Button>
                 </div>
               )}
             </div>
@@ -380,7 +543,7 @@ export const InteractiveMatchPreview: React.FC = () => {
           </span>
         </div>
         <div className="h-4 w-px bg-white/10 hidden sm:block"></div>
-        <span>Join 420+ squads using SportWarren</span>
+        <span>{squadCount !== null ? `Join ${squadCount}+ squads using SportWarren` : 'Join squads using SportWarren'}</span>
       </div>
 
       {/* Quick Guide */}
@@ -471,25 +634,26 @@ export const InteractiveMatchPreview: React.FC = () => {
                     <label className="flex items-center gap-2 text-[12px] text-gray-300">
                       <input type="checkbox" checked={showNames} onChange={(e) => setShowNames(e.target.checked)} /> Show names on card
                     </label>
-                    <label className="flex items-center gap-2 text-[12px] text-gray-300">
-                      <input type="checkbox" checked={blurFaces} onChange={(e) => setBlurFaces(e.target.checked)} /> Blur faces
-                    </label>
+                    <div className="flex items-center gap-2 text-[12px] text-gray-300">
+                      <label className="flex items-center gap-2">
+                        <input type="checkbox" checked={blurFaces} onChange={(e) => setBlurFaces(e.target.checked)} /> Blur faces
+                      </label>
+                      {blurFaces && (
+                        <select
+                          className="rounded-md bg-white/5 border border-white/10 text-white text-[12px] px-2 py-1"
+                          value={blurLevel}
+                          onChange={(e) => setBlurLevel((e.target.value as any) || 'med')}
+                        >
+                          <option value="low">Low</option>
+                          <option value="med">Medium</option>
+                          <option value="high">High</option>
+                        </select>
+                      )}
+                    </div>
                   </div>
                   <div className="flex gap-2">
-                    <label className="mr-2 flex items-center gap-2 text-[12px] text-gray-300">
-                      <input type="checkbox" checked={false /* controlled externally if desired */} onChange={() => {}} disabled className="opacity-50" /> Blur faces (coming next)
-                    </label>
-                    <Button variant="ghost" className="text-white hover:bg-white/10" onClick={() => {
-                      setNames(['Tunde','Kofi','Diallo','Eze','Yusuf','GK']);
-                      setAvatars([null,null,null,null,null,null]);
-                      setShowNames(false);
-                      try {
-                        if (typeof window !== 'undefined') {
-                          const key = (k:string) => `${k}_${formation}`;
-                          ['sw_pitch_names','sw_pitch_avatars','sw_pitch_show_names'].forEach((k)=> window.localStorage.removeItem(key(k)));
-                        }
-                      } catch {}
-                    }}>Reset</Button>
+                    <Button variant="ghost" className="text-white hover:bg-white/10" onClick={resetCurrentFormation}>Reset</Button>
+                    <Button variant="ghost" className="text-white hover:bg-white/10" onClick={resetAllFormations}>Reset All</Button>
                     <Button variant="outline" className="border-white/10 text-white hover:bg-white/5" onClick={() => setShowEditor(false)}>Done</Button>
                   </div>
                 </div>
