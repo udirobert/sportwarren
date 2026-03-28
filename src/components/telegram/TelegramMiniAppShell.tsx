@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { Home, Trophy, User, Wallet, Bot, Image as ImageIcon, Loader2, AlertCircle, RefreshCw, Link2, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Home, Trophy, User, Wallet, Bot, Image as ImageIcon, Loader2, AlertCircle, RefreshCw, Link2, ArrowRight, CheckCircle2, Vote } from 'lucide-react';
 
 // Types for the enhanced Mini App context
 export interface PlayerContext {
@@ -130,7 +130,7 @@ export interface MiniAppContext {
   ton: TonContext;
 }
 
-type TabId = 'squad' | 'match' | 'profile' | 'treasury' | 'media' | 'ai';
+type TabId = 'squad' | 'match' | 'profile' | 'treasury' | 'media' | 'ai' | 'governance';
 
 interface Tab {
   id: TabId;
@@ -155,6 +155,7 @@ interface TelegramMiniAppShellProps {
   renderTreasury?: (context: MiniAppContext, refresh: () => void) => ReactNode;
   renderMedia?: (context: MiniAppContext, refresh: () => void) => ReactNode;
   renderAI?: (context: MiniAppContext, refresh: () => void) => ReactNode;
+  renderGovernance?: (context: MiniAppContext, refresh: () => void) => ReactNode;
 }
 
 export function TelegramMiniAppShell({
@@ -164,6 +165,7 @@ export function TelegramMiniAppShell({
   renderTreasury,
   renderMedia,
   renderAI,
+  renderGovernance,
 }: TelegramMiniAppShellProps) {
   const CONTEXT_CACHE_KEY = 'telegram-mini-app:last-context';
   const PULL_THRESHOLD = 72;
@@ -417,6 +419,7 @@ export function TelegramMiniAppShell({
       { id: 'treasury', label: 'TON', icon: Wallet, badge: pendingTopUps > 0 ? pendingTopUps : undefined },
       { id: 'media', label: 'Media', icon: ImageIcon },
       { id: 'ai', label: 'Staff', icon: Bot },
+      { id: 'governance', label: 'Vote', icon: Vote },
     ];
   }, [context]);
 
@@ -907,6 +910,8 @@ export function TelegramMiniAppShell({
         return renderMedia ? renderMedia(context, handleRefresh) : null;
       case 'ai':
         return renderAI ? renderAI(context, handleRefresh) : <DefaultAITab context={context} />;
+      case 'governance':
+        return renderGovernance ? renderGovernance(context, handleRefresh) : null;
       default:
         return null;
     }

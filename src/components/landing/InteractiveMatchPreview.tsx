@@ -76,7 +76,11 @@ export const InteractiveMatchPreview: React.FC = () => {
     return window.localStorage.getItem('sw_pitch_hd') === '1';
   });
   const [copiedLink, setCopiedLink] = useState(false);
-  const [exportScope, setExportScope] = useState<'card' | 'panel'>('card');
+  const [exportScope, setExportScope] = useState<'card' | 'panel'>(() => {
+    if (typeof window === 'undefined') return 'card';
+    const v = window.localStorage.getItem('sw_pitch_export_scope');
+    return v === 'panel' ? 'panel' : 'card';
+  });
   const leftPanelRef = React.useRef<HTMLDivElement>(null);
 
   // Update URL when state changes
@@ -154,6 +158,13 @@ export const InteractiveMatchPreview: React.FC = () => {
         blurred: blurFaces,
         success,
       });
+      if (success) {
+        const tip = document.createElement('div');
+        tip.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[100] rounded-md border border-white/10 bg-black/80 px-3 py-1.5 text-xs text-white shadow-xl';
+        tip.textContent = 'Saved';
+        document.body.appendChild(tip);
+        setTimeout(() => { try { document.body.removeChild(tip); } catch {} }, 1200);
+      }
     } finally {
       setIsExporting(false);
     }
@@ -199,6 +210,12 @@ export const InteractiveMatchPreview: React.FC = () => {
     await new Promise((r) => requestAnimationFrame(() => r(null)));
     await handleShare();
     setShowNames(prev);
+    trackFeatureUsed('tactics_share_preset', {
+      preset: withNames ? 'names' : 'clean',
+      formation,
+      style: playStyle,
+      blurred: blurFaces,
+    });
   };
 
   const shareWithNamesAndBlur = async () => {
@@ -211,6 +228,12 @@ export const InteractiveMatchPreview: React.FC = () => {
     await handleShare();
     setShowNames(prevNames);
     setBlurFaces(prevBlur);
+    trackFeatureUsed('tactics_share_preset', {
+      preset: 'names_blur',
+      formation,
+      style: playStyle,
+      blurred: true,
+    });
   };
 
   // Reset helpers
@@ -352,7 +375,7 @@ export const InteractiveMatchPreview: React.FC = () => {
 
               <div className="space-y-4">
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">Play Style</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-300 block mb-2">Play Style</label>
                   <div className="grid grid-cols-2 gap-2">
                     {(['balanced', 'high_press', 'low_block', 'counter'] as PlayStyle[]).map((style) => (
                       <button
@@ -364,7 +387,7 @@ export const InteractiveMatchPreview: React.FC = () => {
                         className={`px-3 py-1.5 md:py-2 rounded-lg border text-left transition-all ${
                           playStyle === style 
                             ? 'bg-blue-500/20 border-blue-500/50 text-white' 
-                            : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
+                            : 'bg-white/5 border-white/20 text-gray-200 hover:border-white/40'
                         }`}
                       >
                         <div className="text-xs font-bold capitalize">{style.replace('_', ' ')}</div>
@@ -375,7 +398,7 @@ export const InteractiveMatchPreview: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">Squad Identity</label>
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-gray-300 block mb-2">Squad Identity</label>
                   <div className="flex gap-3">
                     {['#10b981', '#3b82f6', '#ef4444', '#f59e0b'].map((color) => (
                       <button 
@@ -482,11 +505,11 @@ export const InteractiveMatchPreview: React.FC = () => {
                   {isFs ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </Button>
               </div>
-              <p className="text-[10px] text-center text-gray-500">
+              <p className="text-[10px] text-center text-gray-400">
                 Share as image or link to your squad group chat
               </p>
               <div className="mt-1 flex items-center justify-center gap-3">
-                <span className="text-[10px] text-gray-500">Tip: PNG = lossless. WebP = smaller, widely supported.</span>
+                <span className="text-[10px] text-gray-400">Tip: PNG = lossless. WebP = smaller, widely supported.</span>
                 {blurFaces && (
                   <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
                     <EyeOff className="h-3 w-3" /> Faces blurred

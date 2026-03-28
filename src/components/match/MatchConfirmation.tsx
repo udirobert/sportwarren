@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Check, X, AlertTriangle, Shield, Users } from 'lucide-react';
+import { Check, X, AlertTriangle, Shield, Users, ExternalLink } from 'lucide-react';
 import type { MatchResult } from '@/types';
 import { getMatchStatusDisplay, canVerifyMatch } from '@/lib/match/verification';
+import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
 
 interface MatchConfirmationProps {
   match: MatchResult;
@@ -54,12 +55,24 @@ export const MatchConfirmation: React.FC<MatchConfirmationProps> = ({
     }
   };
 
-  const handleDisputeSubmit = () => {
+      const handleDisputeSubmit = () => {
     if (disputeReason.trim()) {
       onDispute(disputeReason);
       setShowDisputeForm(false);
     }
   };
+
+  const telegramDeepLink = buildTelegramDeepLink({
+    tab: 'match',
+    prefilled: {
+      action: 'verify',
+      matchId: match.id,
+      homeTeam: match.homeTeam,
+      awayTeam: match.awayTeam,
+      homeScore: String(match.homeScore),
+      awayScore: String(match.awayScore),
+    }
+  });
 
   // If user is not captain or already verified
   if (!verificationCheck.canVerify && !showPreview) {
@@ -188,6 +201,17 @@ export const MatchConfirmation: React.FC<MatchConfirmationProps> = ({
               <Check className="w-4 h-4 mr-2" />
               {scoresMatch ? 'Confirm Result' : 'Submit My Score'}
             </Button>
+            
+            <a 
+              href={telegramDeepLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center w-full bg-[#24A1DE] hover:bg-[#208bbf] text-white font-bold py-2.5 px-4 rounded-xl transition-all active:scale-[0.98] text-sm shadow-sm"
+            >
+              <ExternalLink className="w-4 h-4 mr-2" />
+              Verify via Telegram
+            </a>
+
             <Button 
               onClick={() => setShowDisputeForm(true)}
               variant="outline"
