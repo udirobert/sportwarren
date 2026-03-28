@@ -62,12 +62,33 @@ interface PlayerSlotData {
   index: number;
 }
 
-// FIFA standard pitch ratio: 68m width × 105m length = 1:1.545 (154.5%)
-// Using consistent aspect ratio ensures proper scaling at all sizes
+// Position group styling for visual differentiation on the pitch
+const ROLE_GROUPS: Record<string, { ring: string; border: string; label: string }> = {
+  GK: { ring: 'ring-2 ring-amber-400/60', border: 'border-amber-400', label: 'GK' },
+  CB: { ring: '', border: 'border-sky-400', label: 'DEF' },
+  LB: { ring: '', border: 'border-sky-400', label: 'DEF' },
+  RB: { ring: '', border: 'border-sky-400', label: 'DEF' },
+  LWB: { ring: '', border: 'border-sky-400', label: 'DEF' },
+  RWB: { ring: '', border: 'border-sky-400', label: 'DEF' },
+  CDM: { ring: '', border: 'border-violet-400', label: 'MID' },
+  CM: { ring: '', border: 'border-violet-400', label: 'MID' },
+  CAM: { ring: '', border: 'border-violet-400', label: 'MID' },
+  LM: { ring: '', border: 'border-violet-400', label: 'MID' },
+  RM: { ring: '', border: 'border-violet-400', label: 'MID' },
+  ST: { ring: '', border: 'border-rose-400', label: 'FWD' },
+  LW: { ring: '', border: 'border-rose-400', label: 'FWD' },
+  RW: { ring: '', border: 'border-rose-400', label: 'FWD' },
+  CF: { ring: '', border: 'border-rose-400', label: 'FWD' },
+};
+
+const DEFAULT_ROLE_GROUP = { ring: '', border: 'border-white/50', label: '' };
+
+// FIFA standard pitch ratio: 68m width × 105m length = 68:105
+// Using aspect-ratio with max-height ensures proper scaling at all viewport sizes
 const SIZE_CONFIG = {
-  sm: { container: 'pb-[154.5%]', dot: 'w-7 h-7', text: 'text-[8px]', nameText: 'text-[8px]' },
-  md: { container: 'pb-[154.5%]', dot: 'w-10 h-10', text: 'text-[10px]', nameText: 'text-xs' },
-  lg: { container: 'pb-[154.5%]', dot: 'w-12 h-12', text: 'text-xs', nameText: 'text-sm' },
+  sm: { container: 'aspect-[68/105] max-h-[min(70vh,600px)]', dot: 'w-7 h-7', text: 'text-[8px]', nameText: 'text-[8px]' },
+  md: { container: 'aspect-[68/105] max-h-[min(75vh,700px)]', dot: 'w-10 h-10', text: 'text-[10px]', nameText: 'text-xs' },
+  lg: { container: 'aspect-[68/105] max-h-[min(80vh,800px)]', dot: 'w-12 h-12', text: 'text-xs', nameText: 'text-sm' },
 };
 
 /**
@@ -136,8 +157,11 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
   /**
    * Get display content for a player slot
    * Priority: Avatar image → Initials → Role abbreviation
+   * Uses position-group styling for visual differentiation
    */
-  const getSlotDisplay = (slot: PlayerSlotData): { content: React.ReactNode; bgClass: string; borderClass: string; style?: React.CSSProperties } => {
+  const getSlotDisplay = (slot: PlayerSlotData): { content: React.ReactNode; bgClass: string; borderClass: string; ringClass: string; style?: React.CSSProperties } => {
+    const roleGroup = ROLE_GROUPS[slot.role] || DEFAULT_ROLE_GROUP;
+
     if (slot.player) {
       const initials = slot.player.name
         .split(' ')
@@ -160,7 +184,8 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
           <span className={`${sizeConfig.text} font-bold text-white`}>{initials}</span>
         ),
         bgClass: 'bg-gray-900',
-        borderClass: 'border-yellow-300',
+        borderClass: roleGroup.border,
+        ringClass: roleGroup.ring,
         style: primaryColor ? { backgroundColor: primaryColor } : undefined,
       };
     }
@@ -169,6 +194,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
       content: <span className={`${sizeConfig.text} font-bold text-green-700`}>{slot.role}</span>,
       bgClass: 'bg-white',
       borderClass: 'border-green-500',
+      ringClass: '',
     };
   };
 
@@ -366,15 +392,14 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
       <div
         ref={pitchRef}
         className={`relative bg-gradient-to-b from-green-600 to-green-700 rounded-xl overflow-hidden ${sizeConfig.container}`}
-        style={{ paddingBottom: '154.5%' }}
       >
         {/* Pitch Markings (SVG, true-to-scale) */}
         {(() => {
           const heroPreset = theme === 'hero' ? {
             stroke: tintStroke(primaryColor ?? '#10b981'),
             strokeOpacity: 0.95,
-            stripeA: 'rgba(255,255,255,0.015)',
-            stripeB: 'rgba(0,0,0,0.04)',
+            stripeA: 'rgba(255,255,255,0.07)',
+            stripeB: 'rgba(0,0,0,0.11)',
             vignetteOpacity: 0.18,
             lineWeight: 2.0,
             // Keep vertical orientation to match player coordinates
@@ -444,6 +469,14 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
               onDragOver={handleDragOver}
               onDrop={(e) => handleSlotDrop(e, idx)}
             >
+              {/* Ground shadow beneath player dot */}
+              <div
+                className={`
+                  absolute left-1/2 -translate-x-1/2 rounded-full bg-black/30 blur-sm
+                  ${size === 'sm' ? 'w-8 h-2 top-[calc(100%+2px)]' : size === 'lg' ? 'w-14 h-3 top-[calc(100%+3px)]' : 'w-11 h-2.5 top-[calc(100%+2px)]'}
+                `}
+                aria-hidden="true"
+              />
               {/* Player Dot */}
               <div
                 draggable={!readOnly && !!player}
@@ -452,7 +485,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
                   ${sizeConfig.dot} rounded-full flex items-center justify-center 
                   shadow-lg border-2 cursor-pointer
                   transition-transform hover:scale-110
-                  ${display.bgClass} ${display.borderClass}
+                  ${display.bgClass} ${display.borderClass} ${display.ringClass}
                   ${readOnly ? '' : 'cursor-grab active:cursor-grabbing'}
                 `}
                 style={{

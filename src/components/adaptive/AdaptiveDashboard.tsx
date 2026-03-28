@@ -689,7 +689,7 @@ export const AdaptiveDashboard: React.FC = () => {
         
         return b.priority - a.priority;
       });
-  }, [allWidgets, hasOperationalSquad, isGuest, preferences]);
+  }, [allWidgets, hasOperationalSquad, isGuest, preferences, entryState.id]);
 
   if (showCreateSquadFlow) {
     return (

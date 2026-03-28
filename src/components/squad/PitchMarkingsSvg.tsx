@@ -97,10 +97,23 @@ export const PitchMarkingsSvg: React.FC<Props> = ({
           <stop offset="0%" stopColor="rgba(0,0,0,0.12)" />
           <stop offset="100%" stopColor="rgba(0,0,0,0)" />
         </linearGradient>
+
+        {/* Grass texture noise */}
+        <filter id={`grass-${uid}`} x="0%" y="0%" width="100%" height="100%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="4" seed="2" stitchTiles="stitch" result="noise" />
+          <feColorMatrix type="saturate" values="0" in="noise" result="gray" />
+          <feBlend in="SourceGraphic" in2="gray" mode="overlay" result="blended" />
+          <feComponentTransfer in="blended">
+            <feFuncA type="linear" slope="1" />
+          </feComponentTransfer>
+        </filter>
       </defs>
 
       {/* ── Grass stripes ── */}
       <rect x="0" y="0" width={W} height={H} fill={`url(#stripes-${uid})`} />
+
+      {/* ── Grass texture overlay ── */}
+      <rect x="0" y="0" width={W} height={H} fill="rgba(0,80,0,0.12)" filter={`url(#grass-${uid})`} pointerEvents="none" />
 
       {/* ── Goal nets (behind goal lines) ── */}
       {/* Top goal (opponent) */}

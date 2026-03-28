@@ -1,6 +1,10 @@
 /**
  * Formation Definitions - Single Source of Truth
  * Consolidated formation data used across TacticsBoard, PitchCanvas, and MatchEngine
+ * 
+ * Coordinate system: x: 0-100 (left to right), y: 0-100 (top to bottom)
+ * GK at y:90 (near bottom goal), ST at y:20 (near top goal)
+ * Lines are spaced ~25 units apart for consistent visual balance
  */
 
 import type { Formation, PlayStyle, TeamInstructions, Tactics, PlayerPosition } from '@/types';
@@ -12,68 +16,87 @@ export interface FormationPosition {
 }
 
 export const FORMATIONS: Record<Formation, FormationPosition[]> = {
+  // Classic 4-4-2: balanced, two banks of four, two strikers
   '4-4-2': [
     { x: 50, y: 90, role: 'GK' },
     { x: 20, y: 70, role: 'LB' }, { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RB' },
     { x: 20, y: 45, role: 'LM' }, { x: 40, y: 45, role: 'CM' }, { x: 60, y: 45, role: 'CM' }, { x: 80, y: 45, role: 'RM' },
     { x: 40, y: 20, role: 'ST' }, { x: 60, y: 20, role: 'ST' },
   ],
+
+  // 4-3-3: attacking, three midfielders, wingers + striker
   '4-3-3': [
     { x: 50, y: 90, role: 'GK' },
     { x: 20, y: 70, role: 'LB' }, { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RB' },
-    { x: 35, y: 50, role: 'CM' }, { x: 50, y: 45, role: 'CM' }, { x: 65, y: 50, role: 'CM' },
-    { x: 25, y: 25, role: 'LW' }, { x: 50, y: 20, role: 'ST' }, { x: 75, y: 25, role: 'RW' },
+    { x: 30, y: 50, role: 'CM' }, { x: 50, y: 45, role: 'CM' }, { x: 70, y: 50, role: 'CM' },
+    { x: 20, y: 25, role: 'LW' }, { x: 50, y: 20, role: 'ST' }, { x: 80, y: 25, role: 'RW' },
   ],
+
+  // 4-2-3-1: defensive midfielder pivot, three attacking mids, lone striker
   '4-2-3-1': [
     { x: 50, y: 90, role: 'GK' },
     { x: 20, y: 70, role: 'LB' }, { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RB' },
     { x: 40, y: 55, role: 'CDM' }, { x: 60, y: 55, role: 'CDM' },
-    { x: 25, y: 35, role: 'CAM' }, { x: 50, y: 30, role: 'CAM' }, { x: 75, y: 35, role: 'CAM' },
-    { x: 50, y: 15, role: 'ST' },
+    { x: 25, y: 38, role: 'CAM' }, { x: 50, y: 35, role: 'CAM' }, { x: 75, y: 38, role: 'CAM' },
+    { x: 50, y: 18, role: 'ST' },
   ],
+
+  // 3-5-2: three center backs, five midfielders (including wingbacks), two strikers
   '3-5-2': [
     { x: 50, y: 90, role: 'GK' },
     { x: 30, y: 70, role: 'CB' }, { x: 50, y: 70, role: 'CB' }, { x: 70, y: 70, role: 'CB' },
-    { x: 15, y: 50, role: 'LWB' }, { x: 35, y: 50, role: 'CM' }, { x: 50, y: 45, role: 'CM' }, { x: 65, y: 50, role: 'CM' }, { x: 85, y: 50, role: 'RWB' },
-    { x: 40, y: 20, role: 'ST' }, { x: 60, y: 20, role: 'ST' },
+    { x: 20, y: 50, role: 'LWB' }, { x: 35, y: 48, role: 'CM' }, { x: 50, y: 45, role: 'CM' }, { x: 65, y: 48, role: 'CM' }, { x: 80, y: 50, role: 'RWB' },
+    { x: 40, y: 22, role: 'ST' }, { x: 60, y: 22, role: 'ST' },
   ],
+
+  // 5-3-2: five defenders, three midfielders, two strikers
   '5-3-2': [
     { x: 50, y: 90, role: 'GK' },
-    { x: 15, y: 70, role: 'LWB' }, { x: 32, y: 70, role: 'CB' }, { x: 50, y: 70, role: 'CB' }, { x: 68, y: 70, role: 'CB' }, { x: 85, y: 70, role: 'RWB' },
-    { x: 35, y: 45, role: 'CM' }, { x: 50, y: 40, role: 'CM' }, { x: 65, y: 45, role: 'CM' },
-    { x: 40, y: 20, role: 'ST' }, { x: 60, y: 20, role: 'ST' },
+    { x: 20, y: 70, role: 'LWB' }, { x: 35, y: 70, role: 'CB' }, { x: 50, y: 70, role: 'CB' }, { x: 65, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RWB' },
+    { x: 35, y: 48, role: 'CM' }, { x: 50, y: 45, role: 'CM' }, { x: 65, y: 48, role: 'CM' },
+    { x: 40, y: 22, role: 'ST' }, { x: 60, y: 22, role: 'ST' },
   ],
+
+  // 4-5-1: defensive, five midfielders, lone striker
   '4-5-1': [
     { x: 50, y: 90, role: 'GK' },
     { x: 20, y: 70, role: 'LB' }, { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RB' },
-    { x: 20, y: 50, role: 'LM' }, { x: 35, y: 45, role: 'CM' }, { x: 50, y: 40, role: 'CM' }, { x: 65, y: 45, role: 'CM' }, { x: 80, y: 50, role: 'RM' },
-    { x: 50, y: 20, role: 'ST' },
+    { x: 20, y: 50, role: 'LM' }, { x: 38, y: 48, role: 'CM' }, { x: 50, y: 45, role: 'CM' }, { x: 62, y: 48, role: 'CM' }, { x: 80, y: 50, role: 'RM' },
+    { x: 50, y: 22, role: 'ST' },
   ],
+
+  // 4-1-4-1: single defensive midfielder, four attacking mids, lone striker
   '4-1-4-1': [
     { x: 50, y: 90, role: 'GK' },
     { x: 20, y: 70, role: 'LB' }, { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RB' },
     { x: 50, y: 55, role: 'CDM' },
-    { x: 20, y: 40, role: 'LM' }, { x: 40, y: 40, role: 'CM' }, { x: 60, y: 40, role: 'CM' }, { x: 80, y: 40, role: 'RM' },
+    { x: 20, y: 40, role: 'LM' }, { x: 40, y: 38, role: 'CM' }, { x: 60, y: 38, role: 'CM' }, { x: 80, y: 40, role: 'RM' },
     { x: 50, y: 20, role: 'ST' },
   ],
+
+  // 3-4-3: three center backs, four midfielders, three forwards
   '3-4-3': [
     { x: 50, y: 90, role: 'GK' },
     { x: 30, y: 70, role: 'CB' }, { x: 50, y: 70, role: 'CB' }, { x: 70, y: 70, role: 'CB' },
-    { x: 20, y: 50, role: 'LM' }, { x: 40, y: 50, role: 'CM' }, { x: 60, y: 50, role: 'CM' }, { x: 80, y: 50, role: 'RM' },
-    { x: 25, y: 25, role: 'LW' }, { x: 50, y: 20, role: 'ST' }, { x: 75, y: 25, role: 'RW' },
+    { x: 20, y: 50, role: 'LM' }, { x: 40, y: 48, role: 'CM' }, { x: 60, y: 48, role: 'CM' }, { x: 80, y: 50, role: 'RM' },
+    { x: 20, y: 25, role: 'LW' }, { x: 50, y: 20, role: 'ST' }, { x: 80, y: 25, role: 'RW' },
   ],
+
+  // 4-3-1-2: four defenders, three midfield, one attacking mid, two strikers
   '4-3-1-2': [
     { x: 50, y: 90, role: 'GK' },
     { x: 20, y: 70, role: 'LB' }, { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RB' },
-    { x: 35, y: 50, role: 'CM' }, { x: 50, y: 50, role: 'CM' }, { x: 65, y: 50, role: 'CM' },
+    { x: 30, y: 52, role: 'CM' }, { x: 50, y: 50, role: 'CM' }, { x: 70, y: 52, role: 'CM' },
     { x: 50, y: 35, role: 'CAM' },
     { x: 40, y: 20, role: 'ST' }, { x: 60, y: 20, role: 'ST' },
   ],
+
+  // 5-4-1: five defenders, four midfielders, lone striker
   '5-4-1': [
     { x: 50, y: 90, role: 'GK' },
-    { x: 15, y: 70, role: 'LWB' }, { x: 32, y: 70, role: 'CB' }, { x: 50, y: 70, role: 'CB' }, { x: 68, y: 70, role: 'CB' }, { x: 85, y: 70, role: 'RWB' },
-    { x: 25, y: 45, role: 'LM' }, { x: 42, y: 45, role: 'CM' }, { x: 58, y: 45, role: 'CM' }, { x: 75, y: 45, role: 'RM' },
-    { x: 50, y: 20, role: 'ST' },
+    { x: 20, y: 70, role: 'LWB' }, { x: 35, y: 70, role: 'CB' }, { x: 50, y: 70, role: 'CB' }, { x: 65, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RWB' },
+    { x: 25, y: 48, role: 'LM' }, { x: 42, y: 46, role: 'CM' }, { x: 58, y: 46, role: 'CM' }, { x: 75, y: 48, role: 'RM' },
+    { x: 50, y: 22, role: 'ST' },
   ],
 };
 
