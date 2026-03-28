@@ -41,7 +41,7 @@ export async function GET(request: NextRequest, context: { params: { mediaId: st
       status: 200,
       headers: { 'Content-Type': media.mimeType, 'Cache-Control': 'public, max-age=300' },
     });
-  } catch (e) {
+  } catch {
     return new NextResponse('Server Error', { status: 500 });
   }
 }

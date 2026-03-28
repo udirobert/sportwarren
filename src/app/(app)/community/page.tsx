@@ -7,7 +7,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { Target, Users, Trophy, Star, Shield, Swords, Clock } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
-import { Skeleton, SkeletonLines } from "@/components/ui/Skeleton";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { getJourneyZeroState } from "@/lib/journey/content";
 import { getMatchStatusLabel, isSettledMatchStatus } from "@/lib/match/summary";
 import { useSeasonSnapshot } from "@/hooks/useSeasonSnapshot";

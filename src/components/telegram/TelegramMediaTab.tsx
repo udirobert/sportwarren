@@ -17,7 +17,7 @@ type MediaItem = {
   hasThumb?: boolean;
 };
 
-export function TelegramMediaTab({ context, onRefresh }: { context: MiniAppContext; onRefresh: () => void }) {
+export function TelegramMediaTab({ context, onRefresh: _onRefresh }: { context: MiniAppContext; onRefresh: () => void }) {
   const lens = useLens();
   const [items, setItems] = useState<MediaItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -51,7 +51,7 @@ export function TelegramMediaTab({ context, onRefresh }: { context: MiniAppConte
     }
   };
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => { void load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onPickFile = () => {
     fileInputRef.current?.click();

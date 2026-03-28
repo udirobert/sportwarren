@@ -7,14 +7,20 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  productionBrowserSourceMaps: false,
   images: {
     unoptimized: true,
   },
-  webpack: (config) => {
+  webpack: (config, { dev, isServer }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
       '@/server': path.resolve(__dirname, 'src/server'),
     };
+    
+    if (!dev && !isServer) {
+        config.optimization.minimize = true;
+    }
+
     return config;
   },
   async rewrites() {

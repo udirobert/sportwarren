@@ -3,12 +3,6 @@ import { PEER_RATING, MOTM } from './constants';
 import { AttributeType } from '@/types';
 import { telegramService } from '@/server/services/communication/telegram';
 
-interface AttributeMedian {
-  attribute: string;
-  median: number;
-  count: number;
-}
-
 /**
  * Peer Consensus Engine
  * Calculates medians, deviations, and applies XP after the rating window closes.
@@ -106,7 +100,6 @@ export async function calculateConsensus(prisma: PrismaClient, matchId: string) 
 
     // 2. Handle MOTM Bonus
     const votesForPlayer = match.motmVotes.filter(v => v.targetId === player!.id).length;
-    const totalVotes = match.motmVotes.length;
 
     // A player wins MOTM if they have the most votes (and at least 1)
     // Simple logic: find max votes

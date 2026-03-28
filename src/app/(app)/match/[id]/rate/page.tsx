@@ -6,7 +6,7 @@ import { trpc } from '@/lib/trpc-client';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Star, CheckCircle2, Trophy, Loader2, ArrowRight, User, Shield } from 'lucide-react';
+import { Star, CheckCircle2, Trophy, Loader2, ArrowRight, User } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function RateTeammatesPage({ params }: { params: { id: string } }) {

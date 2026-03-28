@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     const base = process.env.NEXT_PUBLIC_APP_URL || '';
     const url = `${base}/api/telegram/mini-app/media/public/${mediaId}?exp=${exp}&sig=${sig}`;
     return NextResponse.json({ url, exp });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Failed to create share URL' }, { status: 400 });
   }
 }

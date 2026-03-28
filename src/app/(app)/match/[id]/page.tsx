@@ -6,7 +6,6 @@ import { useParams } from "next/navigation";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { trpc } from "@/lib/trpc-client";
-import { useWallet } from "@/contexts/WalletContext";
 import { MatchEnginePreview } from "@/components/dashboard/MatchEnginePreview";
 import { Trophy, Shield, Share2, Copy, CheckCircle2, AlertCircle, ArrowLeft, MessageCircle, Star, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,7 +14,6 @@ import { buildTelegramShareUrl } from "@/lib/telegram/deep-links";
 export default function PublicMatchPage() {
     const params = useParams();
     const id = params?.id as string;
-    const { isGuest, hasAccount } = useWallet();
     const [copied, setCopied] = useState(false);
     const [revealResults, setRevealResults] = useState(false);
 

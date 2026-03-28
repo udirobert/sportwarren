@@ -418,15 +418,3 @@ function getRolePosition(role: string): string {
   );
 }
 
-// Helper function
-function getRolePosition(role: string): string {
-  const roleToPosition: Record<string, string> = {
-    GK: 'GK',
-    LB: 'DF', CB: 'DF', RB: 'DF',
-    LWB: 'DF', RWB: 'DF',
-    CDM: 'MF', CM: 'MF', LM: 'MF', RM: 'MF', CAM: 'MF',
-    LW: 'WG', RW: 'WG',
-    ST: 'ST',
-  };
-  return roleToPosition[role] || 'MF';
-}
