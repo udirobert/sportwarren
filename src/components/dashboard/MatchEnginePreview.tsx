@@ -2,12 +2,13 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Card } from '@/components/ui/Card';
-import { Play, Pause, RotateCcw, Activity, Trophy, Zap } from 'lucide-react';
+import { Play, Pause, RotateCcw, Activity, Trophy, Zap, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSquadDetails } from '@/hooks/squad/useSquad';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
+import { WaitlistForm } from '@/components/common/WaitlistForm';
 
 import {
     SIM_PARAMS, COMMENTARY_PARAMS,
@@ -47,6 +48,8 @@ export const MatchEnginePreview: React.FC<{
     const [tempo, setTempo] = useState(1);
     const [showIntent, setShowIntent] = useState(true);
     const [latestEvent, setLatestEvent] = useState<string>('');
+    const [interactions, setInteractions] = useState(0);
+    const [showSoftGate, setShowSoftGate] = useState(false);
     const [lowPowerMode, setLowPowerMode] = useState(false);
     const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -73,7 +76,7 @@ export const MatchEnginePreview: React.FC<{
     const playersInitialised = useRef(false);
     const lowPowerModeRef = useRef(false);
     const halftimeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-    const { isGuest } = useWallet();
+    const { isGuest, hasAccount } = useWallet();
     const env = useEnvironment();
 
     // ── Sync refs from React state when tempo/lowPowerMode changes externally ──
@@ -81,6 +84,14 @@ export const MatchEnginePreview: React.FC<{
     useEffect(() => { lowPowerModeRef.current = lowPowerMode; }, [lowPowerMode]);
 
     // ── Stable callbacks ──────────────────────────────────────────────────────
+
+    const registerInteraction = useCallback(() => {
+        setInteractions((n) => {
+            const next = n + 1;
+            if (next >= 2) setShowSoftGate(true);
+            return next;
+        });
+    }, []);
 
     const addEvent = useCallback((text: string, evtType: MatchEvent['type'], _team?: 'home' | 'away') => {
         const tick = timeRef.current;
@@ -740,7 +751,7 @@ export const MatchEnginePreview: React.FC<{
                             {tempoOptions.map((speed) => (
                                 <button
                                     key={speed}
-                                    onClick={() => { setTempo(speed); tempoRef.current = speed; }}
+                                    onClick={() => { setTempo(speed); tempoRef.current = speed; registerInteraction(); }}
                                     className={`px-2 py-1.5 text-xs font-bold rounded-md ${tempo === speed ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'}`}
                                 >
                                     {speed}x
@@ -754,19 +765,19 @@ export const MatchEnginePreview: React.FC<{
                             Intent {showIntent ? 'ON' : 'OFF'}
                         </button>
                         <button
-                            onClick={() => { if (matchPhase !== 'fulltime') setIsPlaying(!isPlaying); }}
+                            onClick={() => { if (matchPhase !== 'fulltime') { setIsPlaying(!isPlaying); registerInteraction(); } }}
                             className="p-3 md:p-1.5 bg-blue-600 hover:bg-blue-700 rounded-xl md:rounded-lg text-white"
                         >
                             {isPlaying ? <Pause className="w-4 h-4 md:w-3 md:h-3" /> : <Play className="w-4 h-4 md:w-3 md:h-3" />}
                         </button>
                         <button
-                            onClick={() => !isPlaying && movePlayers()}
+                            onClick={() => { if (!isPlaying) { movePlayers(); registerInteraction(); } }}
                             className="p-3 md:p-1.5 bg-gray-800 hover:bg-gray-700 rounded-xl md:rounded-lg text-white"
                             title="Step"
                         >
                             <Activity className="w-4 h-4 md:w-3 md:h-3" />
                         </button>
-                        <button onClick={reset} className="p-3 md:p-1.5 bg-gray-800 hover:bg-gray-700 rounded-xl md:rounded-lg text-white" title="Reset (R)">
+                        <button onClick={() => { reset(); registerInteraction(); }} className="p-3 md:p-1.5 bg-gray-800 hover:bg-gray-700 rounded-xl md:rounded-lg text-white" title="Reset (R)">
                             <RotateCcw className="w-4 h-4 md:w-3 md:h-3" />
                         </button>
                     </div>
@@ -812,6 +823,21 @@ export const MatchEnginePreview: React.FC<{
                             </div>
                         </div>
                     </div>
+
+                    {/* Soft Gate: inline email capture after interactions for visitors */}
+                    {showSoftGate && !hasAccount && (
+                        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40">
+                            <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-black/70 backdrop-blur-md px-3 py-2">
+                                <div className="hidden sm:block text-xs text-gray-300">Save this setup to your inbox</div>
+                                <div className="w-[260px] sm:w-[360px]">
+                                    <WaitlistForm variant="inline" source="preview_soft_gate" />
+                                </div>
+                                <button onClick={() => setShowSoftGate(false)} aria-label="Dismiss" className="p-1 rounded-lg hover:bg-white/10 text-gray-400">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Pitch markings */}
                     <div className="absolute inset-0 opacity-10 pointer-events-none">

@@ -15,6 +15,7 @@ import { ToastProvider } from '@/contexts/ToastContext';
 import { ActiveSquadProvider } from "@/contexts/ActiveSquadContext";
 import { Suspense } from 'react';
 import { AnalyticsTracker } from '@/components/common/AnalyticsTracker';
+import { ExitIntentWaitlist } from '@/components/common/ExitIntentWaitlist';
 
 const queryClient = new QueryClient();
 
@@ -58,6 +59,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                           <Suspense fallback={null}>
                             <AnalyticsTracker />
                           </Suspense>
+                          <ExitIntentWaitlist />
                           {children}
                           <GuestMigrationPrompt />
                         </ActiveSquadProvider>

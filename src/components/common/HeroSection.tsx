@@ -19,14 +19,11 @@ interface PlatformStats {
   totalPlayers: number;
   totalMatches: number;
   totalAgents: number;
+  waitlistTotal?: number;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestStart, autoFocusWaitlist }) => {
-  const [stats, setStats] = useState<PlatformStats>({
-    totalPlayers: 0,
-    totalMatches: 0,
-    totalAgents: 0,
-  });
+  const [stats, setStats] = useState<PlatformStats>({ totalPlayers: 0, totalMatches: 0, totalAgents: 0, waitlistTotal: 0 });
   const { address, chain, loginAsGuest, hasAccount, hasWallet, isGuest, authStatus } = useWallet();
   const [scrollY, setScrollY] = useState(0);
   const parallaxRef = useRef<HTMLDivElement>(null);
@@ -223,7 +220,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
           {hasAccount && <div className="mb-16" />}
 
           {/* Stats — live from API */}
-          {stats.totalPlayers > 0 ? (
+          {stats.totalPlayers > 0 || (stats.waitlistTotal && stats.waitlistTotal > 0) ? (
             <div className="flex flex-wrap items-center justify-center gap-8 p-6 border border-white/5 rounded-2xl bg-white/2">
               <div className="flex items-center space-x-2 group">
                 <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
@@ -251,6 +248,17 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                   <div className="text-left">
                     <div className="text-2xl font-bold text-white">{stats.totalAgents.toLocaleString()}</div>
                     <div className="text-xs text-gray-400">AI Agents</div>
+                  </div>
+                </div>
+              )}
+              {stats.waitlistTotal && stats.waitlistTotal > 0 && (
+                <div className="flex items-center space-x-2 group">
+                  <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Timer className="w-5 h-5 text-amber-300" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-2xl font-bold text-white">{stats.waitlistTotal.toLocaleString()}</div>
+                    <div className="text-xs text-gray-400">On Waitlist</div>
                   </div>
                 </div>
               )}
