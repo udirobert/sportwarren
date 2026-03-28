@@ -639,14 +639,15 @@ export class TelegramService {
         { role: "user", content: text },
       ]);
 
-      if (response) {
+      if (response?.content) {
         await this.bot.sendMessage(chatId, response.content);
         return;
       }
     } catch (error) {
       console.warn("General AI query failed:", error);
-      await this.bot.sendMessage(chatId, this.buildGeneralGuidanceFallback());
     }
+
+    await this.bot.sendMessage(chatId, this.buildGeneralGuidanceFallback());
   }
 
   private buildGeneralGuidanceFallback(): string {
