@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useMemo, useCallback, useRef, type ReactNode } from 'react';
+import { useEffect, useState, useMemo, useCallback, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Home, Trophy, User, Wallet, Bot, Image as ImageIcon, Loader2, AlertCircle, RefreshCw, Link2, ArrowRight, CheckCircle2, Vote } from 'lucide-react';
 import { useTelegram } from '@/hooks/useTelegram';
@@ -223,29 +223,6 @@ export function TelegramMiniAppShell({
   const showCreateValidationError = Boolean(createValidationError)
     && (createSquadName.trim().length > 0 || createShortName.trim().length > 0);
 
-  // Initialize Telegram WebApp immersive features
-  useEffect(() => {
-    if (isReady && webApp) {
-      requestFullscreen();
-      enableVerticalSwipes();
-      webApp.setHeaderColor('#09111f');
-      webApp.setBackgroundColor('#09111f');
-      webApp.BackButton?.hide();
-      webApp.MainButton?.hide();
-      webApp.SecondaryButton?.hide();
-      
-      // Native pull-to-refresh listener
-      const handleReload = () => {
-        handleRefresh();
-      };
-      
-      webApp.onEvent('reload_page', handleReload);
-      return () => {
-        webApp.offEvent('reload_page', handleReload);
-      };
-    }
-  }, [isReady, webApp, requestFullscreen, enableVerticalSwipes, handleRefresh]);
-
   useEffect(() => {
     if (!tokenFromUrl || tokenFromUrl === sessionToken) {
       return;
@@ -397,6 +374,34 @@ export function TelegramMiniAppShell({
     }
   }, [sessionToken, isOnline, sessionBootstrapped, cloudStorage, hapticNotification]);
 
+  const handleRefresh = useCallback(() => {
+    hapticImpact('light');
+    loadContext(true);
+  }, [hapticImpact, loadContext]);
+
+  // Initialize Telegram WebApp immersive features
+  useEffect(() => {
+    if (isReady && webApp) {
+      requestFullscreen();
+      enableVerticalSwipes();
+      webApp.setHeaderColor('#09111f');
+      webApp.setBackgroundColor('#09111f');
+      webApp.BackButton?.hide();
+      webApp.MainButton?.hide();
+      webApp.SecondaryButton?.hide();
+      
+      // Native pull-to-refresh listener
+      const handleReload = () => {
+        handleRefresh();
+      };
+      
+      webApp.onEvent('reload_page', handleReload);
+      return () => {
+        webApp.offEvent('reload_page', handleReload);
+      };
+    }
+  }, [isReady, webApp, requestFullscreen, enableVerticalSwipes, handleRefresh]);
+
   useEffect(() => {
     if (!sessionBootstrapped || requiresSquadOnboarding) {
       setLoading(false);
@@ -435,12 +440,6 @@ export function TelegramMiniAppShell({
       setIsTabTransitioning(true);
       window.setTimeout(() => setIsTabTransitioning(false), 220);
     }
-  };
-
-  // Refresh handler
-  const handleRefresh = () => {
-    hapticImpact('light');
-    loadContext(true);
   };
 
   const _handleRetry = () => {
