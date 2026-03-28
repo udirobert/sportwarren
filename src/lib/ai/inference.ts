@@ -70,6 +70,26 @@ export async function generateInference(
             if (content) {
                 return { content, provider: provider.name };
             }
+
+            console.warn(`[AI] ${provider.name} returned empty content.`);
+
+            if (provider.name === 'kilocode') {
+                try {
+                    const fallbackCompletion = await provider.client.chat.completions.create({
+                        model: KILOCODE_FALLBACK_MODEL,
+                        messages: messages as any,
+                        temperature: options.temperature ?? 0.7,
+                        max_tokens: options.max_tokens ?? 300,
+                    });
+                    const fallbackContent = fallbackCompletion.choices[0]?.message?.content?.trim();
+                    if (fallbackContent) {
+                        return { content: fallbackContent, provider: 'kilocode-fallback' };
+                    }
+                    console.warn('[AI] kilocode fallback returned empty content.');
+                } catch (fallbackError) {
+                    console.error('[AI] kilocode fallback model failed:', fallbackError);
+                }
+            }
         } catch (error) {
             console.error(`[AI] ${provider.name} inference failed:`, error instanceof Error ? error.message : String(error));
             
