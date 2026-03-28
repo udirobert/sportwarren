@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PitchCanvas } from '@/components/squad/PitchCanvas';
 import { FORMATIONS, PLAY_STYLE_LABELS } from '@/lib/formations';
 import type { Formation, PlayStyle, Player } from '@/types';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { trackEvent, trackCoreGrowthEvent, trackFeatureUsed } from '@/lib/analytics';
+import { useSearchParams } from 'next/navigation';
+import { trackCoreGrowthEvent, trackFeatureUsed } from '@/lib/analytics';
 import { 
   Shield, 
   Zap, 
@@ -22,16 +22,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { exportElementAsImage } from '@/lib/utils/export';
 
 const MOCK_PLAYERS: Player[] = [
-  { id: '1', name: 'Tunde', position: 'FW', status: 'available' },
-  { id: '2', name: 'Kofi', position: 'MF', status: 'available' },
-  { id: '3', name: 'Diallo', position: 'MF', status: 'available' },
-  { id: '4', name: 'Eze', position: 'DF', status: 'available' },
-  { id: '5', name: 'Yusuf', position: 'DF', status: 'available' },
-  { id: '6', name: 'GK', position: 'GK', status: 'available' },
+  { id: '1', name: 'Tunde', position: 'ST', status: 'available', address: '0x1' },
+  { id: '2', name: 'Kofi', position: 'MF', status: 'available', address: '0x2' },
+  { id: '3', name: 'Diallo', position: 'MF', status: 'available', address: '0x3' },
+  { id: '4', name: 'Eze', position: 'DF', status: 'available', address: '0x4' },
+  { id: '5', name: 'Yusuf', position: 'DF', status: 'available', address: '0x5' },
+  { id: '6', name: 'GK', position: 'GK', status: 'available', address: '0x6' },
 ];
 
 export const InteractiveMatchPreview: React.FC = () => {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   // Initial state from URL or defaults
@@ -157,8 +156,8 @@ export const InteractiveMatchPreview: React.FC = () => {
                 <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">AI Insight</span>
               </div>
               <p className="text-xs text-gray-300 italic">
-                {playStyle === 'attacking' ? "High defensive line will squeeze the pitch." :
-                 playStyle === 'defensive' ? "Deep block makes you impossible to break down." :
+                {(playStyle as string) === 'attacking' ? "High defensive line will squeeze the pitch." :
+                 (playStyle as string) === 'defensive' ? "Deep block makes you impossible to break down." :
                  playStyle === 'counter' ? "Sprinting into space on the transition is key." :
                  formation === '4-3-3' ? "Aggressive width will stretch their defense." : 
                  formation === '4-4-2' ? "Solid structure, perfect for balanced play." :
@@ -179,7 +178,7 @@ export const InteractiveMatchPreview: React.FC = () => {
                 <div>
                   <label className="text-[10px] font-bold uppercase tracking-widest text-gray-500 block mb-2">Play Style</label>
                   <div className="grid grid-cols-2 gap-2">
-                    {(['balanced', 'attacking', 'defensive', 'counter'] as PlayStyle[]).map((style) => (
+                    {(['balanced', 'high_press', 'low_block', 'counter'] as PlayStyle[]).map((style) => (
                       <button
                         key={style}
                         onClick={() => {
@@ -192,7 +191,7 @@ export const InteractiveMatchPreview: React.FC = () => {
                             : 'bg-white/5 border-white/10 text-gray-400 hover:border-white/20'
                         }`}
                       >
-                        <div className="text-xs font-bold capitalize">{style}</div>
+                        <div className="text-xs font-bold capitalize">{style.replace('_', ' ')}</div>
                         <div className="text-[9px] opacity-60 truncate">{PLAY_STYLE_LABELS[style]?.name}</div>
                       </button>
                     ))}

@@ -26,6 +26,7 @@ import { AlgorandService } from './services/blockchain/algorand.js';
 import { LensService, LensServiceUnavailableError } from './services/communication/lens.js';
 import { EventStreamService } from './services/events/kafka.js';
 import { TonSettlementWorker } from './services/economy/ton-settlement-worker.js';
+import { getStorageAdapter } from '../src/server/services/storage/index.js';
 
 // Suppress known non-critical warnings
 process.env.KAFKAJS_NO_PARTITIONER_WARNING = '1';
@@ -112,6 +113,47 @@ async function startServer() {
     }
   } else {
     console.log('ℹ️ Algorand auto-deploy disabled (set ALGORAND_AUTO_DEPLOY=true to enable)');
+  }
+
+  // Media GC worker — purges soft-deleted media reliably on the backend
+  if (isEnabled(process.env.ENABLE_MEDIA_GC_WORKER)) {
+    const intervalMin = Math.max(5, Math.min(1440, Number(process.env.MEDIA_GC_INTERVAL_MIN || '60')));
+    const olderHours = Math.max(1, Math.min(720, Number(process.env.MEDIA_GC_OLDER_HOURS || '24')));
+    const storage = getStorageAdapter();
+
+    const runMediaGc = async () => {
+      try {
+        const cutoff = new Date(Date.now() - olderHours * 3600 * 1000);
+        const toPurge = await prisma.squadMedia.findMany({
+          where: { deletedAt: { lte: cutoff } },
+          select: { id: true, storageKey: true, thumbStorageKey: true },
+          take: 200,
+        });
+        let removed = 0;
+        for (const m of toPurge) {
+          try {
+            if (m.storageKey) await storage.removeByKey?.(m.storageKey);
+            if (m.thumbStorageKey) await storage.removeByKey?.(m.thumbStorageKey);
+            await prisma.squadMedia.delete({ where: { id: m.id } });
+            removed++;
+          } catch (e) {
+            console.warn('[MEDIA-GC] purge failed', m.id, (e as Error).message);
+          }
+        }
+        if (removed > 0) {
+          console.log(`[MEDIA-GC] removed=${removed} scanned=${toPurge.length}`);
+        }
+      } catch (e) {
+        console.warn('[MEDIA-GC] tick error', (e as Error).message);
+      }
+    };
+
+    // Initial tick + interval
+    await runMediaGc();
+    setInterval(runMediaGc, intervalMin * 60 * 1000);
+    console.log(`ℹ️ Media GC worker enabled (interval=${intervalMin}m, olderHours=${olderHours}h)`);
+  } else {
+    console.log('ℹ️ Media GC worker disabled (set ENABLE_MEDIA_GC_WORKER=true to enable)');
   }
 
   // Create Express app and HTTP server
