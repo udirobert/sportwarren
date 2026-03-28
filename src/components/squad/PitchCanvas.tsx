@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { exportElementAsImage } from '@/lib/utils/export';
 import { FORMATIONS, ROLE_LABELS } from '@/lib/formations';
+import { PitchMarkingsSvg } from './PitchMarkingsSvg';
 import type { Formation, Player, PlayerPosition } from '@/types';
 import { POSITION_COLORS } from '@/lib/utils';
 
@@ -38,6 +39,19 @@ export interface PitchCanvasProps {
   primaryColor?: string;
   /** Play style offset strategy */
   playStyle?: string;
+  /** Optional pitch markings style overrides (landing hero, etc.) */
+  markings?: Partial<{
+    stroke: string;
+    strokeOpacity: number;
+    stripeA: string;
+    stripeB: string;
+    vignetteOpacity: number;
+    lineWeight: number;
+  }>;
+  /** Optional theme preset for markings and presentation */
+  theme?: 'default' | 'hero';
+  /** Blur avatars (privacy-friendly export) */
+  blurAvatars?: boolean;
 }
 
 interface PlayerSlotData {
@@ -90,6 +104,9 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
   showPlayerNames = false,
   primaryColor,
   playStyle = 'balanced',
+  markings,
+  theme = 'default',
+  blurAvatars = false,
 }) => {
   const pitchRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = React.useState(false);
@@ -132,6 +149,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
             src={slot.player.avatar as string}
             alt={slot.player.name}
             className="w-full h-full rounded-full object-cover"
+            style={blurAvatars ? { filter: 'blur(3px)' } : undefined}
           />
         ) : (
           <span className={`${sizeConfig.text} font-bold text-white`}>{initials}</span>
@@ -345,25 +363,44 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
         className={`relative bg-gradient-to-b from-green-600 to-green-700 rounded-xl overflow-hidden ${sizeConfig.container}`}
         style={{ paddingBottom: size === 'sm' ? '50%' : size === 'lg' ? '75%' : '65%' }}
       >
-        {/* Pitch Markings */}
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Center circle */}
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-24 h-24 border-2 border-white/30 rounded-full" />
-          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-2 h-2 bg-white/50 rounded-full" />
-          
-          {/* Center line */}
-          <div className="absolute top-0 left-1/2 w-0.5 h-full bg-white/30 transform -translate-x-1/2" />
-          
-          {/* Penalty areas */}
-          <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-48 h-24 border-2 border-white/30 border-t-0" />
-          <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-48 h-24 border-2 border-white/30 border-b-0" />
-          
-          {/* Corner arcs */}
-          <div className="absolute top-0 left-0 w-8 h-8 border-2 border-white/30 rounded-br-full border-t-0 border-l-0" />
-          <div className="absolute top-0 right-0 w-8 h-8 border-2 border-white/30 rounded-bl-full border-t-0 border-r-0" />
-          <div className="absolute bottom-0 left-0 w-8 h-8 border-2 border-white/30 rounded-tr-full border-b-0 border-l-0" />
-          <div className="absolute bottom-0 right-0 w-8 h-8 border-2 border-white/30 rounded-tl-full border-b-0 border-r-0" />
-        </div>
+        {/* Pitch Markings (SVG, true-to-scale) */}
+        {(() => {
+          const heroPreset = theme === 'hero' ? {
+            stroke: tintStroke(primaryColor ?? '#10b981'),
+            strokeOpacity: 0.95,
+            stripeA: 'rgba(255,255,255,0.015)',
+            stripeB: 'rgba(0,0,0,0.04)',
+            vignetteOpacity: 0.18,
+            lineWeight: 2.0,
+            orientation: 'horizontal' as const,
+            desaturateOpacity: 0.06,
+          } : {} as Partial<{
+            stroke: string;
+            strokeOpacity: number;
+            stripeA: string;
+            stripeB: string;
+            vignetteOpacity: number;
+            lineWeight: number;
+            orientation: 'vertical' | 'horizontal';
+            desaturateOpacity: number;
+          }>;
+          const eff = { ...heroPreset, ...markings } as Required<{
+            stroke: string; strokeOpacity: number; stripeA: string; stripeB: string; vignetteOpacity: number; lineWeight: number; orientation: 'vertical'|'horizontal'; desaturateOpacity: number;
+          }>;
+          return (
+            <PitchMarkingsSvg
+              className="absolute inset-0"
+              stroke={eff.stroke ?? 'rgba(255,255,255,0.6)'}
+              strokeOpacity={eff.strokeOpacity ?? 0.9}
+              stripeA={eff.stripeA ?? 'rgba(255,255,255,0.02)'}
+              stripeB={eff.stripeB ?? 'rgba(0,0,0,0.03)'}
+              vignetteOpacity={eff.vignetteOpacity ?? 0.14}
+              lineWeight={eff.lineWeight ?? 1.6}
+              orientation={eff.orientation ?? 'vertical'}
+              desaturateOpacity={eff.desaturateOpacity ?? 0}
+            />
+          );
+        })()}
 
         {/* Player Positions */}
         {slots.map((slot, idx) => {
@@ -412,7 +449,11 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
                   ${display.bgClass} ${display.borderClass}
                   ${readOnly ? '' : 'cursor-grab active:cursor-grabbing'}
                 `}
-                style={display.style}
+                style={{
+                  ...display.style,
+                  // Subtle hero glow for landing/hero theme
+                  filter: theme === 'hero' ? `drop-shadow(0 0 12px ${primaryColor ? hexToRgba(primaryColor, 0.35) : 'rgba(16,185,129,0.35)'} )` : undefined,
+                }}
                 title={player ? player.name : ROLE_LABELS[slot.role]}
               >
                 {display.content}
@@ -466,3 +507,29 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
 };
 
 export default PitchCanvas;
+
+// Utilities
+function hexToRgba(hex: string, alpha = 1): string {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim());
+  if (!m) return `rgba(16,185,129,${alpha})`;
+  const r = parseInt(m[1], 16);
+  const g = parseInt(m[2], 16);
+  const b = parseInt(m[3], 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function mixWithWhite(hex: string, amount = 0.12): string {
+  const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex.trim()) || ['','#10','#b9','#81'];
+  const r = parseInt(m[1] || '10', 16);
+  const g = parseInt(m[2] || 'b9', 16);
+  const b = parseInt(m[3] || '81', 16);
+  const nr = Math.round(r + (255 - r) * amount);
+  const ng = Math.round(g + (255 - g) * amount);
+  const nb = Math.round(b + (255 - b) * amount);
+  return `rgb(${nr},${ng},${nb})`;
+}
+
+function tintStroke(primary: string): string {
+  // Slightly tint the stroke towards the team color, keep it bright
+  try { return mixWithWhite(primary, 0.2); } catch { return 'rgb(240,240,240)'; }
+}

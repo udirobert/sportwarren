@@ -776,6 +776,7 @@ export default function MatchPage() {
               console.log("Disputed:", reason);
               handleVerify(selectedMatch.id, false);
             }}
+            showPreview={true}
           />
 
           <MatchEnginePreview squadId={activeSquadId || undefined} />

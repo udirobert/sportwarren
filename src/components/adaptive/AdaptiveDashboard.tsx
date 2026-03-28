@@ -634,7 +634,9 @@ export const AdaptiveDashboard: React.FC = () => {
     const isNewUser = preferences.featureDiscoveryLevel < 10 && preferences.dashboardLayout === 'minimal';
     const essentialWidgets = isGuest
       ? ['onboarding-checklist', 'match-engine', 'upcoming-fixtures', 'quick-stats', 'recent-matches', 'staff-feed', 'lens-social']
-      : ['onboarding-checklist', 'match-engine', 'upcoming-fixtures', 'quick-stats', 'recent-matches'];
+      : (entryState.id === 'account_ready' 
+          ? ['onboarding-checklist', 'match-engine', 'quick-stats', 'staff-feed'] 
+          : ['onboarding-checklist', 'match-engine', 'upcoming-fixtures', 'quick-stats', 'recent-matches']);
 
     return allWidgets
       .filter(widget => {

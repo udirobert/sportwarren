@@ -7,6 +7,7 @@ type EventProperties = Record<string, string | number | boolean | null | undefin
 export type GrowthStage = 'activation' | 'conversion' | 'retention' | 'viral';
 
 export const CORE_GROWTH_EVENTS = {
+  tactics_customized: { stage: 'activation' as GrowthStage },
   first_match_submitted: { stage: 'activation' as GrowthStage },
   opponent_verification_invite_shared: { stage: 'viral' as GrowthStage },
   channel_connected: { stage: 'retention' as GrowthStage },

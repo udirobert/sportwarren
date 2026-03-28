@@ -111,8 +111,15 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
                                             </div>
                                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{item.description}</div>
                                             {!item.completed && (
-                                                <div className="mt-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
-                                                    {item.actionLabel}
+                                                <div className="mt-2 flex items-center gap-2">
+                                                    <span className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
+                                                        {item.actionLabel}
+                                                    </span>
+                                                    {item.xp && (
+                                                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded font-black">
+                                                            +{item.xp} XP
+                                                        </span>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

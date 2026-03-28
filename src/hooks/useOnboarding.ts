@@ -5,8 +5,8 @@ import { useWallet } from '@/contexts/WalletContext';
 import { trackOnboarding, trackCoreGrowthEvent, type CoreGrowthEvent } from '@/lib/analytics';
 
 export const CHECKLIST_IDS = [
-    'verify_match',
     'view_match_engine',
+    'verify_match',
     'claim_identity',
     'connect_telegram',
 ] as const;
@@ -20,9 +20,19 @@ interface ChecklistConfig {
     emoji: string;
     href: string;
     actionLabel: string;
+    xp?: number;
 }
 
 const CHECKLIST_CONFIG: ChecklistConfig[] = [
+    {
+        id: 'view_match_engine',
+        label: 'Set your tactics',
+        description: 'Choose your formation and play style to see your squad on the pitch',
+        emoji: '📋',
+        href: '/squad?tab=tactics',
+        actionLabel: 'Set tactics',
+        xp: 50,
+    },
     {
         id: 'verify_match',
         label: 'Log your first game',
@@ -30,14 +40,7 @@ const CHECKLIST_CONFIG: ChecklistConfig[] = [
         emoji: '✅',
         href: '/match?mode=capture',
         actionLabel: 'Log match',
-    },
-    {
-        id: 'view_match_engine',
-        label: 'Share a match link',
-        description: 'Copy the link and send it to your opponent so they can verify the result',
-        emoji: '🔗',
-        href: '/match?mode=verify',
-        actionLabel: 'Copy link',
+        xp: 150,
     },
     {
         id: 'claim_identity',
@@ -46,6 +49,7 @@ const CHECKLIST_CONFIG: ChecklistConfig[] = [
         emoji: '⚡',
         href: '/settings?tab=wallet',
         actionLabel: 'Save progress',
+        xp: 100,
     },
     {
         id: 'connect_telegram',
@@ -54,12 +58,13 @@ const CHECKLIST_CONFIG: ChecklistConfig[] = [
         emoji: '📱',
         href: '/settings?tab=connections',
         actionLabel: 'Connect',
+        xp: 75,
     },
 ];
 
 const CHECKLIST_GROWTH_EVENTS: Partial<Record<ChecklistId, CoreGrowthEvent>> = {
+    view_match_engine: 'tactics_customized',
     verify_match: 'first_match_submitted',
-    view_match_engine: 'opponent_verification_invite_shared',
     claim_identity: 'identity_connected',
 };
 
@@ -71,6 +76,7 @@ export interface ChecklistItem {
     emoji: string;
     href: string;
     actionLabel: string;
+    xp?: number;
 }
 
 const STORAGE_KEY = 'sw_onboarding_v2';
