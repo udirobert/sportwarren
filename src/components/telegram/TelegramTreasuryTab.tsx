@@ -16,7 +16,9 @@ import {
   Copy,
   TrendingUp,
   Banknote,
+  Fingerprint,
 } from 'lucide-react';
+import { useTelegram } from '@/hooks/useTelegram';
 import type { MiniAppContext, TreasuryTransaction } from './TelegramMiniAppShell';
 
 // Import TON payload utilities
@@ -112,18 +114,28 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
   const wallet = useTonWallet();
   const tonAddress = useTonAddress();
 
+  const { 
+    webApp, 
+    hapticNotification, 
+    hapticSelection, 
+    biometricManager 
+  } = useTelegram();
+
   const [amountTon, setAmountTon] = useState<number>(context.ton.presets[0] || 1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [hasTelegramWebApp, setHasTelegramWebApp] = useState(false);
+  const [biometricAuthorized, setBiometricAuthorized] = useState(false);
 
   const { treasury, ton, squad: _squad } = context;
 
+  // Initialize Biometrics if available
   useEffect(() => {
-    setHasTelegramWebApp(Boolean(window.Telegram?.WebApp));
-  }, []);
+    if (biometricManager.isBiometricAvailable && !biometricManager.isInited) {
+      void biometricManager.init();
+    }
+  }, [biometricManager]);
 
   // Check if can submit
   const canSubmit = Boolean(
@@ -152,10 +164,10 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
     try {
       await navigator.clipboard.writeText(ton.walletAddress);
       setCopied(true);
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+      hapticNotification('success');
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
+      hapticNotification('error');
     }
   };
 
@@ -164,15 +176,33 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
     if (!ton.walletAddress || !canSubmit || submitting) {
       if (!canSubmit && !submitting) {
         setError('Connect a TON wallet and choose an amount before submitting.');
-        window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
+        hapticNotification('error');
       }
       return;
+    }
+
+    // 1. Biometric Authentication if available
+    if (biometricManager.isBiometricAvailable && biometricManager.isAccessGranted && !biometricAuthorized) {
+      setSubmitting(true);
+      try {
+        const { success } = await biometricManager.authenticate('Authorize treasury transaction');
+        if (!success) {
+          setError('Biometric authentication failed. Please try again.');
+          setSubmitting(false);
+          return;
+        }
+        setBiometricAuthorized(true);
+      } catch (err) {
+        setError('Security error during authentication.');
+        setSubmitting(false);
+        return;
+      }
     }
 
     setSubmitting(true);
     setError(null);
     setSuccess(null);
-    window.Telegram?.WebApp?.MainButton?.showProgress();
+    webApp?.MainButton?.showProgress();
 
     const comment = `SportWarren top-up:${context.squadId}:${amountTon}TON:${Date.now()}`;
 
@@ -216,22 +246,23 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
             : 'Top-up submitted! Pending verification.'
       );
 
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+      hapticNotification('success');
 
       // Refresh context after success
       setTimeout(() => {
         onRefresh?.();
         setSuccess(null);
+        setBiometricAuthorized(false); // Reset auth for next time
       }, 2000);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Top-up failed';
       setError(message);
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
+      hapticNotification('error');
     } finally {
       setSubmitting(false);
-      window.Telegram?.WebApp?.MainButton?.hideProgress();
+      webApp?.MainButton?.hideProgress();
     }
-  }, [ton.walletAddress, canSubmit, submitting, context.squadId, amountTon, tonConnectUI, token, tonAddress, onRefresh]);
+  }, [ton.walletAddress, canSubmit, submitting, biometricManager, biometricAuthorized, webApp, context.squadId, amountTon, tonConnectUI, token, tonAddress, hapticNotification, onRefresh]);
 
   // Integration with Telegram native buttons
   useEffect(() => {
@@ -255,7 +286,7 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
   // Handle preset selection with haptic feedback
   const selectPreset = (amount: number) => {
     setAmountTon(amount);
-    window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
+    hapticSelection();
   };
 
   return (
@@ -412,7 +443,40 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
             </div>
           )}
 
-          {!hasTelegramWebApp && (
+          {/* Biometric Status */}
+          {biometricManager.isBiometricAvailable && (
+            <div className="mt-4 pt-4 border-t border-white/5">
+              {!biometricManager.isAccessRequested ? (
+                <button
+                  onClick={() => biometricManager.requestAccess('Enable secure treasury approvals')}
+                  className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-left transition hover:bg-white/10"
+                >
+                  <div className="flex items-center gap-3">
+                    <Fingerprint className="h-5 w-5 text-cyan-400" />
+                    <div>
+                      <p className="text-xs font-bold text-white">Enable Biometric Auth</p>
+                      <p className="text-[10px] text-slate-500">Secure your treasury transactions</p>
+                    </div>
+                  </div>
+                  <ArrowUpRight className="h-4 w-4 text-slate-600" />
+                </button>
+              ) : biometricManager.isAccessGranted ? (
+                <div className="flex items-center gap-2 px-1 text-[10px] text-slate-500">
+                  <Fingerprint className="h-3 w-3 text-emerald-400" />
+                  <span>Biometric verification active for this device</span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => biometricManager.openSettings()}
+                  className="text-[10px] text-amber-400 underline"
+                >
+                  Biometric access denied. Open settings to enable.
+                </button>
+              )}
+            </div>
+          )}
+
+          {!webApp && (
             <button
               onClick={handleTopUp}
               disabled={!canSubmit || submitting}
