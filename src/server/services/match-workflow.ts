@@ -293,7 +293,7 @@ export async function submitMatchResult({
       verificationDetails = verificationResult.details;
 
       try {
-        const { agenticService } = await import('@/src/server/services/ai/agentic');
+        const { agenticService } = await import('@/server/services/ai/agentic');
         agentInsights = await agenticService.generateMatchReport(
           { homeSquad, awaySquad, homeScore, awayScore },
           verificationResult.details,
