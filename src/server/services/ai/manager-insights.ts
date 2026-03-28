@@ -3,7 +3,7 @@
  * Generates proactive tactical and market alerts for Squad DAOs
  */
 
-import { openaiService } from '../openai';
+import { generateInference } from '@/lib/ai/inference';
 import { AGENT_PERSONAS } from './prompts';
 import { simulateMatch, calculateWinProbabilities } from '@/lib/match/simulation-engine';
 import { calculatePlayerValue } from '@/lib/player/valuation-engine';
@@ -51,21 +51,16 @@ export class ManagerInsightService {
       
       As Coach Kite, provide a single, firm tactical alert. Focus on the most critical weakness.`;
 
-      const response = await openaiService.openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          { role: 'system', content: AGENT_PERSONAS.COACH_KITE.systemPrompt },
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: 100,
-        temperature: 0.7,
-      });
+      const result = await generateInference([
+        { role: 'system', content: AGENT_PERSONAS.COACH_KITE.systemPrompt },
+        { role: 'user', content: prompt }
+      ], { max_tokens: 100 });
 
       return {
         id: `tactical_${Date.now()}`,
         type: 'tactical',
         title: `Match Preview vs ${awaySquadData.name}`,
-        message: response.choices[0]?.message?.content || "Focus on the basics. Match sharpness is the priority.",
+        message: result?.content || "Focus on the basics. Match sharpness is the priority.",
         agentName: AGENT_PERSONAS.COACH_KITE.name,
         priority,
         timestamp: new Date().toISOString(),
@@ -94,21 +89,16 @@ export class ManagerInsightService {
       
       As Scout Finn, provide a direct market insight. Should we sell, hold, or is this an undervalued asset?`;
 
-      const response = await openaiService.openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
-        messages: [
-          { role: 'system', content: AGENT_PERSONAS.SCOUT_FINN.systemPrompt },
-          { role: 'user', content: prompt }
-        ],
-        max_tokens: 100,
-        temperature: 0.7,
-      });
+      const result = await generateInference([
+        { role: 'system', content: AGENT_PERSONAS.SCOUT_FINN.systemPrompt },
+        { role: 'user', content: prompt }
+      ], { max_tokens: 100 });
 
       return {
         id: `market_${Date.now()}`,
         type: 'market',
         title: `Market Update: ${playerProfile.user.name}`,
-        message: response.choices[0]?.message?.content || "Market conditions stable. Monitor performance.",
+        message: result?.content || "Market conditions stable. Monitor performance.",
         agentName: AGENT_PERSONAS.SCOUT_FINN.name,
         priority: valuation.breakdown.demandMultiplier > 1.2 ? 'high' : 'medium',
         timestamp: new Date().toISOString(),

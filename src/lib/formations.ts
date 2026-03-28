@@ -7,7 +7,7 @@
  * Lines are spaced ~25 units apart for consistent visual balance
  */
 
-import type { Formation, PlayStyle, TeamInstructions, Tactics, PlayerPosition } from '@/types';
+import type { Formation, PlayStyle, TeamInstructions, Tactics, PlayerPosition, SquadSize } from '@/types';
 
 export interface FormationPosition {
   x: number;
@@ -97,6 +97,76 @@ export const FORMATIONS: Record<Formation, FormationPosition[]> = {
     { x: 20, y: 70, role: 'LWB' }, { x: 35, y: 70, role: 'CB' }, { x: 50, y: 70, role: 'CB' }, { x: 65, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RWB' },
     { x: 25, y: 48, role: 'LM' }, { x: 42, y: 46, role: 'CM' }, { x: 58, y: 46, role: 'CM' }, { x: 75, y: 48, role: 'RM' },
     { x: 50, y: 22, role: 'ST' },
+  ],
+
+  // ============ SMALL-SIDED FORMATIONS ============
+  
+  // 5-a-side (4 outfield + GK)
+  '1-2-1': [  // GK + 1 defender + 2 midfielders + 1 striker
+    { x: 50, y: 90, role: 'GK' },
+    { x: 50, y: 70, role: 'CB' },
+    { x: 30, y: 50, role: 'CM' }, { x: 70, y: 50, role: 'CM' },
+    { x: 50, y: 25, role: 'ST' },
+  ],
+  
+  '1-1-2': [  // GK + 1 defender + 1 midfielder + 2 strikers
+    { x: 50, y: 90, role: 'GK' },
+    { x: 50, y: 70, role: 'CB' },
+    { x: 50, y: 50, role: 'CM' },
+    { x: 35, y: 25, role: 'ST' }, { x: 65, y: 25, role: 'ST' },
+  ],
+
+  // 6-a-side (5 outfield + GK)
+  '1-3-1': [  // GK + 3 defenders + 1 midfielder + 1 striker
+    { x: 50, y: 90, role: 'GK' },
+    { x: 25, y: 70, role: 'LB' }, { x: 50, y: 70, role: 'CB' }, { x: 75, y: 70, role: 'RB' },
+    { x: 50, y: 50, role: 'CM' },
+    { x: 50, y: 25, role: 'ST' },
+  ],
+
+  '1-2-2': [  // GK + 2 defenders + 2 midfielders + 2 strikers
+    { x: 50, y: 90, role: 'GK' },
+    { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' },
+    { x: 30, y: 50, role: 'CM' }, { x: 70, y: 50, role: 'CM' },
+    { x: 35, y: 25, role: 'ST' }, { x: 65, y: 25, role: 'ST' },
+  ],
+
+  '1-2-1-1': [  // GK + 2 defenders + 1 midfielder + 1 striker + 1 support
+    { x: 50, y: 90, role: 'GK' },
+    { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' },
+    { x: 50, y: 55, role: 'CDM' },
+    { x: 50, y: 40, role: 'CAM' },
+    { x: 50, y: 20, role: 'ST' },
+  ],
+
+  // 7-a-side (6 outfield + GK)
+  '1-4-1': [  // GK + 4 defenders + 1 midfielder + 1 striker
+    { x: 50, y: 90, role: 'GK' },
+    { x: 20, y: 70, role: 'LB' }, { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' }, { x: 80, y: 70, role: 'RB' },
+    { x: 50, y: 50, role: 'CM' },
+    { x: 50, y: 25, role: 'ST' },
+  ],
+
+  '1-3-2': [  // GK + 3 defenders + 2 midfielders + 1 striker
+    { x: 50, y: 90, role: 'GK' },
+    { x: 30, y: 70, role: 'CB' }, { x: 50, y: 70, role: 'CB' }, { x: 70, y: 70, role: 'CB' },
+    { x: 35, y: 50, role: 'CM' }, { x: 65, y: 50, role: 'CM' },
+    { x: 50, y: 25, role: 'ST' },
+  ],
+
+  '1-3-1-1': [  // GK + 3 defenders + 1 defensive mid + 1 attacking mid + 1 striker
+    { x: 50, y: 90, role: 'GK' },
+    { x: 30, y: 70, role: 'CB' }, { x: 50, y: 70, role: 'CB' }, { x: 70, y: 70, role: 'CB' },
+    { x: 50, y: 55, role: 'CDM' },
+    { x: 50, y: 40, role: 'CAM' },
+    { x: 50, y: 20, role: 'ST' },
+  ],
+
+  '2-3-1': [  // GK + 2 defenders + 3 midfielders + 1 striker (flat back 2)
+    { x: 50, y: 90, role: 'GK' },
+    { x: 40, y: 70, role: 'CB' }, { x: 60, y: 70, role: 'CB' },
+    { x: 25, y: 50, role: 'LM' }, { x: 50, y: 45, role: 'CM' }, { x: 75, y: 50, role: 'RM' },
+    { x: 50, y: 25, role: 'ST' },
   ],
 };
 
@@ -271,4 +341,33 @@ export function reconcileLineup(
     if (pick) used.add(pick.id);
     return pick?.id || '';
   });
+}
+
+/**
+ * Get formations available for a given squad size
+ */
+export function getFormationsBySquadSize(size: SquadSize): Formation[] {
+  const allFormations = Object.keys(FORMATIONS) as Formation[];
+  
+  if (size === 11) {
+    return allFormations.filter(f => !['1-2-1', '1-1-2', '1-3-1', '1-2-2', '1-2-1-1', '1-4-1', '1-3-2', '1-3-1-1', '2-3-1'].includes(f));
+  }
+  
+  return allFormations.filter(f => {
+    const positions = FORMATIONS[f];
+    const outfieldCount = positions.length - 1; // Exclude GK
+    return outfieldCount === size - 1;
+  });
+}
+
+/**
+ * Get the default formation for a squad size
+ */
+export function getDefaultFormationForSize(size: SquadSize): Formation {
+  const formations = getFormationsBySquadSize(size);
+  if (size === 11) return '4-4-2';
+  if (size === 7) return '1-4-1';
+  if (size === 6) return '1-3-1';
+  if (size === 5) return '1-2-1';
+  return '4-4-2';
 }
