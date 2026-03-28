@@ -2,7 +2,7 @@
 
 import React, { useRef, useCallback, useMemo } from 'react';
 import { Download, Share2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { exportElementAsImage } from '@/lib/utils/export';
 import { FORMATIONS, ROLE_LABELS } from '@/lib/formations';
