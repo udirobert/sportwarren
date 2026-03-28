@@ -16,10 +16,15 @@ import {
   Sparkles,
   ChevronRight,
   ChevronLeft,
-  Check
+  Check,
+  UserPlus,
+  Image as ImageIcon,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { exportElementAsImage } from '@/lib/utils/export';
+import { WaitlistForm } from '@/components/common/WaitlistForm';
 
 const MOCK_PLAYERS: Player[] = [
   { id: '1', name: 'Tunde', position: 'ST', status: 'available', address: '0x1' },
@@ -41,6 +46,15 @@ export const InteractiveMatchPreview: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [showShareSuccess, setShowShareSuccess] = useState(false);
   const pitchRef = React.useRef<HTMLDivElement>(null);
+  const [showEditor, setShowEditor] = useState(false);
+  const [unlocked, setUnlocked] = useState(false);
+  const [names, setNames] = useState<string[]>(['Tunde','Kofi','Diallo','Eze','Yusuf','GK']);
+  const [avatars, setAvatars] = useState<(string | null)[]>([null,null,null,null,null,null]);
+  const [showNames, setShowNames] = useState(false);
+  const [blurFaces, setBlurFaces] = useState(false);
+  const [isFs, setIsFs] = useState(false);
+  const [fsOverlay, setFsOverlay] = useState(false);
+  const supportsFs = typeof document !== 'undefined' && typeof (document as any).fullscreenEnabled !== 'undefined';
 
   // Update URL when state changes
   useEffect(() => {
@@ -56,6 +70,13 @@ export const InteractiveMatchPreview: React.FC = () => {
 
   const formationList = Object.keys(FORMATIONS) as Formation[];
   const formationIndex = formationList.indexOf(formation);
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    setUnlocked(window.localStorage.getItem('sw_pitch_personalize_unlocked') === '1');
+    const onFs = () => setIsFs(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onFs);
+    return () => document.removeEventListener('fullscreenchange', onFs);
+  }, []);
 
   const nextFormation = () => {
     const nextIdx = (formationIndex + 1) % formationList.length;
@@ -86,7 +107,8 @@ export const InteractiveMatchPreview: React.FC = () => {
     trackFeatureUsed('tactics_preview_share_click', { formation, style: playStyle });
     try {
       const { toPng } = await import('html-to-image');
-      const dataUrl = await toPng(pitchRef.current, { quality: 0.95, cacheBust: true });
+      const pxr = Math.min(2, (typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1));
+      const dataUrl = await toPng(pitchRef.current, { quality: 0.95, cacheBust: true, pixelRatio: pxr, backgroundColor: '#0b1322' });
       const response = await fetch(dataUrl);
       const blob = await response.blob();
       const file = new File([blob], 'tactics.png', { type: 'image/png' });
@@ -110,9 +132,48 @@ export const InteractiveMatchPreview: React.FC = () => {
     }
   };
 
+  // Share presets (clean vs with names)
+  const shareWithNames = async (withNames: boolean) => {
+    // Temporarily toggle showNames and wait for frame to render
+    const prev = showNames;
+    setShowNames(withNames);
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    await new Promise((r) => requestAnimationFrame(() => r(null)));
+    await handleShare();
+    setShowNames(prev);
+  };
+
   const lineup = useMemo(() => {
     // Just a mock lineup for the preview
     return ['1', '2', '3', '4', '5', '6'].slice(0, FORMATIONS[formation].length);
+  }, [formation]);
+
+  // Persist personalization (local only). Use per-formation keys when available.
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      const key = (k: string) => `${k}_${formation}`;
+      window.localStorage.setItem(key('sw_pitch_names'), JSON.stringify(names));
+      window.localStorage.setItem(key('sw_pitch_avatars'), JSON.stringify(avatars));
+      window.localStorage.setItem(key('sw_pitch_show_names'), showNames ? '1' : '0');
+    } catch {}
+  }, [names, avatars, showNames, formation]);
+
+  useEffect(() => {
+    try {
+      if (typeof window === 'undefined') return;
+      const key = (k: string) => `${k}_${formation}`;
+      const n = window.localStorage.getItem(key('sw_pitch_names')) || window.localStorage.getItem('sw_pitch_names');
+      const a = window.localStorage.getItem(key('sw_pitch_avatars')) || window.localStorage.getItem('sw_pitch_avatars');
+      const s = window.localStorage.getItem(key('sw_pitch_show_names')) || window.localStorage.getItem('sw_pitch_show_names');
+      if (n) {
+        try { const v = JSON.parse(n); if (Array.isArray(v) && v.length) setNames(v); } catch {}
+      }
+      if (a) {
+        try { const v = JSON.parse(a); if (Array.isArray(v) && v.length) setAvatars(v); } catch {}
+      }
+      if (s) setShowNames(s === '1');
+    } catch {}
   }, [formation]);
 
   return (
@@ -141,12 +202,15 @@ export const InteractiveMatchPreview: React.FC = () => {
               <PitchCanvas
                 formation={formation}
                 lineup={lineup}
-                players={MOCK_PLAYERS}
+                players={MOCK_PLAYERS.map((p, i) => ({ ...p, name: names[i] || p.name, avatar: avatars[i] || (p as any).avatar }))}
                 size="sm"
                 readOnly={true}
                 className="bg-transparent"
                 primaryColor={primaryColor}
                 playStyle={playStyle}
+                theme="hero"
+                showPlayerNames={showNames}
+                blurAvatars={blurFaces}
               />
             </div>
             
@@ -259,10 +323,42 @@ export const InteractiveMatchPreview: React.FC = () => {
                 >
                   <Download className={`w-4 h-4 ${isExporting ? 'animate-pulse' : ''}`} />
                 </Button>
+                <Button 
+                  variant="outline" 
+                  className="border-white/10 text-white hover:bg-white/5"
+                  onClick={() => {
+                    const enter = () => pitchRef.current?.requestFullscreen?.();
+                    const exit = () => document.exitFullscreen?.();
+                    if (supportsFs) { if (!document.fullscreenElement) enter(); else exit(); }
+                    else setFsOverlay((v) => !v);
+                  }}
+                >
+                  {isFs ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                </Button>
               </div>
               <p className="text-[10px] text-center text-gray-500">
                 Share as image or link to your squad group chat
               </p>
+              <div className="flex items-center justify-center gap-2">
+                <Button
+                  variant="ghost"
+                  className="text-xs text-white hover:bg-white/10"
+                  onClick={() => setShowEditor(true)}
+                >
+                  <UserPlus className="w-3 h-3 mr-1" /> Personalize: Names & Faces
+                </Button>
+                {unlocked && (
+                  <label className="flex items-center gap-2 text-[11px] text-gray-300">
+                    <input type="checkbox" checked={showNames} onChange={(e) => setShowNames(e.target.checked)} /> Show names on card
+                  </label>
+                )}
+              </div>
+              {unlocked && (
+                <div className="mt-2 flex items-center justify-center gap-2">
+                  <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[11px]" onClick={() => void shareWithNames(false)}>Share Clean</Button>
+                  <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[11px]" onClick={() => void shareWithNames(true)}>Share + Names</Button>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -303,6 +399,105 @@ export const InteractiveMatchPreview: React.FC = () => {
           </div>
         ))}
       </div>
+
+      {(showEditor || fsOverlay) && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4" role="dialog" aria-modal="true">
+          <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-gray-900 p-5">
+            {!fsOverlay && (
+              <div className="mb-3 flex items-center justify-between">
+                <div className="text-sm font-bold uppercase tracking-widest text-white">{unlocked ? 'Personalize Lineup' : 'Unlock Personalization'}</div>
+                <button className="text-gray-400 hover:text-white" onClick={() => setShowEditor(false)}>Close</button>
+              </div>
+            )}
+            {!unlocked ? (
+              <div className="space-y-3">
+                <p className="text-sm text-gray-300">Add names and faces to your sharable tactics card. Enter your email to unlock:</p>
+                <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+                  <WaitlistForm variant="inline" source="hero_personalize" onDone={() => { setUnlocked(true); if (typeof window !== 'undefined') window.localStorage.setItem('sw_pitch_personalize_unlocked','1'); }} />
+                </div>
+                <div className="text-[11px] text-gray-400">We only use this to notify you about early access.</div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[0,1,2,3,4,5].map((i) => (
+                  <div key={i} className="rounded-xl border border-white/10 bg-white/5 p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-14 h-14 rounded-full bg-white/10 flex items-center justify-center overflow-hidden border border-white/10">
+                        {avatars[i] ? (
+                          <img src={avatars[i] as string} alt="avatar" className="w-full h-full object-cover" />
+                        ) : (
+                          <ImageIcon className="w-5 h-5 text-gray-400" />
+                        )}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const url = URL.createObjectURL(file);
+                            const img = new Image();
+                            img.onload = () => {
+                              const canvas = document.createElement('canvas');
+                              const max = 256;
+                              const scale = Math.min(max / (img.width || max), max / (img.height || max));
+                              canvas.width = Math.max(1, Math.round((img.width || max) * scale));
+                              canvas.height = Math.max(1, Math.round((img.height || max) * scale));
+                              const ctx = canvas.getContext('2d');
+                              if (!ctx) return;
+                              ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                              const dataUrl = canvas.toDataURL('image/webp', 0.8);
+                              setAvatars((prev) => { const n = [...prev]; n[i] = dataUrl; return n; });
+                              URL.revokeObjectURL(url);
+                            };
+                            img.src = url;
+                          }}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-1">Name</label>
+                        <input
+                          className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-green-500/30"
+                          value={names[i]}
+                          onChange={(e) => setNames((prev) => { const n = [...prev]; n[i] = e.target.value; return n; })}
+                          placeholder="Enter name"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="md:col-span-2 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <label className="flex items-center gap-2 text-[12px] text-gray-300">
+                      <input type="checkbox" checked={showNames} onChange={(e) => setShowNames(e.target.checked)} /> Show names on card
+                    </label>
+                    <label className="flex items-center gap-2 text-[12px] text-gray-300">
+                      <input type="checkbox" checked={blurFaces} onChange={(e) => setBlurFaces(e.target.checked)} /> Blur faces
+                    </label>
+                  </div>
+                  <div className="flex gap-2">
+                    <label className="mr-2 flex items-center gap-2 text-[12px] text-gray-300">
+                      <input type="checkbox" checked={false /* controlled externally if desired */} onChange={() => {}} disabled className="opacity-50" /> Blur faces (coming next)
+                    </label>
+                    <Button variant="ghost" className="text-white hover:bg-white/10" onClick={() => {
+                      setNames(['Tunde','Kofi','Diallo','Eze','Yusuf','GK']);
+                      setAvatars([null,null,null,null,null,null]);
+                      setShowNames(false);
+                      try {
+                        if (typeof window !== 'undefined') {
+                          const key = (k:string) => `${k}_${formation}`;
+                          ['sw_pitch_names','sw_pitch_avatars','sw_pitch_show_names'].forEach((k)=> window.localStorage.removeItem(key(k)));
+                        }
+                      } catch {}
+                    }}>Reset</Button>
+                    <Button variant="outline" className="border-white/10 text-white hover:bg-white/5" onClick={() => setShowEditor(false)}>Done</Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

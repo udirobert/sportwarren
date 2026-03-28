@@ -14,6 +14,7 @@ interface MatchConfirmationProps {
   userTeam: 'home' | 'away' | null;
   onVerify: (verified: boolean) => void;
   onDispute: (reason: string) => void;
+  showPreview?: boolean;
 }
 
 export const MatchConfirmation: React.FC<MatchConfirmationProps> = ({
@@ -23,6 +24,7 @@ export const MatchConfirmation: React.FC<MatchConfirmationProps> = ({
   userTeam,
   onVerify,
   onDispute,
+  showPreview = false,
 }) => {
   const [showDisputeForm, setShowDisputeForm] = useState(false);
   const [disputeReason, setDisputeReason] = useState('');
@@ -60,7 +62,7 @@ export const MatchConfirmation: React.FC<MatchConfirmationProps> = ({
   };
 
   // If user is not captain or already verified
-  if (!verificationCheck.canVerify) {
+  if (!verificationCheck.canVerify && !showPreview) {
     return (
       <Card className="text-center py-6">
         <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -73,7 +75,7 @@ export const MatchConfirmation: React.FC<MatchConfirmationProps> = ({
   }
 
   // If user already submitted
-  if (hasSubmitted) {
+  if (hasSubmitted && !showPreview) {
     return (
       <Card className="text-center py-6 bg-green-50 border-green-200">
         <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -90,6 +92,24 @@ export const MatchConfirmation: React.FC<MatchConfirmationProps> = ({
   return (
     <Card>
       <div className="space-y-4">
+        {/* Summary Card for Preview */}
+        {showPreview && (
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 mb-2">
+            <div className="flex items-start space-x-3">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <AlertTriangle className="w-5 h-5 text-blue-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-blue-900 uppercase tracking-tight">Result Preview</p>
+                <p className="text-xs text-blue-700 leading-relaxed mt-0.5">
+                  {match.homeTeam} claims a {match.homeScore}-{match.awayScore} win. Do you agree with this result? 
+                  Your verification builds squad reputation and unlocks XP.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-2">

@@ -97,20 +97,20 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
   if (stage === 'account_ready' || stage === 'public_visitor') {
     return {
       id: 'account_ready',
-      eyebrow: 'Season Kickoff',
-      headline: 'Start your season',
-      description: 'Your account is ready. Set up your squad tactics and preview your first match — you can log results after you play.',
-      primaryAction: { intent: 'preview_match', label: 'Preview your match', href: '/squad?tab=tactics' },
+      eyebrow: 'Individual Identity',
+      headline: 'Set your tactical DNA',
+      description: 'Before you hit the pitch, set your formation and play style. Your tactical choices define how you earn XP and reputation.',
+      primaryAction: { intent: 'preview_match', label: 'Set Tactics', href: '/squad?tab=tactics' },
       secondaryAction: { intent: 'open_staff_room', label: 'Explore the Staff Room' },
-      surfaceLabel: 'Account Ready',
-      queueLabel: 'First result not logged yet',
+      surfaceLabel: 'Profile Setup',
+      queueLabel: 'Tactics not set yet',
       identityLabel: 'Account active',
       squadLabel: input.squadCount > 0 ? 'Squad linked' : 'No squad yet',
       isNewUser: true,
       steps: [
-        { number: 1, label: 'Set your tactics', completed: false, href: '/squad?tab=tactics' },
-        { number: 2, label: 'Play a match', completed: false, href: '/match?mode=capture' },
-        { number: 3, label: 'Get verified', completed: false, href: '/settings?tab=wallet' },
+        { number: 1, label: 'Set your tactics', completed: input.completedChecklistCount > 0, href: '/squad?tab=tactics' },
+        { number: 2, label: 'Customize Avatar', completed: false, href: '/settings?tab=profile' },
+        { number: 3, label: 'Connect Wallet', completed: false, href: '/settings?tab=wallet' },
       ],
     };
   }
@@ -118,18 +118,18 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
   if (stage === 'wallet_unverified') {
     return {
       id: 'wallet_unverified',
-      eyebrow: 'Verification Optional',
-      headline: 'Your wallet is connected',
-      description: 'You can set up your tactics now. Preview your squad, choose your formation, and get ready for match day.',
-      primaryAction: { intent: 'preview_match', label: 'Set up tactics', href: '/squad?tab=tactics' },
-      secondaryAction: { intent: 'verify_wallet', label: 'Verify wallet' },
+      eyebrow: 'Tactical Preparation',
+      headline: 'Refine your tactical vision',
+      description: 'Your wallet is connected. Now define your squad identity and formation to unlock deeper tactical briefings.',
+      primaryAction: { intent: 'preview_match', label: 'Refine Tactics', href: '/squad?tab=tactics' },
+      secondaryAction: { intent: 'verify_wallet', label: 'Verify Identity' },
       surfaceLabel: 'Wallet Connected',
       queueLabel: getPendingLabel(input.pendingMatchesCount),
       identityLabel: 'Wallet connected',
       squadLabel: input.squadCount > 0 ? 'Squad linked' : 'No squad yet',
       isNewUser: true,
       steps: [
-        { number: 1, label: 'Set tactics', completed: false, href: '/squad?tab=tactics' },
+        { number: 1, label: 'Set tactics', completed: input.completedChecklistCount > 0, href: '/squad?tab=tactics' },
         { number: 2, label: 'Verify wallet', completed: false },
         { number: 3, label: 'Join a squad', completed: input.squadCount > 0, href: '/squad' },
       ],
@@ -139,20 +139,20 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
   if (stage === 'verified_no_squad') {
     return {
       id: 'verified_no_squad',
-      eyebrow: 'Squad Setup',
-      headline: 'Create your squad',
-      description: 'Your identity is secured. Create a squad, set your tactics, and prepare for your first match.',
-      primaryAction: { intent: 'create_squad', label: 'Create your squad' },
-      secondaryAction: { intent: 'join_squad', label: 'Join a squad' },
+      eyebrow: 'Squad Identity',
+      headline: 'Create your tactical hub',
+      description: 'Your identity is secured. Now create the squad that will execute your tactical vision on the pitch.',
+      primaryAction: { intent: 'create_squad', label: 'Build Your Squad' },
+      secondaryAction: { intent: 'join_squad', label: 'Find a Squad' },
       surfaceLabel: 'Identity Secured',
       queueLabel: getPendingLabel(input.pendingMatchesCount),
       identityLabel: 'Verified',
       squadLabel: 'No squad yet',
       isNewUser: true,
       steps: [
-        { number: 1, label: 'Verify identity', completed: true },
+        { number: 1, label: 'Set tactics', completed: input.completedChecklistCount > 0, href: '/squad?tab=tactics' },
         { number: 2, label: 'Create or join squad', completed: false },
-        { number: 3, label: 'Set tactics', completed: false, href: '/squad?tab=tactics' },
+        { number: 3, label: 'Log match', completed: false, href: '/match?mode=capture' },
       ],
     };
   }

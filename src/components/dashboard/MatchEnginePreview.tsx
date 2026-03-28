@@ -655,6 +655,7 @@ export const MatchEnginePreview: React.FC<{
         const homeFormation: Array<[number, number, string]> = formationData.map((s) => [s.x, s.y, s.role]);
         const awayFormation = homeFormation.map(([x, y, role]) => [100 - x, y, role]) as Array<[number, number, string]>;
         const allNames = ['GK', 'Tunde', 'Kofi', 'Diallo', 'Eze', 'Yusuf', 'Marcus', 'Jamie', 'Kwame', 'Alex', 'Seun', 'Bayo', 'Chidi', 'Emeka', 'Femi', 'Gbenga'];
+        const isGhostMode = !squadId && isGuest;
         const homeNames = allNames.slice(0, playersPerSide);
         const awayNames = ['GK', 'Rival', 'Stone', 'Park', 'Cruz', 'Osei', 'Nkosi', 'Levi', 'Dani', 'Ramos', 'Finn', 'Musa', 'Sven', 'Ito', 'Bale', 'Zara'].slice(0, playersPerSide);
 
@@ -662,6 +663,11 @@ export const MatchEnginePreview: React.FC<{
 
         // Home team — real data if available
         const homePlayers = homeFormation.map(([x, y, role], i) => {
+            if (isGhostMode && role !== 'GK') {
+                return createPlayer(`ghost-${i}`, `Shadow ${homeNames[i]}`, x, y, 'home', role, { 
+                    level: 1, passing: 40, stamina: 100, pace: 45, shooting: 40 
+                });
+            }
             const m = members?.[i];
             const level = m?.stats?.level || 8;
             const baseStat = 60 + (level * 1.5);

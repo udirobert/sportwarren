@@ -263,12 +263,12 @@ export function getJourneyContent(
     case 'account_ready':
       return {
         hero: {
-          primaryCtaLabel: 'Preview Your First Match',
-          stageLine: 'Set up your tactics and formation before the first match.',
+          primaryCtaLabel: 'Set Your Tactical DNA',
+          stageLine: 'Choose your formation and play style before you hit the pitch.',
           highlights: [
-            'Choose your formation and play style',
-            'Preview how your squad will play',
-            'Then log your first match',
+            'Pick your starting formation',
+            'Define your squad play style',
+            'Earn XP for tactical discipline',
           ],
         },
         authModal: {
@@ -306,9 +306,9 @@ export function getJourneyContent(
           completeLabel: 'Brand My Squad',
         },
         checklist: {
-          eyebrow: 'First Wins',
-          title: 'Start your season with proof',
-          footer: 'Progress is saved automatically once your account is live',
+          eyebrow: 'Individual Setup',
+          title: 'Define your tactical vision',
+          footer: 'Your tactics influence how you earn XP and Reputation',
         },
       };
     case 'wallet_unverified':

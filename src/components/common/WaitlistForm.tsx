@@ -11,9 +11,10 @@ interface WaitlistFormProps {
   variant?: Variant;
   source?: string; // analytics source tag override
   autoFocus?: boolean;
+  onDone?: () => void; // optional callback when successfully joined
 }
 
-export function WaitlistForm({ variant = 'inline', source, autoFocus }: WaitlistFormProps) {
+export function WaitlistForm({ variant = 'inline', source, autoFocus, onDone }: WaitlistFormProps) {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
@@ -44,6 +45,7 @@ export function WaitlistForm({ variant = 'inline', source, autoFocus }: Waitlist
     if (res.ok) {
       setDone(true);
       trackCoreGrowthEvent('waitlist_joined', { surface: source || variant, email: email.split('@')[1] }); // track domain for general info
+      try { onDone?.(); } catch {}
     } else {
       setError(res.error || 'Failed to join waitlist');
     }
@@ -82,4 +84,3 @@ export function WaitlistForm({ variant = 'inline', source, autoFocus }: Waitlist
     </form>
   );
 }
-
