@@ -77,7 +77,7 @@ function calculateTeamPower(
   });
 
   // Apply formation modifiers [Defense, Midfield, Attack]
-  const [defMod, midMod, attMod] = FORMATION_MODIFIERS[tactics.formation];
+  const [defMod, midMod, attMod] = FORMATION_MODIFIERS[tactics.formation] ?? [1, 1, 1];
 
   return {
     defense: (defense / Math.max(1, players.length)) * defMod,
