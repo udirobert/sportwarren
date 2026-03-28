@@ -120,8 +120,14 @@ async function startServer() {
     const intervalMin = Math.max(5, Math.min(1440, Number(process.env.MEDIA_GC_INTERVAL_MIN || '60')));
     const olderHours = Math.max(1, Math.min(720, Number(process.env.MEDIA_GC_OLDER_HOURS || '24')));
     const storage = getStorageAdapter();
+    let mediaGcEnabled = true;
 
     const runMediaGc = async () => {
+      if (!mediaGcEnabled || typeof prisma.squadMedia?.findMany !== 'function') {
+        mediaGcEnabled = false;
+        return;
+      }
+
       try {
         const cutoff = new Date(Date.now() - olderHours * 3600 * 1000);
         const toPurge = await prisma.squadMedia.findMany({
@@ -144,7 +150,13 @@ async function startServer() {
           console.log(`[MEDIA-GC] removed=${removed} scanned=${toPurge.length}`);
         }
       } catch (e) {
-        console.warn('[MEDIA-GC] tick error', (e as Error).message);
+        const message = (e as Error).message;
+        if (message.includes('squad_media') || message.includes('squadMedia')) {
+          mediaGcEnabled = false;
+          console.warn('[MEDIA-GC] disabled: squad media table is unavailable on this deployment.');
+          return;
+        }
+        console.warn('[MEDIA-GC] tick error', message);
       }
     };
 
