@@ -1,16 +1,15 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Shield, Users, Zap, Share2, ArrowRight, Target, Cpu, TrendingUp } from 'lucide-react';
+import { Shield, Zap, Share2, ArrowRight, Target, Cpu, TrendingUp } from 'lucide-react';
 import { MatchEnginePreview } from '@/components/dashboard/MatchEnginePreview';
 import { Card } from '@/components/ui/Card';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { Button } from '@/components/ui/Button';
 
 export default function TeamBriefingPage() {
-    const params = useParams();
     const router = useRouter();
     const { preferences } = useUserPreferences();
     const [mounted, setMounted] = useState(false);

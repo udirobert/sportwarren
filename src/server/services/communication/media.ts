@@ -209,7 +209,8 @@ export async function readTelegramMiniAppMediaThumb(
   return { mimeType: media.thumbMimeType, buffer } as { mimeType: string; buffer: Buffer };
 }
 
+import crypto from 'crypto';
+
 function cryptoRandom(n: number): Buffer {
-  const nodeCrypto = require('crypto') as typeof import('crypto');
-  return nodeCrypto.randomBytes(n);
+  return crypto.randomBytes(n);
 }

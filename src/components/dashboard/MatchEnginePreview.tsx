@@ -48,7 +48,7 @@ export const MatchEnginePreview: React.FC<{
     const [tempo, setTempo] = useState(1);
     const [showIntent, setShowIntent] = useState(true);
     const [latestEvent, setLatestEvent] = useState<string>('');
-    const [interactions, setInteractions] = useState(0);
+    const [_interactions, setInteractions] = useState(0);
     const [showSoftGate, setShowSoftGate] = useState(false);
     const [lowPowerMode, setLowPowerMode] = useState(false);
     const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);

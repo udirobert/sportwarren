@@ -201,7 +201,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
 
           {/* Interactive Tactical Preview */}
           <div className="mb-6">
-            <InteractiveMatchPreview />
+            <React.Suspense fallback={<div className="h-[400px] w-full animate-pulse rounded-2xl bg-white/5" />}>
+              <InteractiveMatchPreview />
+            </React.Suspense>
           </div>
 
           {/* Waitlist capture — enhancement to hero, minimal footprint */}

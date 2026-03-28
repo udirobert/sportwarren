@@ -1,10 +1,8 @@
 
-import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { TelegramService } from "./telegram";
 import { INTEL_LEVELS, getIntelLevel } from "@/lib/match/intel-disclosure";
 import { managerInsightService } from "../ai/manager-insights";
-import { AGENT_PERSONAS } from "../ai/prompts";
 
 export class TacticalNotificationService {
   private telegramService: TelegramService;
