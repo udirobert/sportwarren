@@ -75,7 +75,6 @@ export const InteractiveMatchPreview: React.FC = () => {
     if (typeof window === 'undefined') return false;
     return window.localStorage.getItem('sw_pitch_hd') === '1';
   });
-  const [copiedLink, setCopiedLink] = useState(false);
   const [exportScope, setExportScope] = useState<'card' | 'panel'>(() => {
     if (typeof window === 'undefined') return 'card';
     const v = window.localStorage.getItem('sw_pitch_export_scope');
@@ -133,17 +132,19 @@ export const InteractiveMatchPreview: React.FC = () => {
       let finalFormat: 'png'|'webp' = exportFormat as any;
       try {
         success = await exportElementAsImage(target, `sportwarren-tactics-${formation}`, finalFormat, { pixelRatio, backgroundColor: '#0b1322' });
-      } catch {}
+      } catch (e) {
+        console.warn('Initial export attempt failed', e);
+      }
       if (!success && finalFormat === 'webp') {
         finalFormat = 'png';
-        try { success = await exportElementAsImage(target, `sportwarren-tactics-${formation}`, 'png', { pixelRatio, backgroundColor: '#0b1322' }); } catch {}
+        try { success = await exportElementAsImage(target, `sportwarren-tactics-${formation}`, 'png', { pixelRatio, backgroundColor: '#0b1322' }); } catch (e) { console.warn('WebP fallback export failed', e); }
       }
       if (!success && pixelRatio > 2) {
         pixelRatio = 2;
-        try { success = await exportElementAsImage(target, `sportwarren-tactics-${formation}`, 'png', { pixelRatio, backgroundColor: '#0b1322' }); } catch {}
+        try { success = await exportElementAsImage(target, `sportwarren-tactics-${formation}`, 'png', { pixelRatio, backgroundColor: '#0b1322' }); } catch (e) { console.warn('High DPI fallback export failed', e); }
       }
       if (!success) {
-        try { success = await exportElementAsImage(target, `sportwarren-tactics-${formation}`, 'png', { pixelRatio: 1, backgroundColor: '#0b1322' }); } catch {}
+        try { success = await exportElementAsImage(target, `sportwarren-tactics-${formation}`, 'png', { pixelRatio: 1, backgroundColor: '#0b1322' }); } catch (e) { console.warn('Final fallback export failed', e); }
       }
 
       // Analytics with export metadata
@@ -163,7 +164,7 @@ export const InteractiveMatchPreview: React.FC = () => {
         tip.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[100] rounded-md border border-white/10 bg-black/80 px-3 py-1.5 text-xs text-white shadow-xl';
         tip.textContent = 'Saved';
         document.body.appendChild(tip);
-        setTimeout(() => { try { document.body.removeChild(tip); } catch {} }, 1200);
+        setTimeout(() => { try { document.body.removeChild(tip); } catch (e) { console.warn('Failed to remove tip', e); } }, 1200);
       }
     } finally {
       setIsExporting(false);
@@ -248,7 +249,9 @@ export const InteractiveMatchPreview: React.FC = () => {
         ['sw_pitch_names','sw_pitch_avatars','sw_pitch_show_names','sw_pitch_blur_faces','sw_pitch_blur_level']
           .forEach((k)=> window.localStorage.removeItem(key(k)));
       }
-    } catch {}
+    } catch (e) {
+      console.warn('LocalStorage cleanup failed', e);
+    }
   };
 
   const resetAllFormations = () => {
@@ -266,7 +269,9 @@ export const InteractiveMatchPreview: React.FC = () => {
         // Also remove any legacy global keys just in case
         keys.forEach((k) => window.localStorage.removeItem(k));
       }
-    } catch {}
+    } catch (e) {
+      console.warn('LocalStorage batch cleanup failed', e);
+    }
   };
 
   const lineup = useMemo(() => {
@@ -287,7 +292,9 @@ export const InteractiveMatchPreview: React.FC = () => {
       window.localStorage.setItem('sw_pitch_export_format', exportFormat);
       window.localStorage.setItem('sw_pitch_hd', hdExport ? '1' : '0');
       window.localStorage.setItem('sw_pitch_export_scope', exportScope);
-    } catch {}
+    } catch (e) {
+      console.warn('Failed to save pitch settings to localStorage', e);
+    }
   }, [names, avatars, showNames, blurFaces, blurLevel, exportFormat, hdExport, exportScope, formation]);
 
   useEffect(() => {
@@ -300,15 +307,17 @@ export const InteractiveMatchPreview: React.FC = () => {
       const b = window.localStorage.getItem(key('sw_pitch_blur_faces')) || window.localStorage.getItem('sw_pitch_blur_faces');
       const bl = window.localStorage.getItem(key('sw_pitch_blur_level')) || window.localStorage.getItem('sw_pitch_blur_level');
       if (n) {
-        try { const v = JSON.parse(n); if (Array.isArray(v) && v.length) setNames(v); } catch {}
+        try { const v = JSON.parse(n); if (Array.isArray(v) && v.length) setNames(v); } catch (e) { console.warn('Failed to parse names from localStorage', e); }
       }
       if (a) {
-        try { const v = JSON.parse(a); if (Array.isArray(v) && v.length) setAvatars(v); } catch {}
+        try { const v = JSON.parse(a); if (Array.isArray(v) && v.length) setAvatars(v); } catch (e) { console.warn('Failed to parse avatars from localStorage', e); }
       }
       if (s) setShowNames(s === '1');
       if (b) setBlurFaces(b === '1');
       if (bl === 'low' || bl === 'med' || bl === 'high') setBlurLevel(bl as any);
-    } catch {}
+    } catch (e) {
+      console.warn('Failed to load settings from localStorage', e);
+    }
   }, [formation]);
 
   return (
@@ -485,7 +494,13 @@ export const InteractiveMatchPreview: React.FC = () => {
                     variant="outline" 
                     className="border-white/10 text-white hover:bg-white/5 text-[11px]"
                     onClick={async () => {
-                      try { await navigator.clipboard.writeText(window.location.href); setShowShareSuccess(true); setTimeout(() => setShowShareSuccess(false), 1500); } catch {}
+                      try { 
+                        await navigator.clipboard.writeText(window.location.href); 
+                        setShowShareSuccess(true); 
+                        setTimeout(() => setShowShareSuccess(false), 1500); 
+                      } catch (e) {
+                        console.error('Failed to copy link', e);
+                      }
                     }}
                     title="Copy link with current setup"
                   >

@@ -45,7 +45,7 @@ export function WaitlistForm({ variant = 'inline', source, autoFocus, onDone }: 
     if (res.ok) {
       setDone(true);
       trackCoreGrowthEvent('waitlist_joined', { surface: source || variant, email: email.split('@')[1] }); // track domain for general info
-      try { onDone?.(); } catch {}
+      try { onDone?.(); } catch { /* ignore */ }
     } else {
       setError(res.error || 'Failed to join waitlist');
     }

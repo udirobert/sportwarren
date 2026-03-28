@@ -14,6 +14,14 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "SportWarren",
     locale: "en_US",
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        alt: "SportWarren — Rec Football, Tactically Elevated",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",

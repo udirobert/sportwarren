@@ -13,7 +13,9 @@ import {
   Sword,
   Target,
   Sparkles,
+  Share2,
 } from 'lucide-react';
+import { useTelegram } from '@/hooks/useTelegram';
 import type { MiniAppContext, PendingMatch, RecentMatch } from './TelegramMiniAppShell';
 import { PitchCanvas } from '@/components/squad/PitchCanvas';
 
@@ -155,7 +157,14 @@ function VerificationProgress({ current, required, trustScore }: { current: numb
 
 export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterProps) {
   const { squad, matches } = context;
-  const [hasTelegramWebApp, setHasTelegramWebApp] = useState(false);
+  const { 
+    webApp, 
+    hapticImpact, 
+    hapticNotification, 
+    hapticSelection, 
+    shareToStory 
+  } = useTelegram();
+
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const [submitting, setSubmitting] = useState(false);
   const [_verifying, setVerifying] = useState<string | null>(null);
@@ -173,10 +182,6 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
   });
   const [opponentSuggestions, setOpponentSuggestions] = useState<Array<{ id: string; name: string; shortName: string | null }>>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
-
-  useEffect(() => {
-    setHasTelegramWebApp(Boolean(window.Telegram?.WebApp));
-  }, []);
 
   useEffect(() => {
     if (viewMode !== 'submit') {
@@ -227,14 +232,14 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
   const selectOpponent = (name: string) => {
     setForm((prev) => ({ ...prev, opponentName: name }));
     setOpponentSuggestions([]);
-    window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
+    hapticSelection();
   };
 
   // Handle match submission (extracted for MainButton availability)
   const handleSubmitInternal = useCallback(async () => {
     if (!form.opponentName.trim()) {
       setError('Please enter the opponent name');
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
+      hapticNotification('error');
       return;
     }
 
@@ -244,7 +249,7 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
     setVerificationNote(null);
 
     // Provide feedback if button is MainButton
-    window.Telegram?.WebApp?.MainButton?.showProgress();
+    webApp?.MainButton?.showProgress();
 
     try {
       const searchParams = new URLSearchParams(window.location.search);
@@ -270,7 +275,7 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
 
       setSuccess('Match submitted for verification!');
       setLastXPSummary(null);
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+      hapticNotification('success');
 
       // Reset form and go back to overview
       setForm({ opponentName: '', homeScore: '0', awayScore: '0', isHome: true });
@@ -281,30 +286,42 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
       }, 1500);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit match');
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
+      hapticNotification('error');
     } finally {
       setSubmitting(false);
-      window.Telegram?.WebApp?.MainButton?.hideProgress();
+      webApp?.MainButton?.hideProgress();
     }
-  }, [form.opponentName, form.homeScore, form.awayScore, form.isHome, onRefresh]);
+  }, [form.opponentName, form.homeScore, form.awayScore, form.isHome, onRefresh, hapticNotification, webApp]);
 
   // Integration with Telegram native buttons
   useEffect(() => {
-    const webApp = window.Telegram?.WebApp;
     if (!webApp) return;
 
-    // Back Button integration
+    // Back action handler
     const handleBack = () => {
       setViewMode('overview');
-      webApp.HapticFeedback.impactOccurred('light');
+      hapticImpact('light');
     };
 
+    // Primary & Secondary Buttons management
     if (viewMode !== 'overview') {
-      webApp.BackButton.show();
-      webApp.BackButton.onClick(handleBack);
+      // Use SecondaryButton as Back button in API 7.10+, fallback to BackButton
+      if (webApp.SecondaryButton) {
+        webApp.SecondaryButton.setParams({
+          text: 'BACK',
+          is_visible: true,
+          position: 'left'
+        });
+        webApp.SecondaryButton.onClick(handleBack);
+      } else {
+        webApp.BackButton.show();
+        webApp.BackButton.onClick(handleBack);
+      }
     } else {
       webApp.BackButton.hide();
+      webApp.SecondaryButton?.hide();
       webApp.BackButton.offClick(handleBack);
+      webApp.SecondaryButton?.offClick(handleBack);
     }
 
     // Main Button integration (for submission)
@@ -320,9 +337,10 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
 
     return () => {
       webApp.BackButton.offClick(handleBack);
+      webApp.SecondaryButton?.offClick(handleBack);
       webApp.MainButton.offClick(handleSubmitInternal);
     };
-  }, [viewMode, form.opponentName, submitting, handleSubmitInternal]);
+  }, [viewMode, form.opponentName, submitting, handleSubmitInternal, webApp, hapticImpact]);
 
   // Aggregate stats from recent matches
   const recentStats = useMemo(() => {
@@ -413,11 +431,11 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
         );
       }
 
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+      hapticNotification('success');
       onRefresh?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to verify match');
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
+      hapticNotification('error');
     } finally {
       setVerifying(null);
     }
@@ -427,7 +445,7 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
   const openDetails = (match: RecentMatch) => {
     setSelectedMatch(match);
     setViewMode('details');
-    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+    hapticImpact('light');
   };
 
   // --- RENDER MODES ---
@@ -439,12 +457,9 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
 
     return (
       <div className="p-4 space-y-6 pb-20">
-        <div className="flex items-center gap-3">
-          <button onClick={() => setViewMode('overview')} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-slate-400">←</button>
-          <div>
-            <h2 className="text-lg font-bold text-white">Tactical Preview</h2>
-            <p className="text-xs text-slate-400">Match Prep vs {nextMatch.opponent}</p>
-          </div>
+        <div>
+          <h2 className="text-lg font-bold text-white">Tactical Preview</h2>
+          <p className="text-xs text-slate-400">Match Prep vs {nextMatch.opponent}</p>
         </div>
 
         {/* Formation Setup - Level 1+ */}
@@ -545,21 +560,17 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
              </div>
            )}
         </section>
-
-        <button onClick={() => setViewMode('overview')} className="w-full rounded-2xl bg-white/5 border border-white/10 py-4 text-sm font-bold text-slate-300">Close Preview</button>
       </div>
     );
   }
 
+
   if (viewMode === 'submit') {
     return (
       <div className="p-4 pb-20">
-        <div className="mb-6 flex items-center gap-3">
-          <button onClick={() => setViewMode('overview')} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-slate-400">←</button>
-          <div>
-            <h2 className="text-lg font-bold text-white">Log Match Result</h2>
-            <p className="text-xs text-slate-400">Manual entry for verification</p>
-          </div>
+        <div className="mb-6">
+          <h2 className="text-lg font-bold text-white">Log Match Result</h2>
+          <p className="text-xs text-slate-400">Manual entry for verification</p>
         </div>
 
         <div className="space-y-6">
@@ -599,10 +610,6 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
               <ScoreInput value={form.awayScore} onChange={(v) => setForm({ ...form, awayScore: v })} label={form.isHome ? form.opponentName || 'Opponent' : squad.name} disabled={submitting} />
             </div>
           </div>
-
-          {!hasTelegramWebApp && (
-            <button onClick={handleSubmitInternal} disabled={submitting || !form.opponentName.trim()} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-4 py-4 text-sm font-black text-white">Submit Result</button>
-          )}
         </div>
       </div>
     );
@@ -616,12 +623,9 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
     
     return (
       <div className="p-4 space-y-6">
-        <div className="flex items-center gap-3">
-          <button onClick={() => setViewMode('overview')} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-slate-400">←</button>
-          <div>
-            <h2 className="text-lg font-bold text-white">Match Resolution</h2>
-            <p className="text-xs text-slate-400">{selectedMatch.status.toUpperCase()} • {formatDate(selectedMatch.matchDate)}</p>
-          </div>
+        <div>
+          <h2 className="text-lg font-bold text-white">Match Resolution</h2>
+          <p className="text-xs text-slate-400">{selectedMatch.status.toUpperCase()} • {formatDate(selectedMatch.matchDate)}</p>
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/50">
@@ -654,7 +658,17 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
            </div>
         </div>
 
-        <button onClick={() => setViewMode('overview')} className="w-full rounded-2xl bg-white/5 border border-white/10 py-4 text-sm font-bold text-slate-300">Back</button>
+        <button 
+          onClick={() => {
+            const mediaUrl = 'https://sportwarren.xyz/og-image.png'; // Placeholder
+            const shareText = `Match Result: ${isHome ? squad.name : selectedMatch.opponent} ${selectedMatch.homeScore}-${selectedMatch.awayScore} ${!isHome ? squad.name : selectedMatch.opponent}! #SportWarren`;
+            shareToStory(mediaUrl, shareText, `https://t.me/SportWarrenBot/app?startapp=match_${selectedMatch.id}`);
+          }}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500 py-4 text-sm font-black text-white"
+        >
+          <Share2 className="h-4 w-4" />
+          SHARE RESULT
+        </button>
       </div>
     );
   }

@@ -709,7 +709,7 @@ export const MatchEnginePreview: React.FC<{
             setLatestEvent(`${kickoffStarter.name} takes the kickoff.`);
         }
         playersInitialised.current = true;
-    }, [members, membersLoading, awayMembers, awayMembersLoading, formation, playersPerSide, hasKeeper]);
+    }, [members, membersLoading, awayMembers, awayMembersLoading, formation, playersPerSide, hasKeeper, isGuest, squadId]);
 
     // Game loop — interval is stable because movePlayers has no deps
     useEffect(() => {

@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Home, Trophy, User, Wallet, Bot, Image as ImageIcon, Loader2, AlertCircle, RefreshCw, Link2, ArrowRight, CheckCircle2, Vote } from 'lucide-react';
+import { useTelegram } from '@/hooks/useTelegram';
 
 // Types for the enhanced Mini App context
 export interface PlayerContext {
@@ -167,11 +168,23 @@ export function TelegramMiniAppShell({
   renderAI,
   renderGovernance,
 }: TelegramMiniAppShellProps) {
-  const CONTEXT_CACHE_KEY = 'telegram-mini-app:last-context';
-  const PULL_THRESHOLD = 72;
+  const CONTEXT_CACHE_KEY = 'squad_context';
   const searchParams = useSearchParams();
   const tokenFromUrl = searchParams.get('token') || '';
   const initialTab = (searchParams.get('tab') as TabId) || 'squad';
+
+  const { 
+    webApp, 
+    isReady, 
+    safeArea, 
+    isOnline, 
+    hapticImpact, 
+    hapticNotification, 
+    hapticSelection,
+    requestFullscreen,
+    enableVerticalSwipes,
+    cloudStorage 
+  } = useTelegram();
 
   const [activeTab, setActiveTab] = useState<TabId>(initialTab);
   const [sessionToken, setSessionToken] = useState(tokenFromUrl);
@@ -181,9 +194,6 @@ export function TelegramMiniAppShell({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [isOnline, setIsOnline] = useState(true);
-  const [pullDistance, setPullDistance] = useState(0);
-  const [isPulling, setIsPulling] = useState(false);
   const [isTabTransitioning, setIsTabTransitioning] = useState(false);
   const [onboardingMode, setOnboardingMode] = useState<'menu' | 'create' | 'join'>('menu');
   const [onboardingNotice, setOnboardingNotice] = useState<string | null>(null);
@@ -194,8 +204,6 @@ export function TelegramMiniAppShell({
   const [joinQuery, setJoinQuery] = useState('');
   const [joinOptions, setJoinOptions] = useState<OnboardingSquadOption[]>([]);
   const [joinLoading, setJoinLoading] = useState(false);
-  const touchStartYRef = useRef<number | null>(null);
-  const pullTriggeredRef = useRef(false);
 
   const createValidationError = useMemo(() => {
     const trimmedName = createSquadName.trim();
@@ -215,18 +223,28 @@ export function TelegramMiniAppShell({
   const showCreateValidationError = Boolean(createValidationError)
     && (createSquadName.trim().length > 0 || createShortName.trim().length > 0);
 
-  // Initialize Telegram WebApp
+  // Initialize Telegram WebApp immersive features
   useEffect(() => {
-    const webApp = window.Telegram?.WebApp;
-    if (webApp) {
-      webApp.ready();
-      webApp.expand();
+    if (isReady && webApp) {
+      requestFullscreen();
+      enableVerticalSwipes();
       webApp.setHeaderColor('#09111f');
       webApp.setBackgroundColor('#09111f');
       webApp.BackButton?.hide();
       webApp.MainButton?.hide();
+      webApp.SecondaryButton?.hide();
+      
+      // Native pull-to-refresh listener
+      const handleReload = () => {
+        handleRefresh();
+      };
+      
+      webApp.onEvent('reload_page', handleReload);
+      return () => {
+        webApp.offEvent('reload_page', handleReload);
+      };
     }
-  }, []);
+  }, [isReady, webApp, requestFullscreen, enableVerticalSwipes, handleRefresh]);
 
   useEffect(() => {
     if (!tokenFromUrl || tokenFromUrl === sessionToken) {
@@ -238,21 +256,23 @@ export function TelegramMiniAppShell({
   }, [tokenFromUrl, sessionToken]);
 
   useEffect(() => {
-    if (tokenFromUrl) {
-      setSessionBootstrapped(true);
-      setLoading(false);
+    if (tokenFromUrl || !isReady) {
+      if (tokenFromUrl) {
+        setSessionBootstrapped(true);
+        setLoading(false);
+      }
       return;
     }
 
     let cancelled = false;
     const bootstrapSession = async () => {
-      let initData = window.Telegram?.WebApp?.initData;
+      let initData = webApp?.initData;
 
       if (!initData) {
         for (let attempt = 0; attempt < 3; attempt++) {
           await new Promise((resolve) => setTimeout(resolve, 600));
           if (cancelled) return;
-          initData = window.Telegram?.WebApp?.initData;
+          initData = webApp?.initData;
           if (initData) break;
         }
       }
@@ -306,7 +326,7 @@ export function TelegramMiniAppShell({
     return () => {
       cancelled = true;
     };
-  }, [tokenFromUrl]);
+  }, [tokenFromUrl, isReady, webApp]);
 
   // Load context
   const loadContext = useCallback(async (showRefresh = false) => {
@@ -344,16 +364,15 @@ export function TelegramMiniAppShell({
 
       setContext(data);
       setRequiresSquadOnboarding(false);
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(CONTEXT_CACHE_KEY, JSON.stringify(data));
-      }
+      
+      // Use CloudStorage for persistence
+      void cloudStorage.set(CONTEXT_CACHE_KEY, JSON.stringify(data));
 
       // Haptic feedback on success
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('success');
+      hapticNotification('success');
     } catch (err) {
-      const fallbackContextRaw = typeof window !== 'undefined'
-        ? window.localStorage.getItem(CONTEXT_CACHE_KEY)
-        : null;
+      // Fallback from CloudStorage
+      const fallbackContextRaw = await cloudStorage.get(CONTEXT_CACHE_KEY);
       let fallbackContext: MiniAppContext | null = null;
       if (fallbackContextRaw) {
         try {
@@ -371,12 +390,12 @@ export function TelegramMiniAppShell({
       } else {
         setError(err instanceof Error ? err.message : 'Failed to load context');
       }
-      window.Telegram?.WebApp?.HapticFeedback?.notificationOccurred('error');
+      hapticNotification('error');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [sessionToken, isOnline, sessionBootstrapped]);
+  }, [sessionToken, isOnline, sessionBootstrapped, cloudStorage, hapticNotification]);
 
   useEffect(() => {
     if (!sessionBootstrapped || requiresSquadOnboarding) {
@@ -387,25 +406,6 @@ export function TelegramMiniAppShell({
     void loadContext();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionToken, sessionBootstrapped, requiresSquadOnboarding]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return;
-    }
-
-    setIsOnline(window.navigator.onLine);
-
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
 
   // Tab configuration with badges
   const tabs = useMemo<Tab[]>(() => {
@@ -426,10 +426,11 @@ export function TelegramMiniAppShell({
   // Handle tab change with haptic feedback
   const handleTabChange = (tabId: TabId) => {
     if (tabId !== activeTab) {
-      window.Telegram?.WebApp?.HapticFeedback?.selectionChanged();
+      hapticSelection();
       // Reset native buttons on tab change to prevent stale UI
-      window.Telegram?.WebApp?.MainButton?.hide();
-      window.Telegram?.WebApp?.BackButton?.hide();
+      webApp?.MainButton?.hide();
+      webApp?.SecondaryButton?.hide();
+      webApp?.BackButton?.hide();
       setActiveTab(tabId);
       setIsTabTransitioning(true);
       window.setTimeout(() => setIsTabTransitioning(false), 220);
@@ -438,14 +439,12 @@ export function TelegramMiniAppShell({
 
   // Refresh handler
   const handleRefresh = () => {
-    window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('light');
+    hapticImpact('light');
     loadContext(true);
   };
 
   const _handleRetry = () => {
-    if (typeof window !== 'undefined') {
-      window.localStorage.removeItem(CONTEXT_CACHE_KEY);
-    }
+    void cloudStorage.remove(CONTEXT_CACHE_KEY);
     setError(null);
     setContext(null);
     setSessionToken('');
@@ -461,47 +460,7 @@ export function TelegramMiniAppShell({
     </div>
   );
 
-  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
-    if (event.currentTarget.scrollTop <= 0) {
-      touchStartYRef.current = event.touches[0]?.clientY ?? null;
-      pullTriggeredRef.current = false;
-      setIsPulling(true);
-      setPullDistance(0);
-    }
-  };
-
-  const handleTouchMove = (event: React.TouchEvent<HTMLDivElement>) => {
-    if (touchStartYRef.current === null || refreshing) {
-      return;
-    }
-
-    const currentY = event.touches[0]?.clientY ?? touchStartYRef.current;
-    const delta = currentY - touchStartYRef.current;
-
-    if (delta <= 0) {
-      setPullDistance(0);
-      return;
-    }
-
-    const dampedDistance = Math.min(110, delta * 0.45);
-    setPullDistance(dampedDistance);
-
-    if (dampedDistance >= PULL_THRESHOLD && !pullTriggeredRef.current) {
-      pullTriggeredRef.current = true;
-      window.Telegram?.WebApp?.HapticFeedback?.impactOccurred('medium');
-      handleRefresh();
-    }
-  };
-
-  const handleTouchEnd = () => {
-    touchStartYRef.current = null;
-    pullTriggeredRef.current = false;
-    setIsPulling(false);
-    setPullDistance(0);
-  };
-
   const openSquadSetup = useCallback(async () => {
-    const webApp = window.Telegram?.WebApp;
     const initData = webApp?.initData;
 
     if (initData) {
@@ -538,7 +497,7 @@ export function TelegramMiniAppShell({
     } else {
       setError('This app must be opened from Telegram. Tap the bot menu or use /app in your squad chat.');
     }
-  }, []);
+  }, [webApp]);
 
   const fetchJoinOptions = useCallback(async () => {
     if (!sessionToken) {
@@ -664,7 +623,7 @@ export function TelegramMiniAppShell({
   };
 
   // Loading state
-  if (loading) {
+  if (loading || !isReady) {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center bg-[#09111f] px-4">
         <div className="flex flex-col items-center gap-4">
@@ -918,7 +877,15 @@ export function TelegramMiniAppShell({
   };
 
   return (
-    <main className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.12),_transparent_40%),linear-gradient(180deg,_#09111f_0%,_#0d1526_100%)]">
+    <main 
+      className="flex min-h-screen flex-col bg-[radial-gradient(circle_at_top,_rgba(34,197,94,0.12),_transparent_40%),linear-gradient(180deg,_#09111f_0%,_#0d1526_100%)]"
+      style={{
+        paddingTop: `${safeArea.top}px`,
+        paddingBottom: `${safeArea.bottom}px`,
+        paddingLeft: `${safeArea.left}px`,
+        paddingRight: `${safeArea.right}px`
+      }}
+    >
       {/* Header */}
       <header className="sticky top-0 z-20 border-b border-white/5 bg-[#09111f]/90 px-4 py-3 backdrop-blur-lg">
         <div className="flex items-center justify-between">
@@ -952,18 +919,12 @@ export function TelegramMiniAppShell({
       )}
 
       {/* Content */}
-      <div
-        className="relative flex-1 overflow-y-auto pb-20"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-      >
-        {(refreshing || isPulling) && (
-          <div className="sticky top-0 z-10 flex justify-center py-2" style={{ transform: `translateY(${Math.min(pullDistance, 26)}px)` }}>
+      <div className="relative flex-1 overflow-y-auto pb-20">
+        {refreshing && (
+          <div className="sticky top-0 z-10 flex justify-center py-2">
             <div className="flex items-center gap-2 rounded-full border border-white/10 bg-slate-900/80 px-3 py-1 text-[11px] text-slate-300 backdrop-blur">
-              <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin text-emerald-400' : ''}`} />
-              <span>{refreshing ? 'Refreshing...' : pullDistance >= PULL_THRESHOLD ? 'Release to refresh' : 'Pull to refresh'}</span>
+              <RefreshCw className="h-3.5 w-3.5 animate-spin text-emerald-400" />
+              <span>Refreshing...</span>
             </div>
           </div>
         )}
@@ -972,7 +933,10 @@ export function TelegramMiniAppShell({
 
       {/* Bottom Tab Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-white/5 bg-[#09111f]/95 backdrop-blur-lg">
-        <div className="flex items-center justify-around px-2 py-2">
+        <div 
+          className="flex items-center justify-around px-2 py-2"
+          style={{ paddingBottom: `calc(0.5rem + ${safeArea.bottom}px)` }}
+        >
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -1002,8 +966,6 @@ export function TelegramMiniAppShell({
             );
           })}
         </div>
-        {/* Safe area for iOS */}
-        <div className="h-safe-area-inset-bottom bg-[#09111f]" />
       </nav>
     </main>
   );
