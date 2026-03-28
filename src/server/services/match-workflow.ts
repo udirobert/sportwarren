@@ -14,7 +14,7 @@ import {
 } from './economy/treasury-ledger';
 import { createPendingMatchSubmission } from './match-submission';
 import { PEER_RATING } from '@/lib/match/constants';
-import { telegramService } from './communication/telegram';
+import { getTelegramService } from './communication/telegram';
 
 export type MatchWorkflowErrorCode =
   | 'NOT_FOUND'
@@ -510,7 +510,10 @@ export async function verifyMatchResult({
       for (const squad of notifySquads) {
         const tgGroup = squad.groups[0];
         if (tgGroup?.chatId) {
-          await telegramService.sendPeerRatingPrompt(tgGroup.chatId, matchId, squad.name);
+          const telegramService = getTelegramService();
+          if (telegramService) {
+            await telegramService.sendPeerRatingPrompt(tgGroup.chatId, matchId, squad.name);
+          }
         }
       }
     }

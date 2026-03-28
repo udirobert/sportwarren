@@ -57,6 +57,8 @@ type AuthorizedTelegramCaptainActor =
 
 const MATCH_DRAFT_TTL_MS = 15 * 60 * 1000;
 const MATCH_FEE_TON = 1;
+const GENERAL_CHAT_MEMORY_LIMIT = 6;
+const GENERAL_CHAT_MEMORY_TTL_MS = 60 * 60 * 1000;
 
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute window
@@ -67,6 +69,12 @@ interface RateLimitResult {
   allowed: boolean;
   remaining: number;
   resetAt: number;
+}
+
+interface GeneralChatMessage {
+  role: "user" | "assistant";
+  content: string;
+  createdAt: number;
 }
 
 interface TelegramRedisStore {
@@ -88,6 +96,7 @@ export class TelegramService {
   private bot: TelegramBot;
   private redisService: TelegramRedisStore | null;
   private pendingMatchDrafts = new Map<string, PendingMatchDraft>();
+  private generalChatMemory = new Map<number, GeneralChatMessage[]>();
   // In-memory rate limiting (userId -> { command: count })
   private rateLimitLog = new Map<string, number[]>();
   private rateLimitAsk = new Map<string, number[]>();
@@ -178,24 +187,37 @@ export class TelegramService {
     this.bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
       const chatId = msg.chat.id;
       const startParam = match?.[1]?.trim();
+      console.log(`[TELEGRAM] /start received chatId=${chatId}`);
 
-      if (startParam && isTelegramConnectToken(startParam)) {
-        await this.handleConnectStart(
+      try {
+        await this.bot.sendChatAction(chatId, "typing");
+
+        if (startParam && isTelegramConnectToken(startParam)) {
+          await this.handleConnectStart(
+            chatId,
+            extractTelegramConnectToken(startParam),
+            msg.from,
+          );
+          return;
+        }
+
+        const squadGroup = await this.requireLinkedChat(chatId);
+        if (squadGroup?.squadId) {
+          const summary = await this.buildSquadSummaryCard(squadGroup.squadId);
+          await this.bot.sendMessage(chatId, summary);
+          console.log(`[TELEGRAM] /start sent squad summary chatId=${chatId}`);
+          return;
+        }
+
+        await this.bot.sendMessage(chatId, this.buildHelpMessage());
+        console.log(`[TELEGRAM] /start sent help chatId=${chatId}`);
+      } catch (error) {
+        console.error(`[TELEGRAM] /start failed chatId=${chatId}:`, error);
+        await this.bot.sendMessage(
           chatId,
-          extractTelegramConnectToken(startParam),
-          msg.from,
+          "SportWarren is warming up. Try /app in a moment.",
         );
-        return;
       }
-
-      const squadGroup = await this.requireLinkedChat(chatId);
-      if (squadGroup?.squadId) {
-        const summary = await this.buildSquadSummaryCard(squadGroup.squadId);
-        await this.bot.sendMessage(chatId, summary);
-        return;
-      }
-
-      await this.bot.sendMessage(chatId, this.buildHelpMessage());
     });
 
     this.bot.onText(/\/help/, async (msg) => {
@@ -315,6 +337,9 @@ export class TelegramService {
 
     this.bot.on("message", async (msg) => {
       if (msg.text?.startsWith("/") || !msg.text) return;
+      console.log(
+        `[TELEGRAM] general message received chatId=${msg.chat.id} text=${JSON.stringify(msg.text.slice(0, 120))}`,
+      );
       await this.handleGeneralAiQuery(msg.chat.id, msg.text);
     });
   }
@@ -612,6 +637,7 @@ export class TelegramService {
 
     try {
       const linkedChat = await this.requireLinkedChat(chatId);
+      const history = this.getGeneralChatHistory(chatId);
       const guidanceRules = [
         "You are the SportWarren assistant.",
         "Tone: direct, punchy, football-first. No corporate phrasing.",
@@ -628,6 +654,7 @@ export class TelegramService {
         "If they want treasury or TON actions, tell them to use /treasury.",
         "If they want staff analysis, tell them to use /ask coach <question>.",
         "If the message is just a greeting, welcome them and suggest the single best next step.",
+        "Treat follow-up questions as referring to the recent conversation if context is available.",
         "Do not pretend an action has already happened.",
       ].join("\n");
 
@@ -636,18 +663,31 @@ export class TelegramService {
           role: "system",
           content: guidanceRules,
         },
-        { role: "user", content: text },
+        ...history.map((message) => ({
+          role: message.role,
+          content: message.content,
+        })),
+        { role: "user" as const, content: text },
       ]);
 
       if (response?.content) {
+        this.appendGeneralChatMessage(chatId, "user", text);
+        this.appendGeneralChatMessage(chatId, "assistant", response.content);
         await this.bot.sendMessage(chatId, response.content);
+        console.log(`[TELEGRAM] general AI response sent chatId=${chatId}`);
         return;
       }
+
+      console.warn(`[TELEGRAM] general AI empty response chatId=${chatId}`);
     } catch (error) {
-      console.warn("General AI query failed:", error);
+      console.warn(`[TELEGRAM] general AI query failed chatId=${chatId}:`, error);
     }
 
-    await this.bot.sendMessage(chatId, this.buildGeneralGuidanceFallback());
+    this.appendGeneralChatMessage(chatId, "user", text);
+    const fallback = this.buildGeneralGuidanceFallback();
+    this.appendGeneralChatMessage(chatId, "assistant", fallback);
+    await this.bot.sendMessage(chatId, fallback);
+    console.log(`[TELEGRAM] general fallback sent chatId=${chatId}`);
   }
 
   private buildGeneralGuidanceFallback(): string {
@@ -657,6 +697,34 @@ export class TelegramService {
       "Type /app to open onboarding and get moving.",
       "Log the score. Track your stats. Build your legacy.",
     ].join("\n");
+  }
+
+  private getGeneralChatHistory(chatId: number): Array<Pick<GeneralChatMessage, "role" | "content">> {
+    const cutoff = Date.now() - GENERAL_CHAT_MEMORY_TTL_MS;
+    const recentMessages = (this.generalChatMemory.get(chatId) || [])
+      .filter((message) => message.createdAt >= cutoff)
+      .slice(-GENERAL_CHAT_MEMORY_LIMIT);
+
+    if (recentMessages.length === 0) {
+      this.generalChatMemory.delete(chatId);
+      return [];
+    }
+
+    this.generalChatMemory.set(chatId, recentMessages);
+    return recentMessages.map(({ role, content }) => ({ role, content }));
+  }
+
+  private appendGeneralChatMessage(
+    chatId: number,
+    role: GeneralChatMessage["role"],
+    content: string,
+  ): void {
+    const existing = this.getGeneralChatHistory(chatId).map((message) => ({
+      ...message,
+      createdAt: Date.now(),
+    }));
+    existing.push({ role, content, createdAt: Date.now() });
+    this.generalChatMemory.set(chatId, existing.slice(-GENERAL_CHAT_MEMORY_LIMIT));
   }
 
   private async getSquadStatsForAi(squadId: string): Promise<{
@@ -1857,4 +1925,24 @@ export class TelegramService {
   }
 }
 
-export const telegramService = new TelegramService();
+let telegramServiceSingleton: TelegramService | null | undefined;
+
+export function getTelegramService(): TelegramService | null {
+  if (telegramServiceSingleton !== undefined) {
+    return telegramServiceSingleton;
+  }
+
+  if (!process.env.TELEGRAM_BOT_TOKEN) {
+    telegramServiceSingleton = null;
+    return telegramServiceSingleton;
+  }
+
+  try {
+    telegramServiceSingleton = new TelegramService();
+  } catch (error) {
+    console.error("Failed to initialize Telegram service singleton:", error);
+    telegramServiceSingleton = null;
+  }
+
+  return telegramServiceSingleton;
+}
