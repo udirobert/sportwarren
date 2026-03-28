@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import { generateInference } from "@/lib/ai/venice";
+import { generateInference } from "@/lib/ai/inference";
 import { AGENT_PERSONAS } from "../ai/prompts";
 import TelegramBot from "node-telegram-bot-api";
 import { prisma } from "@/lib/db";

@@ -520,7 +520,7 @@ export const matchRouter = createTRPCRouter({
         });
 
         try {
-          const { getVeniceClient, VENICE_MODEL_ID } = await import('../../lib/ai/venice');
+          const { getVeniceClient, VENICE_MODEL_ID } = await import('../../lib/ai/providers/venice');
           const client = getVeniceClient();
 
           const response = await client.chat.completions.create({

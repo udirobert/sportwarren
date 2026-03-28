@@ -1,5 +1,6 @@
 
-import { getOpenAIClient, getOptionalVeniceClient, OPENAI_MODEL_ID, VENICE_MODEL_ID } from './venice';
+import { getOpenAIClient, OPENAI_MODEL_ID } from './providers/openai';
+import { getVeniceClient, VENICE_MODEL_ID } from './providers/venice';
 import { getNarrativeLedger, updateNarrativeLedger } from './memory';
 
 export const MARCUS_SYSTEM_PROMPT = `You are Marcus, the Academy Director of SportWarren. 
@@ -19,7 +20,7 @@ const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
 export async function getMarcusResponse(message: string, context: { city?: string, venue?: string, history: any[], userId?: string }) {
     const { city, venue, history, userId } = context;
-    const veniceClient = getOptionalVeniceClient();
+    const veniceClient = getVeniceClient();
     const openaiClient = getOpenAIClient();
 
     // Guest sessions and raw wallet addresses should not hard-fail chat persistence.

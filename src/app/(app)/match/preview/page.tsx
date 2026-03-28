@@ -133,7 +133,7 @@ function getRolePosition(role: string): string {
 
   // Tactical insight based on formation
   const tacticalInsight = useMemo(() => {
-    const insights: Record<Formation, string> = {
+    const insights: Partial<Record<Formation, string>> = {
       '4-4-2': 'Classic balanced formation. Good for maintaining shape and hitting on the counter.',
       '4-3-3': 'Attacking formation with width. Press high and create overloads on the flanks.',
       '4-2-3-1': 'Defensive solidity with creative play through the middle. Control the game.',
@@ -417,4 +417,3 @@ function getRolePosition(role: string): string {
     </div>
   );
 }
-
