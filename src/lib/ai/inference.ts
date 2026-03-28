@@ -68,6 +68,7 @@ export async function generateInference(
 
             const content = completion.choices[0]?.message?.content?.trim();
             if (content) {
+                console.log(`[AI] ${provider.name} inference succeeded.`);
                 return { content, provider: provider.name };
             }
 
@@ -83,6 +84,7 @@ export async function generateInference(
                     });
                     const fallbackContent = fallbackCompletion.choices[0]?.message?.content?.trim();
                     if (fallbackContent) {
+                        console.log('[AI] kilocode fallback inference succeeded.');
                         return { content: fallbackContent, provider: 'kilocode-fallback' };
                     }
                     console.warn('[AI] kilocode fallback returned empty content.');
@@ -104,6 +106,7 @@ export async function generateInference(
                     });
                     const fallbackContent = fallbackCompletion.choices[0]?.message?.content?.trim();
                     if (fallbackContent) {
+                        console.log('[AI] kilocode fallback inference succeeded.');
                         return { content: fallbackContent, provider: 'kilocode-fallback' };
                     }
                 } catch (fallbackError) {
