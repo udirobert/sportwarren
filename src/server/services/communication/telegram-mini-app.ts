@@ -207,7 +207,7 @@ type TelegramMiniAppIdentity = NonNullable<
   Awaited<ReturnType<typeof findPlatformIdentityByMiniAppToken>>
 >;
 
-async function requireTelegramMiniAppIdentity(prisma: PrismaClient, token: string) {
+export async function requireTelegramMiniAppIdentity(prisma: PrismaClient, token: string) {
   const identity = await findPlatformIdentityByMiniAppToken(prisma, token);
   if (!identity) {
     throw new Error(

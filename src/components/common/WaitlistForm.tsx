@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/Button';
 import { submitWaitlist } from '@/lib/waitlist';
-import { trackEvent } from '@/lib/analytics';
+import { trackEvent, trackCoreGrowthEvent } from '@/lib/analytics';
 
 type Variant = 'hero' | 'inline' | 'footer';
 
@@ -43,6 +43,7 @@ export function WaitlistForm({ variant = 'inline', source, autoFocus }: Waitlist
     setLoading(false);
     if (res.ok) {
       setDone(true);
+      trackCoreGrowthEvent('waitlist_joined', { surface: source || variant, email: email.split('@')[1] }); // track domain for general info
     } else {
       setError(res.error || 'Failed to join waitlist');
     }
@@ -61,7 +62,7 @@ export function WaitlistForm({ variant = 'inline', source, autoFocus }: Waitlist
   }
 
   return (
-    <form onSubmit={onSubmit} className={`${base} flex items-stretch gap-2`}>
+    <form onSubmit={onSubmit} className={`${base} flex flex-col sm:flex-row items-stretch gap-2`}>
       <input
         ref={inputRef}
         type="email"
@@ -72,7 +73,7 @@ export function WaitlistForm({ variant = 'inline', source, autoFocus }: Waitlist
         onChange={(e) => setEmail(e.target.value)}
         aria-label="Email address"
       />
-      <Button type="submit" disabled={loading} className="rounded-xl px-5 font-bold">
+      <Button type="submit" disabled={loading} className="rounded-xl px-5 py-3 h-auto font-bold sm:w-auto w-full">
         {loading ? 'Joining…' : 'Get early access'}
       </Button>
       {error && (

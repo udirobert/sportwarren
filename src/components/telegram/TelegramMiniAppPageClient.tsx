@@ -9,6 +9,7 @@ import { TelegramMatchCenter } from "@/components/telegram/TelegramMatchCenter";
 import { TelegramPlayerProfile } from "@/components/telegram/TelegramPlayerProfile";
 import { TelegramTreasuryTab } from "@/components/telegram/TelegramTreasuryTab";
 import { TelegramAIStaffChat } from "@/components/telegram/TelegramAIStaffChat";
+import { TelegramMediaTab } from "@/components/telegram/TelegramMediaTab";
 import type { MiniAppContext } from "@/components/telegram/TelegramMiniAppShell";
 
 function MiniAppLoading() {
@@ -40,6 +41,9 @@ function MiniAppContent() {
       )}
       renderTreasury={(context: MiniAppContext, refresh: () => void) => (
         <TelegramTreasuryTab context={context} onRefresh={refresh} />
+      )}
+      renderMedia={(context: MiniAppContext, refresh: () => void) => (
+        <TelegramMediaTab context={context} onRefresh={refresh} />
       )}
       renderAI={(context: MiniAppContext, refresh: () => void) => (
         <TelegramAIStaffChat context={context} onRefresh={refresh} />

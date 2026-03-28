@@ -110,6 +110,40 @@ async function main() {
   });
 
   console.log('✅ SEEDING COMPLETE: Neon Production is alive with Agentic Squads.');
+
+  // Optional: Seed a sample squad media file for verification
+  if ((process.env.SEED_SQUAD_MEDIA_SAMPLE || '').trim().toLowerCase() === 'true') {
+    try {
+      const fs = await import('fs/promises');
+      const path = await import('path');
+      const storageRoot = (process.env.STORAGE_ROOT || path.join(process.cwd(), 'storage')).toString();
+      const squadId = invicta.id;
+      const mediaId = 'seed_media_1';
+      const dir = path.join(storageRoot, 'squads', squadId);
+      await fs.mkdir(dir, { recursive: true });
+      const pngBase64 =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII='; // 1x1 PNG
+      const buffer = Buffer.from(pngBase64, 'base64');
+      const filePath = path.join(dir, `${mediaId}.png`);
+      await fs.writeFile(filePath, buffer);
+      await prisma.squadMedia.create({
+        data: {
+          id: mediaId,
+          squadId,
+          uploaderId: agentUser.id,
+          title: 'Seed Photo',
+          kind: 'image',
+          mimeType: 'image/png',
+          size: buffer.length,
+          storageKey: path.posix.join('squads', squadId, `${mediaId}.png`),
+          visibility: 'squad',
+        },
+      });
+      console.log('📸 Seeded sample SquadMedia: seed_media_1');
+    } catch (e) {
+      console.warn('⚠️ SquadMedia seed skipped:', (e as Error).message);
+    }
+  }
 }
 
 main()

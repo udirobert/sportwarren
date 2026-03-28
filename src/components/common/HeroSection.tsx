@@ -8,6 +8,7 @@ import { getJourneyContent } from '@/lib/journey/content';
 import { getJourneyStage } from '@/lib/journey/stage';
 import { AccountStatusControl } from '@/components/common/AccountStatusControl';
 import { WaitlistForm } from '@/components/common/WaitlistForm';
+import { InteractiveMatchPreview } from '@/components/landing/InteractiveMatchPreview';
 
 interface HeroSectionProps {
   onGetStarted?: () => void;
@@ -187,7 +188,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             </div>
           )}
 
-          <div className="mb-8 flex flex-wrap items-center justify-center gap-2">
+          <div className="mb-4 flex flex-wrap items-center justify-center gap-2">
             {journeyContent.hero.highlights.map((highlight) => (
               <span
                 key={highlight}
@@ -198,8 +199,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             ))}
           </div>
 
+          {/* Interactive Tactical Preview */}
+          <div className="mb-6">
+            <InteractiveMatchPreview />
+          </div>
+
           {/* Waitlist capture — enhancement to hero, minimal footprint */}
-          <div className="mb-8">
+          <div className="mb-6">
             <div className="text-center text-sm text-gray-400 mb-2">No wallet needed — join the early access list</div>
             <WaitlistForm variant="hero" source="hero" autoFocus={autoFocusWaitlist} />
           </div>
