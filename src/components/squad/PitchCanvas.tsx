@@ -52,6 +52,8 @@ export interface PitchCanvasProps {
   theme?: 'default' | 'hero';
   /** Blur avatars (privacy-friendly export) */
   blurAvatars?: boolean;
+  /** Blur radius in px when blurAvatars=true */
+  blurRadius?: number;
 }
 
 interface PlayerSlotData {
@@ -60,10 +62,12 @@ interface PlayerSlotData {
   index: number;
 }
 
+// FIFA standard pitch ratio: 68m width × 105m length = 1:1.545 (154.5%)
+// Using consistent aspect ratio ensures proper scaling at all sizes
 const SIZE_CONFIG = {
-  sm: { container: 'pb-[50%]', dot: 'w-7 h-7', text: 'text-[8px]', nameText: 'text-[8px]' },
-  md: { container: 'pb-[65%]', dot: 'w-10 h-10', text: 'text-[10px]', nameText: 'text-xs' },
-  lg: { container: 'pb-[75%]', dot: 'w-12 h-12', text: 'text-xs', nameText: 'text-sm' },
+  sm: { container: 'pb-[154.5%]', dot: 'w-7 h-7', text: 'text-[8px]', nameText: 'text-[8px]' },
+  md: { container: 'pb-[154.5%]', dot: 'w-10 h-10', text: 'text-[10px]', nameText: 'text-xs' },
+  lg: { container: 'pb-[154.5%]', dot: 'w-12 h-12', text: 'text-xs', nameText: 'text-sm' },
 };
 
 /**
@@ -107,6 +111,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
   markings,
   theme = 'default',
   blurAvatars = false,
+  blurRadius = 3,
 }) => {
   const pitchRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = React.useState(false);
@@ -149,7 +154,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
             src={slot.player.avatar as string}
             alt={slot.player.name}
             className="w-full h-full rounded-full object-cover"
-            style={blurAvatars ? { filter: 'blur(3px)' } : undefined}
+            style={blurAvatars ? { filter: `blur(${Math.max(1, Math.min(12, blurRadius))}px)` } : undefined}
           />
         ) : (
           <span className={`${sizeConfig.text} font-bold text-white`}>{initials}</span>
@@ -361,7 +366,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
       <div
         ref={pitchRef}
         className={`relative bg-gradient-to-b from-green-600 to-green-700 rounded-xl overflow-hidden ${sizeConfig.container}`}
-        style={{ paddingBottom: size === 'sm' ? '50%' : size === 'lg' ? '75%' : '65%' }}
+        style={{ paddingBottom: '154.5%' }}
       >
         {/* Pitch Markings (SVG, true-to-scale) */}
         {(() => {
@@ -372,7 +377,8 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
             stripeB: 'rgba(0,0,0,0.04)',
             vignetteOpacity: 0.18,
             lineWeight: 2.0,
-            orientation: 'horizontal' as const,
+            // Keep vertical orientation to match player coordinates
+            orientation: 'vertical' as const,
             desaturateOpacity: 0.06,
           } : {} as Partial<{
             stroke: string;

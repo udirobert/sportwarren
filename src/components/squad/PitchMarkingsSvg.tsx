@@ -4,147 +4,249 @@ import React, { useId } from 'react';
 
 type Props = {
   className?: string;
-  stroke?: string; // line color
+  stroke?: string;
   strokeOpacity?: number;
   stripeA?: string;
   stripeB?: string;
   vignetteOpacity?: number;
-  lineWeight?: number; // in viewBox units
+  lineWeight?: number;
   orientation?: 'vertical' | 'horizontal';
-  desaturateOpacity?: number; // overlay neutral tone to reduce saturation
+  desaturateOpacity?: number;
 };
 
-// Normalized pitch viewBox: length 120 (x), width 80 (y)
-// Approximates a 105m x 68m pitch with key markings in relative units.
+/**
+ * Vertical pitch markings (goals at top & bottom).
+ * ViewBox: 68 wide × 105 tall — real FIFA proportions (68m × 105m).
+ * Player coordinates map naturally: x = left-right, y = top (attacking) to bottom (defending).
+ */
 export const PitchMarkingsSvg: React.FC<Props> = ({
   className,
-  stroke = 'rgba(255,255,255,0.6)',
-  strokeOpacity = 0.9,
-  stripeA = 'rgba(255,255,255,0.02)',
-  stripeB = 'rgba(0,0,0,0.03)',
-  vignetteOpacity = 0.14,
-  lineWeight = 1.6,
+  stroke = 'rgba(255,255,255,0.55)',
+  strokeOpacity = 1,
+  stripeA = 'rgba(255,255,255,0.018)',
+  stripeB = 'rgba(0,0,0,0.028)',
+  vignetteOpacity = 0.18,
+  lineWeight = 0.55,
   orientation = 'vertical',
   desaturateOpacity = 0,
 }) => {
   const uid = useId().replace(/[:]/g, '');
-  const VBW = 120; // length
-  const VBH = 80; // width
 
-  // Dimensions
-  const penaltyDepth = 16.5 / 105 * VBW; // ~18.86
-  const penaltyWidth = 40.32 / 68 * VBH; // ~47.5
-  const sixDepth = 5.5 / 105 * VBW; // ~6.29
-  const sixWidth = 18.32 / 68 * VBH; // ~21.56
-  const centerR = 9.15 / 68 * VBH; // ~10.76
-  const cornerR = 1 / 68 * VBH; // ~1.18
-  const penaltySpotX = 11 / 105 * VBW; // distance from goal line
+  // --- FIFA standard dimensions (metres, used as viewBox units) ---
+  const W = 68;   // pitch width
+  const H = 105;  // pitch length
+  const midX = W / 2;
+  const midY = H / 2;
 
-  const halfY = VBH / 2;
-  const leftX = 0;
-  const rightX = VBW;
-  const topY = 0;
-  const bottomY = VBH;
+  // Penalty area: 40.32m wide × 16.5m deep
+  const penW = 40.32;
+  const penH = 16.5;
+  // Six-yard box: 18.32m wide × 5.5m deep
+  const sixW = 18.32;
+  const sixH = 5.5;
+  // Centre circle radius 9.15m
+  const centreR = 9.15;
+  // Corner arc radius
+  const cornerR = 1;
+  // Penalty spot distance from goal line
+  const penSpotDist = 11;
+  // Goal: 7.32m wide × 2.44m tall (depth shown as ~2.8m for visibility)
+  const goalW = 7.32;
+  const goalH = 2.44;
+  const goalDepth = 2.8;
+  const postWidth = 0.4; // Visual thickness of goal posts
 
-  const strokeProps = { stroke, strokeOpacity, strokeWidth: lineWeight, fill: 'none' } as const;
+  const lw = lineWeight;
+  const sp = { stroke, strokeOpacity, strokeWidth: lw, fill: 'none' } as const;
 
-  // Penalty area rectangles centered on midline
-  const penW = penaltyWidth;
-  const penH = penaltyDepth;
-  const sixW = sixWidth;
-  const sixH = sixDepth;
+  // Mow stripes — horizontal bands across the pitch (like broadcast TV pitches)
+  const stripeH = orientation === 'horizontal' ? W / 8 : H / 8;
 
   return (
-    <svg className={className} viewBox={`0 0 ${VBW} ${VBH}`} preserveAspectRatio="xMidYMid slice" aria-hidden>
+    <svg
+      className={className}
+      viewBox={`${-4} ${-goalDepth - 1} ${W + 8} ${H + (goalDepth + 1) * 2}`}
+      preserveAspectRatio="xMidYMid meet"
+      aria-hidden
+    >
       <defs>
-        {/* Stripes */}
-        {orientation === 'vertical' ? (
-          <pattern id={`sw-stripes-${uid}`} width="10" height="80" patternUnits="userSpaceOnUse">
-            <rect x="0" y="0" width="5" height="80" fill={stripeA} />
-            <rect x="5" y="0" width="5" height="80" fill={stripeB} />
-          </pattern>
-        ) : (
-          <pattern id={`sw-stripes-${uid}`} width="120" height="10" patternUnits="userSpaceOnUse">
-            <rect x="0" y="0" width="120" height="5" fill={stripeA} />
-            <rect x="0" y="5" width="120" height="5" fill={stripeB} />
-          </pattern>
-        )}
-        {/* Vignette */}
-        <radialGradient id={`sw-vignette-${uid}`} cx="50%" cy="50%" r="65%">
-          <stop offset="60%" stopColor="rgba(0,0,0,0)" />
+        {/* Mow stripes */}
+        <pattern id={`stripes-${uid}`} width={W} height={stripeH * 2} patternUnits="userSpaceOnUse">
+          <rect x="0" y="0" width={W} height={stripeH} fill={stripeA} />
+          <rect x="0" y={stripeH} width={W} height={stripeH} fill={stripeB} />
+        </pattern>
+
+        {/* Radial vignette */}
+        <radialGradient id={`vig-${uid}`} cx="50%" cy="50%" r="70%">
+          <stop offset="55%" stopColor="rgba(0,0,0,0)" />
           <stop offset="100%" stopColor={`rgba(0,0,0,${vignetteOpacity})`} />
         </radialGradient>
+
+        {/* Goal net pattern */}
+        <pattern id={`net-${uid}`} width="1.2" height="1.2" patternUnits="userSpaceOnUse">
+          <line x1="0" y1="0" x2="1.2" y2="1.2" stroke={stroke} strokeOpacity={0.15} strokeWidth="0.15" />
+          <line x1="1.2" y1="0" x2="0" y2="1.2" stroke={stroke} strokeOpacity={0.15} strokeWidth="0.15" />
+        </pattern>
+
+        {/* Subtle inner shadow for pitch edges */}
+        <linearGradient id={`edge-t-${uid}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="rgba(0,0,0,0.12)" />
+          <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+        </linearGradient>
+        <linearGradient id={`edge-b-${uid}`} x1="0" y1="1" x2="0" y2="0">
+          <stop offset="0%" stopColor="rgba(0,0,0,0.12)" />
+          <stop offset="100%" stopColor="rgba(0,0,0,0)" />
+        </linearGradient>
       </defs>
 
-      {/* Grass background (keep existing gradient in parent; we add subtle stripes) */}
-      <rect x="0" y="0" width={VBW} height={VBH} fill={`url(#sw-stripes-${uid})`} />
+      {/* ── Grass stripes ── */}
+      <rect x="0" y="0" width={W} height={H} fill={`url(#stripes-${uid})`} />
 
-      {/* Outer Border */}
-      <rect x={leftX + lineWeight} y={topY + lineWeight} width={VBW - 2 * lineWeight} height={VBH - 2 * lineWeight} {...strokeProps} />
-
-      {/* Halfway line */}
-      <line x1={VBW / 2} y1={topY} x2={VBW / 2} y2={bottomY} {...strokeProps} />
-
-      {/* Center circle and spot */}
-      <circle cx={VBW / 2} cy={halfY} r={centerR} {...strokeProps} />
-      <circle cx={VBW / 2} cy={halfY} r={lineWeight} fill={stroke} fillOpacity={strokeOpacity} />
-
-      {/* Penalty areas (left and right) */}
-      <rect x={leftX} y={halfY - penW / 2} width={penH} height={penW} {...strokeProps} />
-      <rect x={rightX - penH} y={halfY - penW / 2} width={penH} height={penW} {...strokeProps} />
-
-      {/* Six-yard boxes */}
-      <rect x={leftX} y={halfY - sixW / 2} width={sixH} height={sixW} {...strokeProps} />
-      <rect x={rightX - sixH} y={halfY - sixW / 2} width={sixH} height={sixW} {...strokeProps} />
-
-      {/* Penalty spots */}
-      <circle cx={leftX + penaltySpotX} cy={halfY} r={lineWeight} fill={stroke} fillOpacity={strokeOpacity} />
-      <circle cx={rightX - penaltySpotX} cy={halfY} r={lineWeight} fill={stroke} fillOpacity={strokeOpacity} />
-
-      {/* Penalty arcs ("D") - draw arcs outside box */}
-      {/** Left D: arc centered at left penalty spot, open towards center */}
-      <path
-        d={describeArc(leftX + penaltySpotX, halfY, centerR, -40, 40)}
-        {...strokeProps}
+      {/* ── Goal nets (behind goal lines) ── */}
+      {/* Top goal (opponent) */}
+      <rect
+        x={midX - goalW / 2}
+        y={-goalDepth}
+        width={goalW}
+        height={goalDepth}
+        fill={`url(#net-${uid})`}
+        stroke={stroke}
+        strokeOpacity={strokeOpacity * 0.5}
+        strokeWidth={lw * 0.8}
+        rx="0.3"
       />
-      {/** Right D */}
-      <path
-        d={describeArc(rightX - penaltySpotX, halfY, centerR, 140, 220)}
-        {...strokeProps}
+      {/* Bottom goal (player's team) */}
+      <rect
+        x={midX - goalW / 2}
+        y={H}
+        width={goalW}
+        height={goalDepth}
+        fill={`url(#net-${uid})`}
+        stroke={stroke}
+        strokeOpacity={strokeOpacity * 0.5}
+        strokeWidth={lw * 0.8}
+        rx="0.3"
       />
 
-      {/* Corner arcs */}
-      <path d={`M ${leftX} ${topY + cornerR} A ${cornerR} ${cornerR} 0 0 1 ${leftX + cornerR} ${topY}`} {...strokeProps} />
-      <path d={`M ${rightX - cornerR} ${topY} A ${cornerR} ${cornerR} 0 0 1 ${rightX} ${topY + cornerR}`} {...strokeProps} />
-      <path d={`M ${leftX} ${bottomY - cornerR} A ${cornerR} ${cornerR} 0 0 0 ${leftX + cornerR} ${bottomY}`} {...strokeProps} />
-      <path d={`M ${rightX - cornerR} ${bottomY} A ${cornerR} ${cornerR} 0 0 0 ${rightX} ${bottomY - cornerR}`} {...strokeProps} />
+      {/* ── Goal posts (prominent white posts) ── */}
+      {/* Top goal posts */}
+      <rect
+        x={midX - goalW / 2 - postWidth}
+        y={-goalDepth}
+        width={postWidth}
+        height={goalDepth + goalH}
+        fill="rgba(255,255,255,0.9)"
+        rx="0.1"
+      />
+      <rect
+        x={midX + goalW / 2}
+        y={-goalDepth}
+        width={postWidth}
+        height={goalDepth + goalH}
+        fill="rgba(255,255,255,0.9)"
+        rx="0.1"
+      />
+      <rect
+        x={midX - goalW / 2}
+        y={-goalDepth - goalH + postWidth}
+        width={goalW + postWidth * 2}
+        height={postWidth}
+        fill="rgba(255,255,255,0.9)"
+        rx="0.1"
+      />
+      {/* Bottom goal posts */}
+      <rect
+        x={midX - goalW / 2 - postWidth}
+        y={H}
+        width={postWidth}
+        height={goalDepth + goalH}
+        fill="rgba(255,255,255,0.9)"
+        rx="0.1"
+      />
+      <rect
+        x={midX + goalW / 2}
+        y={H}
+        width={postWidth}
+        height={goalDepth + goalH}
+        fill="rgba(255,255,255,0.9)"
+        rx="0.1"
+      />
+      <rect
+        x={midX - goalW / 2}
+        y={H + goalDepth}
+        width={goalW + postWidth * 2}
+        height={postWidth}
+        fill="rgba(255,255,255,0.9)"
+        rx="0.1"
+      />
 
-      {/* Vignette overlay */}
-      {/* Desaturate overlay (neutral gray) */}
+      {/* ── Outer boundary ── */}
+      <rect x={lw / 2} y={lw / 2} width={W - lw} height={H - lw} {...sp} rx="0.4" />
+
+      {/* ── Halfway line ── */}
+      <line x1={0} y1={midY} x2={W} y2={midY} {...sp} />
+
+      {/* ── Centre circle & spot ── */}
+      <circle cx={midX} cy={midY} r={centreR} {...sp} />
+      <circle cx={midX} cy={midY} r={lw * 1.2} fill={stroke} fillOpacity={strokeOpacity} />
+
+      {/* ── Penalty areas (top & bottom) ── */}
+      {/* Top */}
+      <rect x={midX - penW / 2} y={0} width={penW} height={penH} {...sp} />
+      {/* Bottom */}
+      <rect x={midX - penW / 2} y={H - penH} width={penW} height={penH} {...sp} />
+
+      {/* ── Six-yard boxes ── */}
+      {/* Top */}
+      <rect x={midX - sixW / 2} y={0} width={sixW} height={sixH} {...sp} />
+      {/* Bottom */}
+      <rect x={midX - sixW / 2} y={H - sixH} width={sixW} height={sixH} {...sp} />
+
+      {/* ── Penalty spots ── */}
+      <circle cx={midX} cy={penSpotDist} r={lw * 1.2} fill={stroke} fillOpacity={strokeOpacity} />
+      <circle cx={midX} cy={H - penSpotDist} r={lw * 1.2} fill={stroke} fillOpacity={strokeOpacity} />
+
+      {/* ── Penalty arcs (D) ── */}
+      {/* Top D — arc below the penalty area */}
+      <path d={describeArc(midX, penSpotDist, centreR, 125, 235)} {...sp} />
+      {/* Bottom D — arc above the penalty area */}
+      <path d={describeArc(midX, H - penSpotDist, centreR, -55, 55)} {...sp} />
+
+      {/* ── Corner arcs ── */}
+      {/* Top-left */}
+      <path d={`M 0 ${cornerR} A ${cornerR} ${cornerR} 0 0 1 ${cornerR} 0`} {...sp} />
+      {/* Top-right */}
+      <path d={`M ${W - cornerR} 0 A ${cornerR} ${cornerR} 0 0 1 ${W} ${cornerR}`} {...sp} />
+      {/* Bottom-left */}
+      <path d={`M ${cornerR} ${H} A ${cornerR} ${cornerR} 0 0 1 0 ${H - cornerR}`} {...sp} />
+      {/* Bottom-right */}
+      <path d={`M ${W} ${H - cornerR} A ${cornerR} ${cornerR} 0 0 1 ${W - cornerR} ${H}`} {...sp} />
+
+      {/* ── Edge shadows for depth ── */}
+      <rect x="0" y="0" width={W} height="6" fill={`url(#edge-t-${uid})`} pointerEvents="none" />
+      <rect x="0" y={H - 6} width={W} height="6" fill={`url(#edge-b-${uid})`} pointerEvents="none" />
+
+      {/* ── Desaturate overlay ── */}
       {desaturateOpacity > 0 && (
-        <rect x="0" y="0" width={VBW} height={VBH} fill={`rgba(128,128,128,${desaturateOpacity})`} pointerEvents="none" />
+        <rect x="0" y="0" width={W} height={H} fill={`rgba(128,128,128,${desaturateOpacity})`} pointerEvents="none" />
       )}
-      <rect x="0" y="0" width={VBW} height={VBH} fill={`url(#sw-vignette-${uid})`} pointerEvents="none" />
+
+      {/* ── Vignette ── */}
+      <rect x="0" y="0" width={W} height={H} fill={`url(#vig-${uid})`} pointerEvents="none" />
     </svg>
   );
 };
 
-function polarToCartesian(centerX: number, centerY: number, radius: number, angleInDegrees: number) {
-  const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0;
-  return {
-    x: centerX + (radius * Math.cos(angleInRadians)),
-    y: centerY + (radius * Math.sin(angleInRadians))
-  };
+function polarToCartesian(cx: number, cy: number, r: number, angleDeg: number) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 
-function describeArc(x: number, y: number, radius: number, startAngle: number, endAngle: number) {
-  const start = polarToCartesian(x, y, radius, endAngle);
-  const end = polarToCartesian(x, y, radius, startAngle);
-  const largeArcFlag = endAngle - startAngle <= 180 ? '0' : '1';
-  return [
-    'M', start.x, start.y,
-    'A', radius, radius, 0, largeArcFlag, 0, end.x, end.y,
-  ].join(' ');
+function describeArc(cx: number, cy: number, r: number, startAngle: number, endAngle: number) {
+  const start = polarToCartesian(cx, cy, r, endAngle);
+  const end = polarToCartesian(cx, cy, r, startAngle);
+  const large = endAngle - startAngle <= 180 ? '0' : '1';
+  return `M ${start.x} ${start.y} A ${r} ${r} 0 ${large} 0 ${end.x} ${end.y}`;
 }
 
 export default PitchMarkingsSvg;
