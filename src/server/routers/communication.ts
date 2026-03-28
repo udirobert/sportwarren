@@ -109,7 +109,7 @@ export const communicationRouter = createTRPCRouter({
     }),
 
   triggerTacticalBriefings: adminProcedure
-    .mutation(async ({ _ctx }) => {
+    .mutation(async ({ ctx }) => {
       const telegramService = new TelegramService();
       const tacticalService = new TacticalNotificationService(telegramService);
       
