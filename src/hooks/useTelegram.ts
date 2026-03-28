@@ -140,6 +140,35 @@ export function useTelegram() {
     }
   }), [webApp]);
 
+  const biometricManager = useMemo(() => ({
+    isInited: webApp?.BiometricManager?.isInited || false,
+    isBiometricAvailable: webApp?.BiometricManager?.isBiometricAvailable || false,
+    biometricType: webApp?.BiometricManager?.biometricType || 'unknown',
+    isAccessRequested: webApp?.BiometricManager?.isAccessRequested || false,
+    isAccessGranted: webApp?.BiometricManager?.isAccessGranted || false,
+    init: (): Promise<boolean> => {
+      return new Promise((resolve) => {
+        if (!webApp?.BiometricManager) return resolve(false);
+        webApp.BiometricManager.init(() => resolve(true));
+      });
+    },
+    requestAccess: (reason: string): Promise<boolean> => {
+      return new Promise((resolve) => {
+        if (!webApp?.BiometricManager) return resolve(false);
+        webApp.BiometricManager.requestAccess({ reason }, (granted: boolean) => resolve(granted));
+      });
+    },
+    authenticate: (reason: string): Promise<{ success: boolean; token?: string }> => {
+      return new Promise((resolve) => {
+        if (!webApp?.BiometricManager) return resolve({ success: false });
+        webApp.BiometricManager.authenticate({ reason }, (success: boolean, token?: string) => 
+          resolve({ success, token })
+        );
+      });
+    },
+    openSettings: () => webApp?.BiometricManager?.openSettings(),
+  }), [webApp]);
+
   return {
     webApp,
     isReady,
@@ -158,5 +187,6 @@ export function useTelegram() {
     enableVerticalSwipes,
     shareToStory,
     cloudStorage,
+    biometricManager,
   };
 }
