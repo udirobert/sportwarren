@@ -20,8 +20,8 @@ import { SocketService } from './services/socket.js';
 
 // Advanced services
 import { CommunicationBridge } from './services/communication/bridge.js';
-import { VoiceProcessingService } from './services/ai/voice.js';
-import { ComputerVisionService } from './services/ai/vision.js';
+import { VoiceProcessingService } from '../src/server/services/ai/voice.js';
+import { ComputerVisionService } from '../src/server/services/ai/vision.js';
 import { AlgorandService } from './services/blockchain/algorand.js';
 import { LensService, LensServiceUnavailableError } from './services/communication/lens.js';
 import { EventStreamService } from './services/events/kafka.js';

@@ -1,0 +1,4 @@
+ALTER TABLE "matches"
+ADD COLUMN IF NOT EXISTS "session_id" TEXT,
+ADD COLUMN IF NOT EXISTS "peer_ratings_closed" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN IF NOT EXISTS "peer_ratings_close_at" TIMESTAMP(3);
