@@ -152,30 +152,22 @@ export default function SquadPage() {
     }));
   }, [members, activeSquad]);
 
-  const VALID_FORMATIONS: readonly Formation[] = [
-    '4-4-2', '4-3-3', '4-2-3-1', '4-5-1', '4-1-4-1',
-    '3-5-2', '3-4-3', '5-3-2', '5-4-1', '4-3-1-2',
-    '1-2-1', '1-1-2', '1-3-1', '1-2-2', '1-2-1-1',
-    '1-4-1', '1-3-2', '1-3-1-1', '2-3-1',
-  ];
-
-  const isValidFormation = (f: unknown): f is Formation => {
-    return typeof f === 'string' && VALID_FORMATIONS.includes(f as Formation);
-  };
-
-  const initialTactics: Tactics | undefined = useMemo(() => {
+  const initialTactics: Tactics | undefined = useMemo((): Tactics | undefined => {
     if (!tacticsData) return undefined;
-    const raw = tacticsData as { formation?: unknown; playStyle?: unknown; instructions?: unknown; setPieces?: unknown };
-    if (!isValidFormation(raw.formation)) return undefined;
+    const f = String(tacticsData.formation ?? '');
+    const validSet = new Set([
+      '4-4-2', '4-3-3', '4-2-3-1', '4-5-1', '4-1-4-1',
+      '3-5-2', '3-4-3', '5-3-2', '5-4-1', '4-3-1-2',
+      '1-2-1', '1-1-2', '1-3-1', '1-2-2', '1-2-1-1',
+      '1-4-1', '1-3-2', '1-3-1-1', '2-3-1',
+    ]);
+    if (!validSet.has(f)) return undefined;
+    const data: Record<string, unknown> = tacticsData as Record<string, unknown>;
     return {
-      formation: raw.formation,
-      style: (typeof raw.playStyle === 'string' ? raw.playStyle : 'balanced') as PlayStyle,
-      instructions: (typeof raw.instructions === 'object' && raw.instructions !== null) 
-        ? raw.instructions as TeamInstructions 
-        : { width: 'normal', tempo: 'normal', passing: 'mixed', pressing: 'medium', defensiveLine: 'normal' },
-      setPieces: (typeof raw.setPieces === 'object' && raw.setPieces !== null)
-        ? raw.setPieces as Tactics['setPieces']
-        : { corners: 'near_post', freeKicks: 'shoot', penalties: '' },
+      formation: f as Formation,
+      style: (typeof data.playStyle === 'string' ? data.playStyle : 'balanced') as PlayStyle,
+      instructions: (data.instructions as TeamInstructions) ?? { width: 'normal', tempo: 'normal', passing: 'mixed', pressing: 'medium', defensiveLine: 'normal' },
+      setPieces: (data.setPieces as Tactics['setPieces']) ?? { corners: 'near_post', freeKicks: 'shoot', penalties: '' },
     };
   }, [tacticsData]);
 

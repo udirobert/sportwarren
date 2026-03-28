@@ -522,6 +522,9 @@ export const matchRouter = createTRPCRouter({
         try {
           const { getVeniceClient, VENICE_MODEL_ID } = await import('../../lib/ai/providers/venice');
           const client = getVeniceClient();
+          if (!client) {
+            throw new Error('Venice AI not configured');
+          }
 
           const response = await client.chat.completions.create({
             model: VENICE_MODEL_ID,
