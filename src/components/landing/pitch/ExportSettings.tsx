@@ -26,9 +26,9 @@ export const ExportSettings: React.FC<ExportSettingsProps> = ({
   onExport,
   onCopyLink,
 }) => (
-  <div className="flex items-center gap-2">
+  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 w-full sm:w-auto">
     <select
-      className="rounded-md bg-white/5 border border-white/10 text-white text-[11px] px-2 py-1"
+      className="flex-1 min-w-[96px] sm:flex-none rounded-md bg-white/10 border border-white/15 text-white text-xs px-2 py-1.5"
       value={exportFormat}
       onChange={(e) => onFormatChange((e.target.value as ExportFormat) || 'png')}
       title="Export format (PNG: lossless, WebP: smaller)"
@@ -37,7 +37,7 @@ export const ExportSettings: React.FC<ExportSettingsProps> = ({
       <option value="webp">WebP</option>
     </select>
     <select
-      className="rounded-md bg-white/5 border border-white/10 text-white text-[11px] px-2 py-1"
+      className="flex-1 min-w-[120px] sm:flex-none rounded-md bg-white/10 border border-white/15 text-white text-xs px-2 py-1.5"
       value={exportScope}
       onChange={(e) => onScopeChange((e.target.value as ExportScope) || 'card')}
       title="Export area"
@@ -45,12 +45,12 @@ export const ExportSettings: React.FC<ExportSettingsProps> = ({
       <option value="card">Card only</option>
       <option value="panel">Card + header</option>
     </select>
-    <label className="flex items-center gap-1 text-[11px] text-white/80" title="Higher pixel ratio for crisper export (larger file)">
+    <label className="order-3 sm:order-none flex items-center gap-1 text-xs text-white/90" title="Higher pixel ratio for crisper export (larger file)">
       <input type="checkbox" checked={hdExport} onChange={(e) => onHdChange(e.target.checked)} /> HD
     </label>
     <Button
       variant="outline"
-      className="border-white/10 text-white hover:bg-white/5"
+      className="order-4 sm:order-none border-white/15 text-white hover:bg-white/10 px-3"
       onClick={onExport}
       disabled={isExporting}
       title="Save card"
@@ -59,7 +59,7 @@ export const ExportSettings: React.FC<ExportSettingsProps> = ({
     </Button>
     <Button
       variant="outline"
-      className="border-white/10 text-white hover:bg-white/5 text-[11px]"
+      className="order-5 sm:order-none border-white/15 text-white hover:bg-white/10 text-xs px-3"
       onClick={onCopyLink}
       title="Copy link with current setup"
     >

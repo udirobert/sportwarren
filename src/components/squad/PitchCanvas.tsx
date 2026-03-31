@@ -92,7 +92,7 @@ const DEFAULT_ROLE_GROUP = { ring: '', border: 'border-white/50', label: '' };
 // FIFA standard pitch ratio: 68m width × 105m length = 68:105
 // Using aspect-ratio with max-height ensures proper scaling at all viewport sizes
 const SIZE_CONFIG = {
-  sm: { container: 'aspect-[68/105] max-h-[min(70vh,600px)]', dot: 'w-7 h-7', text: 'text-[8px]', nameText: 'text-[8px]' },
+  sm: { container: 'aspect-[68/105] max-h-[min(70vh,600px)]', dot: 'w-8 h-8', text: 'text-[10px]', nameText: 'text-[10px]' },
   md: { container: 'aspect-[68/105] max-h-[min(75vh,700px)]', dot: 'w-10 h-10', text: 'text-[10px]', nameText: 'text-xs' },
   lg: { container: 'aspect-[68/105] max-h-[min(80vh,800px)]', dot: 'w-12 h-12', text: 'text-xs', nameText: 'text-sm' },
 };
@@ -398,7 +398,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
       {/* Formation Badge */}
       <div className="flex items-center justify-between text-sm">
         <span className="font-medium text-white">{formation}</span>
-        <span className="text-white/80">
+        <span className="text-white/90">
           {assignedCount}/{totalSlots - 1} outfield + GK
         </span>
       </div>
@@ -518,7 +518,7 @@ export const PitchCanvas: React.FC<PitchCanvasProps> = ({
               {/* Player Name (optional) */}
               {showPlayerNames && player && (
                 <div className="absolute top-full left-1/2 transform -translate-x-1/2 mt-1 whitespace-nowrap">
-                  <span className={`${sizeConfig.nameText} font-medium text-white bg-black/60 px-1.5 py-0.5 rounded`}>
+                  <span className={`${sizeConfig.nameText} font-medium text-white bg-black/75 px-1.5 py-0.5 rounded`}>
                     {player.name.split(' ')[0]}
                   </span>
                 </div>

@@ -1842,4 +1842,106 @@ export const squadRouter = createTRPCRouter({
         return [];
       }
     }),
+
+  // ============================================================================
+  // AVAILABILITY MANAGEMENT (Multi-Squad Support)
+  // ============================================================================
+
+  // Get user's availability for a specific squad
+  getMyAvailability: protectedProcedure
+    .input(z.object({ squadId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+      if (!membership) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'You are not a member of this squad' });
+      }
+
+      return ctx.prisma.squadAvailability.findMany({
+        where: { userId: ctx.userId!, squadId: input.squadId },
+        orderBy: { dayOfWeek: 'asc' }
+      });
+    }),
+
+  // Set recurring availability for a squad
+  setAvailability: protectedProcedure
+    .input(z.object({
+      squadId: z.string().min(1),
+      dayOfWeek: z.number().min(1).max(7),
+      timeSlot: z.string().optional(),
+      isAvailable: z.boolean().default(true),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+      if (!membership) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'You are not a member of this squad' });
+      }
+
+      return ctx.prisma.squadAvailability.upsert({
+        where: {
+          userId_squadId_dayOfWeek: {
+            userId: ctx.userId!,
+            squadId: input.squadId,
+            dayOfWeek: input.dayOfWeek
+          }
+        },
+        create: {
+          userId: ctx.userId!,
+          squadId: input.squadId,
+          dayOfWeek: input.dayOfWeek,
+          timeSlot: input.timeSlot,
+          isAvailable: input.isAvailable,
+          notes: input.notes
+        },
+        update: {
+          timeSlot: input.timeSlot,
+          isAvailable: input.isAvailable,
+          notes: input.notes
+        }
+      });
+    }),
+
+  // Remove availability for a squad
+  removeAvailability: protectedProcedure
+    .input(z.object({ squadId: z.string().min(1), dayOfWeek: z.number().min(1).max(7) }))
+    .mutation(async ({ ctx, input }) => {
+      const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+      if (!membership) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'You are not a member of this squad' });
+      }
+
+      return ctx.prisma.squadAvailability.delete({
+        where: {
+          userId_squadId_dayOfWeek: {
+            userId: ctx.userId!,
+            squadId: input.squadId,
+            dayOfWeek: input.dayOfWeek
+          }
+        }
+      });
+    }),
+
+  // Get squad's availability summary (for captains)
+  getSquadAvailabilitySummary: protectedProcedure
+    .input(z.object({ squadId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+      if (!membership) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'You are not a member of this squad' });
+      }
+
+      const availabilities = await ctx.prisma.squadAvailability.findMany({
+        where: { squadId: input.squadId, isAvailable: true },
+        include: { user: { select: { id: true, name: true } } }
+      });
+
+      // Group by day of week
+      const byDay: Record<number, { userId: string; name: string | null; timeSlot: string | null }[]> = {};
+      for (const a of availabilities) {
+        if (!byDay[a.dayOfWeek]) byDay[a.dayOfWeek] = [];
+        byDay[a.dayOfWeek].push({ userId: a.userId, name: a.user.name, timeSlot: a.timeSlot });
+      }
+
+      return byDay;
+    }),
 });

@@ -37,6 +37,10 @@ model User {
   aiMemory         AiMemory?
   squadContexts    SquadPlayerContext[]
   squadMedia       SquadMedia[]
+  
+  // Availability (Multi-squad support)
+  availabilities  SquadAvailability[]
+  matchRsvps      MatchRsvp[]
 
   @@map("users")
 }
@@ -186,6 +190,10 @@ model Squad {
   challengesFrom     MatchChallenge[] @relation("ChallengeFromSquad")
   challengesTo       MatchChallenge[] @relation("ChallengeToSquad")
   sessions           Session[]
+  
+  // Availability & Scheduling (Multi-squad support)
+  availabilities     SquadAvailability[]
+  schedule           SquadSchedule?
 
   // Media (private/squad/public)
   media SquadMedia[]
@@ -521,6 +529,9 @@ model Pitch {
   // History
   challenges MatchChallenge[]
   matches    Match[]
+  
+  // Squad scheduling
+  squadSchedules SquadSchedule[]
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -601,6 +612,7 @@ model Match {
   xpGains       XPGain[]
   peerRatings   PeerRating[]
   motmVotes     MotmVote[]
+  rsvps         MatchRsvp[]
 
   @@map("matches")
 }
@@ -941,6 +953,94 @@ model PredictionBet {
   createdAt DateTime @default(now()) @map("created_at")
   
   @@map("prediction_bets")
+}
+
+// ============================================================================
+// AVAILABILITY & SCHEDULING (Multi-Squad Support)
+// ============================================================================
+
+// Recurring weekly availability - "I play every Tuesday"
+model SquadAvailability {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  squadId   String   @map("squad_id")
+  squad     Squad    @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  
+  // Day of week (ISO: 1=Monday, 7=Sunday)
+  dayOfWeek Int      @map("day_of_week") // 1-7
+  
+  // Time preference
+  timeSlot  String?  // "morning", "afternoon", "evening", "any"
+  
+  // Availability status
+  isAvailable Boolean @default(true) @map("is_available")
+  
+  // Notes (e.g., "only if home game", "after 6pm")
+  notes     String?
+  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  
+  @@unique([userId, squadId, dayOfWeek])
+  @@map("squad_availabilities")
+}
+
+// One-off match RSVP - "I'm playing this Saturday"
+model MatchRsvp {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  matchId   String   @map("match_id")
+  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  
+  // Response status
+  status    String   @default("pending") // "available", "unavailable", "maybe"
+  
+  // Position preference for this match
+  position  String?  // GK, DF, MF, ST, WG, any
+  
+  // Notes (e.g., "might be late", "bringing a friend")
+  notes     String?
+  
+  respondedAt DateTime? @map("responded_at")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  
+  @@unique([userId, matchId])
+  @@map("match_rsvps")
+}
+
+// Squad's default schedule - "We play every Saturday 2pm at XYZ"
+model SquadSchedule {
+  id          String   @id @default(cuid())
+  squadId     String   @unique @map("squad_id")
+  squad       Squad    @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  
+  // Day of week (ISO: 1=Monday, 7=Sunday)
+  dayOfWeek   Int      @map("day_of_week") // 1-7
+  
+  // Default time
+  time        String?  // "14:00", "2pm"
+  
+  // Default location
+  locationId  String?  @map("location_id")
+  location    Pitch?   @relation(fields: [locationId], references: [id])
+  
+  // Recurrence
+  isRecurring Boolean  @default(true) @map("is_recurring")
+  
+  // Active/inactive
+  isActive    Boolean  @default(true) @map("is_active")
+  
+  // Notes
+  notes       String?
+  
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  @@map("squad_schedules")
 }
 
 // ============================================================================
