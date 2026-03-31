@@ -183,6 +183,14 @@ export class TelegramService {
           command: "help",
           description: "Show Telegram commands and linking help",
         },
+        {
+          command: "available",
+          description: "Set your availability for this week's matches",
+        },
+        {
+          command: "myteams",
+          description: "View your squads and set availability",
+        },
       ])
       .catch((error: Error) => {
         console.warn("Failed to register Telegram commands:", error.message);
@@ -265,6 +273,24 @@ export class TelegramService {
 
     this.bot.onText(/\/fixtures/, async (msg) => {
       await this.handleFixturesRequest(msg.chat.id);
+    });
+
+    this.bot.onText(/\/available(?:\s+(.+))?/, async (msg, match) => {
+      const chatId = msg.chat.id;
+      const args = match?.[1]?.trim();
+      await this.handleAvailability(chatId, args);
+    });
+
+    this.bot.onText(/\/myteams/, async (msg) => {
+      const chatId = msg.chat.id;
+      await this.handleMyTeams(chatId);
+    });
+
+    // Captain command - view squad availability for this week
+    this.bot.onText(/\/roster(?:\s+(.+))?/, async (msg, match) => {
+      const chatId = msg.chat.id;
+      const args = match?.[1]?.trim(); // Optional day filter
+      await this.handleRoster(chatId, args);
     });
 
     this.bot.onText(/\/fee(?:\s+(.+))?/, async (msg, match) => {
@@ -1551,6 +1577,351 @@ export class TelegramService {
       .join("\n\n");
 
     await this.sendMarkdown(chatId, `*Upcoming fixtures*\n\n${message}`);
+  }
+
+  /**
+   * Handle /available command - set user availability for upcoming matches
+   */
+  private async handleAvailability(chatId: number, args?: string): Promise<void> {
+    // Get user identity (for multi-squad users)
+    const platformIdentity = await findPlatformIdentityByChatId(prisma, String(chatId));
+    if (!platformIdentity) {
+      await this.sendMarkdown(
+        chatId,
+        "⚠️ *Not linked to SportWarren.*\n\nUse /start to link your Telegram account first."
+      );
+      return;
+    }
+
+    // Get all squads the user is a member of
+    const memberships = await getUserActiveMemberships(prisma, platformIdentity.userId);
+    
+    if (memberships.length === 0) {
+      await this.sendMarkdown(
+        chatId,
+        "⚠️ *No squads found.*\n\nYou haven't joined any squads yet. Open the Mini App to create or join a squad."
+      );
+      return;
+    }
+
+    // Parse availability: /available yes/no/[day] for specific squad
+    // Format: /available [yes|no|maybe] [squad-name]
+    // Example: /available yes Tuesday League
+    const argsParts = args?.trim().split(/\s+/) || [];
+    let availability: "available" | "unavailable" | "maybe" | null = null;
+    let squadFilter: string | null = null;
+
+    if (argsParts.length > 0) {
+      const firstArg = argsParts[0].toLowerCase();
+      if (["yes", "y", "available"].includes(firstArg)) {
+        availability = "available";
+      } else if (["no", "n", "unavailable"].includes(firstArg)) {
+        availability = "unavailable";
+      } else if (["maybe", "m"].includes(firstArg)) {
+        availability = "maybe";
+      }
+      
+      if (argsParts.length > 1) {
+        squadFilter = argsParts.slice(1).join(" ");
+      }
+    }
+
+    // Filter memberships if squad specified
+    let targetSquads = memberships;
+    if (squadFilter) {
+      targetSquads = memberships.filter((m: typeof memberships[number]) => 
+        m.squad.name.toLowerCase().includes(squadFilter!.toLowerCase())
+      );
+      
+      if (targetSquads.length === 0) {
+        await this.sendMarkdown(
+          chatId,
+          `⚠️ *Squad not found: "${squadFilter}"*\n\nYour squads: ${memberships.map((m: typeof memberships[number]) => m.squad.name).join(", ")}`
+        );
+        return;
+      }
+    }
+
+    if (!availability) {
+      // Show current availability status
+      const lines: string[] = ["*Your Availability*\n"];
+      
+      for (const membership of targetSquads) {
+        // TODO: Query availability from SquadSchedule or PlayerAvailability
+        lines.push(`• ${membership.squad.name}: _Not set_`);
+      }
+      
+      lines.push("\n📝 *Set availability:*");
+      lines.push("/available yes - Mark as available for all squads");
+      lines.push("/available no [squad-name] - Mark unavailable");
+      lines.push("/available maybe Tuesday - Uncertain");
+      
+      await this.sendMarkdown(chatId, lines.join("\n"));
+      return;
+    }
+
+    // Set availability for target squads
+    // Query each squad's schedule to get their playing day
+    const results: string[] = [];
+    
+    for (const membership of targetSquads) {
+      // Get the squad's schedule
+      const schedule = await prisma.squadSchedule.findUnique({
+        where: { squadId: membership.squad.id },
+      });
+      
+      const dayOfWeek = schedule?.dayOfWeek || 0; // 0 means no schedule set
+      const dayName = dayOfWeek === 1 ? "Monday" : dayOfWeek === 2 ? "Tuesday" : 
+                      dayOfWeek === 3 ? "Wednesday" : dayOfWeek === 4 ? "Thursday" :
+                      dayOfWeek === 5 ? "Friday" : dayOfWeek === 6 ? "Saturday" : 
+                      dayOfWeek === 7 ? "Sunday" : "Unknown";
+      
+      // Upsert availability record
+      const isAvailableStatus = availability === "available";
+      
+      await prisma.squadAvailability.upsert({
+        where: {
+          userId_squadId_dayOfWeek: {
+            userId: platformIdentity.userId,
+            squadId: membership.squad.id,
+            dayOfWeek,
+          },
+        },
+        create: {
+          userId: platformIdentity.userId,
+          squadId: membership.squad.id,
+          dayOfWeek,
+          isAvailable: isAvailableStatus,
+          timeSlot: "any",
+        },
+        update: {
+          isAvailable: isAvailableStatus,
+          timeSlot: "any",
+        },
+      });
+      
+      results.push(`${membership.squad.name} (${dayName})`);
+    }
+
+    const emoji = availability === "available" ? "✅" : availability === "unavailable" ? "❌" : "🤔";
+    
+    // Check for conflicts with other squads
+    if (targetSquads.length > 1 && availability === "available") {
+      // Find other squads user is in but didn't set availability for
+      const allMySquads = memberships.map((m: typeof memberships[number]) => m.squad.id);
+      const targetSquadIds = targetSquads.map((m: typeof memberships[number]) => m.squad.id);
+      
+      const otherSquads = memberships.filter(
+        (m: typeof memberships[number]) => !targetSquadIds.includes(m.squad.id)
+      );
+      
+      if (otherSquads.length > 0) {
+        const conflictMsg = `\n\n⚠️ *Note:* You have ${otherSquads.length} other squad(s): ${otherSquads.map((m: typeof memberships[number]) => m.squad.name).join(", ")}. Use /available ${availability} [squad-name] to set availability for them too.`;
+        
+        await this.sendMarkdown(
+          chatId,
+          `${emoji} *Availability set:*\n${results.join("\n")}\n\nStatus: ${availability}${conflictMsg}`
+        );
+        return;
+      }
+    }
+    
+    await this.sendMarkdown(
+      chatId,
+      `${emoji} *Availability set:*\n${results.join("\n")}\n\nStatus: ${availability}\n\nThis applies to your regular ${results.length > 1 ? "matches" : "match"} this week.`
+    );
+  }
+
+  /**
+   * Handle /myteams command - view all squads and their status
+   */
+  private async handleMyTeams(chatId: number): Promise<void> {
+    const platformIdentity = await findPlatformIdentityByChatId(prisma, String(chatId));
+    
+    if (!platformIdentity) {
+      await this.sendMarkdown(
+        chatId,
+        "⚠️ *Not linked to SportWarren.*\n\nUse /start to link your Telegram account first."
+      );
+      return;
+    }
+
+    const memberships = await getUserActiveMemberships(prisma, platformIdentity.userId);
+    
+    if (memberships.length === 0) {
+      await this.sendMarkdown(
+        chatId,
+        "⚠️ *No squads found.*\n\nYou haven't joined any squads yet. Open the Mini App to create or join a squad."
+      );
+      return;
+    }
+
+    // Check which squads this chat is linked to
+    const chatSquadIds = new Set<string>();
+    const squadGroup = await findSquadGroupByChatId(prisma, String(chatId));
+    if (squadGroup) {
+      chatSquadIds.add(squadGroup.squadId);
+    }
+
+    const lines: string[] = ["*Your Squads*\n"];
+    
+    for (const membership of memberships) {
+      const isLinked = chatSquadIds.has(membership.squad.id);
+      const role = membership.role;
+      const roleEmoji = role === "captain" ? "👑" : role === "admin" ? "⭐" : "👤";
+      
+      lines.push(`${roleEmoji} *${membership.squad.name}*`);
+      lines.push(`   Role: ${role}`);
+      lines.push(`   Linked: ${isLinked ? "✅ This chat" : "❌ Not linked"}`);
+      
+      // TODO: Show availability status for this week
+      lines.push("");
+    }
+
+    lines.push("📝 *Commands:*");
+    lines.push("/available yes - Set availability for upcoming matches");
+    lines.push("/available no [squad] - Mark unavailable");
+    lines.push("/available maybe [squad] - Not sure yet");
+    
+    if (memberships.length > 1) {
+      lines.push("\n💡 *Tip:* You can specify a squad: /available yes Tuesday League");
+    }
+
+    await this.sendMarkdown(chatId, lines.join("\n"));
+  }
+
+  /**
+   * Handle /roster command - captains view squad availability
+   */
+  private async handleRoster(chatId: number, dayFilter?: string): Promise<void> {
+    // Get the squad group (chat must be linked to a squad)
+    const squadGroup = await findSquadGroupByChatId(prisma, String(chatId));
+    
+    if (!squadGroup) {
+      await this.sendMarkdown(
+        chatId,
+        "⚠️ *Not linked to a squad.*\n\nThis chat isn't linked to any squad. Ask your captain to link this group from the Mini App."
+      );
+      return;
+    }
+
+    // Check if user is a captain/admin of this squad
+    const platformIdentity = await findPlatformIdentityByChatId(prisma, String(chatId));
+    if (!platformIdentity) {
+      await this.sendMarkdown(chatId, "⚠️ *Not linked.*\n\nUse /start to link your account.");
+      return;
+    }
+
+    const memberships = await getUserActiveMemberships(prisma, platformIdentity.userId);
+    const membership = memberships.find((m: typeof memberships[number]) => m.squad.id === squadGroup.squadId);
+    
+    if (!membership || !["captain", "admin"].includes(membership.role)) {
+      await this.sendMarkdown(
+        chatId,
+        "⛔ *Access denied.*\n\nOnly captains and admins can view the roster."
+      );
+      return;
+    }
+
+    const squad = squadGroup.squad;
+    
+    // Get squad schedule to know which day to show
+    const schedule = await prisma.squadSchedule.findUnique({
+      where: { squadId: squad.id },
+    });
+
+    const dayOfWeek = schedule?.dayOfWeek || 0;
+    const dayName = dayOfWeek === 1 ? "Monday" : dayOfWeek === 2 ? "Tuesday" : 
+                    dayOfWeek === 3 ? "Wednesday" : dayOfWeek === 4 ? "Thursday" :
+                    dayOfWeek === 5 ? "Friday" : dayOfWeek === 6 ? "Saturday" : 
+                    dayOfWeek === 7 ? "Sunday" : null;
+
+    // If dayFilter provided, override
+    let targetDay = dayOfWeek;
+    if (dayFilter) {
+      const dayMap: Record<string, number> = {
+        monday: 1, tuesday: 2, wednesday: 3, thursday: 4,
+        friday: 5, saturday: 6, sunday: 7,
+      };
+      targetDay = dayMap[dayFilter.toLowerCase()] || dayOfWeek;
+    }
+
+    if (!targetDay) {
+      await this.sendMarkdown(
+        chatId,
+        `⚠️ No schedule set for this squad.\n\nAsk your captain to set up the squad schedule in Settings.`
+      );
+      return;
+    }
+
+    // Get all squad members with their availability for this day
+    const members = await prisma.squadMember.findMany({
+      where: { squadId: squad.id },
+      include: {
+        user: {
+          include: {
+            // Get availability for the target day
+            availabilities: {
+              where: { dayOfWeek: targetDay },
+            },
+          },
+        },
+      },
+    });
+
+    // Categorize members
+    const available: string[] = [];
+    const unavailable: string[] = [];
+    const notSet: string[] = [];
+
+    for (const member of members) {
+      const availability = member.user.availabilities[0];
+      const name = member.user.name || `User ${member.userId.slice(0, 6)}`;
+      
+      if (!availability) {
+        notSet.push(name);
+      } else if (availability.isAvailable) {
+        available.push(name);
+      } else {
+        unavailable.push(name);
+      }
+    }
+
+    const targetDayName = targetDay === 1 ? "Monday" : targetDay === 2 ? "Tuesday" : 
+                          targetDay === 3 ? "Wednesday" : targetDay === 4 ? "Thursday" :
+                          targetDay === 5 ? "Friday" : targetDay === 6 ? "Saturday" : "Sunday";
+
+    // Build response
+    const lines: string[] = [];
+    lines.push(`*📋 Roster for ${squad.name}*`);
+    lines.push(`📅 ${targetDayName}${dayName && targetDay !== dayOfWeek ? ` (all: ${dayName})` : ""}`);
+    lines.push("");
+
+    if (available.length > 0) {
+      lines.push(`✅ *Available (${available.length}):*`);
+      lines.push(available.map(n => `• ${n}`).join("\n"));
+      lines.push("");
+    }
+
+    if (unavailable.length > 0) {
+      lines.push(`❌ *Unavailable (${unavailable.length}):*`);
+      lines.push(unavailable.map(n => `• ${n}`).join("\n"));
+      lines.push("");
+    }
+
+    if (notSet.length > 0) {
+      lines.push(`⚪ *Not set (${notSet.length}):*`);
+      lines.push(notSet.map(n => `• ${n}`).join("\n"));
+      lines.push("");
+    }
+
+    lines.push("---");
+    lines.push(`*Total:* ${members.length} members`);
+    lines.push(`*Available:* ${available.length} | *Unavailable:* ${unavailable.length} | *Not set:* ${notSet.length}`);
+    lines.push("");
+    lines.push("📝 _Use /available yes in your chat to mark yourself available_");
+
+    await this.sendMarkdown(chatId, lines.join("\n"));
   }
 
   private async handleFeeProposal(
