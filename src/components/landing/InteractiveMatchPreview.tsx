@@ -233,23 +233,24 @@ export const InteractiveMatchPreview: React.FC = () => {
   }, [supportsFs]);
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-1 sm:px-0">
+    <div className="w-full max-w-4xl mx-auto px-2 sm:px-0">
       <Card className="relative bg-gray-950/80 border-white/[0.08] backdrop-blur-xl overflow-hidden shadow-2xl shadow-green-500/5">
         <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-green-500/60 to-transparent" />
-        <div className="grid md:grid-cols-2 gap-0">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
           {/* Left: Pitch Preview */}
-          <div ref={leftPanelRef} className="p-5 sm:p-6 border-b md:border-b-0 md:border-r border-white/[0.06]">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-green-400 flex items-center gap-2">
-                <Shield className="w-4 h-4" />
-                Tactical Setup
+          <div ref={leftPanelRef} className="p-3 sm:p-6 border-b md:border-b-0 md:border-r border-white/[0.06]">
+            <div className="flex items-center justify-between mb-3 sm:mb-4">
+              <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-green-400 flex items-center gap-1.5 sm:gap-2">
+                <Shield className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Tactical Setup</span>
+                <span className="sm:hidden">Setup</span>
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
               </h3>
               <div className="flex items-center gap-0.5 bg-white/[0.04] rounded-lg p-0.5">
                 <Button variant="ghost" size="sm" onClick={prevFormation} className="h-7 w-7 p-0 text-white/70 hover:text-white hover:bg-white/10 rounded-md">
                   <ChevronLeft className="w-3.5 h-3.5" />
                 </Button>
-                <span className="text-xs font-mono font-bold text-white w-14 text-center tabular-nums">{formation}</span>
+                <span className="text-xs font-mono font-bold text-white w-12 sm:w-14 text-center tabular-nums">{formation}</span>
                 <Button variant="ghost" size="sm" onClick={nextFormation} className="h-7 w-7 p-0 text-white/70 hover:text-white hover:bg-white/10 rounded-md">
                   <ChevronRight className="w-3.5 h-3.5" />
                 </Button>
@@ -257,14 +258,14 @@ export const InteractiveMatchPreview: React.FC = () => {
             </div>
 
             {/* Squad Size — Segmented Pills */}
-            <div className="mb-4">
-              <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/50 mb-1.5 block">Squad Size</label>
+            <div className="mb-3 sm:mb-4">
+              <label className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] text-white/50 mb-1.5 block">Squad Size</label>
               <div className="inline-flex bg-white/[0.04] rounded-lg p-0.5 gap-0.5">
                 {SQUAD_SIZES.map((size) => (
                   <button
                     key={size}
                     onClick={() => handleSquadSizeChange(size)}
-                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                    className={`px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-[10px] sm:text-xs font-bold transition-all ${
                       squadSize === size
                         ? 'bg-green-500/25 text-green-300 shadow-sm shadow-green-500/20'
                         : 'text-white/40 hover:text-white/70'
@@ -308,28 +309,29 @@ export const InteractiveMatchPreview: React.FC = () => {
             )}
             
             {/* AI Insight — Commentator Ticker */}
-            <div className="mt-4 rounded-xl overflow-hidden border border-green-500/20 bg-gradient-to-r from-green-500/10 via-green-500/5 to-emerald-500/10">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-green-500/10 border-b border-green-500/15">
-                <Sparkles className="w-3.5 h-3.5 text-green-400" />
-                <span className="text-[11px] font-black uppercase tracking-[0.15em] text-green-400">AI Insight</span>
+            <div className="mt-3 sm:mt-4 rounded-xl overflow-hidden border border-green-500/20 bg-gradient-to-r from-green-500/10 via-green-500/5 to-emerald-500/10">
+              <div className="flex items-center gap-2 px-2 sm:px-3 py-1.5 bg-green-500/10 border-b border-green-500/15">
+                <Sparkles className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-green-400" />
+                <span className="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.15em] text-green-400">AI Insight</span>
                 <span className="ml-auto w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
               </div>
-              <p className="px-3 py-2.5 text-sm text-green-100/90 font-medium leading-relaxed">{aiInsight}</p>
+              <p className="px-2 sm:px-3 py-2 sm:py-2.5 text-xs sm:text-sm text-green-100/90 font-medium leading-relaxed">{aiInsight}</p>
             </div>
           </div>
 
           {/* Right: Personalization & Share */}
-          <div className="p-5 md:p-6 flex flex-col justify-between">
+          <div className="p-3 md:p-6 flex flex-col justify-between">
             <div>
-              <h3 className="text-xs font-black uppercase tracking-[0.2em] text-blue-400 flex items-center gap-2 mb-5">
-                <Zap className="w-4 h-4" />
-                Personalize Tactics
+              <h3 className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-blue-400 flex items-center gap-1.5 sm:gap-2 mb-4 sm:mb-5">
+                <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Personalize Tactics</span>
+                <span className="sm:hidden">Personalize</span>
               </h3>
 
-              <div className="space-y-5">
+              <div className="space-y-4 sm:space-y-5">
                 {/* Play Style */}
                 <div>
-                  <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/50 block mb-2">Play Style</label>
+                  <label className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] text-white/50 block mb-2">Play Style</label>
                   <div className="grid grid-cols-2 gap-2">
                     {PLAY_STYLES.map((style) => (
                       <button
@@ -338,7 +340,7 @@ export const InteractiveMatchPreview: React.FC = () => {
                           setPlayStyle(style);
                           trackFeatureUsed('tactics_preview_change', { type: 'playStyle', value: style });
                         }}
-                        className={`relative px-3 py-2.5 rounded-xl border text-left transition-all overflow-hidden ${
+                        className={`relative px-2 sm:px-3 py-2 sm:py-2.5 rounded-xl border text-left transition-all overflow-hidden ${
                           playStyle === style 
                             ? 'bg-blue-500/15 border-blue-400/40 text-white ring-1 ring-blue-400/30 shadow-lg shadow-blue-500/10' 
                             : 'bg-white/[0.04] border-white/[0.08] text-white/60 hover:border-white/20 hover:text-white/80 hover:bg-white/[0.06]'
@@ -347,8 +349,8 @@ export const InteractiveMatchPreview: React.FC = () => {
                         {playStyle === style && (
                           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
                         )}
-                        <div className="text-xs font-bold capitalize">{style.replace('_', ' ')}</div>
-                        <div className="text-[11px] text-white/40 mt-0.5 truncate">{PLAY_STYLE_LABELS[style]?.name}</div>
+                        <div className="text-[10px] sm:text-xs font-bold capitalize">{style.replace('_', ' ')}</div>
+                        <div className="text-[9px] sm:text-[11px] text-white/40 mt-0.5 truncate">{PLAY_STYLE_LABELS[style]?.name}</div>
                       </button>
                     ))}
                   </div>
@@ -356,13 +358,13 @@ export const InteractiveMatchPreview: React.FC = () => {
 
                 {/* Pitch Theme */}
                 <div>
-                  <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/50 block mb-2">Pitch Theme</label>
+                  <label className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] text-white/50 block mb-2">Pitch Theme</label>
                   <div className="grid grid-cols-2 gap-2">
                     {PITCH_THEMES.map((pt) => (
                       <button
                         key={pt.value}
                         onClick={() => setPitchTheme(pt.value)}
-                        className={`relative px-3 py-2.5 rounded-xl border text-left transition-all overflow-hidden ${
+                        className={`relative px-2 sm:px-3 py-2 sm:py-2.5 rounded-xl border text-left transition-all overflow-hidden ${
                           pitchTheme === pt.value 
                             ? 'border-blue-400/40 ring-1 ring-blue-400/30 shadow-lg shadow-blue-500/10' 
                             : 'bg-white/[0.04] border-white/[0.08] hover:border-white/20 hover:bg-white/[0.06]'
@@ -371,8 +373,8 @@ export const InteractiveMatchPreview: React.FC = () => {
                         {pitchTheme === pt.value && (
                           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
                         )}
-                        <div className={`text-xs font-bold ${pitchTheme === pt.value ? 'text-white' : 'text-white/60'}`}>{pt.label}</div>
-                        <div className={`h-3 rounded-md bg-gradient-to-r ${pt.color} mt-1.5 ${pitchTheme === pt.value ? 'opacity-100' : 'opacity-50'}`} />
+                        <div className={`text-[10px] sm:text-xs font-bold ${pitchTheme === pt.value ? 'text-white' : 'text-white/60'}`}>{pt.label}</div>
+                        <div className={`h-2 sm:h-3 rounded-md bg-gradient-to-r ${pt.color} mt-1.5 ${pitchTheme === pt.value ? 'opacity-100' : 'opacity-50'}`} />
                       </button>
                     ))}
                   </div>
@@ -380,8 +382,8 @@ export const InteractiveMatchPreview: React.FC = () => {
 
                 {/* Squad Identity */}
                 <div>
-                  <label className="text-[11px] font-bold uppercase tracking-[0.15em] text-white/50 block mb-2">Squad Identity</label>
-                  <div className="flex gap-3">
+                  <label className="text-[10px] sm:text-[11px] font-bold uppercase tracking-[0.15em] text-white/50 block mb-2">Squad Identity</label>
+                  <div className="flex gap-2 sm:gap-3">
                     {SQUAD_COLORS.map((color) => (
                       <button 
                         key={color}
@@ -389,7 +391,7 @@ export const InteractiveMatchPreview: React.FC = () => {
                           setPrimaryColor(color);
                           trackFeatureUsed('tactics_preview_change', { type: 'color', value: color });
                         }}
-                        className={`relative w-9 h-9 md:w-7 md:h-7 rounded-full transition-all hover:scale-110 ${
+                        className={`relative w-8 h-8 sm:w-9 sm:h-9 md:w-7 md:h-7 rounded-full transition-all hover:scale-110 ${
                           primaryColor === color ? 'ring-2 ring-white ring-offset-2 ring-offset-gray-950 scale-110' : 'ring-1 ring-white/20'
                         }`}
                         style={{ backgroundColor: color }}
@@ -401,20 +403,20 @@ export const InteractiveMatchPreview: React.FC = () => {
             </div>
 
             {/* Share & Export */}
-            <div className="mt-6 md:mt-8 space-y-3">
-              <div className="flex gap-2">
+            <div className="mt-4 sm:mt-6 md:mt-8 space-y-2 sm:space-y-3">
+              <div className="flex gap-1.5 sm:gap-2">
                 <Button 
-                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 border-0 font-bold"
+                  className="flex-1 bg-gradient-to-r from-green-500 to-emerald-600 border-0 font-bold text-xs sm:text-sm py-2 sm:py-3"
                   onClick={handleShare}
                 >
                   <AnimatePresence mode="wait">
                     {showShareSuccess ? (
                       <motion.div key="success" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="flex items-center">
-                        <Check className="w-4 h-4 mr-2" /> Link Copied
+                        <Check className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="hidden sm:inline">Link Copied</span>
                       </motion.div>
                     ) : (
                       <motion.div key="share" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="flex items-center">
-                        <Share2 className="w-4 h-4 mr-2" /> Share Tactics
+                        <Share2 className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" /> <span className="hidden sm:inline">Share Tactics</span>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -432,41 +434,41 @@ export const InteractiveMatchPreview: React.FC = () => {
                   })}
                   onCopyLink={handleCopyLink}
                 />
-                <Button variant="outline" className="border-white/10 text-white hover:bg-white/5" onClick={toggleFullscreen}>
+                <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 p-2" onClick={toggleFullscreen}>
                   {isFs ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </Button>
               </div>
-              <p className="text-[10px] text-center text-white/90">Share as image or link to your squad group chat</p>
-              <div className="mt-1 flex items-center justify-center gap-3">
-                <span className="text-[10px] text-white/80">Tip: PNG = lossless. WebP = smaller, widely supported.</span>
+              <p className="text-[9px] sm:text-[10px] text-center text-white/90">Share as image or link to your squad group chat</p>
+              <div className="mt-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3">
+                <span className="text-[9px] sm:text-[10px] text-white/80 hidden sm:inline">Tip: PNG = lossless. WebP = smaller, widely supported.</span>
                 {personalization.blurFaces && (
-                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-200">
-                    <EyeOff className="h-3 w-3" /> Faces blurred
+                  <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold text-emerald-200">
+                    <EyeOff className="h-2 w-2 sm:h-3 sm:w-3" /> Faces blurred
                   </span>
                 )}
               </div>
-              <div className="flex items-center justify-center gap-2">
-                <Button variant="ghost" className="text-xs text-white hover:bg-white/10" onClick={() => setShowEditor(true)}>
-                  <UserPlus className="w-3 h-3 mr-1" /> Personalize: Names & Faces
+              <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-2">
+                <Button variant="ghost" className="text-[10px] sm:text-xs text-white hover:bg-white/10 py-1 sm:py-2" onClick={() => setShowEditor(true)}>
+                  <UserPlus className="w-3 h-3 mr-1" /> <span className="hidden sm:inline">Personalize: Names & Faces</span>
                 </Button>
-                <Button variant="ghost" className="text-xs text-white/70 hover:bg-white/10" onClick={personalization.resetAllFormations}>
+                <Button variant="ghost" className="text-[10px] sm:text-xs text-white/70 hover:bg-white/10 py-1 sm:py-2" onClick={personalization.resetAllFormations}>
                   Reset All
                 </Button>
                 {personalization.unlocked && (
-                  <label className="flex items-center gap-2 text-[11px] text-gray-300">
-                    <input type="checkbox" checked={personalization.showNames} onChange={(e) => personalization.setShowNames(e.target.checked)} /> Show names on card
+                  <label className="flex items-center gap-1 sm:gap-2 text-[9px] sm:text-[11px] text-gray-300">
+                    <input type="checkbox" checked={personalization.showNames} onChange={(e) => personalization.setShowNames(e.target.checked)} /> <span className="hidden sm:inline">Show names on card</span>
                   </label>
                 )}
               </div>
               {personalization.unlocked && (
-                <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
-                  <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[11px]"
+                <div className="mt-1 sm:mt-2 flex flex-wrap items-center justify-center gap-1 sm:gap-2">
+                  <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[9px] sm:text-[11px] px-2 py-1"
                     onClick={() => shareWithTemporaryState({ showNames: false }, 'clean')}>Share Clean</Button>
-                  <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[11px]"
+                  <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[9px] sm:text-[11px] px-2 py-1"
                     onClick={() => shareWithTemporaryState({ showNames: true }, 'names')}>Share + Names</Button>
-                  <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[11px]"
+                  <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[9px] sm:text-[11px] px-2 py-1"
                     onClick={() => shareWithTemporaryState({ showNames: true, blurFaces: true }, 'names_blur')}>Share + Names + Blur</Button>
-                  <Button variant="outline" className="border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 text-[11px]"
+                  <Button variant="outline" className="border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 text-[9px] sm:text-[11px] px-2 py-1"
                     onClick={() => setShowSquadModal(true)}>Create Squad</Button>
                 </div>
               )}
@@ -476,36 +478,36 @@ export const InteractiveMatchPreview: React.FC = () => {
       </Card>
       
       {/* Viral Loop Note */}
-      <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-4 text-xs text-gray-400">
+      <div className="mt-3 sm:mt-4 flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-400">
         <div className="flex items-center gap-2">
-          <div className="flex -space-x-2">
+          <div className="flex -space-x-1.5 sm:-space-x-2">
             {DEMO_INITIALS.map((initials, i) => (
-              <div key={i} className="w-6 h-6 rounded-full border border-gray-900 bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-[8px] font-bold text-white shadow-sm">
+              <div key={i} className="w-5 h-5 sm:w-6 sm:h-6 rounded-full border border-gray-900 bg-gradient-to-br from-gray-700 to-gray-800 flex items-center justify-center text-[6px] sm:text-[8px] font-bold text-white shadow-sm">
                 {initials}
               </div>
             ))}
           </div>
           <span className="animate-pulse flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
-            Recently built by Sunday League stars
+            <span className="hidden sm:inline">Recently built by Sunday League stars</span>
           </span>
         </div>
         <div className="h-4 w-px bg-white/10 hidden sm:block"></div>
-        <span>{squadCount !== null ? `Join ${squadCount}+ squads using SportWarren` : 'Join squads using SportWarren'}</span>
+        <span>{squadCount !== null ? `Join ${squadCount}+ squads` : 'Join squads'}</span>
       </div>
 
       {/* Quick Guide */}
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="mt-4 sm:mt-8 grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4">
         {QUICK_GUIDE_STEPS.map((item, i) => (
-          <div key={i} className="bg-white/5 border border-white/5 rounded-xl p-3 flex items-start gap-3">
-            <div className="mt-1">
-              {i === 0 && <Shield className="w-4 h-4 text-green-400" />}
-              {i === 1 && <Zap className="w-4 h-4 text-blue-400" />}
-              {i === 2 && <Share2 className="w-4 h-4 text-purple-400" />}
+          <div key={i} className="bg-white/5 border border-white/5 rounded-xl p-2 sm:p-3 flex items-start gap-2 sm:gap-3">
+            <div className="mt-0.5 sm:mt-1">
+              {i === 0 && <Shield className="w-3 h-3 sm:w-4 sm:h-4 text-green-400" />}
+              {i === 1 && <Zap className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />}
+              {i === 2 && <Share2 className="w-3 h-3 sm:w-4 sm:h-4 text-purple-400" />}
             </div>
             <div>
-              <div className="text-[11px] font-bold text-white uppercase tracking-wider">{item.title}</div>
-              <div className="text-[10px] text-gray-400 leading-tight">{item.text}</div>
+              <div className="text-[10px] sm:text-[11px] font-bold text-white uppercase tracking-wider">{item.title}</div>
+              <div className="text-[9px] sm:text-[10px] text-gray-400 leading-tight">{item.text}</div>
             </div>
           </div>
         ))}

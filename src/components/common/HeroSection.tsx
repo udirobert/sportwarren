@@ -124,27 +124,27 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
           ></div>
         </div>
 
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <h1 className="text-4xl md:text-6xl lg:text-7xl font-black mb-4 leading-tight">
+        <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-12 sm:py-20 text-center">
+          <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black mb-3 sm:mb-4 leading-tight">
             <span className="block text-white">Your Squad,</span>
             <span className="block bg-gradient-to-r from-green-400 via-emerald-500 to-green-600 bg-clip-text text-transparent">
               Tactically Elevated
             </span>
           </h1>
 
-          <p className="text-lg text-gray-300 mb-8 max-w-2xl mx-auto">
+          <p className="text-sm sm:text-base text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto">
             Design your DNA. Simulate tactics. Dominate the pitch. 
             <span className="hidden md:inline"> The ultimate tactical command center for your real-world squad.</span>
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
             <button
               onClick={onGetStarted}
-              className="group relative inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
+              className="group relative inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
             >
-              <Zap className="w-5 h-5 mr-2" aria-hidden="true" />
+              <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
               {journeyContent.hero.primaryCtaLabel}
-              <ArrowRight className="w-5 h-5 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
             </button>
           </div>
 
@@ -216,44 +216,44 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
           {hasAccount && <div className="mb-16" />}
 
           {stats.totalPlayers > 0 || (stats.waitlistTotal && stats.waitlistTotal > 0) ? (
-            <div className="flex flex-wrap items-center justify-center gap-8 p-6 border border-white/5 rounded-2xl bg-white/2">
+            <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 p-4 sm:p-6 border border-white/5 rounded-2xl bg-white/2">
               <div className="flex items-center space-x-2 group">
-                <div className="w-10 h-10 rounded-full bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Users className="w-5 h-5 text-green-400" aria-hidden="true" />
+                <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Users className="w-4 sm:w-5 h-4 sm:h-5 text-green-400" aria-hidden="true" />
                 </div>
                 <div className="text-left">
-                  <div className="text-2xl font-bold text-white">{stats.totalPlayers.toLocaleString()}</div>
-                  <div className="text-xs text-gray-400">Players</div>
+                  <div className="text-lg sm:text-2xl font-bold text-white">{stats.totalPlayers.toLocaleString()}</div>
+                  <div className="text-[10px] sm:text-xs text-gray-400">Players</div>
                 </div>
               </div>
               <div className="flex items-center space-x-2 group">
-                <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Trophy className="w-5 h-5 text-blue-400" aria-hidden="true" />
+                <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-blue-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Trophy className="w-4 sm:w-5 h-4 sm:h-5 text-blue-400" aria-hidden="true" />
                 </div>
                 <div className="text-left">
-                  <div className="text-2xl font-bold text-white">{stats.totalMatches.toLocaleString()}</div>
-                  <div className="text-xs text-gray-400">Matches</div>
+                  <div className="text-lg sm:text-2xl font-bold text-white">{stats.totalMatches.toLocaleString()}</div>
+                  <div className="text-[10px] sm:text-xs text-gray-400">Matches</div>
                 </div>
               </div>
               {stats.totalAgents > 0 && (
                 <div className="flex items-center space-x-2 group">
-                  <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Sparkles className="w-5 h-5 text-purple-400" aria-hidden="true" />
+                  <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Sparkles className="w-4 sm:w-5 h-4 sm:h-5 text-purple-400" aria-hidden="true" />
                   </div>
                   <div className="text-left">
-                    <div className="text-2xl font-bold text-white">{stats.totalAgents.toLocaleString()}</div>
-                    <div className="text-xs text-gray-400">AI Agents</div>
+                    <div className="text-lg sm:text-2xl font-bold text-white">{stats.totalAgents.toLocaleString()}</div>
+                    <div className="text-[10px] sm:text-xs text-gray-400">AI Agents</div>
                   </div>
                 </div>
               )}
               {stats.waitlistTotal && stats.waitlistTotal > 0 && (
                 <div className="flex items-center space-x-2 group">
-                  <div className="w-10 h-10 rounded-full bg-amber-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Timer className="w-5 h-5 text-amber-300" aria-hidden="true" />
+                  <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-amber-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Timer className="w-4 sm:w-5 h-4 sm:h-5 text-amber-300" aria-hidden="true" />
                   </div>
                   <div className="text-left">
-                    <div className="text-2xl font-bold text-white">{stats.waitlistTotal.toLocaleString()}</div>
-                    <div className="text-xs text-gray-400">On Waitlist</div>
+                    <div className="text-lg sm:text-2xl font-bold text-white">{stats.waitlistTotal.toLocaleString()}</div>
+                    <div className="text-[10px] sm:text-xs text-gray-400">On Waitlist</div>
                   </div>
                 </div>
               )}
