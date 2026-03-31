@@ -10,6 +10,7 @@ export interface PendingMatchSubmissionInput {
   homeScore: number;
   awayScore: number;
   submittedBy: string;
+  submittedByMembershipId?: string; // Membership context for multi-squad attribution
   matchDate?: Date;
   latitude?: number;
   longitude?: number;
@@ -27,6 +28,7 @@ export async function createPendingMatchSubmission({
   homeScore,
   awayScore,
   submittedBy,
+  submittedByMembershipId,
   matchDate = new Date(),
   latitude,
   longitude,
@@ -46,6 +48,7 @@ export async function createPendingMatchSubmission({
       awayScore,
       matchDate,
       submittedBy,
+      submittedByMembershipId,
       status: 'pending',
       shareSlug,
       latitude,

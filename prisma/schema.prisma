@@ -210,6 +210,14 @@ model SquadMember {
   role     String   @default("player") // captain, vice_captain, player
   joinedAt DateTime @default(now()) @map("joined_at")
 
+  // Temporal membership tracking for multi-squad support
+  validFrom DateTime? @map("valid_from") // When membership started
+  validTo   DateTime? @map("valid_to")   // When membership ended (null = active)
+  status    String    @default("active") // active, inactive, paused
+
+  // Reverse relation for match submissions
+  submittedMatches Match[] @relation("MatchSubmitterMembership")
+
   @@unique([squadId, userId])
   @@map("squad_members")
 }
@@ -545,6 +553,11 @@ model Match {
   // Submitter
   submittedBy String @map("submitted_by")
   submitter   User   @relation("MatchSubmitter", fields: [submittedBy], references: [id])
+
+  // Membership context - which squad membership was active when submitted
+  // Enables historical attribution for multi-squad players
+  submittedByMembershipId String? @map("submitted_by_membership_id")
+  submittedByMembership   SquadMember? @relation("MatchSubmitterMembership", fields: [submittedByMembershipId], references: [id])
 
   // Status
   status String @default("pending") // pending, verified, disputed, finalized

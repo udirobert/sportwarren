@@ -45,6 +45,7 @@ interface SubmitMatchResultInput {
   homeScore: number;
   awayScore: number;
   submittedBy: string;
+  submittedByMembershipId?: string; // Membership context for multi-squad attribution
   matchDate?: Date;
   latitude?: number;
   longitude?: number;
@@ -247,6 +248,7 @@ export async function submitMatchResult({
   homeScore,
   awayScore,
   submittedBy,
+  submittedByMembershipId,
   matchDate = new Date(),
   latitude,
   longitude,
@@ -314,6 +316,7 @@ export async function submitMatchResult({
     awayScore,
     matchDate,
     submittedBy,
+    submittedByMembershipId,
     latitude,
     longitude,
     weatherVerified,

@@ -89,6 +89,7 @@ export const matchRouter = createTRPCRouter({
           awayScore: input.awayScore,
           matchDate: input.matchDate,
           submittedBy: ctx.userId!,
+          submittedByMembershipId: submitterMembership.id, // Multi-squad attribution
           latitude: input.latitude,
           longitude: input.longitude,
           yellowSettlement: input.yellowSettlement,
