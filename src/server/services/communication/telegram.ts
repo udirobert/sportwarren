@@ -129,6 +129,11 @@ export class TelegramService {
     return this.bot;
   }
 
+  // Helper to send messages with Markdown parsing
+  private async sendMarkdown(chatId: number, text: string, options?: TelegramBot.SendMessageOptions): Promise<TelegramBot.Message> {
+    return this.bot.sendMessage(chatId, text, { parse_mode: "Markdown", ...options });
+  }
+
   async setWebhook(webhookUrl: string): Promise<void> {
     try {
       await this.bot.setWebHook(webhookUrl);
@@ -204,12 +209,12 @@ export class TelegramService {
         const squadGroup = await this.requireLinkedChat(chatId);
         if (squadGroup?.squadId) {
           const summary = await this.buildSquadSummaryCard(squadGroup.squadId);
-          await this.bot.sendMessage(chatId, summary);
+          await this.sendMarkdown(chatId, summary);
           console.log(`[TELEGRAM] /start sent squad summary chatId=${chatId}`);
           return;
         }
 
-        await this.bot.sendMessage(chatId, this.buildHelpMessage());
+        await this.sendMarkdown(chatId, this.buildHelpMessage());
         console.log(`[TELEGRAM] /start sent help chatId=${chatId}`);
       } catch (error) {
         console.error(`[TELEGRAM] /start failed chatId=${chatId}:`, error);
@@ -221,7 +226,7 @@ export class TelegramService {
     });
 
     this.bot.onText(/\/help/, async (msg) => {
-      await this.bot.sendMessage(msg.chat.id, this.buildHelpMessage());
+      await this.sendMarkdown(msg.chat.id, this.buildHelpMessage());
     });
 
     this.bot.onText(/\/log(?:\s+(.+))?/, async (msg, match) => {
@@ -234,18 +239,18 @@ export class TelegramService {
         const rateLimit = this.checkRateLimit(userId, this.rateLimitLog, RATE_LIMIT_LOG_MAX);
         if (!rateLimit.allowed) {
           const waitSeconds = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
-          await this.bot.sendMessage(
+          await this.sendMarkdown(
             chatId,
-            `⏳ Slow down! You've hit the limit for /log. Try again in ${waitSeconds}s.`,
+            `⏳ *Slow down!* You've hit the limit for /log. Try again in ${waitSeconds}s.`,
           );
           return;
         }
       }
 
       if (!matchText) {
-        await this.bot.sendMessage(
+        await this.sendMarkdown(
           chatId,
-          "Please include the result. Example: /log 4-2 win vs Red Lions",
+          "⚽ Please include the result.\n\nExample: `/log 4-2 win vs Red Lions`",
         );
         return;
       }
@@ -298,16 +303,16 @@ export class TelegramService {
         const rateLimit = this.checkRateLimit(userId, this.rateLimitAsk, RATE_LIMIT_ASK_MAX);
         if (!rateLimit.allowed) {
           const waitSeconds = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
-          await this.bot.sendMessage(
+          await this.sendMarkdown(
             chatId,
-            `⏳ Slow down! You've hit the limit for /ask. Try again in ${waitSeconds}s.`,
+            `⏳ *Slow down!* You've hit the limit for /ask. Try again in ${waitSeconds}s.`,
           );
           return;
         }
       }
 
       if (!query) {
-        await this.bot.sendMessage(
+        await this.sendMarkdown(
           chatId,
           [
             "Ask our AI Staff anything about your squad.",
@@ -389,7 +394,7 @@ export class TelegramService {
           }
         : undefined;
 
-      await this.bot.sendMessage(
+      await this.sendMarkdown(
         chatId,
         [
           "Stop playing ghost matches.",
@@ -673,7 +678,7 @@ export class TelegramService {
       if (response?.content) {
         this.appendGeneralChatMessage(chatId, "user", text);
         this.appendGeneralChatMessage(chatId, "assistant", response.content);
-        await this.bot.sendMessage(chatId, response.content);
+        await this.sendMarkdown(chatId, response.content);
         console.log(`[TELEGRAM] general AI response sent chatId=${chatId}`);
         return;
       }
@@ -686,7 +691,7 @@ export class TelegramService {
     this.appendGeneralChatMessage(chatId, "user", text);
     const fallback = this.buildGeneralGuidanceFallback();
     this.appendGeneralChatMessage(chatId, "assistant", fallback);
-    await this.bot.sendMessage(chatId, fallback);
+    await this.sendMarkdown(chatId, fallback);
     console.log(`[TELEGRAM] general fallback sent chatId=${chatId}`);
   }
 
@@ -1017,19 +1022,28 @@ export class TelegramService {
 
       const squadGroup = await this.requireLinkedChat(chatId);
       if (!squadGroup?.squadId) {
-        await this.bot.sendMessage(
-          chatId,
-          "This chat is not linked to a SportWarren squad yet. Link Telegram from Settings before logging matches.",
-        );
+        // Check if user has a squad but just needs to link the chat
+        const identity = await findPlatformIdentityByChatId(prisma, String(chatId));
+        if (identity?.userId && identity.activeSquadId) {
+          await this.sendMarkdown(
+            chatId,
+            "⚠️ *This chat is not linked to your squad yet.*\n\nYour captain needs to link this group:\n1. Go to *Settings → Connections → Telegram*\n2. Click *Link Telegram* and share the link here",
+          );
+        } else {
+          await this.sendMarkdown(
+            chatId,
+            "⚠️ *This chat is not linked to a SportWarren squad yet.*\n\n*To get started:*\n1. Open the Mini App (/app)\n2. Create or join a squad\n3. Your captain links this group from *Settings → Connections → Telegram*",
+          );
+        }
         return;
       }
 
       // Resolve the submitting user through PlatformIdentity
       const identity = await findPlatformIdentityByChatId(prisma, String(chatId));
       if (!identity?.userId) {
-        await this.bot.sendMessage(
+        await this.sendMarkdown(
           chatId,
-          "Could not resolve your SportWarren account from this Telegram chat.",
+          "⚠️ Could not resolve your SportWarren account from this Telegram chat.",
         );
         return;
       }
@@ -1164,6 +1178,7 @@ export class TelegramService {
       homeScore: draft.teamScore,
       awayScore: draft.opponentScore,
       submittedBy: draft.submittedBy,
+      submittedByMembershipId: membership.id, // Multi-squad attribution
       matchDate: new Date(),
     });
 
@@ -1355,9 +1370,9 @@ export class TelegramService {
   private async handleFixturesRequest(chatId: number): Promise<void> {
     const squadGroup = await this.requireLinkedChat(chatId);
     if (!squadGroup?.squadId) {
-      await this.bot.sendMessage(
+      await this.sendMarkdown(
         chatId,
-        "Link this chat from SportWarren Settings before requesting fixtures.",
+        "⚠️ *This chat is not linked to a squad.*\n\nYour captain needs to link this group from *Settings → Connections → Telegram* before you can see fixtures.",
       );
       return;
     }
@@ -1405,7 +1420,7 @@ export class TelegramService {
       })
       .join("\n\n");
 
-    await this.bot.sendMessage(chatId, `Upcoming fixtures\n\n${message}`);
+    await this.sendMarkdown(chatId, `*Upcoming fixtures*\n\n${message}`);
   }
 
   private async handleFeeProposal(
