@@ -32,6 +32,7 @@ model User {
   playerProfile    PlayerProfile?
   squads           SquadMember[]
   platformIdentities PlatformIdentity[]
+  telegramLinkCodes TelegramLinkCode[]
   matchesSubmitted Match[]             @relation("MatchSubmitter")
   verifications    MatchVerification[]
   aiMemory         AiMemory?
@@ -296,6 +297,7 @@ model PlatformIdentity {
   platformUserId String   @map("platform_user_id") // Telegram user ID (stable)
   chatId         String?  @map("chat_id") // Last group chat context
   username       String?
+  firstName      String?  @map("first_name") // Telegram first name
 
   // Session fields (moved from PlatformConnection)
   miniAppToken         String?   @unique @map("mini_app_token")
@@ -307,6 +309,24 @@ model PlatformIdentity {
 
   @@unique([platform, platformUserId])
   @@map("platform_identities")
+}
+
+// Telegram link codes for self-service linking
+model TelegramLinkCode {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  chatId    String   @map("chat_id") // Telegram chat ID
+  userId    String   @map("user_id")  // User to link to
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([chatId])
+  @@index([userId])
+  @@map("telegram_link_codes")
 }
 
 // ============================================================================
