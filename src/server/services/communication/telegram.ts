@@ -5,6 +5,7 @@ import TelegramBot from "node-telegram-bot-api";
 import { prisma } from "@/lib/db";
 import {
   getSquadMembership,
+  getUserActiveMemberships,
   isSquadLeader,
 } from "@/server/services/permissions";
 import { submitMatchResult } from "../match-workflow";
@@ -1020,30 +1021,62 @@ export class TelegramService {
     try {
       this.pruneExpiredDrafts();
 
-      const squadGroup = await this.requireLinkedChat(chatId);
-      if (!squadGroup?.squadId) {
-        // Check if user has a squad but just needs to link the chat
-        const identity = await findPlatformIdentityByChatId(prisma, String(chatId));
-        if (identity?.userId && identity.activeSquadId) {
-          await this.sendMarkdown(
-            chatId,
-            "⚠️ *This chat is not linked to your squad yet.*\n\nYour captain needs to link this group:\n1. Go to *Settings → Connections → Telegram*\n2. Click *Link Telegram* and share the link here",
-          );
-        } else {
-          await this.sendMarkdown(
-            chatId,
-            "⚠️ *This chat is not linked to a SportWarren squad yet.*\n\n*To get started:*\n1. Open the Mini App (/app)\n2. Create or join a squad\n3. Your captain links this group from *Settings → Connections → Telegram*",
-          );
-        }
-        return;
-      }
-
       // Resolve the submitting user through PlatformIdentity
       const identity = await findPlatformIdentityByChatId(prisma, String(chatId));
       if (!identity?.userId) {
         await this.sendMarkdown(
           chatId,
           "⚠️ Could not resolve your SportWarren account from this Telegram chat.",
+        );
+        return;
+      }
+
+      // Get user's active memberships across all squads
+      const memberships = await getUserActiveMemberships(prisma, identity.userId);
+      
+      if (memberships.length === 0) {
+        await this.sendMarkdown(
+          chatId,
+          "⚠️ You're not a member of any squad yet.\n\n*To get started:*\n1. Open the Mini App (/app)\n2. Create or join a squad",
+        );
+        return;
+      }
+
+      let targetSquadId: string | null = null;
+      let targetSquadName: string | null = null;
+
+      // Check if chat is linked to a specific squad
+      const squadGroup = await this.requireLinkedChat(chatId);
+      
+      if (squadGroup?.squadId) {
+        // Chat is linked to a squad - use that one
+        targetSquadId = squadGroup.squadId;
+        targetSquadName = squadGroup.squad?.name || null;
+      } else if (memberships.length === 1) {
+        // No chat link but only one squad - use that one
+        targetSquadId = memberships[0].squadId;
+        targetSquadName = memberships[0].squad.name;
+      } else {
+        // No chat link and multiple squads - need to ask which one
+        const keyboard = {
+          inline_keyboard: memberships.map((m: any) => [
+            { text: m.squad.name, callback_data: `select_squad_log:${m.squad.id}:${Buffer.from(matchText).toString('base64')}` }
+          ]),
+        };
+        await this.bot.sendMessage(
+          chatId,
+          "⚽ You're a member of multiple squads. Which one is this match for?",
+          { reply_markup: keyboard }
+        );
+        return;
+      }
+
+      // Check if user is captain of the target squad
+      const membership = memberships.find((m: any) => m.squadId === targetSquadId);
+      if (!membership || !isSquadLeader(membership.role)) {
+        await this.sendMarkdown(
+          chatId,
+          `⚠️ Only captains can log matches for *${targetSquadName}*.`,
         );
         return;
       }
@@ -1068,7 +1101,7 @@ export class TelegramService {
       const draft: PendingMatchDraft = {
         id: draftId,
         chatId,
-        squadId: squadGroup.squadId,
+        squadId: targetSquadId!,
         submittedBy: identity.userId,
         createdAt: Date.now(),
         ...parsed,
@@ -1085,7 +1118,7 @@ export class TelegramService {
         ],
       };
 
-      const squadLabel = squadGroup.squad?.name || "Your squad";
+      const squadLabel = targetSquadName || "Your squad";
       const message = [
         "Match log draft",
         "",
@@ -1101,6 +1134,103 @@ export class TelegramService {
       await this.bot.sendMessage(
         chatId,
         "We could not prepare that match log. Please try again.",
+      );
+    }
+  }
+
+  /**
+   * Handle squad selection for multi-squad users logging a match
+   */
+  private async handleSquadSelectedForLog(
+    chatId: number,
+    squadId: string,
+    matchText: string,
+  ): Promise<void> {
+    try {
+      // Get user's identity
+      const identity = await findPlatformIdentityByChatId(prisma, String(chatId));
+      if (!identity?.userId) {
+        await this.sendMarkdown(
+          chatId,
+          "⚠️ Could not resolve your account. Please try again.",
+        );
+        return;
+      }
+
+      // Get user's memberships and find the selected one
+      const memberships = await getUserActiveMemberships(prisma, identity.userId);
+      const membership = memberships.find((m: any) => m.squadId === squadId);
+
+      if (!membership) {
+        await this.sendMarkdown(
+          chatId,
+          "⚠️ You're not a member of that squad. Please try again.",
+        );
+        return;
+      }
+
+      // Check captain permissions
+      if (!isSquadLeader(membership.role)) {
+        await this.sendMarkdown(
+          chatId,
+          `⚠️ Only captains can log matches for *${membership.squad.name}*.`,
+        );
+        return;
+      }
+
+      // Parse the match result
+      const parsed = parseTelegramMatchResult(matchText);
+      if (!parsed) {
+        await this.bot.sendMessage(
+          chatId,
+          [
+            "Could not parse that match result.",
+            "",
+            "Try: 4-2 win vs Red Lions",
+          ].join("\n"),
+        );
+        return;
+      }
+
+      // Create the draft
+      const draftId = this.createDraftId();
+      const draft: PendingMatchDraft = {
+        id: draftId,
+        chatId,
+        squadId,
+        submittedBy: identity.userId,
+        createdAt: Date.now(),
+        ...parsed,
+      };
+
+      await this.storePendingDraft(draft);
+
+      // Send confirmation
+      const keyboard = {
+        inline_keyboard: [
+          [
+            { text: "Confirm", callback_data: `confirm_match:${draftId}` },
+            { text: "Cancel", callback_data: `cancel_match:${draftId}` },
+          ],
+        ],
+      };
+
+      const squadLabel = membership.squad.name;
+      const message = [
+        "Match log draft",
+        "",
+        `${squadLabel} ${draft.teamScore} - ${draft.opponentScore} ${draft.opponent}`,
+        `Outcome: ${draft.outcome}`,
+        "",
+        "Submit this result to the verification queue?",
+      ].join("\n");
+
+      await this.bot.sendMessage(chatId, message, { reply_markup: keyboard });
+    } catch (error) {
+      console.error("Error handling squad selection for match log:", error);
+      await this.sendMarkdown(
+        chatId,
+        "⚠️ Something went wrong. Please try /log again.",
       );
     }
   }
@@ -1749,6 +1879,20 @@ export class TelegramService {
     }
 
     const [action, draftId] = data.split(":");
+
+    // Handle squad selection for multi-squad users
+    if (action === "select_squad_log") {
+      const parts = data.split(":");
+      if (parts.length >= 3) {
+        const selectedSquadId = parts[1];
+        const matchTextBase64 = parts.slice(2).join(":"); // Rejoin in case base64 had colons
+        const matchText = Buffer.from(matchTextBase64, 'base64').toString('utf8');
+        
+        await this.handleSquadSelectedForLog(chatId, selectedSquadId, matchText);
+        await this.bot.answerCallbackQuery(query.id);
+        return;
+      }
+    }
 
     if (action === "approve_fee" || action === "reject_fee") {
       await this.handleFeeCallback(query, action, draftId);
