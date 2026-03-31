@@ -93,8 +93,8 @@ export function TelegramSquadDashboard({ context, onNavigate }: TelegramSquadDas
     return { streak, points, maxPoints, percentage };
   }, [squad.form]);
 
-  // Get next match (first pending or first recent if no pending)
-  const nextMatch = matches.pending[0];
+  // Get next match — prefer server-computed nextMatch (with scouting/tactical intel) over raw pending
+  const nextMatch = matches.nextMatch ?? matches.pending[0];
 
   // Build player objects for pitch visualization
   const squadPlayers: Player[] = useMemo(() => {

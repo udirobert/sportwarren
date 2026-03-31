@@ -5,7 +5,8 @@ import TelegramBot from "node-telegram-bot-api";
 import { prisma } from "@/lib/db";
 
 // Modular commands (DRY: Auto-discovered command registry)
-import { registerCommands } from "./telegram/commands/registry";
+import { registerCommands, wireCommandHandlers, buildWelcomeMessage } from "./telegram/commands/registry";
+import { setupGeneralChatHandler } from "./telegram/commands/ask";
 
 import {
   getSquadMembership,
@@ -68,13 +69,6 @@ const GENERAL_CHAT_MEMORY_TTL_MS = 60 * 60 * 1000;
 // Rate limiting configuration
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute window
 const RATE_LIMIT_LOG_MAX = 5; // Max 5 /log commands per minute
-const RATE_LIMIT_ASK_MAX = 10; // Max 10 /ask commands per minute
-
-interface RateLimitResult {
-  allowed: boolean;
-  remaining: number;
-  resetAt: number;
-}
 
 interface GeneralChatMessage {
   role: "user" | "assistant";
@@ -102,9 +96,6 @@ export class TelegramService {
   private redisService: TelegramRedisStore | null;
   private pendingMatchDrafts = new Map<string, PendingMatchDraft>();
   private generalChatMemory = new Map<number, GeneralChatMessage[]>();
-  // In-memory rate limiting (userId -> { command: count })
-  private rateLimitLog = new Map<string, number[]>();
-  private rateLimitAsk = new Map<string, number[]>();
 
   constructor(redisService: TelegramRedisStore | null = null) {
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -129,8 +120,42 @@ export class TelegramService {
     this.setupCommands();
     this.setupEventHandlers();
 
-    // MODULAR: Register modular commands (DRY: Auto-discovery)
+    // Wire grouped command handlers BEFORE registering commands
+    wireCommandHandlers({
+      squad: {
+        handleMatchLog: this.handleMatchLog.bind(this),
+        handleStatsRequest: this.handleStatsRequest.bind(this),
+        handleAvailability: this.handleAvailability.bind(this),
+        handleRoster: this.handleRoster.bind(this),
+        handleFixturesRequest: this.handleFixturesRequest.bind(this),
+        sendMarkdown: (chatId: number, text: string) => this.sendMarkdown(chatId, text),
+      },
+      account: {
+        handleMiniAppRequest: this.handleMiniAppRequest.bind(this),
+        handleMyTeams: this.handleMyTeams.bind(this),
+        handleAccountLink: this.handleAccountLink.bind(this),
+        handleAccountUnlink: this.handleAccountUnlink.bind(this),
+        sendMarkdown: (chatId: number, text: string) => this.sendMarkdown(chatId, text),
+      },
+      treasury: {
+        handleMiniAppRequest: (chatId: number, tab: string, userId?: string) =>
+          this.handleMiniAppRequest(chatId, tab as any, userId),
+        handleFeeProposal: this.handleFeeProposal.bind(this),
+        sendMarkdown: (chatId: number, text: string) => this.sendMarkdown(chatId, text),
+        sendMessage: (chatId: number, text: string) => this.bot.sendMessage(chatId, text),
+      },
+      ask: {
+        handleAiStaffQuery: this.handleAiStaffQuery.bind(this),
+        handleGeneralAiQuery: this.handleGeneralAiQuery.bind(this),
+        sendMarkdown: (chatId: number, text: string) => this.sendMarkdown(chatId, text),
+      },
+    });
+
+    // Register modular commands (handlers are now wired)
     registerCommands(this.bot);
+
+    // General chat handler for non-command messages
+    setupGeneralChatHandler(this.bot, this.handleGeneralAiQuery.bind(this));
   }
 
   getBot(): TelegramBot {
@@ -243,9 +268,10 @@ export class TelegramService {
       const userId = msg.from?.id?.toString();
       const matchText = match?.[1]?.trim();
 
-      // Rate limit check
+      // Rate limit via middleware
       if (userId) {
-        const rateLimit = this.checkRateLimit(userId, this.rateLimitLog, RATE_LIMIT_LOG_MAX);
+        const { checkRateLimit } = await import("./telegram/middleware/identity");
+        const rateLimit = await checkRateLimit(userId, RATE_LIMIT_LOG_MAX, RATE_LIMIT_WINDOW_MS);
         if (!rateLimit.allowed) {
           const waitSeconds = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
           await this.sendMarkdown(
@@ -271,200 +297,8 @@ export class TelegramService {
       await this.handleFixturesRequest(msg.chat.id);
     });
 
-    // === GROUPED COMMAND HANDLERS (squad.*, account.*, treasury.*) ===
-    
-    // Squad group
-    this.bot.onText(/\/squad(?:\s+(.+))?/, async (msg, match) => {
-      const subcommand = match?.[1]?.trim();
-      const chatId = msg.chat.id;
-      
-      if (!subcommand || subcommand === 'help') {
-        await this.sendMarkdown(chatId, 
-          "*Squad Commands:*\n" +
-          "/squad log <score> - Submit match\n" +
-          "/squad stats - View stats\n" +
-          "/squad available yes/no - Set availability\n" +
-          "/squad roster - View squad availability\n" +
-          "/squad fixtures - View upcoming matches"
-        );
-        return;
-      }
-      
-      // Route to appropriate handler
-      const [cmd, ...args] = subcommand.split(' ');
-      const argsStr = args.join(' ');
-      
-      switch (cmd.toLowerCase()) {
-        case 'log':
-          if (argsStr) {
-            await this.handleMatchLog(chatId, argsStr);
-          } else {
-            await this.sendMarkdown(chatId, "Usage: /squad log 4-2 win vs Red Lions");
-          }
-          break;
-        case 'stats':
-          await this.handleStatsRequest(chatId);
-          break;
-        case 'available':
-          await this.handleAvailability(chatId, argsStr || undefined);
-          break;
-        case 'roster':
-          await this.handleRoster(chatId);
-          break;
-        case 'fixtures':
-          await this.handleFixturesRequest(chatId);
-          break;
-        default:
-          await this.sendMarkdown(chatId, `Unknown squad command: /squad ${cmd}. Try /squad help`);
-      }
-    });
-
-    // Account group
-    this.bot.onText(/\/account(?:\s+(.+))?/, async (msg, match) => {
-      const subcommand = match?.[1]?.trim();
-      const chatId = msg.chat.id;
-      const userId = msg.from?.id?.toString();
-      
-      if (!subcommand || subcommand === 'help') {
-        await this.sendMarkdown(chatId, 
-          "*Account Commands:*\n" +
-          "/account app - Open Mini App\n" +
-          "/account profile - View profile\n" +
-          "/account myteams - View all your squads\n" +
-          "/account link - Generate link code\n" +
-          "/account unlink - Unlink this chat"
-        );
-        return;
-      }
-      
-      const [cmd, ...rest] = subcommand.split(' ');
-      const args = rest.join(' ');
-      
-      switch (cmd.toLowerCase()) {
-        case 'app':
-          await this.handleMiniAppRequest(chatId, 'squad', userId);
-          break;
-        case 'profile':
-          await this.handleMiniAppRequest(chatId, 'profile', userId);
-          break;
-        case 'myteams':
-          await this.handleMyTeams(chatId);
-          break;
-        case 'link':
-          await this.handleAccountLink(chatId, msg);
-          break;
-        case 'unlink':
-          await this.handleAccountUnlink(chatId, msg);
-          break;
-        default:
-          await this.sendMarkdown(chatId, `Unknown account command: /account ${cmd}. Try /account help`);
-      }
-    });
-
-    // Treasury group
-    this.bot.onText(/\/treasury(?:\s+(.+))?/, async (msg, match) => {
-      const subcommand = match?.[1]?.trim();
-      const chatId = msg.chat.id;
-      
-      if (!subcommand || subcommand === 'help') {
-        await this.sendMarkdown(chatId, 
-          "*Treasury Commands:*\n" +
-          "/treasury view - Open treasury\n" +
-          "/treasury fee <matchId> [amount] - Propose fee"
-        );
-        return;
-      }
-      
-      const [cmd, ...args] = subcommand.split(' ');
-      const argsStr = args.join(' ');
-      
-      switch (cmd.toLowerCase()) {
-        case 'view':
-          await this.handleMiniAppRequest(chatId, 'treasury', msg.from?.id?.toString());
-          break;
-        case 'fee':
-          if (argsStr) {
-            await this.handleFeeProposal(chatId, argsStr, msg.from);
-          } else {
-            await this.bot.sendMessage(chatId, "Usage: /treasury fee <matchId> [amount]");
-          }
-          break;
-        default:
-          await this.sendMarkdown(chatId, `Unknown treasury command: /treasury ${cmd}. Try /treasury help`);
-      }
-    });
-
-    // Legacy flat commands (still work for backwards compatibility)
-    this.bot.onText(/\/myteams/, async (msg) => {
-      const chatId = msg.chat.id;
-      await this.handleMyTeams(chatId);
-    });
-
-    this.bot.onText(/\/fee(?:\s+(.+))?/, async (msg, match) => {
-      const chatId = msg.chat.id;
-      const args = match?.[1]?.trim();
-
-      if (!args) {
-        await this.bot.sendMessage(
-          chatId,
-          "Usage: /fee <matchId> [amount]\n\nExample: /fee abc123 2\n\nProposes a match fee (in TON) to be paid from the squad treasury.",
-        );
-        return;
-      }
-
-      await this.handleFeeProposal(chatId, args, msg.from);
-    });
-
-    this.bot.onText(/\/treasury/, async (msg) => {
-      await this.handleMiniAppRequest(msg.chat.id, "treasury", msg.from?.id?.toString());
-    });
-
-    this.bot.onText(/\/app/, async (msg) => {
-      await this.handleMiniAppRequest(msg.chat.id, "squad", msg.from?.id?.toString());
-    });
-
-    this.bot.onText(/\/profile/, async (msg) => {
-      await this.handleMiniAppRequest(msg.chat.id, "profile", msg.from?.id?.toString());
-    });
-
-    this.bot.onText(/\/ask(?:\s+(.+))?/, async (msg, match) => {
-      const chatId = msg.chat.id;
-      const userId = msg.from?.id?.toString();
-      const query = match?.[1]?.trim();
-
-      // Rate limit check
-      if (userId) {
-        const rateLimit = this.checkRateLimit(userId, this.rateLimitAsk, RATE_LIMIT_ASK_MAX);
-        if (!rateLimit.allowed) {
-          const waitSeconds = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
-          await this.sendMarkdown(
-            chatId,
-            `⏳ *Slow down!* You've hit the limit for /ask. Try again in ${waitSeconds}s.`,
-          );
-          return;
-        }
-      }
-
-      if (!query) {
-        await this.sendMarkdown(
-          chatId,
-          [
-            "Ask our AI Staff anything about your squad.",
-            "",
-            "Examples:",
-            "/ask Coach what formation should we use?",
-            "/ask Scout analyze Red Lions",
-            "/ask Physio who needs rest?",
-            "/ask Analyst show my shooting stats",
-            "",
-            "Available staff: Coach, Scout, Physio, Analyst, Commercial",
-          ].join("\n"),
-        );
-        return;
-      }
-
-      await this.handleAiStaffQuery(chatId, query);
-    });
+    // Grouped commands (/squad *, /account *, /treasury *, /ask) and legacy aliases
+    // are handled by the modular command registry — no inline handlers needed.
 
     this.bot.on("inline_query", async (query) => {
       await this.handleInlineQuery(query);
@@ -473,41 +307,15 @@ export class TelegramService {
     this.bot.on("callback_query", async (query) => {
       await this.handleCallbackQuery(query);
     });
-
-    this.bot.on("message", async (msg) => {
-      if (msg.text?.startsWith("/") || !msg.text) return;
-      console.log(
-        `[TELEGRAM] general message received chatId=${msg.chat.id} text=${JSON.stringify(msg.text.slice(0, 120))}`,
-      );
-      await this.handleGeneralAiQuery(msg.chat.id, msg.text);
-    });
   }
 
   private buildHelpMessage(): string {
-    return [
-      "Stop playing ghost matches.",
-      "",
-      "Log the score. Track your stats. Build your legacy.",
-      "Every match. Every stat. Forever.",
-      "",
-      "Commands:",
-      "/app — Open Mini App",
-      "/profile — Your Stats",
-      "/log 4-2 win vs Red Lions",
-      "/stats — Squad Stats",
-      "/fixtures — Upcoming Matches",
-      "/treasury — Squad Economy",
-      "/ask coach — AI Analysis",
-      "/help — Show this message",
-      "",
-      "Linking:",
-      "Captains can link group chats from Settings > Connections > Telegram for squad-wide commands.",
-    ].join("\n");
+    return buildWelcomeMessage();
   }
 
   private async handleMiniAppRequest(
     chatId: number,
-    tab: "squad" | "match" | "profile" | "treasury" | "ai" = "squad",
+    tab: string = "squad",
     telegramUserId?: string,
   ): Promise<void> {
     // Try user-scoped identity first, fall back to group-scoped
@@ -944,32 +752,6 @@ export class TelegramService {
 
   private getDraftKey(draftId: string): string {
     return `telegram:match-draft:${draftId}`;
-  }
-
-  private checkRateLimit(
-    userId: string,
-    limitMap: Map<string, number[]>,
-    maxRequests: number,
-  ): RateLimitResult {
-    const now = Date.now();
-    const timestamps = limitMap.get(userId) || [];
-
-    // Filter to within window
-    const recent = timestamps.filter(
-      (ts) => now - ts < RATE_LIMIT_WINDOW_MS,
-    );
-
-    const remaining = Math.max(0, maxRequests - recent.length);
-    const allowed = recent.length < maxRequests;
-
-    if (allowed) {
-      recent.push(now);
-    }
-
-    limitMap.set(userId, recent);
-    const resetAt = recent.length > 0 ? recent[0] + RATE_LIMIT_WINDOW_MS : now;
-
-    return { allowed, remaining, resetAt };
   }
 
   private async storePendingDraft(draft: PendingMatchDraft): Promise<void> {

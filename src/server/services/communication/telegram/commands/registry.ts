@@ -7,31 +7,79 @@ import type TelegramBot from 'node-telegram-bot-api';
  * PREVENT BLOAT: Single place to manage all commands
  */
 
-// Import commands - DRY: Auto-discovery pattern
-// CONSOLIDATION: Only include commands that belong in modular format
-// - /log, /fee kept in legacy (sophisticated workflows)
-// - /link, /unlink now under /account group (telegram.ts)
+// Simple commands (modular - straightforward)
 import { StatsCommand } from './stats';
 import { AvailableCommand } from './availability';
 import { RosterCommand } from './roster';
 import { HelpCommand } from './help';
 
+// Grouped commands (complex routing)
+import { SquadCommand } from './squad';
+import { AccountCommand } from './account';
+import { TreasuryCommand } from './treasury-cmd';
+import { AskCommand } from './ask';
+
+// Singleton command instances for handler wiring
+export const squadCommand = new SquadCommand();
+export const accountCommand = new AccountCommand();
+export const treasuryCommand = new TreasuryCommand();
+export const askCommand = new AskCommand();
+
 /**
  * All available commands
  * ORGANIZED: Single source of truth for command list
- * CONSOLIDATION: Link/unlink moved to /account group in telegram.ts
  */
 export const COMMANDS: TelegramCommand[] = [
-  // Simple commands (modular - straightforward, no complex workflows)
+  // Simple commands (straightforward, no complex workflows)
   new StatsCommand(),
   new AvailableCommand(),
   new RosterCommand(),
   new HelpCommand(),
-  // CONSOLIDATION: /log, /fee, /link, /unlink remain in legacy telegram.ts
-  // - /log has draft->confirm/cancel flow with expiry
-  // - /fee has approve/reject callback workflow
-  // - /link, /unlink now under /account group
+
+  // Grouped commands (route to subcommands, handlers wired via wireCommandHandlers)
+  squadCommand,
+  accountCommand,
+  treasuryCommand,
+  askCommand,
 ];
+
+/**
+ * Wire grouped command handlers from TelegramService
+ * Called during service construction to connect commands to service methods
+ */
+export function wireCommandHandlers(handlers: {
+  squad: {
+    handleMatchLog: (chatId: number, matchText: string) => Promise<void>;
+    handleStatsRequest: (chatId: number) => Promise<void>;
+    handleAvailability: (chatId: number, args?: string) => Promise<void>;
+    handleRoster: (chatId: number) => Promise<void>;
+    handleFixturesRequest: (chatId: number) => Promise<void>;
+    sendMarkdown: (chatId: number, text: string) => Promise<unknown>;
+  };
+  account: {
+    handleMiniAppRequest: (chatId: number, tab: string, userId?: string) => Promise<void>;
+    handleMyTeams: (chatId: number) => Promise<void>;
+    handleAccountLink: (chatId: number, msg: any) => Promise<void>;
+    handleAccountUnlink: (chatId: number, msg: any) => Promise<void>;
+    sendMarkdown: (chatId: number, text: string) => Promise<unknown>;
+  };
+  treasury: {
+    handleMiniAppRequest: (chatId: number, tab: string, userId?: string) => Promise<void>;
+    handleFeeProposal: (chatId: number, args: string, user: any) => Promise<void>;
+    sendMarkdown: (chatId: number, text: string) => Promise<unknown>;
+    sendMessage: (chatId: number, text: string) => Promise<unknown>;
+  };
+  ask: {
+    handleAiStaffQuery: (chatId: number, query: string) => Promise<void>;
+    handleGeneralAiQuery: (chatId: number, text: string) => Promise<void>;
+    sendMarkdown: (chatId: number, text: string) => Promise<unknown>;
+  };
+}): void {
+  squadCommand.setHandlers(handlers.squad);
+  accountCommand.setHandlers(handlers.account);
+  treasuryCommand.setHandlers(handlers.treasury);
+  askCommand.setHandlers(handlers.ask);
+}
 
 /**
  * Get command by pattern
@@ -42,11 +90,10 @@ export function getCommandByPattern(pattern: RegExp): TelegramCommand | undefine
 }
 
 /**
- * Build help text from all commands
- * ENHANCEMENT FIRST: Reuse command descriptions
+ * Build unified help text
+ * SINGLE SOURCE OF TRUTH for help messages
  */
 export function buildHelpText(): string {
-  // ORGANIZED: Show grouped command structure for better UX
   return `📋 *Available Commands*
 
 *Primary*
@@ -72,9 +119,34 @@ export function buildHelpText(): string {
 
 *Treasury (Captains)*
 /treasury view - View treasury
-/treasury fee - Submit fee request
+/treasury fee <matchId> [amount] - Propose match fee
 
 _Use /start to get started_`;
+}
+
+/**
+ * Build the short welcome help message (used by /start when no squad linked)
+ */
+export function buildWelcomeMessage(): string {
+  return [
+    "Stop playing ghost matches.",
+    "",
+    "Log the score. Track your stats. Build your legacy.",
+    "Every match. Every stat. Forever.",
+    "",
+    "Commands:",
+    "/squad log 4-2 win vs Red Lions",
+    "/squad stats — Squad Stats",
+    "/squad fixtures — Upcoming Matches",
+    "/account app — Open Mini App",
+    "/account profile — Your Stats",
+    "/ask coach — AI Analysis",
+    "/treasury — Squad Economy",
+    "/help — Show all commands",
+    "",
+    "Linking:",
+    "Captains can link group chats from Settings > Connections > Telegram for squad-wide commands.",
+  ].join("\n");
 }
 
 /**
@@ -87,9 +159,9 @@ export function registerCommands(bot: TelegramBot): void {
       const chatId = msg.chat.id;
       const userId = msg.from?.id?.toString();
       const args = match?.[1]?.trim();
-      
+
       const { createCommandContext, resolveIdentity, checkRateLimit } = await import('../middleware/identity');
-      
+
       // Check rate limit
       const rateLimit = command.getRateLimit?.();
       if (rateLimit && userId) {
@@ -104,11 +176,11 @@ export function registerCommands(bot: TelegramBot): void {
           return;
         }
       }
-      
+
       // Create context and resolve identity
       const ctx = createCommandContext(bot, chatId, userId, msg, args);
       const identity = await resolveIdentity(chatId);
-      
+
       // Execute command
       try {
         await command.execute(ctx, identity ?? undefined);
@@ -122,6 +194,31 @@ export function registerCommands(bot: TelegramBot): void {
       }
     });
   }
-  
-  console.log(`✅ Registered ${COMMANDS.length} commands`);
+
+  // Legacy aliases — execute grouped command actions directly
+  bot.onText(/\/app/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from?.id?.toString();
+    const { createCommandContext } = await import('../middleware/identity');
+    const ctx = createCommandContext(bot, chatId, userId, msg, 'app');
+    await accountCommand.execute(ctx);
+  });
+
+  bot.onText(/\/profile/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from?.id?.toString();
+    const { createCommandContext } = await import('../middleware/identity');
+    const ctx = createCommandContext(bot, chatId, userId, msg, 'profile');
+    await accountCommand.execute(ctx);
+  });
+
+  bot.onText(/\/myteams/, async (msg) => {
+    const chatId = msg.chat.id;
+    const userId = msg.from?.id?.toString();
+    const { createCommandContext } = await import('../middleware/identity');
+    const ctx = createCommandContext(bot, chatId, userId, msg, 'myteams');
+    await accountCommand.execute(ctx);
+  });
+
+  console.log(`✅ Registered ${COMMANDS.length} commands + 3 legacy aliases`);
 }
