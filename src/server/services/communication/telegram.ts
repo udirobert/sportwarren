@@ -3,6 +3,10 @@ import { generateInference } from "@/lib/ai/inference";
 import { AGENT_PERSONAS } from "../ai/prompts";
 import TelegramBot from "node-telegram-bot-api";
 import { prisma } from "@/lib/db";
+
+// Modular commands (DRY: Auto-discovered command registry)
+import { registerCommands } from "./telegram/commands/registry";
+
 import {
   getSquadMembership,
   getUserActiveMemberships,
@@ -124,6 +128,9 @@ export class TelegramService {
 
     this.setupCommands();
     this.setupEventHandlers();
+
+    // MODULAR: Register modular commands (DRY: Auto-discovery)
+    registerCommands(this.bot);
   }
 
   getBot(): TelegramBot {
@@ -155,42 +162,39 @@ export class TelegramService {
   }
 
   private setupCommands(): void {
+    // ORGANIZED: Grouped commands for better UX
+    // Telegram supports hierarchical commands: /group shows children in menu
     this.bot
       .setMyCommands([
+        // === PRIMARY COMMANDS (always visible) ===
         {
           command: "start",
-          description: "Link Telegram to your SportWarren squad",
+          description: "Link or view your squad",
         },
-        { command: "app", description: "Open the full SportWarren Mini App" },
-        {
-          command: "log",
-          description: "Submit a match result for verification",
-        },
-        { command: "stats", description: "View real player or squad stats" },
-        { command: "fixtures", description: "View scheduled squad fixtures" },
-        {
-          command: "ask",
-          description:
-            "Ask AI Staff a question (e.g. /ask Coach about tactics)",
-        },
-        {
-          command: "fee",
-          description: "Propose a match fee from the treasury",
-        },
-        { command: "treasury", description: "Open treasury in the Mini App" },
-        { command: "profile", description: "View your player profile" },
         {
           command: "help",
-          description: "Show Telegram commands and linking help",
+          description: "Show all commands",
         },
-        {
-          command: "available",
-          description: "Set your availability for this week's matches",
-        },
-        {
-          command: "myteams",
-          description: "View your squads and set availability",
-        },
+        // === SQUAD GROUP ===
+        { command: "squad", description: "Squad commands" }, // Parent
+        { command: "squad log", description: "Submit match result" },
+        { command: "squad stats", description: "View squad stats" },
+        { command: "squad available", description: "Set availability" },
+        { command: "squad roster", description: "View availability" },
+        { command: "squad fixtures", description: "View fixtures" },
+        // === ACCOUNT GROUP ===
+        { command: "account", description: "Account commands" }, // Parent
+        { command: "account app", description: "Open Mini App" },
+        { command: "account profile", description: "View profile" },
+        { command: "account myteams", description: "View all squads" },
+        { command: "account link", description: "Link Telegram to SportWarren" },
+        { command: "account unlink", description: "Unlink Telegram from SportWarren" },
+        // === AI GROUP ===
+        { command: "ask", description: "Ask AI Staff (e.g. /ask Coach)" }, // Single command
+        // === TREASURY GROUP (captains only) ===
+        { command: "treasury", description: "Treasury commands" }, // Parent
+        { command: "treasury view", description: "Open treasury" },
+        { command: "treasury fee", description: "Propose match fee" },
       ])
       .catch((error: Error) => {
         console.warn("Failed to register Telegram commands:", error.message);
@@ -234,10 +238,6 @@ export class TelegramService {
       }
     });
 
-    this.bot.onText(/\/help/, async (msg) => {
-      await this.sendMarkdown(msg.chat.id, this.buildHelpMessage());
-    });
-
     this.bot.onText(/\/log(?:\s+(.+))?/, async (msg, match) => {
       const chatId = msg.chat.id;
       const userId = msg.from?.id?.toString();
@@ -267,30 +267,137 @@ export class TelegramService {
       await this.handleMatchLog(chatId, matchText);
     });
 
-    this.bot.onText(/\/stats(?:\s+(.+))?/, async (msg, match) => {
-      await this.handleStatsRequest(msg.chat.id, match?.[1]?.trim());
-    });
-
     this.bot.onText(/\/fixtures/, async (msg) => {
       await this.handleFixturesRequest(msg.chat.id);
     });
 
-    this.bot.onText(/\/available(?:\s+(.+))?/, async (msg, match) => {
+    // === GROUPED COMMAND HANDLERS (squad.*, account.*, treasury.*) ===
+    
+    // Squad group
+    this.bot.onText(/\/squad(?:\s+(.+))?/, async (msg, match) => {
+      const subcommand = match?.[1]?.trim();
       const chatId = msg.chat.id;
-      const args = match?.[1]?.trim();
-      await this.handleAvailability(chatId, args);
+      
+      if (!subcommand || subcommand === 'help') {
+        await this.sendMarkdown(chatId, 
+          "*Squad Commands:*\n" +
+          "/squad log <score> - Submit match\n" +
+          "/squad stats - View stats\n" +
+          "/squad available yes/no - Set availability\n" +
+          "/squad roster - View squad availability\n" +
+          "/squad fixtures - View upcoming matches"
+        );
+        return;
+      }
+      
+      // Route to appropriate handler
+      const [cmd, ...args] = subcommand.split(' ');
+      const argsStr = args.join(' ');
+      
+      switch (cmd.toLowerCase()) {
+        case 'log':
+          if (argsStr) {
+            await this.handleMatchLog(chatId, argsStr);
+          } else {
+            await this.sendMarkdown(chatId, "Usage: /squad log 4-2 win vs Red Lions");
+          }
+          break;
+        case 'stats':
+          await this.handleStatsRequest(chatId);
+          break;
+        case 'available':
+          await this.handleAvailability(chatId, argsStr || undefined);
+          break;
+        case 'roster':
+          await this.handleRoster(chatId);
+          break;
+        case 'fixtures':
+          await this.handleFixturesRequest(chatId);
+          break;
+        default:
+          await this.sendMarkdown(chatId, `Unknown squad command: /squad ${cmd}. Try /squad help`);
+      }
     });
 
+    // Account group
+    this.bot.onText(/\/account(?:\s+(.+))?/, async (msg, match) => {
+      const subcommand = match?.[1]?.trim();
+      const chatId = msg.chat.id;
+      const userId = msg.from?.id?.toString();
+      
+      if (!subcommand || subcommand === 'help') {
+        await this.sendMarkdown(chatId, 
+          "*Account Commands:*\n" +
+          "/account app - Open Mini App\n" +
+          "/account profile - View profile\n" +
+          "/account myteams - View all your squads\n" +
+          "/account link - Generate link code\n" +
+          "/account unlink - Unlink this chat"
+        );
+        return;
+      }
+      
+      const [cmd, ...rest] = subcommand.split(' ');
+      const args = rest.join(' ');
+      
+      switch (cmd.toLowerCase()) {
+        case 'app':
+          await this.handleMiniAppRequest(chatId, 'squad', userId);
+          break;
+        case 'profile':
+          await this.handleMiniAppRequest(chatId, 'profile', userId);
+          break;
+        case 'myteams':
+          await this.handleMyTeams(chatId);
+          break;
+        case 'link':
+          await this.handleAccountLink(chatId, msg);
+          break;
+        case 'unlink':
+          await this.handleAccountUnlink(chatId, msg);
+          break;
+        default:
+          await this.sendMarkdown(chatId, `Unknown account command: /account ${cmd}. Try /account help`);
+      }
+    });
+
+    // Treasury group
+    this.bot.onText(/\/treasury(?:\s+(.+))?/, async (msg, match) => {
+      const subcommand = match?.[1]?.trim();
+      const chatId = msg.chat.id;
+      
+      if (!subcommand || subcommand === 'help') {
+        await this.sendMarkdown(chatId, 
+          "*Treasury Commands:*\n" +
+          "/treasury view - Open treasury\n" +
+          "/treasury fee <matchId> [amount] - Propose fee"
+        );
+        return;
+      }
+      
+      const [cmd, ...args] = subcommand.split(' ');
+      const argsStr = args.join(' ');
+      
+      switch (cmd.toLowerCase()) {
+        case 'view':
+          await this.handleMiniAppRequest(chatId, 'treasury', msg.from?.id?.toString());
+          break;
+        case 'fee':
+          if (argsStr) {
+            await this.handleFeeProposal(chatId, argsStr, msg.from);
+          } else {
+            await this.bot.sendMessage(chatId, "Usage: /treasury fee <matchId> [amount]");
+          }
+          break;
+        default:
+          await this.sendMarkdown(chatId, `Unknown treasury command: /treasury ${cmd}. Try /treasury help`);
+      }
+    });
+
+    // Legacy flat commands (still work for backwards compatibility)
     this.bot.onText(/\/myteams/, async (msg) => {
       const chatId = msg.chat.id;
       await this.handleMyTeams(chatId);
-    });
-
-    // Captain command - view squad availability for this week
-    this.bot.onText(/\/roster(?:\s+(.+))?/, async (msg, match) => {
-      const chatId = msg.chat.id;
-      const args = match?.[1]?.trim(); // Optional day filter
-      await this.handleRoster(chatId, args);
     });
 
     this.bot.onText(/\/fee(?:\s+(.+))?/, async (msg, match) => {
@@ -996,6 +1103,40 @@ export class TelegramService {
       },
       membership,
     };
+  }
+
+  // Helper for /account link
+  private async handleAccountLink(chatId: number, msg: TelegramBot.Message): Promise<void> {
+    const identity = await findPlatformIdentityByChatId(prisma, String(chatId));
+    if (identity) {
+      await this.sendMarkdown(chatId, `✅ This chat is already linked to a SportWarren account.`);
+      return;
+    }
+    
+    await this.sendMarkdown(chatId, 
+      "*Link Your Telegram*\n\n" +
+      "1. Open SportWarren Mini App\n" +
+      "2. Go to Settings → Connections\n" +
+      "3. Click 'Link Telegram' to generate a code\n" +
+      "4. Return here and type: /link <code>"
+    );
+  }
+
+  // Helper for /account unlink  
+  private async handleAccountUnlink(chatId: number, msg: TelegramBot.Message): Promise<void> {
+    const identity = await findPlatformIdentityByChatId(prisma, String(chatId));
+    if (!identity) {
+      await this.sendMarkdown(chatId, "⚠️ This chat is not linked to any account.");
+      return;
+    }
+
+    await prisma.platformIdentity.delete({
+      where: { id: identity.id },
+    }).catch(() => {});
+
+    await this.sendMarkdown(chatId, 
+      `✅ *Unlinked*\n\nThis chat has been disconnected from SportWarren.`
+    );
   }
 
   private async handleConnectStart(
