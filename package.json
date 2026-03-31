@@ -50,7 +50,7 @@
     "@trpc/react-query": "^11.10.0",
     "@trpc/server": "^11.10.0",
     "algosdk": "^3.5.2",
-    "axios": "^1.6.5",
+    "axios": "1.13.6",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
