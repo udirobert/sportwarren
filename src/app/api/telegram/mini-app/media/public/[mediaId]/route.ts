@@ -33,7 +33,7 @@ export async function GET(request: NextRequest, context: { params: { mediaId: st
 
     const storage = getStorageAdapter();
     const stored = await storage.readByKey(media.storageKey);
-    const master = getMasterKey();
+    const master = await getMasterKey();
     const secret = await prisma.squadSecret.findUnique({ where: { squadId_kind: { squadId: media.squadId, kind: 'media_enc' } } });
     const key = secret ? unwrapKeyWithMaster(secret.keyEnc, master) : Buffer.alloc(32);
     const buffer = tryDecryptMedia(stored, key);

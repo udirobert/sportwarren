@@ -39,7 +39,7 @@ export async function uploadTelegramMiniAppMedia(
   const squadId = identity.activeSquadId || memberships[0].squad.id;
 
   // Ensure per-squad encryption key exists
-  const master = getMasterKey();
+  const master = await getMasterKey();
   let secret = await prisma.squadSecret.findUnique({ where: { squadId_kind: { squadId, kind: 'media_enc' } } });
   if (!secret) {
     const mediaKey = cryptoRandom(32);
@@ -173,7 +173,7 @@ export async function readTelegramMiniAppMedia(
   }
 
   // Decrypt using squad key (backward compatible if not encrypted)
-  const master = getMasterKey();
+  const master = await getMasterKey();
   const secret = await prisma.squadSecret.findUnique({ where: { squadId_kind: { squadId: media.squadId, kind: 'media_enc' } } });
   const storage = getStorageAdapter();
   const storedBuffer = await storage.readByKey(media.storageKey);
@@ -200,7 +200,7 @@ export async function readTelegramMiniAppMediaThumb(
     throw new Error('NO_THUMB');
   }
 
-  const master = getMasterKey();
+  const master = await getMasterKey();
   const secret = await prisma.squadSecret.findUnique({ where: { squadId_kind: { squadId: media.squadId, kind: 'media_enc' } } });
   const storage = getStorageAdapter();
   const storedBuffer = await storage.readByKey(media.thumbStorageKey);
