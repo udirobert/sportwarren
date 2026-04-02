@@ -1,5 +1,5 @@
 import React from 'react';
-import { LucideIcon } from 'lucide-react';
+import { LucideIcon, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import Link from 'next/link';
 
@@ -10,6 +10,11 @@ interface EmptyStateProps {
   actionLabel?: string;
   actionHref?: string;
   onAction?: () => void;
+  secondaryActionLabel?: string;
+  secondaryActionHref?: string;
+  onSecondaryAction?: () => void;
+  sampleLabel?: string;
+  onSample?: () => void;
   className?: string;
 }
 
@@ -20,6 +25,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   actionLabel,
   actionHref,
   onAction,
+  secondaryActionLabel,
+  secondaryActionHref,
+  onSecondaryAction,
+  sampleLabel,
+  onSample,
   className = '',
 }) => {
   return (
@@ -31,22 +41,50 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       <p className="text-sm text-gray-600 dark:text-gray-300 mb-6 max-w-xs mx-auto">
         {description}
       </p>
-      {actionLabel && (
-        actionHref ? (
-          <Link href={actionHref}>
-            <Button className="bg-green-600 hover:bg-green-700 text-white">
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        {actionLabel && (
+          actionHref ? (
+            <Link href={actionHref}>
+              <Button className="bg-green-600 hover:bg-green-700 text-white">
+                {actionLabel}
+              </Button>
+            </Link>
+          ) : (
+            <Button 
+              onClick={onAction}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
               {actionLabel}
             </Button>
-          </Link>
-        ) : (
-          <Button 
-            onClick={onAction}
-            className="bg-green-600 hover:bg-green-700 text-white"
+          )
+        )}
+        {secondaryActionLabel && (
+          secondaryActionHref ? (
+            <Link href={secondaryActionHref}>
+              <Button variant="outline">
+                {secondaryActionLabel}
+              </Button>
+            </Link>
+          ) : (
+            <Button 
+              variant="outline"
+              onClick={onSecondaryAction}
+            >
+              {secondaryActionLabel}
+            </Button>
+          )
+        )}
+        {sampleLabel && onSample && (
+          <Button
+            variant="ghost"
+            onClick={onSample}
+            className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
           >
-            {actionLabel}
+            <Eye className="w-4 h-4 mr-1.5" />
+            {sampleLabel}
           </Button>
-        )
-      )}
+        )}
+      </div>
     </div>
   );
 };

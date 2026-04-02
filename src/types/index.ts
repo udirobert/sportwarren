@@ -148,6 +148,8 @@ export interface PlayerAttributes {
   // Scout fields
   scoutXP: number;
   scoutTier: 'rookie' | 'trusted' | 'elite';
+  // Avatar
+  avatar?: string;
 }
 
 export interface Endorsement {

@@ -58,6 +58,7 @@ function transformProfile(profile: any): PlayerAttributes {
     address: profile.user?.walletAddress || profile.userId,
     playerName: profile.user?.name || 'Unnamed Player',
     position: (profile.user?.position as any) || 'MF',
+    avatar: profile.user?.avatar || undefined,
     totalMatches: profile.totalMatches,
     totalGoals: profile.totalGoals,
     totalAssists: profile.totalAssists,

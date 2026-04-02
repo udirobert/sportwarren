@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -22,6 +22,7 @@ import { useJourneyState } from "@/hooks/useJourneyState";
 import { useSeasonSnapshot } from "@/hooks/useSeasonSnapshot";
 
 export default function StatsPage() {
+  const [showSample, setShowSample] = useState(false);
   const {
     journeyStage,
     hasAccount,
@@ -52,7 +53,10 @@ export default function StatsPage() {
           description={lockedState.description}
           actionLabel={lockedState.actionLabel}
           actionHref={lockedState.actionHref}
+          sampleLabel="See Pro Stats"
+          onSample={() => setShowSample(true)}
         />
+        {showSample && <SampleStats onClose={() => setShowSample(false)} />}
       </main>
     );
   }
@@ -82,7 +86,10 @@ export default function StatsPage() {
           description={emptyState.description}
           actionLabel={emptyState.actionLabel}
           actionHref={emptyState.actionHref}
+          sampleLabel="See Pro Stats"
+          onSample={() => setShowSample(true)}
         />
+        {showSample && <SampleStats onClose={() => setShowSample(false)} />}
       </main>
     );
   }
@@ -300,5 +307,111 @@ export default function StatsPage() {
         </Link>
       </div>
     </main>
+  );
+}
+
+function SampleStats({ onClose }: { onClose: () => void }) {
+  const sampleSkills = [
+    { label: "Pace", value: 88 },
+    { label: "Shooting", value: 92 },
+    { label: "Passing", value: 78 },
+    { label: "Dribbling", value: 85 },
+    { label: "Defending", value: 45 },
+    { label: "Physical", value: 82 },
+  ];
+
+  return (
+    <div className="mt-6 space-y-6">
+      <div className="bg-blue-600 px-4 py-2 rounded-xl text-white flex items-center justify-between shadow-lg">
+        <span className="text-sm font-bold flex items-center gap-2">
+          <TrendingUp className="w-4 h-4" />
+          Viewing Pro Stats Sample — This is what your stats page could look like after a successful season.
+        </span>
+        <button onClick={onClose} className="text-xs font-black uppercase tracking-widest hover:text-blue-200">
+          Exit Sample
+        </button>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard title="Matches" value={42} icon={Target} color="blue" />
+        <StatCard title="Goals" value={28} icon={Zap} color="green" />
+        <StatCard title="Assists" value={12} icon={TrendingUp} color="orange" />
+        <StatCard title="Reputation" value={8450} icon={Trophy} color="purple" />
+      </div>
+
+      <Card className="border-gray-200 bg-white">
+        <h2 className="text-base font-black uppercase tracking-wide text-gray-700 mb-4">Skill Ratings</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {sampleSkills.map(({ label, value }) => (
+            <div key={label} className="flex items-center gap-3">
+              <Zap className="w-4 h-4 text-gray-400 flex-shrink-0" />
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between mb-1">
+                  <span className="text-xs font-semibold text-gray-600">{label}</span>
+                  <span className="text-xs font-black text-gray-900">{value}</span>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-green-500 rounded-full transition-all"
+                    style={{ width: `${Math.min(value, 100)}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+
+      <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <Card className="border-gray-200 bg-white">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-base font-black uppercase tracking-wide text-gray-700">XP Progress</h2>
+            <span className="text-xs text-gray-600">Level 18 → 19</span>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
+            <div className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full" style={{ width: '45%' }} />
+          </div>
+          <p className="text-xs text-gray-600">450 / 1,000 season XP</p>
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-600">Verified Record</div>
+              <div className="mt-2 text-lg font-bold text-gray-900">28-6-8</div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-600">Pending Queue</div>
+              <div className="mt-2 text-lg font-bold text-gray-900">0</div>
+            </div>
+            <div className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.16em] text-gray-600">Highlights</div>
+              <div className="mt-2 text-lg font-bold text-gray-900">7</div>
+            </div>
+          </div>
+        </Card>
+
+        <Card className="border-gray-200 bg-white">
+          <h2 className="text-base font-black uppercase tracking-wide text-gray-700 mb-4">Recent Momentum</h2>
+          <div className="space-y-3">
+            {[
+              { result: 'W', opponent: 'Sunday Legends', score: '3-1', date: 'Mar 28, 2026' },
+              { result: 'W', opponent: 'FC Wanderers', score: '2-0', date: 'Mar 21, 2026' },
+              { result: 'D', opponent: 'Thunder FC', score: '1-1', date: 'Mar 14, 2026' },
+            ].map((match, i) => (
+              <div key={i} className="flex items-center gap-3 rounded-xl border border-gray-200 px-3 py-3">
+                <div className={`flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold text-white ${
+                  match.result === 'W' ? 'bg-green-500' : match.result === 'D' ? 'bg-yellow-500' : 'bg-red-500'
+                }`}>
+                  {match.result}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-gray-900 truncate">vs {match.opponent}</div>
+                  <div className="text-xs text-gray-600">{match.score} · {match.date}</div>
+                </div>
+                <ArrowRight className="h-4 w-4 text-gray-300" />
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
+    </div>
   );
 }

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Settings, Wallet, User, Bell, Link2, Check, X, Copy, LogOut, Trophy, Target, Star, MessageCircle, ShieldAlert, ShieldCheck } from 'lucide-react';
+import { Settings, Wallet, User, Bell, Link2, Check, X, Copy, LogOut, Trophy, Target, Star, MessageCircle, ShieldAlert, ShieldCheck, Camera } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useMySquads } from '@/hooks/squad/useSquad';
 import { usePlatformConnections } from '@/hooks/usePlatformConnections';
@@ -59,6 +59,9 @@ export default function SettingsPage() {
   const [profileNotice, setProfileNotice] = useState<string | null>(null);
   const [profileName, setProfileName] = useState('');
   const [profilePosition, setProfilePosition] = useState<PlayerPosition>('MF');
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarChanged, setAvatarChanged] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { address, chain, balance, isGuest, hasAccount, hasWallet, loginMethod, authStatus, disconnect, isVerified } = useWallet();
   const { memberships } = useMySquads();
   const [notifications, setNotifications] = useState<NotificationPreferences>(DEFAULT_NOTIFICATIONS);
@@ -151,7 +154,10 @@ export default function SettingsPage() {
 
     setProfileName(normalizeEditableName(currentProfile.user?.name));
     setProfilePosition((currentProfile.user?.position as PlayerPosition | undefined) ?? 'MF');
-  }, [currentProfile]);
+    if (!avatarChanged) {
+      setAvatarPreview(currentProfile.user?.avatar ?? null);
+    }
+  }, [currentProfile, avatarChanged]);
 
   const copyAddress = async () => {
     if (hasWallet && address) {
@@ -159,6 +165,36 @@ export default function SettingsPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const handleAvatarSelect = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setProfileNotice('Please select an image file.');
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      setProfileNotice('Image must be under 2MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      setAvatarPreview(dataUrl);
+      setAvatarChanged(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveAvatar = () => {
+    setAvatarPreview(null);
+    setAvatarChanged(true);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const updateNotifications = (key: keyof NotificationPreferences, value: boolean | NotificationPreferences['channels']) => {
@@ -231,10 +267,15 @@ export default function SettingsPage() {
     }
 
     setProfileNotice(null);
-    await updateProfileMutation.mutateAsync({
+    const payload: { name: string; position: PlayerPosition; avatar?: string } = {
       name: trimmedName,
       position: profilePosition,
-    });
+    };
+    if (avatarChanged) {
+      payload.avatar = avatarPreview ?? '';
+    }
+    await updateProfileMutation.mutateAsync(payload);
+    setAvatarChanged(false);
   };
 
   return (
@@ -300,6 +341,60 @@ export default function SettingsPage() {
             )}
 
             <div className="grid gap-4 md:grid-cols-2">
+              <label className="block md:col-span-2">
+                <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
+                  Avatar
+                </span>
+                <div className="flex items-center gap-4">
+                  <div
+                    className="relative w-20 h-20 rounded-xl overflow-hidden bg-gradient-to-br from-blue-600 to-blue-700 flex items-center justify-center cursor-pointer group"
+                    onClick={handleAvatarSelect}
+                  >
+                    {avatarPreview ? (
+                      <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                      <User className="w-10 h-10 text-white" />
+                    )}
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Camera className="w-6 h-6 text-white" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={handleAvatarSelect}
+                      disabled={!isVerified || updateProfileMutation.isPending}
+                    >
+                      <Camera className="w-3.5 h-3.5 mr-1.5" />
+                      {avatarPreview ? 'Change photo' : 'Upload photo'}
+                    </Button>
+                    {avatarPreview && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleRemoveAvatar}
+                        disabled={!isVerified || updateProfileMutation.isPending}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="w-3.5 h-3.5 mr-1.5" />
+                        Remove
+                      </Button>
+                    )}
+                    <p className="text-xs text-gray-500">JPG or PNG, max 2MB. Shows on your reputation card.</p>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarFile}
+                    className="hidden"
+                  />
+                </div>
+              </label>
+
               <label className="block">
                 <span className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-600 dark:text-gray-300">
                   Display name
