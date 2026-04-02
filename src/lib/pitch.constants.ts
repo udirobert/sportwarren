@@ -27,9 +27,9 @@ export const SQUAD_COLORS = ['#10b981', '#3b82f6', '#ef4444', '#f59e0b'] as cons
 export const DEMO_INITIALS = ['JD', 'AM', 'SK'] as const;
 
 export const QUICK_GUIDE_STEPS = [
-  { title: 'Plan', text: 'Design your formation and squad identity.' },
-  { title: 'Simulate', text: 'Our match engine tests your setup against the meta.' },
-  { title: 'Dominate', text: 'Share with your squad and lead them to victory.' },
+  { title: '⚽ Set Your DNA', text: 'Pick your formation and kit colours. This is your tactical identity.' },
+  { title: '🧠 Simulate', text: 'The match engine stress-tests your setup against real opposition shapes.' },
+  { title: '📲 Drop It in the Group Chat', text: 'Share the card. Let the squad know the plan before kick-off.' },
 ] as const;
 
 export const EXPORT_FILENAME_PREFIX = 'sportwarren-tactics';

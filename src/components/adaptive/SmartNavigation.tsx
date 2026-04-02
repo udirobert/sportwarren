@@ -13,6 +13,7 @@ import { useActiveSquad } from '@/contexts/ActiveSquadContext';
 import { SELF_SERVE_PLATFORM_LIST } from '@/types';
 import { ContextualHelp } from './ContextualHelp';
 import { AccountStatusControl } from '@/components/common/AccountStatusControl';
+import { trpc } from '@/lib/trpc-client';
 
 const BOTTOM_NAV_MAX = 5;
 
@@ -35,6 +36,10 @@ export const SmartNavigation: React.FC = () => {
   const needsJourneySetup = journeyStage !== 'returning_manager';
   const primarySquadId = activeSquadId;
   const { connections } = usePlatformConnections({ squadId: primarySquadId });
+  const { data: playerProfile } = trpc.player.getCurrentProfile.useQuery(undefined, {
+    staleTime: 1000 * 60 * 5,
+    retry: false,
+  });
   const hasUnconnectedPlatforms = Boolean(
     isVerified &&
     primarySquadId &&
@@ -204,11 +209,17 @@ export const SmartNavigation: React.FC = () => {
               className="flex items-center space-x-3 group"
               onClick={() => handleNavClick('/dashboard')}
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-green-700 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-transform">
-                <Target className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-green-700 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-transform overflow-hidden shrink-0">
+                {playerProfile?.user?.avatar ? (
+                  <img src={playerProfile.user.avatar} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  <Target className="w-6 h-6 text-white" />
+                )}
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white">SportWarren</h1>
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                  {playerProfile?.user?.name ? playerProfile.user.name : 'SportWarren'}
+                </h1>
                 <p className="text-xs text-gray-700 dark:text-gray-300">{getJourneyNavigationSubtitle(journeyStage)}</p>
               </div>
             </Link>
