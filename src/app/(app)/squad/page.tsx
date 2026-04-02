@@ -44,6 +44,17 @@ const PLAY_STYLE_LABELS: Record<PlayStyle, string> = {
   low_block: "Low Block",
 };
 
+const SAMPLE_MEMBERS = [
+  { id: 'm1', name: 'Marcus J.', role: 'captain', position: 'GK', stats: { level: 45 } },
+  { id: 'm2', name: 'David L.', role: 'vice_captain', position: 'DF', stats: { level: 42 } },
+  { id: 'm3', name: 'Sarah K.', role: 'member', position: 'DF', stats: { level: 38 } },
+  { id: 'm4', name: 'Alex R.', role: 'member', position: 'MF', stats: { level: 44 } },
+  { id: 'm5', name: 'Elena G.', role: 'member', position: 'MF', stats: { level: 41 } },
+  { id: 'm6', name: 'Chris W.', role: 'member', position: 'WG', stats: { level: 46 } },
+  { id: 'm7', name: 'Jordan B.', role: 'member', position: 'ST', stats: { level: 48 } },
+  { id: 'm8', name: 'Toni M.', role: 'member', position: 'ST', stats: { level: 43 } },
+];
+
 type OverviewEvent = {
   id: string;
   title: string;
@@ -79,12 +90,13 @@ export default function SquadPage() {
   const [activeTab, setActiveTab] = useState<SquadTab>("overview");
   const [showCreateSquadFlow, setShowCreateSquadFlow] = useState(false);
   const [showJoinSquadFlow, setShowJoinSquadFlow] = useState(false);
+  const [showSample, setShowSample] = useState(false);
   const [inviteShareState, setInviteShareState] = useState<"idle" | "copied" | "shared" | "error">("idle");
   const { chain, hasAccount, hasWallet, isVerified } = useWallet();
   const { journeyStage, memberships, refreshSquads } = useJourneyState();
 
   const activeMembership = memberships?.[0];
-  const activeSquadId = activeMembership?.squad?.id;
+  const activeSquadId = showSample ? 'sample-squad' : activeMembership?.squad?.id;
   const squadWorkspaceGate = getJourneyActionGate('squad_workspace', {
     stage: journeyStage,
     hasAccount,
@@ -101,19 +113,22 @@ export default function SquadPage() {
     hasSquad: Boolean(activeSquadId),
     chain,
   });
-  const { squad: detailedSquad, members } = useSquadDetails(activeSquadId);
-  const activeSquad = detailedSquad ?? activeMembership?.squad;
-  const { connections } = usePlatformConnections({ squadId: activeSquadId });
+  const { squad: detailedSquad, members: realMembers } = useSquadDetails(showSample ? undefined : activeSquadId);
+  const activeSquad = showSample 
+    ? { id: 'sample-squad', name: 'Warriors Pro', shortName: 'WAR', treasuryBalance: 50000, memberCount: 8 } as any
+    : (detailedSquad ?? activeMembership?.squad);
+  const members = showSample ? SAMPLE_MEMBERS as any[] : realMembers;
+  const { connections } = usePlatformConnections({ squadId: showSample ? undefined : activeSquadId });
   const telegramConnected = connections.telegram?.connected;
 
   const { checklistItems: _checklistItems } = useOnboarding();
   const squadChecklistDone = true; // open_office removed from checklist
 
-  const treasuryState = useTreasury(activeSquadId);
-  const transfersState = useTransfers(activeSquadId);
+  const treasuryState = useTreasury(showSample ? undefined : activeSquadId);
+  const transfersState = useTransfers(showSample ? undefined : activeSquadId);
   const { data: recentMatchesData, isLoading: recentMatchesLoading } = trpc.match.list.useQuery(
-    { squadId: activeSquadId, limit: 5 },
-    { enabled: !!activeSquadId, staleTime: 30 * 1000 }
+    { squadId: showSample ? undefined : activeSquadId, limit: 5 },
+    { enabled: !!activeSquadId && !showSample, staleTime: 30 * 1000 }
   );
   const { data: scoutingFeed, isLoading: scoutingFeedLoading } = trpc.market.listScoutingFeed.useQuery(
     { squadId: activeSquadId || '' },
@@ -389,7 +404,7 @@ export default function SquadPage() {
     );
   }
 
-  if (squadWorkspaceGate.status === "blocked") {
+  if (squadWorkspaceGate.status === "blocked" && !showSample) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 md:py-12 nav-spacer-top nav-spacer-bottom text-gray-900 dark:text-gray-100 space-y-4">
         <VerificationBanner />
@@ -401,10 +416,10 @@ export default function SquadPage() {
             href: squadWorkspaceGate.primaryAction.href,
             onClick: squadWorkspaceGate.reason === 'missing_squad' ? () => setShowCreateSquadFlow(true) : undefined
           } : undefined}
-          secondaryAction={squadWorkspaceGate.secondaryAction ? {
-            label: squadWorkspaceGate.secondaryAction.label,
-            href: squadWorkspaceGate.secondaryAction.href
-          } : undefined}
+          secondaryAction={{
+            label: "See Pro Squad",
+            onClick: () => setShowSample(true),
+          }}
           onCreateSquad={squadWorkspaceGate.reason === 'missing_squad' ? () => setShowCreateSquadFlow(true) : undefined}
           onJoinSquad={squadWorkspaceGate.reason === 'missing_squad' ? () => setShowJoinSquadFlow(true) : undefined}
         />
@@ -413,8 +428,19 @@ export default function SquadPage() {
   }
 
   return (
-    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="max-w-6xl mx-auto px-4 py-4 md:py-6 nav-spacer-top nav-spacer-bottom space-y-4 md:space-y-6 text-gray-900 dark:text-gray-100">
+    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="max-w-6xl mx-auto px-4 py-4 md:py-6 nav-spacer-top nav-spacer-bottom space-y-4 md:space-y-6 text-gray-900 dark:text-gray-100 relative">
       <VerificationBanner />
+      {showSample && (
+        <div className="bg-blue-600 text-white px-4 py-2 rounded-xl flex items-center justify-between shadow-lg animate-in slide-in-from-top duration-300">
+          <div className="flex items-center gap-2">
+            <Info className="w-4 h-4" />
+            <p className="text-sm font-bold uppercase tracking-widest">Viewing Pro Squad Sample</p>
+          </div>
+          <Button size="sm" variant="outline" className="text-white border-white/40 hover:bg-white/10 h-8" onClick={() => setShowSample(false)}>
+            Exit Preview
+          </Button>
+        </div>
+      )}
       {/* Header — compact on mobile */}
       <div className="flex items-center gap-3 md:block md:text-center">
         <div className="w-10 h-10 md:w-16 md:h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shrink-0 md:mx-auto md:mb-4">
