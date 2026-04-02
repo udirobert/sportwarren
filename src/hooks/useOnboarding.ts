@@ -34,6 +34,15 @@ const CHECKLIST_CONFIG: ChecklistConfig[] = [
         xp: 50,
     },
     {
+        id: 'connect_telegram',
+        label: 'Connect Telegram',
+        description: 'Get match alerts and manage your squad from the group chat',
+        emoji: '📱',
+        href: '/settings?tab=connections',
+        actionLabel: 'Connect',
+        xp: 75,
+    },
+    {
         id: 'verify_match',
         label: 'Log your first game',
         description: 'Submit one real match result to unlock XP, reputation, and squad momentum',
@@ -50,15 +59,6 @@ const CHECKLIST_CONFIG: ChecklistConfig[] = [
         href: '/settings?tab=wallet',
         actionLabel: 'Save progress',
         xp: 100,
-    },
-    {
-        id: 'connect_telegram',
-        label: 'Connect Telegram',
-        description: 'Get instant match alerts, log results, and manage treasury from Telegram',
-        emoji: '📱',
-        href: '/settings?tab=connections',
-        actionLabel: 'Connect',
-        xp: 75,
     },
 ];
 

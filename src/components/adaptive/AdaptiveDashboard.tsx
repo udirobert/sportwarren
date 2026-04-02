@@ -136,6 +136,7 @@ export const AdaptiveDashboard: React.FC = () => {
   }, []);
 
   const [personalizationDone, setPersonalizationDone] = React.useState(false);
+  const showOnboardingOverlay = !isGuest && hasAccount && !preferences.onboardingCompleted && !personalizationDone;
   const entryState = useMemo(() => getDashboardEntryState({
     isGuest,
     hasAccount,
@@ -962,6 +963,17 @@ export const AdaptiveDashboard: React.FC = () => {
   // ── Returning User Dashboard ──────────────────────────────────────
   return (
     <>
+      {/* First-run onboarding overlay — shown fullscreen until personalization is complete */}
+      {showOnboardingOverlay && (
+        <div className="fixed inset-0 z-[200] bg-gray-950/95 backdrop-blur-sm flex items-center justify-center p-4 nav-spacer-top">
+          <div className="w-full max-w-lg">
+            <QuickPersonalization
+              onComplete={() => setPersonalizationDone(true)}
+              journeyStage={entryState.id}
+            />
+          </div>
+        </div>
+      )}
       <div className={`max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 nav-spacer-top nav-spacer-bottom ${getLayoutClass()}`}>
       <div className="flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-widest">
         <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-black tracking-[0.18em] text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
