@@ -113,6 +113,11 @@ function CommunityPageInner() {
               description={playersZeroState.description}
               actionLabel={playersZeroState.actionLabel}
               actionHref={playersZeroState.actionHref}
+              sampleLabel="See Pro Players"
+              onSample={() => {
+                // This would trigger sample data overlay if we had a global sample state
+                // For now it just provides visual hint
+              }}
               className="py-8"
             />
           )}
@@ -172,6 +177,8 @@ function CommunityPageInner() {
               description={squadsZeroState.description}
               actionLabel={squadsZeroState.actionLabel}
               actionHref={squadsZeroState.actionHref}
+              sampleLabel="See Active Squads"
+              onSample={() => {}}
               className="py-8"
             />
           )}
@@ -214,6 +221,8 @@ function CommunityPageInner() {
             description={matchesZeroState.description}
             actionLabel={matchesZeroState.actionLabel}
             actionHref={matchesZeroState.actionHref}
+            sampleLabel="See Recent Pro Matches"
+            onSample={() => {}}
             className="py-8"
           />
         )}

@@ -1,12 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronRight, Palette, Shield, Users } from 'lucide-react';
+import { Check, ChevronRight, Palette, Shield, Users, User, Camera } from 'lucide-react';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { Card } from '@/components/ui/Card';
+import { trpc } from '@/lib/trpc-client';
+import { useWallet } from '@/contexts/WalletContext';
 import { getJourneyContent } from '@/lib/journey/content';
 import type { DashboardEntryStateId } from '@/lib/dashboard/entry-state';
+import type { PlayerPosition } from '@/types';
 
 const FORMATION_OPTIONS = [
     { id: '4-4-2', label: 'Classic 4-4-2', description: 'Balanced and structured' },
@@ -26,18 +29,44 @@ const BRAND_COLORS = [
 
 export const QuickPersonalization: React.FC<{ onComplete: () => void; journeyStage?: DashboardEntryStateId }> = ({ onComplete, journeyStage = 'account_ready' }) => {
     const { preferences, savePreferences } = useUserPreferences();
-    const [step, setStep] = useState<'formation' | 'brand'>('formation');
+    const { isVerified } = useWallet();
+    const [step, setStep] = useState<'identity' | 'formation' | 'brand'>('identity');
+    const [playerName, setPlayerName] = useState('');
+    const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [formation, setFormation] = useState<string | null>(preferences.squadBranding?.formation || null);
     const [primaryColor, setPrimaryColor] = useState<string>(preferences.squadBranding?.primaryColor || '#10b981');
     const [nickname, setNickname] = useState<string>(preferences.squadBranding?.nickname || '');
     const [isCompleting, setIsCompleting] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const updateProfile = trpc.player.updateProfile.useMutation();
     const journeyContent = getJourneyContent(journeyStage);
 
     // Skip if already personalized
     if (preferences.onboardingCompleted) return null;
 
+    const handleAvatarFile = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) return;
+        if (file.size > 2 * 1024 * 1024) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            setAvatarPreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
     const handleComplete = () => {
         setIsCompleting(true);
+
+        // Save player identity to backend if verified
+        if (isVerified && playerName.trim().length >= 2) {
+            updateProfile.mutate({
+                name: playerName.trim(),
+                position: 'MF' as PlayerPosition,
+                avatar: avatarPreview || undefined,
+            });
+        }
 
         savePreferences({
             onboardingCompleted: true,
@@ -63,12 +92,109 @@ export const QuickPersonalization: React.FC<{ onComplete: () => void; journeySta
         <Card className="bg-gradient-to-br from-gray-900 to-black border-gray-800 text-white overflow-hidden relative shadow-2xl">
             {/* Visual Header Decoration */}
             <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
-                {step === 'formation' ? <Users size={120} /> : <Palette size={120} />}
+                {step === 'identity' ? <User size={120} /> : step === 'formation' ? <Users size={120} /> : <Palette size={120} />}
             </div>
 
             <div className="p-8">
                 <AnimatePresence mode="wait">
-                    {step === 'formation' ? (
+                    {step === 'identity' ? (
+                        <motion.div
+                            key="identity"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -20 }}
+                            transition={{ duration: 0.4 }}
+                        >
+                            <div className="text-[10px] font-black text-green-400 uppercase tracking-[0.3em] mb-2 flex items-center gap-2">
+                                <User className="w-3 h-3" />
+                                {journeyContent.personalization.eyebrow}
+                            </div>
+                            <h2 className="text-2xl font-black uppercase tracking-tight mb-2">
+                                Create Your Player
+                            </h2>
+                            <p className="text-sm text-gray-400 mb-8 max-w-sm">This is how teammates and opponents will see you on the pitch.</p>
+
+                            {/* Avatar */}
+                            <div className="mb-6 flex items-center gap-4">
+                                <div
+                                    className="relative w-20 h-20 rounded-2xl overflow-hidden bg-white/10 border-2 border-white/20 flex items-center justify-center cursor-pointer group shrink-0"
+                                    onClick={() => fileInputRef.current?.click()}
+                                >
+                                    {avatarPreview ? (
+                                        <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User className="w-10 h-10 text-white/40" />
+                                    )}
+                                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <Camera className="w-6 h-6 text-white" />
+                                    </div>
+                                </div>
+                                <div>
+                                    <button
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="text-sm font-bold text-green-400 hover:text-green-300 transition-colors"
+                                    >
+                                        {avatarPreview ? 'Change photo' : 'Add a photo'}
+                                    </button>
+                                    <p className="text-xs text-gray-500 mt-1">JPG or PNG, max 2MB</p>
+                                </div>
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleAvatarFile}
+                                    className="hidden"
+                                />
+                            </div>
+
+                            {/* Name */}
+                            <div className="mb-8">
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Player Name</label>
+                                <input
+                                    type="text"
+                                    value={playerName}
+                                    onChange={(e) => setPlayerName(e.target.value)}
+                                    placeholder="e.g. Marcus Johnson"
+                                    className="w-full bg-white/5 border-2 border-white/10 rounded-2xl p-4 text-white font-bold focus:outline-none focus:border-green-500 transition-colors"
+                                    maxLength={40}
+                                />
+                            </div>
+
+                            {/* Live preview card */}
+                            <div className="bg-white/5 rounded-2xl p-4 mb-8 flex items-center gap-4 border border-white/10">
+                                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center overflow-hidden shrink-0">
+                                    {avatarPreview ? (
+                                        <img src={avatarPreview} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <User className="w-6 h-6 text-white" />
+                                    )}
+                                </div>
+                                <div>
+                                    <div className="text-sm font-black uppercase tracking-tight">
+                                        {playerName || 'Your Name'}
+                                    </div>
+                                    <div className="text-[10px] text-gray-500 uppercase tracking-widest">Player Card Preview</div>
+                                </div>
+                                <div className="ml-auto text-2xl font-black text-green-400">50</div>
+                            </div>
+
+                            <button
+                                onClick={() => playerName.trim().length >= 2 && setStep('formation')}
+                                disabled={playerName.trim().length < 2}
+                                className="w-full py-4 bg-white text-black rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-green-400 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                            >
+                                Choose Your Tactics
+                                <ChevronRight className="w-5 h-5" />
+                            </button>
+
+                            <button
+                                onClick={onComplete}
+                                className="w-full py-3 text-xs text-gray-600 hover:text-gray-400 font-bold uppercase tracking-widest transition-colors mt-4"
+                            >
+                                Skip & Explore First
+                            </button>
+                        </motion.div>
+                    ) : step === 'formation' ? (
                         <motion.div
                             key="formation"
                             initial={{ opacity: 0, y: 20 }}
@@ -123,10 +249,10 @@ export const QuickPersonalization: React.FC<{ onComplete: () => void; journeySta
                             </button>
 
                             <button
-                                onClick={onComplete}
+                                onClick={() => setStep('identity')}
                                 className="w-full py-3 text-xs text-gray-600 hover:text-gray-400 font-bold uppercase tracking-widest transition-colors mt-4"
                             >
-                                Skip & Explore First
+                                Back to Identity
                             </button>
                         </motion.div>
                     ) : (
