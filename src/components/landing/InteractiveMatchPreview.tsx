@@ -259,7 +259,7 @@ export const InteractiveMatchPreview: React.FC = () => {
 
             {/* Squad Size — Segmented Pills */}
             <div className="mb-3 sm:mb-4">
-              <label className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.15em] text-gray-200 mb-1.5 block">Squad Size</label>
+              <label className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.15em] text-white mb-1.5 block">Formation Size</label>
               <div className="grid grid-cols-4 sm:inline-flex bg-white/[0.06] rounded-lg p-0.5 gap-0.5 w-full sm:w-auto">
                 {SQUAD_SIZES.map((size) => (
                   <button
@@ -321,7 +321,7 @@ export const InteractiveMatchPreview: React.FC = () => {
           </div>
 
           {/* Right: Personalization & Share */}
-          <div className="p-3 md:p-6 flex flex-col justify-between">
+          <div className="p-3 md:p-6 flex flex-col justify-between bg-gray-950">
             <div>
               <h3 className="text-[11px] sm:text-sm font-black uppercase tracking-[0.16em] sm:tracking-[0.2em] text-blue-400 flex items-center gap-1.5 sm:gap-2 mb-4 sm:mb-5">
                 <Zap className="w-3 h-3 sm:w-4 sm:h-4" />
@@ -332,34 +332,43 @@ export const InteractiveMatchPreview: React.FC = () => {
               <div className="space-y-3 sm:space-y-5">
                 {/* Play Style */}
                 <div>
-                  <label className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.15em] text-gray-200 block mb-2">Play Style</label>
+                  <label className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.15em] text-white block mb-2">How You Play</label>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    {PLAY_STYLES.map((style) => (
-                      <button
-                        key={style}
-                        onClick={() => {
-                          setPlayStyle(style);
-                          trackFeatureUsed('tactics_preview_change', { type: 'playStyle', value: style });
-                        }}
-                        className={`relative px-3 py-2.5 sm:px-3 sm:py-2.5 rounded-xl border text-left transition-all overflow-hidden min-h-[60px] sm:min-h-0 ${
-                          playStyle === style 
-                            ? 'bg-blue-500/15 border-blue-400/40 text-white ring-1 ring-blue-400/30 shadow-lg shadow-blue-500/10' 
-                            : 'bg-white/[0.06] border-white/10 text-white/85 hover:border-white/25 hover:text-white hover:bg-white/[0.08]'
-                        }`}
-                      >
-                        {playStyle === style && (
-                          <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
-                        )}
-                        <div className="text-xs sm:text-sm font-bold capitalize leading-tight">{style.replace('_', ' ')}</div>
-                        <div className="text-[11px] sm:text-xs text-gray-300 mt-0.5 leading-tight sm:truncate">{PLAY_STYLE_LABELS[style]?.name}</div>
-                      </button>
-                    ))}
+                    {PLAY_STYLES.map((style) => {
+                      const styleTheme: Record<string, { idle: string; active: string; glow: string; bar: string }> = {
+                        balanced:   { idle: 'bg-sky-500/10 border-sky-500/20 hover:bg-sky-500/15 hover:border-sky-400/30',   active: 'bg-sky-500/20 border-sky-400/50 ring-1 ring-sky-400/30 shadow-sky-500/20',   glow: 'via-sky-400/60',   bar: 'bg-sky-400' },
+                        high_press: { idle: 'bg-red-500/10 border-red-500/20 hover:bg-red-500/15 hover:border-red-400/30',   active: 'bg-red-500/20 border-red-400/50 ring-1 ring-red-400/30 shadow-red-500/20',   glow: 'via-red-400/60',   bar: 'bg-red-400' },
+                        low_block:  { idle: 'bg-indigo-500/10 border-indigo-500/20 hover:bg-indigo-500/15 hover:border-indigo-400/30', active: 'bg-indigo-500/20 border-indigo-400/50 ring-1 ring-indigo-400/30 shadow-indigo-500/20', glow: 'via-indigo-400/60', bar: 'bg-indigo-400' },
+                        counter:    { idle: 'bg-amber-500/10 border-amber-500/20 hover:bg-amber-500/15 hover:border-amber-400/30', active: 'bg-amber-500/20 border-amber-400/50 ring-1 ring-amber-400/30 shadow-amber-500/20', glow: 'via-amber-400/60', bar: 'bg-amber-400' },
+                      };
+                      const t = styleTheme[style] ?? styleTheme.balanced;
+                      const isActive = playStyle === style;
+                      return (
+                        <button
+                          key={style}
+                          onClick={() => {
+                            setPlayStyle(style);
+                            trackFeatureUsed('tactics_preview_change', { type: 'playStyle', value: style });
+                          }}
+                          className={`relative px-3 py-2.5 rounded-xl border text-left transition-all overflow-hidden min-h-[60px] sm:min-h-0 shadow-lg ${
+                            isActive ? `${t.active}` : `${t.idle}`
+                          }`}
+                        >
+                          {isActive && (
+                            <div className={`absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent ${t.glow} to-transparent`} />
+                          )}
+                          <div className="text-xs sm:text-sm font-bold capitalize leading-tight text-white">{style.replace('_', ' ')}</div>
+                          <div className="text-[11px] sm:text-xs text-gray-300 mt-0.5 leading-tight sm:truncate">{PLAY_STYLE_LABELS[style]?.name}</div>
+                          {isActive && <div className={`absolute bottom-0 left-0 right-0 h-[2px] ${t.bar} opacity-60`} />}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Pitch Theme */}
                 <div>
-                  <label className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.15em] text-gray-200 block mb-2">Pitch Theme</label>
+                  <label className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.15em] text-white block mb-2">Pitch Conditions</label>
                   <div className="grid grid-cols-2 gap-2">
                     {PITCH_THEMES.map((pt) => (
                       <button
@@ -374,7 +383,7 @@ export const InteractiveMatchPreview: React.FC = () => {
                         {pitchTheme === pt.value && (
                           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-blue-400/60 to-transparent" />
                         )}
-                        <div className={`text-xs sm:text-sm font-bold ${pitchTheme === pt.value ? 'text-white' : 'text-gray-200'}`}>{pt.label}</div>
+                        <div className={`text-xs sm:text-sm font-bold ${pitchTheme === pt.value ? 'text-white' : 'text-white'}`}>{pt.label}</div>
                         <div className={`h-2 sm:h-3 rounded-md bg-gradient-to-r ${pt.color} mt-1.5 ${pitchTheme === pt.value ? 'opacity-100' : 'opacity-50'}`} />
                       </button>
                     ))}
@@ -383,7 +392,7 @@ export const InteractiveMatchPreview: React.FC = () => {
 
                 {/* Squad Identity */}
                 <div>
-                  <label className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.15em] text-gray-200 block mb-2">Squad Identity</label>
+                  <label className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.15em] text-white block mb-2">Kit Colours</label>
                   <div className="flex flex-wrap gap-2 sm:gap-3">
                     {SQUAD_COLORS.map((color) => (
                       <button 
@@ -435,13 +444,13 @@ export const InteractiveMatchPreview: React.FC = () => {
                   })}
                   onCopyLink={handleCopyLink}
                 />
-                <Button variant="outline" className="self-center sm:self-auto border-white/10 text-white hover:bg-white/5 p-2" onClick={toggleFullscreen}>
+                <Button variant="outline" className="self-center sm:self-auto border-white/20 text-white hover:bg-white/5 p-2" onClick={toggleFullscreen}>
                   {isFs ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
                 </Button>
               </div>
-              <p className="text-xs sm:text-sm text-center text-gray-200">Share as image or link to your squad group chat</p>
+              <p className="text-xs sm:text-sm text-center text-gray-300 font-medium">Drop the card in your squad group chat before kick-off</p>
               <div className="mt-1 flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3">
-                <span className="text-[11px] sm:text-xs text-gray-200 hidden sm:inline">Tip: PNG = lossless. WebP = smaller, widely supported.</span>
+                <span className="text-[11px] sm:text-xs text-gray-400 hidden sm:inline">PNG = lossless quality · WebP = smaller file, same sharpness</span>
                 {personalization.blurFaces && (
                   <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] sm:text-[11px] font-semibold text-emerald-100">
                     <EyeOff className="h-2 w-2 sm:h-3 sm:w-3" /> Faces blurred
@@ -452,22 +461,22 @@ export const InteractiveMatchPreview: React.FC = () => {
                 <Button variant="ghost" className="text-xs text-white hover:bg-white/10 py-1.5 sm:py-2" onClick={() => setShowEditor(true)}>
                   <UserPlus className="w-3 h-3 mr-1" /> <span className="hidden sm:inline">Personalize: Names & Faces</span><span className="sm:hidden">Personalize</span>
                 </Button>
-                <Button variant="ghost" className="text-xs text-white/85 hover:bg-white/10 py-1.5 sm:py-2" onClick={personalization.resetAllFormations}>
+                <Button variant="ghost" className="text-xs text-white hover:bg-white/10 py-1.5 sm:py-2" onClick={personalization.resetAllFormations}>
                   Reset All
                 </Button>
                 {personalization.unlocked && (
-                  <label className="flex items-center gap-1 sm:gap-2 text-[11px] sm:text-xs text-gray-200">
+                  <label className="flex items-center gap-1 sm:gap-2 text-[11px] sm:text-xs text-gray-300 font-medium">
                     <input type="checkbox" checked={personalization.showNames} onChange={(e) => personalization.setShowNames(e.target.checked)} /> <span className="hidden sm:inline">Show names on card</span><span className="sm:hidden">Show names</span>
                   </label>
                 )}
               </div>
               {personalization.unlocked && (
                 <div className="mt-1 sm:mt-2 flex flex-wrap items-center justify-center gap-1 sm:gap-2">
-                  <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[10px] sm:text-xs px-2 py-1"
+                  <Button variant="outline" className="border-white/20 text-white hover:bg-white/5 text-[10px] sm:text-xs px-2 py-1"
                     onClick={() => shareWithTemporaryState({ showNames: false }, 'clean')}>Share Clean</Button>
-                  <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[10px] sm:text-xs px-2 py-1"
+                  <Button variant="outline" className="border-white/20 text-white hover:bg-white/5 text-[10px] sm:text-xs px-2 py-1"
                     onClick={() => shareWithTemporaryState({ showNames: true }, 'names')}>Share + Names</Button>
-                  <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 text-[10px] sm:text-xs px-2 py-1"
+                  <Button variant="outline" className="border-white/20 text-white hover:bg-white/5 text-[10px] sm:text-xs px-2 py-1"
                     onClick={() => shareWithTemporaryState({ showNames: true, blurFaces: true }, 'names_blur')}>Share + Names + Blur</Button>
                   <Button variant="outline" className="border-emerald-500/30 text-emerald-200 hover:bg-emerald-500/20 text-[10px] sm:text-xs px-2 py-1"
                     onClick={() => setShowSquadModal(true)}>Create Squad</Button>

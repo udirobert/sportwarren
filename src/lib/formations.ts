@@ -190,12 +190,12 @@ export const ROLE_LABELS: Record<string, string> = {
 export const PLAY_STYLES: PlayStyle[] = ['balanced', 'possession', 'direct', 'counter', 'high_press', 'low_block'];
 
 export const PLAY_STYLE_LABELS: Record<PlayStyle, { name: string; description: string; icon: string }> = {
-  balanced: { name: 'Balanced', description: 'Mix of attack and defense', icon: '⚖️' },
-  possession: { name: 'Possession', description: 'Keep the ball, build slowly', icon: '🎯' },
-  direct: { name: 'Direct', description: 'Quick transitions, long balls', icon: '🚀' },
-  counter: { name: 'Counter Attack', description: 'Defend deep, attack fast', icon: '⚡' },
-  high_press: { name: 'High Press', description: 'Press high, win ball early', icon: '🔥' },
-  low_block: { name: 'Low Block', description: 'Defend deep, compact shape', icon: '🛡️' },
+  balanced: { name: 'Balanced', description: 'Control the tempo, stay dangerous', icon: '⚖️' },
+  possession: { name: 'Possession', description: 'Suffocate them with the ball', icon: '🎯' },
+  direct: { name: 'Direct', description: 'Vertical, fast, no mercy', icon: '🚀' },
+  counter: { name: 'Counter Attack', description: 'Absorb, then strike on the break', icon: '⚡' },
+  high_press: { name: 'High Press', description: 'Hunt them down from the first whistle', icon: '🔥' },
+  low_block: { name: 'Low Block', description: 'Compact, disciplined, unbreakable', icon: '🛡️' },
 };
 
 export const SET_PIECE_OPTIONS = {

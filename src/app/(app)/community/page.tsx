@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/common/EmptyState";
-import { Target, Users, Trophy, Star, Shield, Swords, Clock } from "lucide-react";
+import { Target, Users, Trophy, Star, Shield, Swords, Clock, Brain, X } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -13,8 +14,26 @@ import { getMatchStatusLabel, isSettledMatchStatus } from "@/lib/match/summary";
 import { useSeasonSnapshot } from "@/hooks/useSeasonSnapshot";
 import { useJourneyState } from "@/hooks/useJourneyState";
 
+// Lightweight coach tip popover shown when user clicks "See Pro" on empty states
+function CoachTip({ tip, onClose }: { tip: string; onClose: () => void }) {
+  return (
+    <div className="mt-3 flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700 p-3 text-sm animate-in fade-in slide-in-from-top-2">
+      <div className="w-7 h-7 shrink-0 rounded-full bg-blue-100 dark:bg-blue-800 flex items-center justify-center">
+        <Brain className="w-4 h-4 text-blue-600 dark:text-blue-300" />
+      </div>
+      <p className="flex-1 text-blue-800 dark:text-blue-200 italic leading-snug">&ldquo;{tip}&rdquo;</p>
+      <button onClick={onClose} className="shrink-0 text-blue-400 hover:text-blue-600 dark:hover:text-blue-200">
+        <X className="w-4 h-4" />
+      </button>
+    </div>
+  );
+}
+
 function CommunityPageInner() {
   const { journeyStage } = useJourneyState();
+  const [playersTip, setPlayersTip] = useState(false);
+  const [squadsTip, setSquadsTip] = useState(false);
+  const [matchesTip, setMatchesTip] = useState(false);
   const {
     primarySquad,
     primarySquadId,
@@ -79,10 +98,12 @@ function CommunityPageInner() {
         {/* Player Leaderboard */}
         <Card>
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-              <Trophy className="w-5 h-5 text-yellow-500" />
-              Player Leaderboard
-            </h2>
+            <Link href="/leaderboard" className="flex items-center gap-2 group">
+              <h2 className="text-lg font-bold text-gray-900 flex items-center gap-2 group-hover:text-green-600 transition-colors">
+                <Trophy className="w-5 h-5 text-yellow-500" />
+                Player Leaderboard
+              </h2>
+            </Link>
             <Link href="/stats"><Button size="sm" variant="outline">My Stats</Button></Link>
           </div>
           {loadingLeaderboard ? (
@@ -107,19 +128,24 @@ function CommunityPageInner() {
               ))}
             </div>
           ) : (
-            <EmptyState
-              icon={Trophy}
-              title={playersZeroState.title}
-              description={playersZeroState.description}
-              actionLabel={playersZeroState.actionLabel}
-              actionHref={playersZeroState.actionHref}
-              sampleLabel="See Pro Players"
-              onSample={() => {
-                // This would trigger sample data overlay if we had a global sample state
-                // For now it just provides visual hint
-              }}
-              className="py-8"
-            />
+            <>
+              <EmptyState
+                icon={Trophy}
+                title={playersZeroState.title}
+                description={playersZeroState.description}
+                actionLabel={playersZeroState.actionLabel}
+                actionHref={playersZeroState.actionHref}
+                sampleLabel="See Pro Players"
+                onSample={() => setPlayersTip(true)}
+                className="py-8"
+              />
+              {playersTip && (
+                <CoachTip
+                  tip="Top players maintain a rating above 7.5 by playing consistently and earning peer votes. Notice how the #1 spot always belongs to someone with 20+ verified matches — volume and quality both matter."
+                  onClose={() => setPlayersTip(false)}
+                />
+              )}
+            </>
           )}
         </Card>
 
@@ -171,16 +197,24 @@ function CommunityPageInner() {
               ))}
             </div>
           ) : (
-            <EmptyState
-              icon={Shield}
-              title={squadsZeroState.title}
-              description={squadsZeroState.description}
-              actionLabel={squadsZeroState.actionLabel}
-              actionHref={squadsZeroState.actionHref}
-              sampleLabel="See Active Squads"
-              onSample={() => {}}
-              className="py-8"
-            />
+            <>
+              <EmptyState
+                icon={Shield}
+                title={squadsZeroState.title}
+                description={squadsZeroState.description}
+                actionLabel={squadsZeroState.actionLabel}
+                actionHref={squadsZeroState.actionHref}
+                sampleLabel="See Active Squads"
+                onSample={() => setSquadsTip(true)}
+                className="py-8"
+              />
+              {squadsTip && (
+                <CoachTip
+                  tip="Active squads have at least one verified result in the last 30 days. The top squads here play 2–3 times a week and keep their roster tight — 11 to 15 players is the sweet spot for rotation without losing cohesion."
+                  onClose={() => setSquadsTip(false)}
+                />
+              )}
+            </>
           )}
         </Card>
       </div>
@@ -215,16 +249,24 @@ function CommunityPageInner() {
             ))}
           </div>
         ) : (
-          <EmptyState
-            icon={Target}
-            title={matchesZeroState.title}
-            description={matchesZeroState.description}
-            actionLabel={matchesZeroState.actionLabel}
-            actionHref={matchesZeroState.actionHref}
-            sampleLabel="See Recent Pro Matches"
-            onSample={() => {}}
-            className="py-8"
-          />
+          <>
+            <EmptyState
+              icon={Target}
+              title={matchesZeroState.title}
+              description={matchesZeroState.description}
+              actionLabel={matchesZeroState.actionLabel}
+              actionHref={matchesZeroState.actionHref}
+              sampleLabel="See Recent Pro Matches"
+              onSample={() => setMatchesTip(true)}
+              className="py-8"
+            />
+            {matchesTip && (
+              <CoachTip
+                tip="Pro matches here are verified by both teams within 24 hours. A 4-3-3 squad recently beat a 5-3-2 side 3–1 — their ST's pace (87) exploited the gaps left by the wing-backs pushing forward. Formation matchups matter."
+                onClose={() => setMatchesTip(false)}
+              />
+            )}
+          </>
         )}
       </Card>
     </div>
