@@ -48,8 +48,12 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         onClick={onClick}
       >
         <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
-            <User className="w-6 h-6 text-white" />
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
+            {player.avatar ? (
+              <img src={player.avatar} alt={player.playerName} className="w-full h-full object-cover" />
+            ) : (
+              <User className="w-6 h-6 text-white" />
+            )}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2">
@@ -81,8 +85,12 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center">
-              <User className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center overflow-hidden">
+              {player.avatar ? (
+                <img src={player.avatar} alt={player.playerName} className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-8 h-8 text-white" />
+              )}
             </div>
             <div>
               <div className="flex items-center space-x-2 mb-1">

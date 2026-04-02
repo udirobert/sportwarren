@@ -114,21 +114,28 @@ export const playerRouter = createTRPCRouter({
     .input(z.object({
       name: z.string().trim().min(2, 'Name must be at least 2 characters').max(40, 'Name must be 40 characters or fewer'),
       position: z.enum(['GK', 'DF', 'MF', 'ST', 'WG']),
+      avatar: z.string().max(500_000, 'Avatar data too large').optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
         await ensurePlayerProfile(ctx.prisma, ctx.userId!);
 
+        const updateData: Record<string, unknown> = {
+          name: input.name,
+          position: input.position,
+        };
+        if (input.avatar !== undefined) {
+          updateData.avatar = input.avatar;
+        }
+
         const user = await ctx.prisma.user.update({
           where: { id: ctx.userId! },
-          data: {
-            name: input.name,
-            position: input.position,
-          },
+          data: updateData,
           select: {
             id: true,
             name: true,
             position: true,
+            avatar: true,
           },
         });
 
