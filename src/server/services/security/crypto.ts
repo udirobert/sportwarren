@@ -1,14 +1,47 @@
 import crypto from 'crypto';
+import { KMSClient, DecryptCommand } from '@aws-sdk/client-kms';
 
 // Simple envelope: magic | iv (12) | authTag (16) | ciphertext
 const MAGIC = Buffer.from('SWENC1');
 
-export function getMasterKey(): Buffer {
+let cachedMasterKey: Buffer | null = null;
+
+/**
+ * Returns the 32-byte media master key.
+ *
+ * Production: KMS_KEY_ID + MEDIA_KEY_CIPHERTEXT (base64 KMS ciphertext blob).
+ *   The plaintext key never lives in an env var.
+ *
+ * Local dev fallback: MEDIA_MASTER_KEY (raw 32-byte base64) — same as before.
+ */
+export async function getMasterKey(): Promise<Buffer> {
+  if (cachedMasterKey) return cachedMasterKey;
+
+  const ciphertext = process.env.MEDIA_KEY_CIPHERTEXT;
+  const keyId = process.env.KMS_KEY_ID;
+
+  if (ciphertext && keyId) {
+    const kms = new KMSClient({
+      region: process.env.AWS_REGION || 'us-east-1',
+    });
+    const { Plaintext } = await kms.send(new DecryptCommand({
+      KeyId: keyId,
+      CiphertextBlob: Buffer.from(ciphertext, 'base64'),
+    }));
+    if (!Plaintext || Plaintext.length !== 32) {
+      throw new Error('KMS decrypted key must be 32 bytes');
+    }
+    cachedMasterKey = Buffer.from(Plaintext);
+    return cachedMasterKey;
+  }
+
+  // Local dev fallback
   const b64 = (process.env.MEDIA_MASTER_KEY || '').trim();
-  if (!b64) throw new Error('MEDIA_MASTER_KEY is required for media encryption');
+  if (!b64) throw new Error('Set MEDIA_KEY_CIPHERTEXT + KMS_KEY_ID (prod) or MEDIA_MASTER_KEY (dev)');
   const key = Buffer.from(b64, 'base64');
   if (key.length !== 32) throw new Error('MEDIA_MASTER_KEY must be 32 bytes base64');
-  return key;
+  cachedMasterKey = key;
+  return cachedMasterKey;
 }
 
 export function wrapKeyWithMaster(plainKey: Buffer, master: Buffer): string {
@@ -16,8 +49,7 @@ export function wrapKeyWithMaster(plainKey: Buffer, master: Buffer): string {
   const cipher = crypto.createCipheriv('aes-256-gcm', master, iv);
   const ciphertext = Buffer.concat([cipher.update(plainKey), cipher.final()]);
   const tag = cipher.getAuthTag();
-  const envelope = Buffer.concat([iv, tag, ciphertext]);
-  return envelope.toString('base64');
+  return Buffer.concat([iv, tag, ciphertext]).toString('base64');
 }
 
 export function unwrapKeyWithMaster(encB64: string, master: Buffer): Buffer {
@@ -27,8 +59,7 @@ export function unwrapKeyWithMaster(encB64: string, master: Buffer): Buffer {
   const ciphertext = buf.subarray(28);
   const decipher = crypto.createDecipheriv('aes-256-gcm', master, iv);
   decipher.setAuthTag(tag);
-  const plain = Buffer.concat([decipher.update(ciphertext), decipher.final()]);
-  return plain;
+  return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
 }
 
 export function encryptMedia(content: Buffer, key: Buffer): Buffer {
@@ -40,9 +71,8 @@ export function encryptMedia(content: Buffer, key: Buffer): Buffer {
 }
 
 export function tryDecryptMedia(enveloped: Buffer, key: Buffer): Buffer {
-  // Backward compatibility: if MAGIC missing, treat as plaintext
   if (enveloped.length < MAGIC.length + 12 + 16 || !enveloped.subarray(0, MAGIC.length).equals(MAGIC)) {
-    return enveloped;
+    return enveloped; // backward compat: plaintext
   }
   const iv = enveloped.subarray(MAGIC.length, MAGIC.length + 12);
   const tag = enveloped.subarray(MAGIC.length + 12, MAGIC.length + 12 + 16);
@@ -51,4 +81,3 @@ export function tryDecryptMedia(enveloped: Buffer, key: Buffer): Buffer {
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
 }
-
