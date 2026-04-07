@@ -27,6 +27,7 @@ import {
   parseTelegramMatchResult,
   type ParsedTelegramMatchResult,
 } from "./telegram-match-parser";
+import { parseNaturalLanguageMatch, type ParsedMatchResult } from "@/lib/ai/match-parser";
 import {
   buildVerificationNudgeMessage,
   shouldSendNudge,
@@ -1030,7 +1031,21 @@ export class TelegramService {
         return;
       }
 
-      const parsed = parseTelegramMatchResult(matchText);
+      let parsed: ParsedTelegramMatchResult | null = parseTelegramMatchResult(matchText);
+      
+      if (!parsed) {
+        // Try AI-powered natural language parsing
+        const aiParsed = await parseNaturalLanguageMatch(matchText);
+        if (aiParsed && aiParsed.confidence > 0.7) {
+          parsed = {
+            teamScore: aiParsed.isHome ? aiParsed.homeScore : aiParsed.awayScore,
+            opponentScore: aiParsed.isHome ? aiParsed.awayScore : aiParsed.homeScore,
+            opponent: aiParsed.opponent,
+            outcome: aiParsed.homeScore > aiParsed.awayScore ? 'win' : (aiParsed.homeScore < aiParsed.awayScore ? 'loss' : 'draw')
+          };
+        }
+      }
+
       if (!parsed) {
         await this.bot.sendMessage(
           chatId,
@@ -1041,6 +1056,8 @@ export class TelegramService {
             "4-2 win vs Red Lions",
             "lost 1-3 to Sunday Legends",
             "drew 2-2 with Park Rangers",
+            "",
+            "Or just say: \"We beat Red Lions 4-2, I got 2 goals!\"",
           ].join("\n"),
         );
         return;
@@ -1128,7 +1145,21 @@ export class TelegramService {
       }
 
       // Parse the match result
-      const parsed = parseTelegramMatchResult(matchText);
+      let parsed: ParsedTelegramMatchResult | null = parseTelegramMatchResult(matchText);
+      
+      if (!parsed) {
+        // Try AI-powered natural language parsing
+        const aiParsed = await parseNaturalLanguageMatch(matchText);
+        if (aiParsed && aiParsed.confidence > 0.7) {
+          parsed = {
+            teamScore: aiParsed.isHome ? aiParsed.homeScore : aiParsed.awayScore,
+            opponentScore: aiParsed.isHome ? aiParsed.awayScore : aiParsed.homeScore,
+            opponent: aiParsed.opponent,
+            outcome: aiParsed.homeScore > aiParsed.awayScore ? 'win' : (aiParsed.homeScore < aiParsed.awayScore ? 'loss' : 'draw')
+          };
+        }
+      }
+
       if (!parsed) {
         await this.bot.sendMessage(
           chatId,
@@ -1136,6 +1167,7 @@ export class TelegramService {
             "Could not parse that match result.",
             "",
             "Try: 4-2 win vs Red Lions",
+            "Or describe the result naturally!",
           ].join("\n"),
         );
         return;
@@ -1250,6 +1282,8 @@ export class TelegramService {
       );
     }
 
+    const isSociallyTrusted = await this.checkSocialTrust(squad.id, opponent.id);
+
     const match = await submitMatchResult({
       prisma,
       homeSquadId: squad.id,
@@ -1259,6 +1293,7 @@ export class TelegramService {
       submittedBy: draft.submittedBy,
       submittedByMembershipId: membership.id, // Multi-squad attribution
       matchDate: new Date(),
+      isSociallyTrusted,
     });
 
     await this.deletePendingDraft(draft.id);
@@ -1267,7 +1302,31 @@ export class TelegramService {
       id: match.id,
       shareSlug: match.shareSlug ?? null,
       opponentName: opponent.name,
+      isSoftVerified: match.status === 'verified',
     };
+  }
+
+  private async checkSocialTrust(squadAId: string, squadBId: string): Promise<boolean> {
+    try {
+      // Logic: Trust if they've played each other more than 3 times
+      const previousMatchesCount = await prisma.match.count({
+        where: {
+          OR: [
+            { homeSquadId: squadAId, awaySquadId: squadBId },
+            { homeSquadId: squadBId, awaySquadId: squadAId },
+          ],
+          status: { in: ['verified', 'finalized'] },
+        },
+      });
+
+      if (previousMatchesCount >= 3) return true;
+
+      // Logic: Trust if captains are "connected" (simplified check for now)
+      // In a real app, we'd check a friends table
+      return false;
+    } catch {
+      return false;
+    }
   }
 
   private async handleStatsRequest(
@@ -2219,12 +2278,27 @@ export class TelegramService {
     }
 
     try {
-      const match = await this.processMatchLog(draft);
+      const result = await this.processMatchLog(draft);
+      const statusMessage = result.isSoftVerified 
+        ? "✅ *Verified!* (Trusted matchup history detected)" 
+        : "⏳ *Pending Verification*";
+
       await this.bot.editMessageText(
-        `Match submitted successfully.\n\nMatch ID: ${match.id}\nOpponent: ${match.opponentName}\nStatus: pending verification`,
+        [
+          `⚽ *Match Logged!*`,
+          "",
+          `ID: \`${result.id}\``,
+          `Opponent: *${result.opponentName}*`,
+          `Status: ${statusMessage}`,
+          "",
+          result.isSoftVerified 
+            ? "Your match history has automatically verified this result. Legacy updated! 🥂"
+            : "We've notified the team to verify this result."
+        ].join("\n"),
         {
           chat_id: chatId,
           message_id: messageId,
+          parse_mode: "Markdown",
         },
       );
       await this.bot.answerCallbackQuery(query.id, { text: "Match submitted" });

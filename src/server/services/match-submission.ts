@@ -19,6 +19,7 @@ export interface PendingMatchSubmissionInput {
   verificationDetails?: unknown;
   agentInsights?: unknown;
   sessionId?: string;
+  isSoftVerified?: boolean;
 }
 
 export async function createPendingMatchSubmission({
@@ -37,10 +38,11 @@ export async function createPendingMatchSubmission({
   verificationDetails = null,
   agentInsights = null,
   sessionId,
+  isSoftVerified = false,
 }: PendingMatchSubmissionInput) {
   const shareSlug = randomBytes(4).toString('base64url');
 
-  const match = await prisma.match.create({
+    const match = await prisma.match.create({
     data: {
       homeSquadId,
       awaySquadId,
@@ -49,7 +51,7 @@ export async function createPendingMatchSubmission({
       matchDate,
       submittedBy,
       submittedByMembershipId,
-      status: 'pending',
+      status: isSoftVerified ? 'verified' : 'pending',
       shareSlug,
       latitude,
       longitude,
