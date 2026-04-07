@@ -51,6 +51,7 @@ interface SubmitMatchResultInput {
   longitude?: number;
   yellowSettlement?: YellowSettlementInput;
   sessionId?: string;
+  isSociallyTrusted?: boolean;
 }
 
 interface VerifyMatchResultInput {
@@ -254,6 +255,7 @@ export async function submitMatchResult({
   longitude,
   yellowSettlement,
   sessionId,
+  isSociallyTrusted = false,
 }: SubmitMatchResultInput) {
   const [homeSquad, awaySquad] = await Promise.all([
     prisma.squad.findUnique({ where: { id: homeSquadId } }),
@@ -308,23 +310,53 @@ export async function submitMatchResult({
     }
   }
 
-  const match = await createPendingMatchSubmission({
-    prisma,
-    homeSquadId,
-    awaySquadId,
-    homeScore,
-    awayScore,
-    matchDate,
-    submittedBy,
-    submittedByMembershipId,
-    latitude,
-    longitude,
-    weatherVerified,
-    locationVerified,
-    verificationDetails,
-    agentInsights,
-    sessionId,
-  });
+    const match = await createPendingMatchSubmission({
+      prisma,
+      homeSquadId,
+      awaySquadId,
+      homeScore,
+      awayScore,
+      matchDate,
+      submittedBy,
+      submittedByMembershipId,
+      latitude,
+      longitude,
+      weatherVerified,
+      locationVerified,
+      verificationDetails,
+      agentInsights,
+      sessionId,
+      isSoftVerified: isSociallyTrusted,
+    });
+
+    if (isSociallyTrusted) {
+      try {
+        await postVerifiedMatchToAlgorand(match.id);
+        const seededStats = await prisma.playerMatchStats.findMany({
+          where: { matchId: match.id },
+        });
+
+        await distributeMatchRewards({
+          prisma,
+          squadId: homeSquadId,
+          matchId: match.id,
+          isWinner: homeScore > awayScore,
+          isDraw: homeScore === awayScore,
+          playerStats: seededStats,
+        });
+
+        await distributeMatchRewards({
+          prisma,
+          squadId: awaySquadId,
+          matchId: match.id,
+          isWinner: awayScore > homeScore,
+          isDraw: homeScore === awayScore,
+          playerStats: seededStats,
+        });
+      } catch (err) {
+        console.warn('Post-soft-verification automation failed:', err);
+      }
+    }
 
   if (yellowSettlement) {
     try {

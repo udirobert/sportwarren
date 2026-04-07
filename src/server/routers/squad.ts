@@ -559,6 +559,49 @@ export const squadRouter = createTRPCRouter({
       }
     }),
 
+  // Get top teammates (most matches together) for quick logging
+  getTopTeammates: protectedProcedure
+    .input(z.object({
+      squadId: z.string().min(1, 'Squad ID is required'),
+      limit: z.number().int().min(1).max(10).default(5),
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const members = await ctx.prisma.squadMember.findMany({
+          where: {
+            squadId: input.squadId,
+            status: 'active',
+            userId: { not: ctx.userId! },
+          },
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                avatar: true,
+              },
+            },
+          },
+          orderBy: {
+            joinedAt: 'asc', // Simple heuristic for now, could be improved with actual match overlap
+          },
+          take: input.limit,
+        });
+
+        return members.map(m => ({
+          id: m.user.id,
+          name: m.user.name || 'Unknown Player',
+          avatar: m.user.avatar,
+        }));
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch teammates',
+          cause: error,
+        });
+      }
+    }),
+
   // ============================================================================
   // TACTICS
   // ============================================================================

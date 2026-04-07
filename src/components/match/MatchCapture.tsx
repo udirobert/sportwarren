@@ -24,6 +24,8 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [playersPerSide, setPlayersPerSide] = useState(11);
   const [hasKeeper, setHasKeeper] = useState(true);
+  const [isQuickLog, setIsQuickLog] = useState(false);
+  const [quickLogForm, setQuickLogForm] = useState({ homeScore: 0, awayScore: 0 });
 
   const FORMAT_PRESETS = [
     { label: '5v5', players: 5 },
@@ -53,6 +55,23 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
 
   const handleStartMatch = () => {
     startMatch();
+  };
+
+  const handleQuickLog = () => {
+    if (onSubmit) {
+      onSubmit({
+        homeTeam,
+        awayTeam,
+        homeScore: quickLogForm.homeScore,
+        awayScore: quickLogForm.awayScore,
+        status: 'pending',
+        timestamp: new Date(),
+        matchFormat,
+        playersPerSide,
+        hasKeeper,
+        isQuickLog: true
+      });
+    }
   };
 
   const handleEndMatch = () => {
@@ -91,6 +110,21 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
   if (!matchState.isActive && matchState.events.length === 0) {
     return (
       <Card className="py-8 px-4 space-y-6 bg-gradient-to-br from-white to-emerald-50/70 border-emerald-200">
+        <div className="flex items-center justify-center p-1 bg-gray-100 rounded-lg mb-4">
+          <button
+            onClick={() => setIsQuickLog(false)}
+            className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${!isQuickLog ? 'bg-white shadow-sm text-green-700' : 'text-gray-500'}`}
+          >
+            LIVE TRACKER
+          </button>
+          <button
+            onClick={() => setIsQuickLog(true)}
+            className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${isQuickLog ? 'bg-white shadow-sm text-green-700' : 'text-gray-500'}`}
+          >
+            QUICK LOG
+          </button>
+        </div>
+
         <div className="rounded-2xl border border-emerald-200/70 bg-white/80 px-4 py-3 flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="section-title text-gray-600 dark:text-gray-300">Home</div>
@@ -103,69 +137,105 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
           </div>
         </div>
 
-        <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-600/20">
-            <Play className="w-8 h-8 text-white" />
+        {isQuickLog ? (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <div className="flex items-center justify-center gap-8 py-4">
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-[10px] font-bold uppercase text-gray-500">HOME</span>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setQuickLogForm(f => ({...f, homeScore: Math.max(0, f.homeScore - 1)}))} className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center font-bold">-</button>
+                  <div className="text-4xl font-black w-12 text-center">{quickLogForm.homeScore}</div>
+                  <button onClick={() => setQuickLogForm(f => ({...f, homeScore: f.homeScore + 1}))} className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center font-bold">+</button>
+                </div>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <span className="text-[10px] font-bold uppercase text-gray-500">AWAY</span>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setQuickLogForm(f => ({...f, awayScore: Math.max(0, f.awayScore - 1)}))} className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center font-bold">-</button>
+                  <div className="text-4xl font-black w-12 text-center">{quickLogForm.awayScore}</div>
+                  <button onClick={() => setQuickLogForm(f => ({...f, awayScore: f.awayScore + 1}))} className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center font-bold">+</button>
+                </div>
+              </div>
+            </div>
+            
+            <Button onClick={handleQuickLog} size="lg" className="w-full h-14 text-base font-bold shadow-lg shadow-green-600/20 active:scale-95 transition-transform">
+              Log Result
+            </Button>
+            <p className="text-[10px] text-center text-gray-500 font-medium">
+              RETROSPECTIVE LOGGING: FOR INFORMAL MATCHES
+            </p>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-1">Set Up Match</h2>
-          <p className="text-sm text-gray-700 dark:text-gray-200">Configure your format before kick-off</p>
-        </div>
+        ) : (
+          <>
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-600/20">
+                <Play className="w-8 h-8 text-white" />
+              </div>
+              <h2 className="text-xl font-bold text-gray-900 mb-1">Set Up Match</h2>
+              <p className="text-sm text-gray-700 dark:text-gray-200">Configure your format before kick-off</p>
+            </div>
 
-        {/* Format presets */}
-        <div>
-          <p className="text-sm font-semibold text-gray-700 mb-2">Players per side</p>
-          <div className="grid grid-cols-4 gap-2">
-            {FORMAT_PRESETS.map(p => (
+            {/* Format presets */}
+            <div>
+              <p className="text-sm font-semibold text-gray-700 mb-2">Players per side</p>
+              <div className="grid grid-cols-4 gap-2">
+                {FORMAT_PRESETS.map(p => (
+                  <button
+                    key={p.label}
+                    onClick={() => setPlayersPerSide(p.players)}
+                    className={`py-2 rounded-lg text-sm font-bold border transition-colors ${
+                      playersPerSide === p.players
+                        ? 'bg-green-600 text-white border-green-600'
+                        : 'bg-white text-gray-700 border-gray-200 hover:border-green-400'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+              {/* Custom slider for non-standard sizes */}
+              <div className="mt-3 flex items-center gap-3">
+                <span className="text-xs text-gray-600 dark:text-gray-300 w-20">Custom: {playersPerSide}v{playersPerSide}</span>
+                <input
+                  type="range" min={3} max={15} value={playersPerSide}
+                  onChange={e => setPlayersPerSide(Number(e.target.value))}
+                  className="flex-1 accent-green-600"
+                />
+              </div>
+            </div>
+
+            {/* Keeper toggle */}
+            <div className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3">
+              <div className="flex-1 flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Goalkeeper</span>
+                </div>
+                <span className="text-[10px] text-gray-500 font-medium uppercase tracking-tight">
+                  {hasKeeper ? 'FIXED: One player stays in goal' : 'ROTATING: Everyone takes a turn'}
+                </span>
+              </div>
               <button
-                key={p.label}
-                onClick={() => setPlayersPerSide(p.players)}
-                className={`py-2 rounded-lg text-sm font-bold border transition-colors ${
-                  playersPerSide === p.players
-                    ? 'bg-green-600 text-white border-green-600'
-                    : 'bg-white text-gray-700 border-gray-200 hover:border-green-400'
+                onClick={() => setHasKeeper(v => !v)}
+                className={`relative w-11 h-6 rounded-full transition-colors ${
+                  hasKeeper ? 'bg-blue-600' : 'bg-emerald-500'
                 }`}
               >
-                {p.label}
+                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                  hasKeeper ? 'translate-x-5' : 'translate-x-0'
+                }`} />
               </button>
-            ))}
-          </div>
-          {/* Custom slider for non-standard sizes */}
-          <div className="mt-3 flex items-center gap-3">
-            <span className="text-xs text-gray-600 dark:text-gray-300 w-20">Custom: {playersPerSide}v{playersPerSide}</span>
-            <input
-              type="range" min={3} max={15} value={playersPerSide}
-              onChange={e => setPlayersPerSide(Number(e.target.value))}
-              className="flex-1 accent-green-600"
-            />
-          </div>
-        </div>
+            </div>
 
-        {/* Keeper toggle */}
-        <div className="flex items-center justify-between bg-gray-50 rounded-xl px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-blue-600" />
-            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Goalkeeper</span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">(can rotate each week)</span>
-          </div>
-          <button
-            onClick={() => setHasKeeper(v => !v)}
-            className={`relative w-11 h-6 rounded-full transition-colors ${
-              hasKeeper ? 'bg-blue-600' : 'bg-gray-300'
-            }`}
-          >
-            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
-              hasKeeper ? 'translate-x-5' : 'translate-x-0'
-            }`} />
-          </button>
-        </div>
+            <div className="text-center text-[10px] text-gray-400 font-black uppercase tracking-[0.2em]">
+              {matchFormat} • {hasKeeper ? 'Standard Rules' : 'Informal / Rotating'}
+            </div>
 
-        <div className="text-center text-xs text-gray-600 dark:text-gray-300 font-semibold uppercase tracking-widest">
-          {matchFormat} • {hasKeeper ? 'With goalkeeper' : 'No goalkeeper / rotating keeper'}
-        </div>
-
-        <Button onClick={handleStartMatch} size="lg" className="w-full h-14 text-base font-bold shadow-lg shadow-green-600/20 active:scale-95 transition-transform">
-          Start Match Tracking
-        </Button>
+            <Button onClick={handleStartMatch} size="lg" className="w-full h-14 text-base font-bold shadow-lg shadow-green-600/20 active:scale-95 transition-transform">
+              Start Match Tracking
+            </Button>
+          </>
+        )}
       </Card>
     );
   }

@@ -27,6 +27,7 @@ import { trpc } from '@/lib/trpc-client';
 import { getDashboardEntryState, type DashboardEntryAction } from '@/lib/dashboard/entry-state';
 import { useTactics } from '@/hooks/squad/useTactics';
 
+import { QuickLogWidget } from '@/components/dashboard/QuickLogWidget';
 import dynamic from 'next/dynamic';
 
 // Statically imported (small / always visible)
@@ -195,6 +196,27 @@ export const AdaptiveDashboard: React.FC = () => {
     }
 
     widgets.push(
+      {
+        id: 'quick-log',
+        priority: 450,
+        requiredLevel: 'basic',
+        category: 'matches',
+        component: (
+          <QuickLogWidget 
+            homeTeam={primarySquadName || 'My Squad'} 
+            awayTeam="Opponent" 
+            onLog={async (data) => {
+              // In a real app, this would call a TRPC mutation
+              console.log('Logging match:', data);
+              addToast({
+                tone: 'success',
+                title: 'Match Logged',
+                message: 'Result submitted to the verification queue.',
+              });
+            }} 
+          />
+        ),
+      },
       {
         id: 'match-engine',
         priority: 500, // Top priority
@@ -387,7 +409,15 @@ export const AdaptiveDashboard: React.FC = () => {
                         isWin ? 'bg-green-500' : isDraw ? 'bg-yellow-400' : 'bg-red-400'
                       }`} />
                       <div>
-                        <h3 className="font-semibold text-gray-900 text-sm">vs {match.opponent}</h3>
+                        <div className="flex items-center gap-1.5">
+                          <h3 className="font-semibold text-gray-900 text-sm">vs {match.opponent}</h3>
+                          {match.status === 'verified' && (
+                            <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-emerald-100 text-[8px] font-black text-emerald-700 uppercase tracking-tighter" title="Socially Trusted">
+                              <Users className="w-2 h-2" />
+                              Trusted
+                            </div>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-700 dark:text-gray-300">{match.date}</p>
                       </div>
                     </div>
@@ -1125,7 +1155,7 @@ export const AdaptiveDashboard: React.FC = () => {
       </AnimatePresence>
 
       {(() => {
-        const todayIds = ['onboarding-checklist', 'pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine', 'quick-stats', 'achievements', 'upcoming-fixtures'];
+        const todayIds = ['quick-log', 'onboarding-checklist', 'pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine', 'quick-stats', 'achievements', 'upcoming-fixtures'];
         const squadIds = ['governance', 'squad-dynamics', 'captains-log', 'communication-hub'];
         const progressIds = ['training', 'scouting-report', 'lens-social', 'nearby-squads', 'territory'];
 
@@ -1136,6 +1166,7 @@ export const AdaptiveDashboard: React.FC = () => {
 
         const sectionLayouts: Record<string, Record<string, string>> = {
           Today: {
+            'quick-log': 'md:col-span-12',
             'match-engine': 'md:col-span-12',
             'upcoming-fixtures': 'md:col-span-12',
             'pending-actions': 'md:col-span-12 lg:col-span-5 xl:col-span-4',
