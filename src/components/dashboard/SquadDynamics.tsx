@@ -8,7 +8,9 @@ import { trpc } from '@/lib/trpc-client';
 import { useJourneyState } from '@/hooks/useJourneyState';
 import { useSquadDetails } from '@/hooks/squad/useSquad';
 import { isPendingMatchStatus, isSettledMatchStatus } from '@/lib/match/summary';
-import { Avatar } from '@/components/ui/Avatar';
+import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
+import { buildDerivedAvatarPresentation } from '@/lib/avatar/builders';
+import type { AvatarPresentation } from '@/lib/avatar/types';
 
 interface SquadDynamicsProps {
   squadId?: string;
@@ -18,6 +20,28 @@ function getCoverageTone(value: number) {
   if (value >= 80) return 'text-green-600';
   if (value >= 50) return 'text-amber-600';
   return 'text-red-500';
+}
+
+function buildMemberAvatar(member: {
+  id: string;
+  name: string;
+  avatar?: string;
+  role: string;
+  stats?: {
+    goals: number;
+    level: number;
+    matches: number;
+  };
+}): AvatarPresentation {
+  return buildDerivedAvatarPresentation({
+    userId: member.id,
+    name: member.name,
+    imageUrl: member.avatar,
+    role: member.role,
+    level: member.stats?.level,
+    totalMatches: member.stats?.matches,
+    totalGoals: member.stats?.goals,
+  });
 }
 
 export const SquadDynamics: React.FC<SquadDynamicsProps> = ({ squadId }) => {
@@ -50,6 +74,7 @@ export const SquadDynamics: React.FC<SquadDynamicsProps> = ({ squadId }) => {
   const topScorer = [...members]
     .filter((member) => member.stats)
     .sort((left, right) => (right.stats?.goals ?? 0) - (left.stats?.goals ?? 0))[0];
+  const topScorerAvatar = topScorer ? buildMemberAvatar(topScorer) : null;
 
   const rotationCoverage = Math.min(100, Math.round((members.length / 11) * 100));
   const recentSettledMatches = settledMatches.filter((match) => {
@@ -205,11 +230,13 @@ export const SquadDynamics: React.FC<SquadDynamicsProps> = ({ squadId }) => {
           <div className="flex items-center gap-1.5 bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">
             {topScorer ? (
               <>
-                <Avatar
-                  src={topScorer.avatar || undefined}
-                  name={topScorer.name}
-                  size="xs"
-                />
+                {topScorerAvatar && (
+                  <PlayerAvatar
+                    presentation={topScorerAvatar}
+                    size="xs"
+                    showBadge={false}
+                  />
+                )}
                 <span>{topScorer.name} • {topScorer.stats?.goals ?? 0}G</span>
               </>
             ) : (

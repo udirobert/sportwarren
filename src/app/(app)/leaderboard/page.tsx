@@ -4,11 +4,37 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import { Trophy, Star, Shield, Users, ArrowLeft, Search, Filter, TrendingUp } from "lucide-react";
+import { Trophy, Star, Shield, ArrowLeft, TrendingUp } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useJourneyState } from "@/hooks/useJourneyState";
+import { PlayerAvatar } from "@/components/ui/PlayerAvatar";
+import { buildDerivedAvatarPresentation } from "@/lib/avatar/builders";
+import type { AvatarPresentation } from "@/lib/avatar/types";
+
+function buildLeaderboardAvatar(player: {
+  userId: string;
+  name?: string | null;
+  avatar?: string | null;
+  level?: number;
+  totalXP?: number;
+  totalMatches?: number;
+  totalGoals?: number;
+  totalAssists?: number;
+}): AvatarPresentation {
+  return buildDerivedAvatarPresentation({
+    userId: player.userId,
+    name: player.name ?? 'Anonymous',
+    imageUrl: player.avatar,
+    level: player.level,
+    xp: player.totalXP,
+    totalMatches: player.totalMatches,
+    totalGoals: player.totalGoals,
+    totalAssists: player.totalAssists,
+    position: null,
+  });
+}
 
 function LeaderboardPageInner() {
   const [type, setType] = useState<'overall' | 'goals' | 'assists' | 'matches'>('overall');
@@ -16,8 +42,7 @@ function LeaderboardPageInner() {
     type, 
     limit: 50 
   });
-  const { memberships } = useJourneyState();
-  const primarySquadId = memberships?.[0]?.squad?.id;
+  useJourneyState();
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom space-y-6 text-gray-900 dark:text-gray-100">
@@ -87,7 +112,10 @@ function LeaderboardPageInner() {
                 </div>
               ))
             ) : leaderboard && leaderboard.length > 0 ? (
-              leaderboard.map((player: any, i: number) => (
+              leaderboard.map((player: any, i: number) => {
+                const avatarPresentation = buildLeaderboardAvatar(player);
+
+                return (
                 <div 
                   key={player.userId} 
                   className={`grid grid-cols-12 gap-4 px-6 py-4 items-center transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
@@ -105,24 +133,23 @@ function LeaderboardPageInner() {
                     </span>
                   </div>
                   <div className="col-span-6 md:col-span-7 flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-xs font-bold text-white shadow-sm shrink-0">
-                      {player.avatar ? (
-                        <img src={player.avatar} alt="" className="w-full h-full object-cover rounded-xl" />
-                      ) : (
-                        (player.name ?? 'A').charAt(0).toUpperCase()
-                      )}
-                    </div>
+                    <PlayerAvatar
+                      presentation={avatarPresentation}
+                      size="md"
+                      showBadge={i < 3}
+                    />
                     <div className="truncate">
                       <div className="flex items-center gap-2">
                         <p className="text-sm font-bold text-gray-900 dark:text-white truncate">
                           {player.name ?? 'Anonymous'}
                         </p>
-                        {player.isCaptain && (
+                        {i < 3 && (
                           <Shield className="w-3 h-3 text-blue-500" />
                         )}
                       </div>
                       <p className="text-[10px] text-gray-500 uppercase font-bold tracking-tight">
                         Level {player.level} • {player.totalMatches} matches
+                        {avatarPresentation.archetype ? ` • ${avatarPresentation.archetype}` : ''}
                       </p>
                     </div>
                   </div>
@@ -138,7 +165,8 @@ function LeaderboardPageInner() {
                     </div>
                   </div>
                 </div>
-              ))
+                );
+              })
             ) : (
               <div className="px-6 py-12 text-center">
                 <p className="text-gray-500 font-bold">No players found in this category.</p>

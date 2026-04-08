@@ -5,6 +5,7 @@ import { createTRPCRouter, publicProcedure, protectedProcedure, adminProcedure }
 import { calculateSharpnessDecay, calculateActivityGain } from '../../lib/player/fitness-engine';
 import { getSquadMembership } from '../services/permissions';
 import { applyMatchXP } from '../services/match-xp';
+import { getAvatarPresentation } from '../services/avatar/avatar-presentation';
 
 const AttributeType = z.enum([
   'pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical',
@@ -105,6 +106,22 @@ export const playerRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to fetch current player profile',
+          cause: error,
+        });
+      }
+    }),
+
+  getAvatarPresentation: protectedProcedure
+    .input(z.object({
+      squadId: z.string().optional(),
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await getAvatarPresentation(ctx.prisma, ctx.userId!, input.squadId);
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch avatar presentation',
           cause: error,
         });
       }
