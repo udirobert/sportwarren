@@ -1,6 +1,5 @@
 
-import { getOpenAIClient, OPENAI_MODEL_ID } from './providers/openai';
-import { getVeniceClient, VENICE_MODEL_ID } from './providers/venice';
+import { generateInference, AIMessage } from './inference';
 import { getNarrativeLedger, updateNarrativeLedger } from './memory';
 
 export const MARCUS_SYSTEM_PROMPT = `You are Marcus, the Academy Director of SportWarren. 
@@ -20,8 +19,6 @@ const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
 export async function getMarcusResponse(message: string, context: { city?: string, venue?: string, history: any[], userId?: string }) {
     const { city, venue, history, userId } = context;
-    const veniceClient = getVeniceClient();
-    const openaiClient = getOpenAIClient();
 
     // Guest sessions and raw wallet addresses should not hard-fail chat persistence.
     let ledger = null;
@@ -43,39 +40,24 @@ export async function getMarcusResponse(message: string, context: { city?: strin
     const contextPrefix = city && venue ? `[Context: ${city} Chapter near ${venue}] ` : '';
     const memoryPrefix = keyInsights ? `[Previous Insights: ${keyInsights}] ` : '';
 
-    const messages = [
-        { role: 'system' as const, content: MARCUS_SYSTEM_PROMPT },
+    const messages: AIMessage[] = [
         ...history,
-        { role: 'user' as const, content: contextPrefix + memoryPrefix + message }
+        { role: 'user', content: contextPrefix + memoryPrefix + message }
     ];
-
-    if (!veniceClient && !openaiClient) {
-        return "Tactical systems are in offline mode. Connect your identity and I will guide your next move.";
-    }
 
     let reply = "Signals weak. Focus on the tactical layout.";
     try {
-        const response = await (veniceClient ?? openaiClient)!.chat.completions.create({
-            model: veniceClient ? VENICE_MODEL_ID : OPENAI_MODEL_ID,
-            messages,
+        const result = await generateInference(messages, {
+            systemPrompt: MARCUS_SYSTEM_PROMPT,
             temperature: 0.7,
             max_tokens: 150,
         });
 
-        reply = response.choices[0]?.message?.content || reply;
-    } catch (error) {
-        if (veniceClient && openaiClient) {
-            const fallbackResponse = await openaiClient.chat.completions.create({
-                model: OPENAI_MODEL_ID,
-                messages,
-                temperature: 0.7,
-                max_tokens: 150,
-            });
-
-            reply = fallbackResponse.choices[0]?.message?.content || reply;
-        } else {
-            throw error;
+        if (result) {
+            reply = result.content;
         }
+    } catch (error) {
+        console.error('[Marcus] Inference failed:', error);
     }
 
     // Save to cache

@@ -20,6 +20,7 @@ export interface PendingMatchSubmissionInput {
   agentInsights?: unknown;
   sessionId?: string;
   isSoftVerified?: boolean;
+  hasKeeper?: boolean;
 }
 
 export async function createPendingMatchSubmission({
@@ -39,6 +40,7 @@ export async function createPendingMatchSubmission({
   agentInsights = null,
   sessionId,
   isSoftVerified = false,
+  hasKeeper,
 }: PendingMatchSubmissionInput) {
   const shareSlug = randomBytes(4).toString('base64url');
 
@@ -60,6 +62,7 @@ export async function createPendingMatchSubmission({
       verificationDetails,
       agentInsights,
       sessionId,
+      hasKeeper: hasKeeper ?? true,
     } as any,
     include: {
       homeSquad: true,

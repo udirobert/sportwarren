@@ -12,6 +12,13 @@ import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { getJourneyContent } from '@/lib/journey/content';
 import type { DashboardEntryStateId } from '@/lib/dashboard/entry-state';
+import { Avatar } from '@/components/ui/Avatar';
+
+const AGENT_AVATARS: Record<string, string> = {
+    concierge: 'https://api.dicebear.com/7.x/bottts/svg?seed=Marcus&backgroundColor=b6e3f4',
+    scout: 'https://api.dicebear.com/7.x/bottts/svg?seed=Kite&backgroundColor=ffdfbf',
+    coach: 'https://api.dicebear.com/7.x/bottts/svg?seed=Coach&backgroundColor=c0aede',
+};
 
 interface Message {
     id: string;
@@ -70,10 +77,10 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
         const handleTourStep = (e: any) => {
             const stepId = e.detail?.id;
             if (!stepId || tourStepProcessed.current.has(stepId)) return;
-            
+
             // Only process steps that have contextual prompts
             if (!TOUR_STEP_PROMPTS[stepId]) return;
-            
+
             tourStepProcessed.current.add(stepId);
             setIsOpen(true);
             setIsTyping(true);
@@ -210,11 +217,25 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
                         >
                             {messages.map((m: Message) => (
                                 <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                    <div className={`max-w-[85%] p-3 rounded-2xl text-sm ${m.role === 'user'
-                                        ? 'bg-blue-600 text-white shadow-lg'
-                                        : 'bg-white/5 text-gray-200 border border-white/10'
-                                        }`}>
-                                        {m.content}
+                                    <div className="flex flex-col gap-1 max-w-[85%]">
+                                        {m.role === 'agent' && (
+                                            <div className="flex items-center gap-1.5 ml-1">
+                                                <Avatar
+                                                    src={AGENT_AVATARS[m.agentType || 'concierge']}
+                                                    size="xs"
+                                                    className="border-0 shadow-none bg-transparent"
+                                                />
+                                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
+                                                    {m.agentType || 'concierge'}
+                                                </span>
+                                            </div>
+                                        )}
+                                        <div className={`p-3 rounded-2xl text-sm ${m.role === 'user'
+                                            ? 'bg-blue-600 text-white shadow-lg'
+                                            : 'bg-white/5 text-gray-200 border border-white/10'
+                                            }`}>
+                                            {m.content}
+                                        </div>
                                     </div>
                                 </div>
                             ))}

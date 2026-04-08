@@ -1,6 +1,47 @@
 import axios from 'axios';
 import { ethers } from 'ethers';
 
+type KiteServiceStatus = {
+  enabled: boolean;
+  apiUrl: string;
+  hasApiKey: boolean;
+  hasPrivateKey: boolean;
+  rpcUrl: string;
+  reason?: string;
+};
+
+function readKiteEnv() {
+  const apiUrl = process.env.KITE_API_URL || 'https://api.gokite.ai';
+  const rpcUrl = process.env.KITE_RPC_URL || process.env.NEXT_PUBLIC_KITE_RPC_URL || 'https://rpc-testnet.gokite.ai';
+  const hasApiKey = Boolean(process.env.KITE_API_KEY?.trim());
+  const hasPrivateKey = Boolean(process.env.WEB3_PRIVATE_KEY?.trim());
+
+  return {
+    apiUrl,
+    rpcUrl,
+    hasApiKey,
+    hasPrivateKey,
+  };
+}
+
+export function getKiteServiceStatus(): KiteServiceStatus {
+  const config = readKiteEnv();
+  const enabled = config.hasApiKey && config.hasPrivateKey;
+
+  return {
+    enabled,
+    apiUrl: config.apiUrl,
+    rpcUrl: config.rpcUrl,
+    hasApiKey: config.hasApiKey,
+    hasPrivateKey: config.hasPrivateKey,
+    reason: enabled
+      ? undefined
+      : !config.hasApiKey
+        ? 'KITE_API_KEY is not configured.'
+        : 'WEB3_PRIVATE_KEY is not configured for Kite agent operations.',
+  };
+}
+
 /**
  * Kite AI Service
  * Agent identity, payments, and marketplace integration
@@ -34,10 +75,11 @@ export class KiteAIService {
   private wallet: ethers.Wallet;
 
   constructor() {
-    this.apiUrl = process.env.KITE_API_URL || 'https://api.gokite.ai';
+    const config = readKiteEnv();
+    this.apiUrl = config.apiUrl;
     this.apiKey = process.env.KITE_API_KEY || '';
     
-    const rpcUrl = process.env.AVALANCHE_RPC_URL || 'https://api.avax.network/ext/bc/C/rpc';
+    const rpcUrl = config.rpcUrl;
     this.provider = new ethers.JsonRpcProvider(rpcUrl);
     
     const privateKey = process.env.WEB3_PRIVATE_KEY;
@@ -69,7 +111,7 @@ export class KiteAIService {
           platform: 'sportwarren',
           metadata: {
             sport: 'football',
-            chain: 'avalanche',
+            chain: 'kite',
           },
         },
         {
@@ -174,7 +216,7 @@ export class KiteAIService {
           to: toAddress,
           amount: amount,
           currency: currency,
-          network: 'avalanche',
+          network: 'kite',
           metadata: {
             platform: 'sportwarren',
             type: 'agent_payment',
@@ -425,4 +467,20 @@ export class KiteAIService {
   }
 }
 
-export const kiteAIService = new KiteAIService();
+let kiteAIServiceInstance: KiteAIService | null = null;
+
+export function getKiteAIService() {
+  if (!kiteAIServiceInstance) {
+    kiteAIServiceInstance = new KiteAIService();
+  }
+
+  return kiteAIServiceInstance;
+}
+
+export const kiteAIService = new Proxy({} as KiteAIService, {
+  get(_target, property, receiver) {
+    const instance = getKiteAIService();
+    const value = Reflect.get(instance, property, receiver);
+    return typeof value === 'function' ? value.bind(instance) : value;
+  },
+});

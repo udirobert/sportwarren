@@ -1,8 +1,8 @@
 # SportWarren Core
 
-**Phygital Football Platform | Championship Manager in Telegram, powered by TON**
+**Phygital Football Platform | Championship Manager across Telegram, Web, and a role-specific multi-chain stack**
 
-> **Hackathon Focus:** User-Facing AI Agents on TON — an AI-powered squad management assistant that lives in Telegram, handles match tracking, tactics, and treasury via TON payments.
+> **Platform Principle:** SportWarren uses multiple networks with strict responsibilities. No chain is interchangeable; each one exists because it owns a distinct product capability.
 
 ---
 
@@ -41,21 +41,35 @@ SportWarren's current MVP scope is the **Championship Manager-style squad loop, 
 | Match Tracking | Log results, events, verification | ✅ Complete |
 | Game Simulation | AI-powered match prediction engine | ✅ Complete |
 | Tactics/Strategy | Formation, instructions, lineups | ✅ Complete |
-| Payments | TON treasury, fees, rewards | ✅ Complete |
+| Payments | Multi-network treasury, fees, rewards, and agent settlements | ✅ Complete |
 | XP System | Player progression, reputation | ✅ Complete |
 | AI Staff | 5 agents (Scout, Coach, Physio, etc.) | ✅ Complete |
 
-**Telegram is the primary distribution layer. TON is the payment/trust layer.**
+**Telegram is a primary distribution surface. TON owns Telegram-native wallet flows, while Algorand, Avalanche, Kite, Yellow, and Lens each handle separate responsibilities.**
 
 ### Out of Scope (Future Build)
 
 The following features exist in code but are **not part of the current core product**:
 
 - **Prediction Markets** (`/predict`, `server/services/prediction/`) — Speculative feature, not CM-style core loop
-- **Lens Social Integration** — Future social layer, not launch priority
 - **Advanced DAO Governance** — Beyond basic treasury operations
 
 These should not displace the primary CM-style loop during consolidation, hackathon judging, or roadmap prioritization.
+
+## Chain Responsibility Model
+
+SportWarren keeps all supported networks because each one maps to a different part of the product:
+
+| Network | Product Responsibility | Why It Exists |
+|---------|------------------------|---------------|
+| **Algorand** | Match verification, reputation state, and proof-backed player progression | Fast, low-cost verification and durable football records |
+| **Avalanche** | Squad governance, treasury policy, digital assets, and escrow contracts | Strong EVM tooling for programmable squad coordination |
+| **Kite AI** | Agent identity, paid agent actions, attestations, and autonomous economy | Purpose-built infrastructure for agent passports and agent commerce |
+| **Yellow** | Instant settlement rail for treasury movement and match-fee coordination | Operational liquidity without forcing every action into a slower on-chain path |
+| **TON** | Telegram-native wallet UX, top-ups, rewards, and Mini App payments | Native fit for Telegram distribution and user treasury actions |
+| **Lens** | Social identity, highlights, and community distribution | Portable social graph for player and squad visibility |
+
+This is not a fallback stack. It is a responsibility-partitioned architecture where the app layer coordinates purpose-built networks instead of forcing one chain to do everything.
 
 ### Weekly Cycle
 
@@ -149,7 +163,7 @@ These should not displace the primary CM-style loop during consolidation, hackat
 | Database | PostgreSQL 15+ |
 | ORM | Prisma 7 |
 | Auth | Wallet signatures (algosdk, ethers) |
-| Blockchains | Algorand (XP), Avalanche (DAO), Kite AI (Agents), Lens (Social), Yellow (Payments) |
+| Blockchains | Algorand (verification/reputation), Avalanche (governance/assets), Kite AI (agent economy), Yellow (settlement rail), TON (Telegram treasury UX), Lens (social distribution) |
 
 ---
 

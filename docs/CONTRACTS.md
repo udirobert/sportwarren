@@ -103,7 +103,14 @@
 
 ## 🔗 Kite AI Testnet ⏳
 
-**Network:** RPC `https://rpc-testnet.gokite.ai`, Chain ID 2368. Planned: Agent Escrow.
+**Network:** RPC `https://rpc-testnet.gokite.ai`, Chain ID `2368`.
+
+**Role in SportWarren:**
+- Agent identity and passports
+- Paid agent actions and agent economy primitives
+- Attestations and verifiable agent activity
+
+**Implementation Note:** Contract escrow for squad funds lives on Avalanche. Kite is the agent-native layer that complements those escrow flows with agent identity, payments, and attestations.
 
 ---
 
@@ -209,11 +216,16 @@ npx tsx scripts/test-cre-logic.ts            # Test CRE logic
 ## Architecture Notes
 
 **Why Multiple Chains:**
-- **Algorand:** Match verification, reputation (low fees, fast finality)
-- **Avalanche:** Governance, DeFi, agents (EVM compatibility)
-- **Kite AI:** Agent identity & payments (purpose-built for agents)
+- **Algorand:** Match verification, reputation state, and proof-backed player progression
+- **Avalanche:** Governance, squad treasury policy, programmable assets, and escrow contracts
+- **Kite AI:** Agent passports, paid agent actions, attestations, and autonomous economy
+- **Yellow:** Instant settlement rail for treasury movement and match-fee coordination
+- **TON:** Telegram-native wallet UX, top-ups, rewards, and Mini App payment flows
+- **Lens:** Social identity, highlight publishing, and community distribution
 
-**Cross-Chain Strategy:** Algorand for immutable match data, Avalanche for governance/economics, Kite AI for agent settlements. Future: State Proofs, Warp Messaging, app-layer sync.
+**Cross-Chain Strategy:** SportWarren assigns each network a strict role. Algorand owns verified football state, Avalanche owns programmable squad governance and assets, Kite owns agent identity and agent economy primitives, Yellow handles instant operational settlement, TON handles Telegram-native consumer payments, and Lens handles community distribution.
+
+**On-Chain Scope:** Smart contracts in this project primarily live on Algorand and Avalanche. Kite, Yellow, TON, and Lens are integrated at the application and service layers rather than duplicated as contract systems inside this repository.
 
 ---
 

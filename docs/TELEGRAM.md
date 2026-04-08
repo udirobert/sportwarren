@@ -1,19 +1,23 @@
 # SportWarren Telegram Integration
 
-**Championship Manager in Telegram, powered by TON**
+**Championship Manager in Telegram, connected to SportWarren’s multi-chain stack**
 
-> Target: TON AI Hackathon — User-Facing AI Agents Track ($10,000)
+> Telegram is a primary SportWarren surface. TON powers Telegram-native wallet and treasury actions, while Algorand, Avalanche, Kite AI, Yellow, and Lens continue to serve their own strict roles.
 
 ---
 
 ## Executive Summary
 
-SportWarren brings the Championship Manager experience to Telegram as an AI-powered squad management assistant. Users interact with their football squad through bot commands and a Mini App, with TON handling payments and on-chain verification.
+SportWarren brings the Championship Manager experience to Telegram as an AI-powered squad management assistant. Users interact with their football squad through bot commands and a Mini App, while the broader platform coordinates multiple networks behind the scenes.
 
-**Hackathon Positioning:**
-- **Track:** User-Facing AI Agents
-- **Core Value:** AI agents that help users manage real-world football squads inside Telegram
-- **TON Integration:** Treasury payments, match fee settlements, reward distribution
+**Telegram Surface Responsibilities:**
+- **Telegram:** Bot commands, alerts, squad coordination, and Mini App distribution
+- **TON:** Telegram-native wallet flows, top-ups, rewards, and treasury actions
+- **Algorand:** Match verification and reputation state that the Telegram surface reads and advances
+- **Avalanche:** Governance, assets, and escrow that squads can trigger from shared workflows
+- **Kite AI:** Staff identities, paid agent actions, and attestations behind AI experiences
+- **Yellow:** Instant settlement rail for operational treasury movement and match-fee coordination
+- **Lens:** Social identity and distribution for shareable squad moments
 
 ---
 
@@ -22,6 +26,8 @@ SportWarren brings the Championship Manager experience to Telegram as an AI-powe
 **Yes, the Telegram Mini App and web app are fully connected.**
 
 A user can link their Telegram account to their existing EVM/Algorand/Lens identity and manage the same squad, matches, XP, and treasury across both surfaces.
+
+TON treasury wallets complement this identity model at the payment layer; they do not replace the core user record used across web and Telegram.
 
 ### How It Works
 
@@ -184,7 +190,8 @@ interface TelegramMiniAppContext {
 │  • Treasury top-ups (pending → verified)                        │
 │  • Match fee settlements                                        │
 │  • XP reward distribution                                       │
-│  • On-chain verification anchoring                              │
+│  • TON wallet and treasury actions                              │
+│  • Verification status surfaced from shared chain services      │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -496,14 +503,14 @@ src/app/api/telegram/mini-app/
 
 ---
 
-## Hackathon Judging Alignment
+## Telegram Surface Value
 
 | Criteria | Weight | How We Score |
 |----------|--------|--------------|
-| **Product Quality** | 25% | Full CM experience in Telegram, not just a wallet |
-| **Technical Execution** | 25% | tRPC type safety, shared primitives, clean architecture |
-| **Ecosystem Value** | 25% | TON payments for real-world football operations |
-| **User Potential** | 25% | 1B+ Telegram users, grassroots football market |
+| **Distribution** | 25% | Full CM experience in Telegram, not just a wallet |
+| **Execution** | 25% | tRPC type safety, shared primitives, clean architecture |
+| **Chain Fit** | 25% | TON wallet UX paired with shared Algorand/Avalanche/Kite/Yellow workflows |
+| **User Potential** | 25% | Massive Telegram reach plus grassroots football utility |
 
 ### Demo Script (3 min)
 
@@ -555,7 +562,7 @@ server/
 
 ---
 
-## Next Steps for Hackathon
+## Next Steps for Telegram Operations
 
 ### Remaining Tasks
 
@@ -565,9 +572,9 @@ server/
 4. [x] Create `TelegramPlayerProfile.tsx` with attributes
 5. [x] Add `/ask`, `/app`, `/profile` bot commands
 6. [x] **Consolidate backend flow:** Seed stats, rewards, and XP distribute automatically
-6. [ ] **Test full flow:** link → log → verify → XP → treasury
-7. [ ] **Record demo video** for hackathon submission
-8. [ ] **Deploy to production** with Telegram Bot webhook
+7. [ ] **Test full flow:** link → log → verify → XP → treasury
+8. [ ] **Record demo video** for product, partner, or investor walkthroughs
+9. [ ] **Deploy to production** with Telegram Bot webhook
 
 ### Demo Checklist
 

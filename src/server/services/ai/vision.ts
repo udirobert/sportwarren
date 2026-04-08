@@ -1,72 +1,54 @@
-import OpenAI from 'openai';
+import { generateInference, AIMessage } from '@/lib/ai/inference';
 import { writeFile } from 'fs/promises';
 
 export class ComputerVisionService {
-  private openai: OpenAI | null = null;
-
-  constructor() {
-    // OpenAI client is lazily initialized when needed
-  }
-
-  private getClient(): OpenAI {
-    if (!this.openai) {
-      if (!process.env.OPENAI_API_KEY) {
-        throw new Error('OPENAI_API_KEY environment variable is not set');
-      }
-      this.openai = new OpenAI({
-        apiKey: process.env.OPENAI_API_KEY,
-      });
-    }
-    return this.openai;
-  }
+  constructor() {}
 
   async analyzeMatchPhoto(imageData: any, _matchId?: string): Promise<any> {
     try {
-      // Save buffer to temporary file
-      const tempPath = `/tmp/image_${Date.now()}.jpg`;
       const imageBuffer = Buffer.isBuffer(imageData) ? imageData : Buffer.from(imageData as any);
-      await writeFile(tempPath, imageBuffer);
 
-      // Convert to base64 for OpenAI Vision API
+      // Convert to base64 for Vision API (gpt-4o or similar)
       const base64Image = imageBuffer.toString('base64');
 
-      const response = await this.getClient().chat.completions.create({
-        model: 'gpt-4-vision-preview',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Analyze this football match photo and extract relevant information. 
-                       Return a JSON object with:
-                       {
-                         "scene_type": "goal_celebration" | "team_photo" | "action_shot" | "crowd" | "other",
-                         "players_visible": number,
-                         "key_moments": ["description of what's happening"],
-                         "emotions": ["celebration", "disappointment", "concentration", etc.],
-                         "suggested_caption": "engaging caption for social media",
-                         "confidence": number between 0 and 1
-                       }`
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:image/jpeg;base64,${base64Image}`,
-                  detail: 'high'
-                }
+      const messages: any[] = [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Analyze this football match photo and extract relevant information.
+                     Return a JSON object with:
+                     {
+                       "scene_type": "goal_celebration" | "team_photo" | "action_shot" | "crowd" | "other",
+                       "players_visible": number,
+                       "key_moments": ["description of what's happening"],
+                       "emotions": ["celebration", "disappointment", "concentration", etc.],
+                       "suggested_caption": "engaging caption for social media",
+                       "confidence": number between 0 and 1
+                     }`
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`,
+                detail: 'high'
               }
-            ]
-          }
-        ],
+            }
+          ]
+        }
+      ];
+
+      const result = await generateInference(messages, {
+        modelOverride: 'gpt-4o', // Use vision-capable model
         max_tokens: 500,
         temperature: 0.3,
       });
 
-      const content = response.choices[0]?.message?.content;
-      if (content) {
+      if (result?.content) {
         try {
-          return JSON.parse(content);
+          const cleanContent = result.content.replace(/```json|```/g, '').trim();
+          return JSON.parse(cleanContent);
         } catch (_parseError) {
           return this.createFallbackPhotoAnalysis();
         }
@@ -164,48 +146,49 @@ export class ComputerVisionService {
     try {
       const base64Image = imageBuffer.toString('base64');
 
-      const response = await this.getClient().chat.completions.create({
-        model: 'gpt-4-vision-preview',
-        messages: [
-          {
-            role: 'user',
-            content: [
-              {
-                type: 'text',
-                text: `Analyze this football field image and detect player positions. 
-                       Return a JSON object with:
-                       {
-                         "formation": "4-4-2" | "3-5-2" | "4-3-3" | "other",
-                         "player_positions": [
-                           {
-                             "position": "GK" | "DF" | "MF" | "FW",
-                             "x": number (0-100, left to right),
-                             "y": number (0-100, top to bottom),
-                             "team": "home" | "away"
-                           }
-                         ],
-                         "tactical_analysis": "brief description of formation and positioning",
-                         "confidence": number between 0 and 1
-                       }`
-              },
-              {
-                type: 'image_url',
-                image_url: {
-                  url: `data:image/jpeg;base64,${base64Image}`,
-                  detail: 'high'
-                }
+      const messages: any[] = [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'text',
+              text: `Analyze this football field image and detect player positions.
+                     Return a JSON object with:
+                     {
+                       "formation": "4-4-2" | "3-5-2" | "4-3-3" | "other",
+                       "player_positions": [
+                         {
+                           "position": "GK" | "DF" | "MF" | "FW",
+                           "x": number (0-100, left to right),
+                           "y": number (0-100, top to bottom),
+                           "team": "home" | "away"
+                         }
+                       ],
+                       "tactical_analysis": "brief description of formation and positioning",
+                       "confidence": number between 0 and 1
+                     }`
+            },
+            {
+              type: 'image_url',
+              image_url: {
+                url: `data:image/jpeg;base64,${base64Image}`,
+                detail: 'high'
               }
-            ]
-          }
-        ],
+            }
+          ]
+        }
+      ];
+
+      const result = await generateInference(messages, {
+        modelOverride: 'gpt-4o',
         max_tokens: 800,
         temperature: 0.2,
       });
 
-      const content = response.choices[0]?.message?.content;
-      if (content) {
+      if (result?.content) {
         try {
-          return JSON.parse(content);
+          const cleanContent = result.content.replace(/```json|```/g, '').trim();
+          return JSON.parse(cleanContent);
         } catch (_parseError) {
           return this.createFallbackPositionAnalysis();
         }

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { useWallet } from '@/contexts/WalletContext';
+import { getAvalancheContracts } from '@/lib/blockchain/evm-config';
 
 const ACHIEVEMENT_ABI = [
   "function balanceOf(address owner) public view returns (uint256)",
@@ -11,7 +12,7 @@ const ACHIEVEMENT_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
 ];
 
-const ACHIEVEMENT_ADDRESS = process.env.NEXT_PUBLIC_AVALANCHE_ACHIEVEMENT_NFT_ADDRESS || "0xF8ae857B73DF377A4D9387600bA15c0f1e0e15C4";
+const { achievementNft: ACHIEVEMENT_ADDRESS } = getAvalancheContracts();
 
 export interface AchievementNFT {
   tokenId: string;

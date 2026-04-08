@@ -48,6 +48,7 @@ npm run dev
 |----------|---------|
 | **[CORE.md](docs/CORE.md)** | Architecture, database schema, tech stack, features |
 | **[BUILD.md](docs/BUILD.md)** | Development guide, deployment, testing, troubleshooting |
+| **[CONTRACTS.md](docs/CONTRACTS.md)** | Deployed contracts, chain responsibilities, and integration inventory |
 | **[UX_REFOCUS.md](docs/UX_REFOCUS.md)** | Strategy for prioritizing tactical experience over match logging |
 | **[PEER_RATINGS.md](docs/PEER_RATINGS.md)** | Peer consensus engine, MOTM voting, and Scout reputation progression |
 | **[TELEGRAM.md](docs/TELEGRAM.md)** | Telegram bot + Mini App architecture, tactical notifications, and TON integration |
@@ -59,27 +60,18 @@ npm run dev
 ## 🏗️ Architecture (High-Level)
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SportWarren Platform                          │
-├─────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐      │
-│  │   Algorand   │  │  Avalanche   │  │     Kite AI      │      │
-│  │ (Sensor/XP)  │  │ (Governance) │  │ (Agent Economy)  │      │
-│  └──────┬───────┘  └──────┬───────┘  └────────┬─────────┘      │
-│         └──────────────────┼───────────────────┘                │
-│                            ▼                                    │
-│              ┌─────────────────────────┐                        │
-│              │   tRPC API Layer        │                        │
-│              │   (Type-safe RPC)       │                        │
-│              └───────────┬─────────────┘                        │
-│                          │                                      │
-│              ┌───────────┴───────────┐                          │
-│              ▼                       ▼                          │
-│  ┌─────────────────────┐  ┌─────────────────────┐              │
-│  │   Prisma ORM        │  │   Unified Auth      │              │
-│  │   (PostgreSQL)      │  │ (Privy v3/Wagmi v2) │              │
-│  └─────────────────────┘  └─────────────────────┘              │
-└─────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                         SportWarren Platform                         │
+├──────────────────────────────────────────────────────────────────────┤
+│ Algorand   Avalanche   Kite AI   Yellow   TON   Lens               │
+│ Verification Governance Agents   Rail     Wallet Social            │
+│ Reputation   Assets     Payments Settlement MiniApp Identity       │
+├──────────────────────────────────────────────────────────────────────┤
+│                    App + Service Orchestration Layer                │
+│             tRPC, Prisma, AI Staff, Treasury, Telegram             │
+├──────────────────────────────────────────────────────────────────────┤
+│                     Web App + Telegram Mini App                     │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -101,14 +93,28 @@ npm run dev
 ### Real Match Verification
 - Both teams submit results independently with consensus-required verification (3 checks)
 - Oracle-backed context (environmental/location signals) contributes to trust scoring
-- On-chain settlement on Algorand and TON
+- Verification, attestation, and treasury flows are distributed across purpose-specific networks
 
 ### Multi-Chain Infrastructure
-- **Algorand:** Match verification, reputation tracking (App ID: 756828208)
-- **Avalanche Amoy:** Governance, DAO and treasury operations
-- **Kite AI:** Agent identity and autonomous economy
-- **Yellow Network:** Instant off-chain match fees and treasury settlements
-- **Telegram + TON:** Full Mini App tactical parity, bot commands, and TON settlement worker
+- **Algorand:** Match verification, reputation state, and proof-backed football records
+- **Avalanche:** Squad governance, treasury policy, programmable assets, and escrow
+- **Kite AI:** Agent identity, agent payments, attestations, and autonomous economy
+- **Yellow Network:** Instant settlement rail for operational treasury movement and match-fee coordination
+- **Telegram + TON:** Consumer wallet UX, Mini App treasury actions, rewards, and Telegram-native payments
+- **Lens:** Social identity, highlight publishing, and community distribution
+
+### Chain Responsibility Matrix
+
+| Network | Strict Role |
+|---------|-------------|
+| **Algorand** | Verifiable match state, reputation, and proof-backed player progression |
+| **Avalanche** | Governance, squad treasury policy, digital assets, and contract-based escrow |
+| **Kite AI** | Agent passports, paid agent actions, attestations, and agent marketplace primitives |
+| **Yellow** | Fast settlement rail for treasury operations and match-fee coordination |
+| **TON** | Telegram-native wallet flows, top-ups, rewards, and Mini App payments UX |
+| **Lens** | Social graph, highlight distribution, and portable community identity |
+
+No chain is redundant in the SportWarren architecture. Each one owns a bounded responsibility, and the app layer composes them into a single squad experience.
 
 ### AI Staff Layer
 - Multi-persona staff assistants (Agent, Scout, Coach, Physio, Analyst, Commercial)

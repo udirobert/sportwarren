@@ -1,17 +1,21 @@
 # SportWarren Smart Contracts
 
-This directory contains all smart contracts for the SportWarren platform, supporting both **Algorand** (core blockchain) and **Avalanche** (agentic infrastructure) blockchains.
+This directory contains the on-chain contracts for the SportWarren platform, primarily across **Algorand** and **Avalanche**.
 
-## Dual-Chain Architecture
+Within the broader SportWarren architecture, these contracts work alongside **Kite AI** (agent identity, agent payments, attestations), **Yellow** (instant settlement rail), **TON** (Telegram-native treasury UX), and **Lens** (social identity and distribution). Those integrations live in the application and service layers rather than in this directory.
 
-SportWarren leverages both blockchains for their unique advantages:
+## Contract Responsibility Model
+
+SportWarren uses on-chain contracts where they fit best:
 
 | Feature | Algorand | Avalanche |
 |---------|----------|-----------|
-| **Purpose** | Match verification, reputation | AI agents, DeFi, cross-chain tournaments |
+| **Purpose** | Match verification, reputation, proof-backed match state | Governance, treasury policy, programmable assets, escrow |
 | **Language** | TEAL | Solidity |
 | **Development** | algosdk + TEAL | Foundry + Solidity |
 | **Network** | Testnet → Mainnet | Fuji → C-Chain |
+
+These chains are not competing implementations of the same feature set. Algorand and Avalanche have strict roles inside a wider multi-network system.
 
 ## Contract Structure
 
@@ -228,11 +232,11 @@ avalanche subnet deploy sportwarren-local
 
 ### Chain Abstraction Layer
 
-SportWarren implements a chain abstraction layer that provides:
-- Unified API for both chains
-- Smart defaults (Algorand for matches, Avalanche for agents)
-- User preference configuration
-- Cross-chain operations support
+SportWarren implements an application-layer abstraction that provides:
+- Unified access to Algorand and Avalanche contracts
+- Clear defaults (Algorand for verified football state, Avalanche for governance and escrow)
+- Service-layer coordination with Kite, Yellow, TON, and Lens
+- Cross-network operations support
 
 ### Cross-Chain Messaging
 
@@ -257,12 +261,14 @@ When adding new contracts:
 
 | Use Case | Recommended Chain | Rationale |
 |----------|------------------|-----------|
-| Match verification | Algorand | Chainlink oracles, low fees |
-| Player reputation | Algorand | Official credibility |
-| Squad governance | User choice | Fees vs. features |
-| AI agents | Avalanche | ERC-8004, TEE |
-| DeFi operations | Avalanche | Liquidity, yield |
-| Cross-chain tournaments | Both | AWM + State Proofs |
+| Match verification | Algorand | Proof-backed football state and low-cost verification |
+| Player reputation | Algorand | Durable progression and reputation records |
+| Squad governance | Avalanche | Mature EVM governance and treasury tooling |
+| Squad assets / escrow | Avalanche | Programmable contracts and asset standards |
+| Agent identity / payments | Kite AI | Purpose-built agent passports and agent economy rails |
+| Instant settlement | Yellow | Fast operational settlement outside heavyweight contract flows |
+| Telegram wallet UX | TON | Native consumer payment flows in Telegram |
+| Social distribution | Lens | Portable social graph and content publishing |
 
 ## Resources
 

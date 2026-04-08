@@ -19,6 +19,13 @@ export interface AIProvider {
     model: string;
 }
 
+export interface InferenceOptions {
+    temperature?: number;
+    max_tokens?: number;
+    modelOverride?: string;
+    systemPrompt?: string;
+}
+
 /**
  * Returns available providers in requested priority order.
  */
@@ -48,7 +55,7 @@ export function getAllAvailableProviders(): AIProvider[] {
  */
 export async function generateInference(
     messages: AIMessage[],
-    options: { temperature?: number; max_tokens?: number } = {}
+    options: InferenceOptions = {}
 ): Promise<{ content: string; provider: string } | null> {
     const providers = getAllAvailableProviders();
 
@@ -57,18 +64,24 @@ export async function generateInference(
         return null;
     }
 
+    const fullMessages = options.systemPrompt
+        ? [{ role: 'system' as const, content: options.systemPrompt }, ...messages]
+        : messages;
+
     for (const provider of providers) {
         try {
+            const modelToUse = options.modelOverride ?? provider.model;
+
             const completion = await provider.client.chat.completions.create({
-                model: provider.model,
-                messages: messages as any,
+                model: modelToUse,
+                messages: fullMessages as any,
                 temperature: options.temperature ?? 0.7,
                 max_tokens: options.max_tokens ?? 300,
             });
 
             const content = completion.choices[0]?.message?.content?.trim();
             if (content) {
-                console.log(`[AI] ${provider.name} inference succeeded.`);
+                console.log(`[AI] ${provider.name} inference succeeded using model ${modelToUse}.`);
                 return { content, provider: provider.name };
             }
 
@@ -94,7 +107,7 @@ export async function generateInference(
             }
         } catch (error) {
             console.error(`[AI] ${provider.name} inference failed:`, error instanceof Error ? error.message : String(error));
-            
+
             // Internal fallback for kilocode
             if (provider.name === 'kilocode') {
                 try {

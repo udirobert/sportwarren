@@ -26,6 +26,8 @@ import { GuestTour } from '@/components/onboarding/GuestTour';
 import { trpc } from '@/lib/trpc-client';
 import { getDashboardEntryState, type DashboardEntryAction } from '@/lib/dashboard/entry-state';
 import { useTactics } from '@/hooks/squad/useTactics';
+import { useMatchCenterData } from '@/hooks/match/useMatchCenterData';
+import { Avatar } from '@/components/ui/Avatar';
 
 import { QuickLogWidget } from '@/components/dashboard/QuickLogWidget';
 import dynamic from 'next/dynamic';
@@ -119,6 +121,7 @@ export const AdaptiveDashboard: React.FC = () => {
     retry: false,
     staleTime: 30 * 1000,
   });
+  const { availableOpponents } = useMatchCenterData(primarySquadId);
   const { completeChecklistItem, allChecklistDone, completedCount, totalCount } = useOnboarding();
   const currentUserId = currentProfile?.userId;
 
@@ -138,6 +141,9 @@ export const AdaptiveDashboard: React.FC = () => {
 
   const [personalizationDone, setPersonalizationDone] = React.useState(false);
   const showOnboardingOverlay = !isGuest && hasAccount && !preferences.onboardingCompleted && !personalizationDone;
+
+  const submitMatch = trpc.match.submit.useMutation();
+
   const entryState = useMemo(() => getDashboardEntryState({
     isGuest,
     hasAccount,
@@ -195,28 +201,52 @@ export const AdaptiveDashboard: React.FC = () => {
       });
     }
 
-    widgets.push(
-      {
+    if (primarySquadId) {
+      widgets.push({
         id: 'quick-log',
         priority: 450,
         requiredLevel: 'basic',
         category: 'matches',
         component: (
-          <QuickLogWidget 
-            homeTeam={primarySquadName || 'My Squad'} 
-            awayTeam="Opponent" 
+          <QuickLogWidget
+            squadId={primarySquadId}
+            homeTeam={primarySquadName || 'My Squad'}
+            opponents={availableOpponents}
             onLog={async (data) => {
-              // In a real app, this would call a TRPC mutation
-              console.log('Logging match:', data);
-              addToast({
-                tone: 'success',
-                title: 'Match Logged',
-                message: 'Result submitted to the verification queue.',
-              });
-            }} 
+              try {
+                await submitMatch.mutateAsync({
+                  homeSquadId: primarySquadId,
+                  awaySquadId: data.awaySquadId,
+                  homeScore: data.homeScore,
+                  awayScore: data.awayScore,
+                  matchDate: new Date(),
+                  isSociallyTrusted: true,
+                });
+
+                addToast({
+                  tone: 'success',
+                  title: 'Match Logged',
+                  message: 'Result submitted to the verification queue.',
+                });
+                await refreshSquads();
+              } catch (error) {
+                const message = error instanceof Error
+                  ? error.message
+                  : 'There was an error submitting the match.';
+
+                addToast({
+                  tone: 'error',
+                  title: 'Submission Failed',
+                  message,
+                });
+              }
+            }}
           />
         ),
-      },
+      });
+    }
+
+    widgets.push(
       {
         id: 'match-engine',
         priority: 500, // Top priority
@@ -224,8 +254,8 @@ export const AdaptiveDashboard: React.FC = () => {
         category: 'matches' as const,
         component: (
           <div onClick={() => completeChecklistItem('view_match_engine')}>
-            <MatchEnginePreview 
-              squadId={primarySquadId} 
+            <MatchEnginePreview
+              squadId={primarySquadId}
               formation={squadTactics?.formation}
             />
           </div>
@@ -660,13 +690,13 @@ export const AdaptiveDashboard: React.FC = () => {
       'squad-dynamics',
       'territory',
     ]);
-    
+
     // For new users, show only essential widgets
     const isNewUser = preferences.featureDiscoveryLevel < 10 && preferences.dashboardLayout === 'minimal';
     const essentialWidgets = isGuest
       ? ['onboarding-checklist', 'match-engine', 'upcoming-fixtures', 'quick-stats', 'recent-matches', 'staff-feed', 'lens-social']
-      : (entryState.id === 'account_ready' 
-          ? ['onboarding-checklist', 'match-engine', 'quick-stats', 'staff-feed'] 
+      : (entryState.id === 'account_ready'
+          ? ['onboarding-checklist', 'match-engine', 'quick-stats', 'staff-feed']
           : ['onboarding-checklist', 'match-engine', 'upcoming-fixtures', 'quick-stats', 'recent-matches']);
 
     return allWidgets
@@ -675,7 +705,7 @@ export const AdaptiveDashboard: React.FC = () => {
         if (hiddenWidgets.includes(widget.id)) return false;
 
         if (!hasOperationalSquad && squadScopedWidgets.has(widget.id)) return false;
-        
+
         // For new users, only show essential widgets
         if (isNewUser && !essentialWidgets.includes(widget.id)) return false;
 
@@ -702,7 +732,7 @@ export const AdaptiveDashboard: React.FC = () => {
         const bPinned = pinnedWidgets.includes(b.id);
         if (aPinned && !bPinned) return -1;
         if (!aPinned && bPinned) return 1;
-        
+
         // Then respect custom order if set
         if (widgetOrder.length > 0) {
           const aIndex = widgetOrder.indexOf(a.id);
@@ -711,13 +741,13 @@ export const AdaptiveDashboard: React.FC = () => {
           if (aIndex !== -1) return -1;
           if (bIndex !== -1) return 1;
         }
-        
+
         // Then by recent usage
         const aRecentlyUsed = preferences.usagePatterns.lastActiveFeatures.includes(a.id);
         const bRecentlyUsed = preferences.usagePatterns.lastActiveFeatures.includes(b.id);
         if (aRecentlyUsed && !bRecentlyUsed) return -1;
         if (!aRecentlyUsed && bRecentlyUsed) return 1;
-        
+
         return b.priority - a.priority;
       });
   }, [allWidgets, hasOperationalSquad, isGuest, preferences, entryState.id]);
@@ -868,115 +898,113 @@ export const AdaptiveDashboard: React.FC = () => {
     }
   };
 
-  // ── New User Onboarding View ──────────────────────────────────────
   if (entryState.isNewUser) {
     return (
-      <>
-        <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10 nav-spacer-top nav-spacer-bottom">
-          {/* Onboarding card with large CTA */}
-          <Card className="overflow-hidden border-gray-200/80 bg-gradient-to-br from-white via-white to-green-50/30 dark:border-gray-700 dark:from-gray-900 dark:via-gray-900 dark:to-green-950/20">
-            <div className="text-center space-y-6">
-              <div className="text-[10px] font-black uppercase tracking-[0.22em] text-green-600 dark:text-green-400">
-                {entryState.eyebrow}
-              </div>
-              <h1 className="text-2xl md:text-4xl font-black tracking-tight text-gray-900 dark:text-white">
-                {entryState.headline}
-              </h1>
-              <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 max-w-lg mx-auto">
-                {entryState.description}
-              </p>
-
-              {/* Primary CTA — large, centered */}
-              {entryState.primaryAction.href ? (
-                <Link
-                  href={entryState.primaryAction.href}
-                  onClick={() => completeChecklistItem(entryState.primaryAction.intent === 'log_match' ? 'verify_match' : 'view_match_engine')}
-                  className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-xl shadow-green-500/30 hover:shadow-green-500/50 transition-all duration-200 hover:scale-[1.02]"
-                >
-                  <Zap className="w-5 h-5 mr-2" />
-                  {entryState.primaryAction.label}
-                  <ArrowRight className="w-5 h-5 ml-2" />
-                </Link>
-              ) : (
-                renderEntryAction(entryState.primaryAction, 'primary')
-              )}
-
-              {entryState.secondaryAction && (
-                <div>
-                  {renderEntryAction(entryState.secondaryAction, 'secondary')}
-                </div>
-              )}
-
-              {/* 3-step visual */}
-              {entryState.steps.length > 0 && (
-                <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                  <div className="flex items-center justify-center gap-1 md:gap-2">
-                    {entryState.steps.map((step, i) => (
-                      <React.Fragment key={step.number}>
-                        {i > 0 && (
-                          <div className={`w-6 md:w-10 h-px ${step.completed ? 'bg-green-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
-                        )}
-                        <div className="flex flex-col items-center gap-1.5">
-                          <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-sm font-black transition-colors ${
-                            step.completed
-                              ? 'bg-green-500 text-white'
-                              : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-2 border-gray-300 dark:border-gray-600'
-                          }`}>
-                            {step.completed ? <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" /> : step.number}
-                          </div>
-                          <span className={`text-[10px] md:text-xs font-bold uppercase tracking-wide ${
-                            step.completed ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'
-                          }`}>
-                            {step.label}
-                          </span>
-                        </div>
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Subtle meta line */}
-              <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-400">
-                {isGuest ? (
-                  <span>{venue} preview</span>
-                ) : (
-                  <span>{entryAccountLabel}</span>
-                )}
-              </div>
+      <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10 nav-spacer-top nav-spacer-bottom">
+        {/* Onboarding card with large CTA */}
+        <Card className="overflow-hidden border-gray-200/80 bg-gradient-to-br from-white via-white to-green-50/30 dark:border-gray-700 dark:from-gray-900 dark:via-gray-900 dark:to-green-950/20">
+          <div className="text-center space-y-6 p-6">
+            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-green-600 dark:text-green-400">
+              {entryState.eyebrow}
             </div>
-          </Card>
+            <h1 className="text-2xl md:text-4xl font-black tracking-tight text-gray-900 dark:text-white">
+              {entryState.headline}
+            </h1>
+            <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 max-w-lg mx-auto">
+              {entryState.description}
+            </p>
 
-          {/* Onboarding checklist — always visible for new users */}
-          <div className="mt-4">
-            <OnboardingChecklist
-              journeyStage={entryState.id}
-              onStepAction={(_id) => {}}
-            />
-          </div>
+            {/* Primary CTA — large, centered */}
+            {entryState.primaryAction.href ? (
+              <Link
+                href={entryState.primaryAction.href}
+                onClick={() => completeChecklistItem(entryState.primaryAction.intent === 'log_match' ? 'verify_match' : 'view_match_engine')}
+                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-xl shadow-green-500/30 hover:shadow-green-500/50 transition-all duration-200 hover:scale-[1.02]"
+              >
+                <Zap className="w-5 h-5 mr-2" />
+                {entryState.primaryAction.label}
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Link>
+            ) : (
+              renderEntryAction(entryState.primaryAction, 'primary')
+            )}
 
-          {/* Mobile Telegram banner */}
-          <div className="md:hidden mt-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">📱</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-blue-900 dark:text-blue-100">Get the best mobile experience</p>
-                <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">Open SportWarren in Telegram for faster access and instant notifications.</p>
-                <a
-                  href={buildTelegramDeepLink()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
-                >
-                  Open in Telegram
-                  <ExternalLink className="w-3 h-3" />
-                </a>
+            {entryState.secondaryAction && (
+              <div>
+                {renderEntryAction(entryState.secondaryAction, 'secondary')}
               </div>
+            )}
+
+            {/* 3-step visual */}
+            {entryState.steps.length > 0 && (
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-center gap-1 md:gap-2">
+                  {entryState.steps.map((step, i) => (
+                    <React.Fragment key={step.number}>
+                      {i > 0 && (
+                        <div className={`w-6 md:w-10 h-px ${step.completed ? 'bg-green-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                      )}
+                      <div className="flex flex-col items-center gap-1.5">
+                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-sm font-black transition-colors ${
+                          step.completed
+                            ? 'bg-green-500 text-white'
+                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-2 border-gray-300 dark:border-gray-600'
+                        }`}>
+                          {step.completed ? <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" /> : step.number}
+                        </div>
+                        <span className={`text-[10px] md:text-xs font-bold uppercase tracking-wide ${
+                          step.completed ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'
+                        }`}>
+                          {step.label}
+                        </span>
+                      </div>
+                    </React.Fragment>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Subtle meta line */}
+            <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-400">
+              {isGuest ? (
+                <span>{venue} preview</span>
+              ) : (
+                <span>{entryAccountLabel}</span>
+              )}
+            </div>
+          </div>
+        </Card>
+
+        {/* Onboarding checklist — always visible for new users */}
+        <div className="mt-4">
+          <OnboardingChecklist
+            journeyStage={entryState.id}
+            onStepAction={(_id) => {}}
+          />
+        </div>
+
+        {/* Mobile Telegram banner */}
+        <div className="md:hidden mt-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">📱</span>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-blue-900 dark:text-blue-100">Get the best mobile experience</p>
+              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">Open SportWarren in Telegram for faster access and instant notifications.</p>
+              <a
+                href={buildTelegramDeepLink()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
+              >
+                Open in Telegram
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
           </div>
         </div>
 
         <GuestTour onVisibilityChange={setIsTourActive} />
+        {!isTourActive && <AgenticConcierge journeyStage={entryState.id} />}
 
         {/* Floating Action Button — pulsing for new users */}
         <Link
@@ -986,13 +1014,13 @@ export const AdaptiveDashboard: React.FC = () => {
         >
           <Plus className="w-6 h-6" />
         </Link>
-      </>
+      </div>
     );
   }
 
   // ── Returning User Dashboard ──────────────────────────────────────
   return (
-    <>
+    <div className={`max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 nav-spacer-top nav-spacer-bottom ${getLayoutClass()}`}>
       {/* First-run onboarding overlay — shown fullscreen until personalization is complete */}
       {showOnboardingOverlay && (
         <div className="fixed inset-0 z-[200] bg-gray-950/95 backdrop-blur-sm flex items-center justify-center p-4 nav-spacer-top">
@@ -1004,7 +1032,6 @@ export const AdaptiveDashboard: React.FC = () => {
           </div>
         </div>
       )}
-      <div className={`max-w-7xl mx-auto px-3 md:px-6 py-4 md:py-6 nav-spacer-top nav-spacer-bottom ${getLayoutClass()}`}>
       <div className="flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-widest">
         <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-black tracking-[0.18em] text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
           {entryState.surfaceLabel}
@@ -1015,17 +1042,24 @@ export const AdaptiveDashboard: React.FC = () => {
         <Card className="overflow-hidden border-gray-200/80 bg-gradient-to-br from-white via-white to-gray-50 dark:border-gray-700 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
           <div className="space-y-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="min-w-0">
-                <div className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-green-600 dark:text-green-400">
-                  {entryState.eyebrow}
-                </div>
-                <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white md:text-4xl">
-                  {entryState.headline}
-                </h1>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-600 dark:text-gray-300 md:text-base">
-                  {entryState.description}
-                </p>
-                <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-gray-400">
+              <div className="flex items-start gap-5">
+                <Avatar
+                  src={currentProfile?.user.avatar}
+                  name={currentProfile?.user.name || address}
+                  size="xl"
+                  className="hidden md:block ring-4 ring-green-500/20"
+                />
+                <div className="min-w-0">
+                  <div className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-green-600 dark:text-green-400">
+                    {entryState.eyebrow}
+                  </div>
+                  <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white md:text-4xl">
+                    {entryState.headline}
+                  </h1>
+                  <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-600 dark:text-gray-300 md:text-base">
+                    {entryState.description}
+                  </p>
+                  <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-gray-400">
                   {isGuest ? (
                     <span>{venue} preview</span>
                   ) : primarySquadName ? (
@@ -1079,6 +1113,7 @@ export const AdaptiveDashboard: React.FC = () => {
                     </>
                   )}
                 </div>
+              </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2 lg:justify-end">
@@ -1320,7 +1355,6 @@ export const AdaptiveDashboard: React.FC = () => {
           </div>
         </Card>
       )}
-      </div>
-    </>
+    </div>
   );
 };

@@ -1,3 +1,4 @@
+import { generateInference, AIMessage } from '@/lib/ai/inference';
 import OpenAI from 'openai';
 import { createReadStream } from 'fs';
 import { writeFile } from 'fs/promises';
@@ -5,9 +6,7 @@ import { writeFile } from 'fs/promises';
 export class VoiceProcessingService {
   private openai: OpenAI | null = null;
 
-  constructor() {
-    // OpenAI client is lazily initialized when needed
-  }
+  constructor() {}
 
   private getClient(): OpenAI {
     if (!this.openai) {
@@ -89,26 +88,20 @@ export class VoiceProcessingService {
         Be conservative with confidence scores - only use high confidence for clear, unambiguous information.
       `;
 
-      const response = await this.getClient().chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are an AI assistant that extracts structured sports data from natural language descriptions. Always return valid JSON with the exact structure requested.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
+      const messages: AIMessage[] = [
+        { role: 'user', content: transcription }
+      ];
+
+      const result = await generateInference(messages, {
+        systemPrompt: 'You are an AI assistant that extracts structured sports data from natural language descriptions. Always return valid JSON with the exact structure requested.',
+        temperature: 0.1,
         max_tokens: 800,
-        temperature: 0.1, // Very low temperature for consistent structured output
       });
 
-      const content = response.choices[0]?.message?.content;
-      if (content) {
+      if (result?.content) {
         try {
-          const parsed = JSON.parse(content);
+          const cleanContent = result.content.replace(/```json|```/g, '').trim();
+          const parsed = JSON.parse(cleanContent);
           return this.validateMatchData(parsed);
         } catch (parseError) {
           console.error('Failed to parse AI response:', parseError);
@@ -156,36 +149,23 @@ export class VoiceProcessingService {
 
   async generateMatchNarrative(matchData: any): Promise<string> {
     try {
-      const prompt = `
-        Create an engaging match report for a grassroots football match with the following details:
-        
-        Teams: ${matchData.homeTeam} vs ${matchData.awayTeam}
-        Score: ${matchData.homeScore}-${matchData.awayScore}
-        Key Events: ${JSON.stringify(matchData.events)}
-        Player Stats: ${JSON.stringify(matchData.playerStats)}
-        
-        Write it in a fun, engaging style that captures the spirit of grassroots football.
-        Focus on the drama, key moments, and standout performances.
-        Keep it under 200 words and make it feel like a local sports journalist wrote it.
-      `;
+      const messages: AIMessage[] = [
+        {
+          role: 'user',
+          content: `Teams: ${matchData.homeTeam} vs ${matchData.awayTeam}
+                    Score: ${matchData.homeScore}-${matchData.awayScore}
+                    Key Events: ${JSON.stringify(matchData.events)}
+                    Player Stats: ${JSON.stringify(matchData.playerStats)}`
+        }
+      ];
 
-      const response = await this.getClient().chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a sports journalist who specializes in grassroots football. Write engaging, fun match reports that celebrate the spirit of amateur football. Use vivid language and capture the emotion of the game.',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
-        max_tokens: 300,
+      const result = await generateInference(messages, {
+        systemPrompt: 'You are a sports journalist who specializes in grassroots football. Write engaging, fun match reports that celebrate the spirit of amateur football. Use vivid language and capture the emotion of the game. Keep it under 200 words.',
         temperature: 0.7,
+        max_tokens: 300,
       });
 
-      return response.choices[0]?.message?.content || 'Match completed successfully!';
+      return result?.content || 'Match completed successfully!';
     } catch (error) {
       console.error('Narrative generation error:', error);
       return 'Match completed successfully!';

@@ -7,6 +7,8 @@
 
 SportWarren uses the Yellow Network as its EVM payment rail for treasury actions, transfer escrow, and match-fee settlement.
 
+In the broader SportWarren architecture, Yellow has a strict role: instant settlement for operational money movement. It complements Algorand verification, Avalanche governance and asset policy, Kite AI agent identity and attestations, TON wallet UX, and Lens social distribution.
+
 The important product truth is:
 
 - Yellow is **off-chain first** in this app.
@@ -92,10 +94,24 @@ The backend no longer needs to trust the client's `sessionId` and `version` blin
 
 Yellow should be described consistently in the product:
 
+- Describe Yellow as the operational settlement layer, not as the source of truth for football state.
 - Say "off-chain", "session", or "escrow session" explicitly.
 - Do not label Yellow actions as "on-chain" unless the interaction truly is on-chain.
 - Explain the timing model: funds are locked in the session first, intermediate updates stay in-session, and payout completes when the session closes.
 - Make fallback behavior obvious when an eligible EVM wallet or deployment config is missing.
+
+## Responsibility Boundary
+
+Yellow complements the rest of the stack rather than overlapping with it:
+
+| Network | Responsibility |
+|---------|----------------|
+| **Yellow** | Instant settlement, escrow sessions, and match-fee coordination |
+| **Algorand** | Verified football state and reputation |
+| **Avalanche** | Governance, treasury policy, assets, and contract-based escrow |
+| **Kite AI** | Agent identity, paid agent actions, and attestations |
+| **TON** | Telegram-native wallet and treasury UX |
+| **Lens** | Social identity and distribution |
 
 The key UI surfaces to keep aligned are:
 

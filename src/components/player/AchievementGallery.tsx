@@ -5,6 +5,12 @@ import { Card } from '@/components/ui/Card';
 import { Trophy, Award, Shield, Star, ExternalLink, Loader2 } from 'lucide-react';
 import { useAchievements } from '@/hooks/useAchievements';
 import { useWallet } from '@/contexts/WalletContext';
+import {
+  getAchievementExplorerUrl,
+  getAvalancheNetworkLabel,
+} from '@/lib/blockchain/evm-config';
+
+const avalancheNetworkLabel = getAvalancheNetworkLabel();
 
 export const AchievementGallery: React.FC = () => {
   const { address, chain, hasWallet } = useWallet();
@@ -32,7 +38,7 @@ export const AchievementGallery: React.FC = () => {
         </div>
         <h4 className="text-lg font-semibold text-gray-900">Avalanche Trophy Rail</h4>
         <p className="text-gray-500 text-sm mt-2 max-w-xs mx-auto">
-          Achievement NFTs are published on Avalanche. Switch to an Avalanche wallet to browse on-chain trophies for this account.
+          Achievement NFTs are published on {avalancheNetworkLabel}. Switch to an Avalanche wallet to browse on-chain trophies for this account.
         </p>
       </Card>
     );
@@ -42,7 +48,7 @@ export const AchievementGallery: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-gray-500">
         <Loader2 className="w-8 h-8 animate-spin mb-4" />
-        <p className="text-sm font-medium animate-pulse">Scanning Avalanche Fuji for achievements...</p>
+        <p className="text-sm font-medium animate-pulse">Scanning {avalancheNetworkLabel} for achievements...</p>
       </div>
     );
   }
@@ -65,7 +71,7 @@ export const AchievementGallery: React.FC = () => {
         </div>
         <h4 className="text-lg font-semibold text-gray-900">No On-Chain Trophies Yet</h4>
         <p className="text-gray-500 text-sm mt-2 max-w-xs mx-auto">
-          Win matches, complete challenges, and earn verified on-chain achievements on the Avalanche Fuji network.
+          Win matches, complete challenges, and earn verified on-chain achievements on {avalancheNetworkLabel}.
         </p>
       </Card>
     );
@@ -89,7 +95,7 @@ export const AchievementGallery: React.FC = () => {
             )}
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
               <a 
-                href={`https://testnet.snowtrace.io/token/${process.env.NEXT_PUBLIC_AVALANCHE_ACHIEVEMENT_NFT_ADDRESS}?a=${nft.tokenId}`}
+                href={getAchievementExplorerUrl(nft.tokenId)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 bg-white rounded-full text-blue-600 hover:scale-110 transition-transform"
@@ -119,7 +125,7 @@ export const AchievementGallery: React.FC = () => {
                   </div>
                 ))}
               </div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Fuji Network</span>
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{avalancheNetworkLabel}</span>
             </div>
           </div>
         </Card>

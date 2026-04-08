@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { yellowService } from '@/server/services/blockchain/yellow';
+import { getKiteServiceStatus } from '@/server/services/ai/kite';
 
 export async function GET() {
   const checks: Record<string, 'ok' | 'missing' | 'error'> = {};
@@ -24,7 +26,6 @@ export async function GET() {
     'VENICE_API_KEY',      // AI staff chat (Marcus / StaffRoom) — app works without it but AI responses will be fallback strings
     'OPENAI_API_KEY',      // AI fallback if Venice is unavailable
     'YELLOW_APP_ID',       // Match fee payment rail
-    'YELLOW_API_KEY',      // Match fee payment rail
     'NEXT_PUBLIC_YELLOW_PLATFORM_WALLET', // Match fee payment rail
     'TELEGRAM_BOT_USERNAME', // Telegram deep links + Mini App launch
     'TON_TREASURY_WALLET_ADDRESS', // TON treasury top-ups
@@ -53,9 +54,9 @@ export async function GET() {
     : 'none';
 
   // ── Payment rail summary ──────────────────────────────────
-  const paymentRail = process.env.YELLOW_APP_ID && process.env.YELLOW_API_KEY
-    ? 'yellow-configured'
-    : 'yellow-missing';
+  const yellowRail = yellowService.getRailStatus();
+  const kiteStatus = getKiteServiceStatus();
+  const paymentRail = yellowRail.enabled ? 'yellow-configured' : 'yellow-missing';
 
   return NextResponse.json({
     status: httpStatus === 200 ? 'ok' : 'degraded',
@@ -68,6 +69,10 @@ export async function GET() {
         : undefined,
     },
     paymentRail,
+    rails: {
+      yellow: yellowRail,
+      kite: kiteStatus,
+    },
     checks,
   }, { status: httpStatus });
 }

@@ -34,6 +34,8 @@ npm run dev
 
 ## Environment Configuration
 
+SportWarren is a role-specific multi-chain system. Environment configuration is grouped by responsibility so each network can do one job well instead of overlapping with the others.
+
 ### Core Variables
 ```env
 NODE_ENV=development
@@ -50,6 +52,10 @@ ALGORAND_MATCH_VERIFICATION_APP_ID=756828208
 AVALANCHE_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
 AVALANCHE_PRIVATE_KEY=your_private_key
 AVALANCHE_CHAIN_ID=43113
+
+# Kite AI
+KITE_API_URL=https://api.gokite.ai
+KITE_API_KEY=your_kite_api_key
 
 # WalletConnect
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-project-id
@@ -68,13 +74,43 @@ TELEGRAM_WEBHOOK_URL=https://api.sportwarren.com
 TON_TREASURY_WALLET_ADDRESS=EQ...              # squad default vault (optional)
 TONCENTER_API_KEY=your-toncenter-key           # improves reliability; uses public quota if unset
 TON_SETTLEMENT_POLL_INTERVAL_MS=60000          # optional; default 60000
+
+# Yellow settlement rail
+YELLOW_ENABLED=true
+NEXT_PUBLIC_YELLOW_ENABLED=true
+YELLOW_APP_ID=your_yellow_app_id
+NEXT_PUBLIC_YELLOW_APP_ID=your_yellow_app_id
+YELLOW_CLEARNODE_URL=wss://clearnet-sandbox.yellow.com/ws
+NEXT_PUBLIC_YELLOW_CLEARNODE_URL=wss://clearnet-sandbox.yellow.com/ws
+NEXT_PUBLIC_YELLOW_PLATFORM_WALLET=your_platform_wallet
+YELLOW_ASSET_SYMBOL=USDC
+NEXT_PUBLIC_YELLOW_ASSET_SYMBOL=USDC
+YELLOW_MATCH_FEE_AMOUNT=1
+
+# Lens social
+ENABLE_LENS_SOCIAL=true
+NEXT_PUBLIC_LENS_SOCIAL_ENABLED=true
+LENS_GATEWAY_URL=https://your-lens-gateway
+LENS_API_KEY=your_lens_api_key
 ```
+
+### Network Responsibility Guide
+
+| Network | What To Configure | Responsibility |
+|---------|-------------------|----------------|
+| **Algorand** | Node/indexer URLs, deployer keys, app IDs | Match verification and reputation state |
+| **Avalanche** | RPC, private key, contract addresses | Governance, treasury policy, assets, escrow |
+| **Kite AI** | API URL and API key | Agent identity, agent payments, attestations |
+| **Yellow** | Rail enablement, ClearNode URL, platform wallet | Instant settlement and match-fee coordination |
+| **TON** | Treasury wallet, Toncenter access, polling | Telegram-native wallet UX and treasury actions |
+| **Lens** | Feature flag, gateway URL, API key | Social identity and publishing |
 
 ### Simulation Mode
 If blockchain keys are missing, the system falls back to **Simulation Mode**:
 - ChainlinkService provides simulated weather/location data
 - Algorand posting is skipped (database verification continues)
 - Set `ALGORAND_MATCH_VERIFICATION_APP_ID=0` to disable on-chain posting
+- Kite, Yellow, Lens, and TON features degrade independently based on their own credentials and feature flags
 
 ---
 
@@ -153,7 +189,7 @@ x-auth-message: MESSAGE
 x-auth-timestamp: TIMESTAMP
 ```
 
-**Note:** Signatures expire after ~5 minutes; UI prompts re-verification.
+**Note:** Signatures expire after ~5 minutes; UI prompts re-verification. TON treasury binding and Telegram session state are handled separately from this wallet-auth header path.
 
 ---
 
@@ -182,6 +218,7 @@ npm run build
 - [ ] Database provisioned and migrated
 - [ ] Environment variables configured (see `.env.production.example`)
 - [ ] Wallet signature verification enabled
+- [ ] Required network credentials configured for Algorand, Avalanche, Kite AI, TON, Yellow, and Lens as needed
 - [ ] SSL certificates configured
 - [ ] Sentry monitoring enabled
 - [ ] Connection pooling configured (if serverless)
@@ -199,11 +236,13 @@ DATABASE_URL=postgresql://... (with sslmode=verify-full)
 ALGORAND_MATCH_VERIFICATION_APP_ID=756828208
 DEPLOYER_MNEMONIC="25-word mnemonic"
 AVALANCHE_PRIVATE_KEY=0x...
+KITE_API_KEY=...
 NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=...
 TELEGRAM_BOT_TOKEN=123456:bot-token
 TELEGRAM_BOT_USERNAME=sportwarrenbot
 TELEGRAM_WEBHOOK_URL=https://api.sportwarren.com
 TONCENTER_API_KEY=your-toncenter-key
+NEXT_PUBLIC_YELLOW_PLATFORM_WALLET=...
 
 # Recommended
 SENTRY_DSN=https://...
@@ -211,6 +250,9 @@ NEXT_PUBLIC_SENTRY_DSN=https://...
 REDIS_URL=redis://... (for caching)
 TON_TREASURY_WALLET_ADDRESS=EQ...  # fallback vault for squads without one set
 TON_SETTLEMENT_POLL_INTERVAL_MS=60000
+ENABLE_LENS_SOCIAL=true
+LENS_GATEWAY_URL=https://...
+LENS_API_KEY=...
 ```
 
 ---

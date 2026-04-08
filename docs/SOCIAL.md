@@ -5,6 +5,8 @@ This consolidates two user-facing social features while keeping privacy and perf
 - Private Squad Media (Telegram Mini App): encrypted-by-context access to match photos/clips shared only with the squad.
 - Lens Publishing (optional): enable public highlights via a real Lens gateway — disabled by default.
 
+Within the broader SportWarren architecture, the social layer has a strict role: identity and distribution for shareable squad moments. It complements, rather than competes with, Algorand verification, Avalanche governance, Kite AI agent workflows, Yellow settlement, and TON wallet UX.
+
 Core Principles applied: Enhancement-first, Consolidation, DRY, Modular, Organized.
 
 ---
@@ -46,6 +48,8 @@ Lens Integration (Optional)
 
 The server now exposes a real, non-stub Lens service via an env-configured HTTP gateway.
 
+Lens should be framed as SportWarren's portable social identity and publishing layer. It is not the source of truth for match state, treasury actions, or agent settlement.
+
 - Feature flag: set either `ENABLE_LENS_SOCIAL=true` or `NEXT_PUBLIC_LENS_SOCIAL_ENABLED=true`.
 - Gateway configuration (one of):
   - `LENS_GATEWAY_URL=https://your-lens-gateway.example.com` (expects `/api/lens/{challenge,authenticate,post}`)
@@ -59,6 +63,15 @@ Client Flow
 
 Security
 - No fake responses: when disabled or unconfigured, Lens endpoints return 503 and the client shows an unavailable state.
+
+Role Boundary
+- **Lens:** Social identity, public highlight publishing, community distribution
+- **Telegram Media:** Private squad sharing and internal coordination
+- **Algorand:** Verified football state and reputation
+- **Avalanche:** Governance, treasury policy, assets, and escrow
+- **Kite AI:** Agent identity, paid agent actions, attestations
+- **Yellow:** Instant operational settlement
+- **TON:** Telegram-native wallet and treasury UX
 
 ---
 
