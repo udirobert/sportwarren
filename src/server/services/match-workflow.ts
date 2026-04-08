@@ -52,6 +52,7 @@ interface SubmitMatchResultInput {
   yellowSettlement?: YellowSettlementInput;
   sessionId?: string;
   isSociallyTrusted?: boolean;
+  hasKeeper?: boolean;
 }
 
 interface VerifyMatchResultInput {
@@ -256,6 +257,7 @@ export async function submitMatchResult({
   yellowSettlement,
   sessionId,
   isSociallyTrusted = false,
+  hasKeeper,
 }: SubmitMatchResultInput) {
   const [homeSquad, awaySquad] = await Promise.all([
     prisma.squad.findUnique({ where: { id: homeSquadId } }),
@@ -327,6 +329,7 @@ export async function submitMatchResult({
       agentInsights,
       sessionId,
       isSoftVerified: isSociallyTrusted,
+      hasKeeper,
     });
 
     if (isSociallyTrusted) {
@@ -343,6 +346,7 @@ export async function submitMatchResult({
           isWinner: homeScore > awayScore,
           isDraw: homeScore === awayScore,
           playerStats: seededStats,
+          hasKeeper: match.hasKeeper,
         });
 
         await distributeMatchRewards({
@@ -352,6 +356,7 @@ export async function submitMatchResult({
           isWinner: awayScore > homeScore,
           isDraw: homeScore === awayScore,
           playerStats: seededStats,
+          hasKeeper: match.hasKeeper,
         });
       } catch (err) {
         console.warn('Post-soft-verification automation failed:', err);

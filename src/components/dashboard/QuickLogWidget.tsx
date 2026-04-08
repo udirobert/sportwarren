@@ -3,49 +3,73 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Plus, Minus, Trophy, Zap, MessageSquare, User, X } from 'lucide-react';
+import { Plus, Minus, Trophy, Zap, MessageSquare, X } from 'lucide-react';
 import { trpc } from '@/lib/trpc-client';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Avatar } from '@/components/ui/Avatar';
+
+interface QuickLogOpponent {
+  id: string;
+  name: string;
+}
+
+interface QuickLogPayload {
+  awaySquadId: string;
+  awayTeam: string;
+  awayScore: number;
+  homeScore: number;
+  homeTeam: string;
+  scorerIds: string[];
+  status: 'pending';
+  timestamp: Date;
+}
 
 interface QuickLogWidgetProps {
   squadId: string;
   homeTeam: string;
-  awayTeam: string;
-  onLog: (data: any) => void;
+  opponents: QuickLogOpponent[];
+  onLog: (data: QuickLogPayload) => Promise<void>;
 }
 
 export const QuickLogWidget: React.FC<QuickLogWidgetProps> = ({
   squadId,
   homeTeam,
-  awayTeam,
+  opponents,
   onLog
 }) => {
   const [homeScore, setHomeScore] = useState(0);
   const [awayScore, setAwayScore] = useState(0);
+  const [selectedOpponentId, setSelectedOpponentId] = useState('');
   const [selectedScorers, setSelectedScorers] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { data: teammates, isLoading } = trpc.squad.getTopTeammates.useQuery({ 
-    squadId, 
-    limit: 5 
+  const { data: teammates, isLoading } = trpc.squad.getTopTeammates.useQuery({
+    squadId,
+    limit: 5
   });
 
   const toggleScorer = (userId: string) => {
-    setSelectedScorers(prev => 
-      prev.includes(userId) 
+    setSelectedScorers(prev =>
+      prev.includes(userId)
         ? prev.filter(id => id !== userId)
         : [...prev, userId]
     );
   };
 
   const handleLog = async () => {
+    const selectedOpponent = opponents.find((opponent) => opponent.id === selectedOpponentId);
+    if (!selectedOpponent) {
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await onLog({
+        awaySquadId: selectedOpponent.id,
         homeScore,
         awayScore,
         homeTeam,
-        awayTeam,
+        awayTeam: selectedOpponent.name,
         scorerIds: selectedScorers,
         timestamp: new Date(),
         status: 'pending'
@@ -65,16 +89,35 @@ export const QuickLogWidget: React.FC<QuickLogWidgetProps> = ({
       </div>
 
       <div className="flex flex-col gap-4">
+        <div className="space-y-2">
+          <div className="text-[10px] font-black uppercase text-gray-400 tracking-wider">Opponent</div>
+          <select
+            value={selectedOpponentId}
+            onChange={(event) => setSelectedOpponentId(event.target.value)}
+            className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 focus:border-emerald-400 focus:outline-none"
+            disabled={isSubmitting || opponents.length === 0}
+          >
+            <option value="">
+              {opponents.length > 0 ? 'Select opponent squad' : 'No opponents available'}
+            </option>
+            {opponents.map((opponent) => (
+              <option key={opponent.id} value={opponent.id}>
+                {opponent.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
         <div className="flex items-center justify-between gap-4">
           <div className="flex-1 flex flex-col items-center gap-2">
             <div className="text-xs font-bold text-gray-500 uppercase truncate max-w-full">{homeTeam}</div>
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={() => setHomeScore(s => Math.max(0, s - 1))}
                 className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center font-bold hover:bg-gray-200 transition-colors"
               >-</button>
               <span className="text-3xl font-black text-emerald-600 w-8 text-center">{homeScore}</span>
-              <button 
+              <button
                 onClick={() => setHomeScore(s => s + 1)}
                 className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center font-bold hover:bg-gray-200 transition-colors"
               >+</button>
@@ -84,14 +127,16 @@ export const QuickLogWidget: React.FC<QuickLogWidgetProps> = ({
           <div className="text-sm font-black text-gray-300">VS</div>
 
           <div className="flex-1 flex flex-col items-center gap-2">
-            <div className="text-xs font-bold text-gray-500 uppercase truncate max-w-full">{awayTeam}</div>
+            <div className="text-xs font-bold text-gray-500 uppercase truncate max-w-full">
+              {opponents.find((opponent) => opponent.id === selectedOpponentId)?.name || 'Opponent'}
+            </div>
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 onClick={() => setAwayScore(s => Math.max(0, s - 1))}
                 className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center font-bold hover:bg-gray-200 transition-colors"
               >-</button>
               <span className="text-3xl font-black text-red-600 w-8 text-center">{awayScore}</span>
-              <button 
+              <button
                 onClick={() => setAwayScore(s => s + 1)}
                 className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center font-bold hover:bg-gray-200 transition-colors"
               >+</button>
@@ -116,13 +161,12 @@ export const QuickLogWidget: React.FC<QuickLogWidgetProps> = ({
                       : 'bg-white border-gray-100 text-gray-600 hover:border-emerald-200'
                   }`}
                 >
-                  <div className="w-4 h-4 rounded-full bg-gray-200 overflow-hidden shrink-0">
-                    {player.avatar ? (
-                      <img src={player.avatar} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <User className="w-3 h-3 text-gray-400 mx-auto mt-0.5" />
-                    )}
-                  </div>
+                  <Avatar
+                    src={player.avatar}
+                    name={player.name}
+                    size="xs"
+                    className="border-0 shadow-none bg-transparent"
+                  />
                   <span className="text-[10px] font-bold truncate max-w-[60px]">{player.name.split(' ')[0]}</span>
                 </button>
               ))
@@ -134,9 +178,9 @@ export const QuickLogWidget: React.FC<QuickLogWidgetProps> = ({
           </div>
         </div>
 
-        <Button 
-          onClick={handleLog} 
-          disabled={isSubmitting}
+        <Button
+          onClick={handleLog}
+          disabled={isSubmitting || !selectedOpponentId}
           className="w-full h-10 text-sm font-bold shadow-md shadow-emerald-500/20"
         >
           {isSubmitting ? 'Logging...' : 'Log Result'}

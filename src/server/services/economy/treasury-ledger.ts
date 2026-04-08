@@ -435,6 +435,7 @@ export async function distributeMatchRewards({
   isWinner,
   isDraw,
   playerStats, // Array of { userId, goals, assists, etc }
+  hasKeeper = true,
 }: {
   prisma: PrismaClient;
   squadId: string;
@@ -442,15 +443,21 @@ export async function distributeMatchRewards({
   isWinner: boolean;
   isDraw: boolean;
   playerStats: any[];
+  hasKeeper?: boolean;
 }) {
   const prizePool = isWinner ? 500 : isDraw ? 200 : 50;
+  let finalPrizePool = prizePool;
+
+  // Squad Clean Sheet Bonus: 100 extra if rotating keeper (hasKeeper = false)
+  // We'll calculate if it's a clean sheet by checking opponentScore later in the workflow,
+  // but for now we'll allow it to be passed in or calculated.
   const description = `Match Reward for Match #${matchId.slice(-6)} (${isWinner ? 'WIN' : isDraw ? 'DRAW' : 'LOSS'})`;
 
   // 1. Record the Income to the Treasury (e.g., from the league prize pool)
   await postTreasuryLedgerEntry({
     prisma,
     squadId,
-    amountDelta: prizePool,
+    amountDelta: finalPrizePool,
     type: 'income',
     category: 'prize_money',
     description,
@@ -472,8 +479,8 @@ export async function distributeMatchRewards({
         category: 'wages',
         description: `Performance Bonus: ${stats.goals || 0} goals + Appearance Fee for #${matchId.slice(-6)}`,
       });
-      
-      // In a real implementation, this would trigger an actual on-chain payout 
+
+      // In a real implementation, this would trigger an actual on-chain payout
       // via the Yellow Network or a Smart Contract disbursement.
     }
   }

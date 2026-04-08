@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { useWallet } from '@/contexts/WalletContext';
+import { getAvalancheContracts } from '@/lib/blockchain/evm-config';
 
 // Minimal ABIs for governance
 const GOVERNOR_ABI = [
@@ -25,8 +26,7 @@ const TOKEN_ABI = [
   "function delegates(address account) public view returns (address)",
 ];
 
-const GOVERNOR_ADDRESS = process.env.NEXT_PUBLIC_AVALANCHE_GOVERNOR_ADDRESS || "0x2e98aF1871bF208Ad361202884AB88F904eFf826";
-const TOKEN_ADDRESS = process.env.NEXT_PUBLIC_AVALANCHE_SQUAD_TOKEN_ADDRESS || "0x9ecDe1788E1cE1B40024F0fD9eA87f49a94781dB";
+const { governor: GOVERNOR_ADDRESS, squadToken: TOKEN_ADDRESS } = getAvalancheContracts();
 
 export interface FujiProposal {
   id: string;

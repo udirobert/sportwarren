@@ -3,8 +3,9 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { 
-  Target, Users, Mic, Camera, MapPin, Play, Square, 
+import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
+import {
+  Target, Users, Mic, Camera, MapPin, Play, Square,
   Plus, Minus, FileText, Check, Shield
 } from 'lucide-react';
 import { useActiveMatch } from '@/hooks/match/useActiveMatch';
@@ -16,16 +17,19 @@ interface MatchCaptureProps {
   onSubmit?: (result: any) => void;
 }
 
-export const MatchCapture: React.FC<MatchCaptureProps> = ({ 
-  homeTeam, 
-  awayTeam, 
-  onSubmit 
+export const MatchCapture: React.FC<MatchCaptureProps> = ({
+  homeTeam,
+  awayTeam,
+  onSubmit
 }) => {
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [playersPerSide, setPlayersPerSide] = useState(11);
   const [hasKeeper, setHasKeeper] = useState(true);
   const [isQuickLog, setIsQuickLog] = useState(false);
   const [quickLogForm, setQuickLogForm] = useState({ homeScore: 0, awayScore: 0 });
+  const [celebration, setCelebration] = useState<{ isVisible: boolean; title: string; type: 'win' | 'legendary' | 'verified' }>({
+    isVisible: false, title: '', type: 'verified'
+  });
 
   const FORMAT_PRESETS = [
     { label: '5v5', players: 5 },
@@ -35,7 +39,7 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
   ];
 
   const matchFormat = `${playersPerSide}v${playersPerSide}`;
-  
+
   const {
     matchState,
     startMatch,
@@ -59,6 +63,13 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
 
   const handleQuickLog = () => {
     if (onSubmit) {
+      const isWinner = quickLogForm.homeScore > quickLogForm.awayScore;
+      setCelebration({
+        isVisible: true,
+        title: isWinner ? "MATCH LOGGED! 🏆" : "RESULT RECORDED ⚽",
+        type: isWinner ? 'win' : 'verified'
+      });
+
       onSubmit({
         homeTeam,
         awayTeam,
@@ -83,6 +94,12 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
   const confirmSubmit = () => {
     const result = endMatch();
     if (result && onSubmit) {
+      const isWinner = result.homeScore > result.awayScore;
+      setCelebration({
+        isVisible: true,
+        title: isWinner ? "VICTORY! 🏆" : "MATCH SUBMITTED ⚽",
+        type: isWinner ? 'win' : 'verified'
+      });
       onSubmit({ ...result, matchFormat, playersPerSide, hasKeeper });
     }
     setShowSubmitConfirm(false);
@@ -157,7 +174,7 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
                 </div>
               </div>
             </div>
-            
+
             <Button onClick={handleQuickLog} size="lg" className="w-full h-14 text-base font-bold shadow-lg shadow-green-600/20 active:scale-95 transition-transform">
               Log Result
             </Button>
@@ -268,16 +285,16 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
           {/* Score Controls */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Button 
-                onClick={() => addGoal('home')} 
+              <Button
+                onClick={() => addGoal('home')}
                 variant="primary"
                 className="w-full bg-green-600 hover:bg-green-700"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Home Goal
               </Button>
-              <Button 
-                onClick={() => removeGoal('home')} 
+              <Button
+                onClick={() => removeGoal('home')}
                 variant="outline"
                 disabled={matchState.homeScore === 0}
                 className="w-full"
@@ -287,16 +304,16 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
               </Button>
             </div>
             <div className="space-y-2">
-              <Button 
-                onClick={() => addGoal('away')} 
+              <Button
+                onClick={() => addGoal('away')}
                 variant="primary"
                 className="w-full bg-red-600 hover:bg-red-700"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Away Goal
               </Button>
-              <Button 
-                onClick={() => removeGoal('away')} 
+              <Button
+                onClick={() => removeGoal('away')}
                 variant="outline"
                 disabled={matchState.awayScore === 0}
                 className="w-full"
@@ -323,8 +340,8 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
             <div className="text-xs font-medium text-gray-900">Assist</div>
           </div>
         </Card>
-        <Card 
-          padding="sm" 
+        <Card
+          padding="sm"
           className={`cursor-pointer hover:shadow-md transition-shadow ${
             evidenceState.isRecording ? 'bg-red-50 border-red-200' : ''
           }`}
@@ -352,8 +369,8 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
           <div className="flex flex-wrap gap-2">
             {evidenceState.capturedPhotos.map((photo, idx) => (
               <div key={idx} className="relative">
-                <img 
-                  src={photo} 
+                <img
+                  src={photo}
                   alt={`Evidence ${idx + 1}`}
                   className="w-20 h-20 object-cover rounded-lg"
                 />
@@ -411,7 +428,7 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
       </Card>
 
       {/* Submit Button */}
-      <Button 
+      <Button
         onClick={handleEndMatch}
         disabled={!canSubmit}
         size="lg"
@@ -433,18 +450,18 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
               <span className="text-xs text-gray-600 dark:text-gray-300">{matchFormat} • {hasKeeper ? 'With goalkeeper' : 'No goalkeeper'}</span>
             </p>
             <p className="text-sm text-gray-600 dark:text-gray-300 mb-6">
-              This result will be sent to the opposing team for confirmation. 
+              This result will be sent to the opposing team for confirmation.
               Both teams must agree for the result to be verified on-chain.
             </p>
             <div className="flex space-x-3">
-              <Button 
-                onClick={() => setShowSubmitConfirm(false)} 
+              <Button
+                onClick={() => setShowSubmitConfirm(false)}
                 variant="outline"
                 className="flex-1"
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={confirmSubmit}
                 className="flex-1"
               >
@@ -454,6 +471,13 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
           </Card>
         </div>
       )}
+
+      <CelebrationOverlay
+        isVisible={celebration.isVisible}
+        title={celebration.title}
+        type={celebration.type}
+        onComplete={() => setCelebration(prev => ({ ...prev, isVisible: false }))}
+      />
     </div>
   );
 };

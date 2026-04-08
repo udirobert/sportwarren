@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSeasonSnapshot } from '@/hooks/useSeasonSnapshot';
 import { describeMatchForSquad } from '@/lib/match/summary';
 import { trpc } from '@/lib/trpc-client';
+import { Avatar } from '@/components/ui/Avatar';
 
 export const LensSocialHub: React.FC = () => {
   const { isAvailable, isConnected, profile, login, postMatchProof, error } = useLens();
@@ -151,17 +152,11 @@ export const LensSocialHub: React.FC = () => {
       ) : (
         <div className="space-y-6">
           <div className="flex items-center space-x-4 p-3 bg-green-50 rounded-2xl border border-green-100">
-            {profile?.avatarUrl ? (
-              <img
-                src={profile.avatarUrl}
-                alt={profile.handle}
-                className="w-12 h-12 rounded-full border-2 border-white shadow-sm"
-              />
-            ) : (
-              <div className="flex h-12 w-12 items-center justify-center rounded-full border-2 border-white bg-green-200 text-sm font-bold text-green-800 shadow-sm">
-                {(profile?.handle || 'L').charAt(0).toUpperCase()}
-              </div>
-            )}
+            <Avatar
+              src={profile?.avatarUrl}
+              name={profile?.handle}
+              size="lg"
+            />
             <div className="flex-1 min-w-0">
               <h3 className="font-black text-gray-900 text-sm truncate uppercase tracking-tight">
                 {profile?.handle}

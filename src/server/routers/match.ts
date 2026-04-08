@@ -64,6 +64,8 @@ export const matchRouter = createTRPCRouter({
       latitude: z.number().optional(),
       longitude: z.number().optional(),
       yellowSettlement: yellowMatchSettlementSchema.optional(),
+      isSociallyTrusted: z.boolean().optional(),
+      hasKeeper: z.boolean().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -93,6 +95,8 @@ export const matchRouter = createTRPCRouter({
           latitude: input.latitude,
           longitude: input.longitude,
           yellowSettlement: input.yellowSettlement,
+          isSociallyTrusted: input.isSociallyTrusted,
+          hasKeeper: input.hasKeeper,
         });
       } catch (error) {
         throw toTRPCError(error);
@@ -521,30 +525,21 @@ export const matchRouter = createTRPCRouter({
         });
 
         try {
-          const { getVeniceClient, VENICE_MODEL_ID } = await import('../../lib/ai/providers/venice');
-          const client = getVeniceClient();
-          if (!client) {
-            throw new Error('Venice AI not configured');
-          }
+          const { generateInference } = await import('../../lib/ai/inference');
 
-          const response = await client.chat.completions.create({
-            model: VENICE_MODEL_ID,
-            messages: [
-              {
-                role: 'system',
-                content: `You are Coach Kite analyzing the team's form. Provide a concise tactical summary of the last 5 matches. Keep it under 3 sentences. Be analytical, firm, but encouraging.`
-              },
-              {
-                role: 'user',
-                content: `Here are our last ${matches.length} results: ${matchSummaries.join(', ')}. What's your tactical "Captain's Log" analysis?`
-              }
-            ],
+          const result = await generateInference([
+            {
+              role: 'user',
+              content: `Here are our last ${matches.length} results: ${matchSummaries.join(', ')}. What's your tactical "Captain's Log" analysis?`
+            }
+          ], {
+            systemPrompt: `You are Coach Kite analyzing the team's form. Provide a concise tactical summary of the last 5 matches. Keep it under 3 sentences. Be analytical, firm, but encouraging.`,
             temperature: 0.7,
             max_tokens: 150,
           });
 
           return {
-            summary: response.choices[0]?.message?.content || "Keep focusing on the fundamentals. The results will come.",
+            summary: result?.content || "Keep focusing on the fundamentals. The results will come.",
             matchesFound: matches.length
           };
         } catch (aiError) {

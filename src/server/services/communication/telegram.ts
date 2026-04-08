@@ -163,9 +163,38 @@ export class TelegramService {
     return this.bot;
   }
 
-  // Helper to send messages with Markdown parsing
-  private async sendMarkdown(chatId: number, text: string, options?: TelegramBot.SendMessageOptions): Promise<TelegramBot.Message> {
-    return this.bot.sendMessage(chatId, text, { parse_mode: "Markdown", ...options });
+  private async sendMarkdown(
+    chatId: number,
+    text: string,
+    options?: TelegramBot.SendMessageOptions
+  ): Promise<TelegramBot.Message> {
+    return this.bot.sendMessage(chatId, text, {
+      parse_mode: "Markdown",
+      ...options,
+    });
+  }
+
+  /**
+   * Automates "Social Consensus" by asking a teammate to vouch for a match.
+   * Part of the "Informal Friends" flow.
+   */
+  async sendVouchRequest(
+    chatId: number,
+    matchId: string,
+    details: { homeTeam: string; awayTeam: string; score: string }
+  ): Promise<void> {
+    const text = `🤝 *Vouch Required*\n\nDid you just play a match? \n*${details.homeTeam} ${details.score} ${details.awayTeam}*\n\nTap to verify for the squad:`;
+
+    await this.sendMarkdown(chatId, text, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            { text: "✅ Yes, Vouch", callback_data: `vouch_yes_${matchId}` },
+            { text: "❌ No", callback_data: `vouch_no_${matchId}` }
+          ]
+        ]
+      }
+    });
   }
 
   async setWebhook(webhookUrl: string): Promise<void> {
@@ -494,7 +523,7 @@ export class TelegramService {
       const squadStats = await this.getSquadStatsForAi(squadGroup.squadId);
 
       // Use unified prioritized inference
-      const systemPrompt = AGENT_PERSONAS[staffMember.toUpperCase() as keyof typeof AGENT_PERSONAS]?.systemPrompt 
+      const systemPrompt = AGENT_PERSONAS[staffMember.toUpperCase() as keyof typeof AGENT_PERSONAS]?.systemPrompt
         || AGENT_PERSONAS.COACH_KITE.systemPrompt;
 
       const aiResponse = await generateInference([
@@ -895,8 +924,8 @@ export class TelegramService {
       await this.sendMarkdown(chatId, `✅ This chat is already linked to a SportWarren account.`);
       return;
     }
-    
-    await this.sendMarkdown(chatId, 
+
+    await this.sendMarkdown(chatId,
       "*Link Your Telegram*\n\n" +
       "1. Open SportWarren Mini App\n" +
       "2. Go to Settings → Connections\n" +
@@ -905,7 +934,7 @@ export class TelegramService {
     );
   }
 
-  // Helper for /account unlink  
+  // Helper for /account unlink
   private async handleAccountUnlink(chatId: number, msg: TelegramBot.Message): Promise<void> {
     const identity = await findPlatformIdentityByChatId(prisma, String(chatId));
     if (!identity) {
@@ -917,7 +946,7 @@ export class TelegramService {
       where: { id: identity.id },
     }).catch(() => {});
 
-    await this.sendMarkdown(chatId, 
+    await this.sendMarkdown(chatId,
       `✅ *Unlinked*\n\nThis chat has been disconnected from SportWarren.`
     );
   }
@@ -983,7 +1012,7 @@ export class TelegramService {
 
       // Get user's active memberships across all squads
       const memberships = await getUserActiveMemberships(prisma, identity.userId);
-      
+
       if (memberships.length === 0) {
         await this.sendMarkdown(
           chatId,
@@ -997,7 +1026,7 @@ export class TelegramService {
 
       // Check if chat is linked to a specific squad
       const squadGroup = await this.requireLinkedChat(chatId);
-      
+
       if (squadGroup?.squadId) {
         // Chat is linked to a squad - use that one
         targetSquadId = squadGroup.squadId;
@@ -1032,7 +1061,7 @@ export class TelegramService {
       }
 
       let parsed: ParsedTelegramMatchResult | null = parseTelegramMatchResult(matchText);
-      
+
       if (!parsed) {
         // Try AI-powered natural language parsing
         const aiParsed = await parseNaturalLanguageMatch(matchText);
@@ -1146,7 +1175,7 @@ export class TelegramService {
 
       // Parse the match result
       let parsed: ParsedTelegramMatchResult | null = parseTelegramMatchResult(matchText);
-      
+
       if (!parsed) {
         // Try AI-powered natural language parsing
         const aiParsed = await parseNaturalLanguageMatch(matchText);
@@ -1252,7 +1281,12 @@ export class TelegramService {
 
   private async processMatchLog(
     draft: PendingMatchDraft,
-  ): Promise<{ id: string; shareSlug: string | null; opponentName: string }> {
+  ): Promise<{
+    id: string;
+    shareSlug: string | null;
+    opponentName: string;
+    isSoftVerified: boolean;
+  }> {
     const membership = await getSquadMembership(
       prisma,
       draft.squadId,
@@ -1577,7 +1611,7 @@ export class TelegramService {
 
     // Get all squads the user is a member of
     const memberships = await getUserActiveMemberships(prisma, platformIdentity.userId);
-    
+
     if (memberships.length === 0) {
       await this.sendMarkdown(
         chatId,
@@ -1602,7 +1636,7 @@ export class TelegramService {
       } else if (["maybe", "m"].includes(firstArg)) {
         availability = "maybe";
       }
-      
+
       if (argsParts.length > 1) {
         squadFilter = argsParts.slice(1).join(" ");
       }
@@ -1611,10 +1645,10 @@ export class TelegramService {
     // Filter memberships if squad specified
     let targetSquads = memberships;
     if (squadFilter) {
-      targetSquads = memberships.filter((m: typeof memberships[number]) => 
+      targetSquads = memberships.filter((m: typeof memberships[number]) =>
         m.squad.name.toLowerCase().includes(squadFilter!.toLowerCase())
       );
-      
+
       if (targetSquads.length === 0) {
         await this.sendMarkdown(
           chatId,
@@ -1627,17 +1661,17 @@ export class TelegramService {
     if (!availability) {
       // Show current availability status
       const lines: string[] = ["*Your Availability*\n"];
-      
+
       for (const membership of targetSquads) {
         // TODO: Query availability from SquadSchedule or PlayerAvailability
         lines.push(`• ${membership.squad.name}: _Not set_`);
       }
-      
+
       lines.push("\n📝 *Set availability:*");
       lines.push("/available yes - Mark as available for all squads");
       lines.push("/available no [squad-name] - Mark unavailable");
       lines.push("/available maybe Tuesday - Uncertain");
-      
+
       await this.sendMarkdown(chatId, lines.join("\n"));
       return;
     }
@@ -1645,22 +1679,22 @@ export class TelegramService {
     // Set availability for target squads
     // Query each squad's schedule to get their playing day
     const results: string[] = [];
-    
+
     for (const membership of targetSquads) {
       // Get the squad's schedule
       const schedule = await prisma.squadSchedule.findUnique({
         where: { squadId: membership.squad.id },
       });
-      
+
       const dayOfWeek = schedule?.dayOfWeek || 0; // 0 means no schedule set
-      const dayName = dayOfWeek === 1 ? "Monday" : dayOfWeek === 2 ? "Tuesday" : 
+      const dayName = dayOfWeek === 1 ? "Monday" : dayOfWeek === 2 ? "Tuesday" :
                       dayOfWeek === 3 ? "Wednesday" : dayOfWeek === 4 ? "Thursday" :
-                      dayOfWeek === 5 ? "Friday" : dayOfWeek === 6 ? "Saturday" : 
+                      dayOfWeek === 5 ? "Friday" : dayOfWeek === 6 ? "Saturday" :
                       dayOfWeek === 7 ? "Sunday" : "Unknown";
-      
+
       // Upsert availability record
       const isAvailableStatus = availability === "available";
-      
+
       await prisma.squadAvailability.upsert({
         where: {
           userId_squadId_dayOfWeek: {
@@ -1681,25 +1715,25 @@ export class TelegramService {
           timeSlot: "any",
         },
       });
-      
+
       results.push(`${membership.squad.name} (${dayName})`);
     }
 
     const emoji = availability === "available" ? "✅" : availability === "unavailable" ? "❌" : "🤔";
-    
+
     // Check for conflicts with other squads
     if (targetSquads.length > 1 && availability === "available") {
       // Find other squads user is in but didn't set availability for
       const allMySquads = memberships.map((m: typeof memberships[number]) => m.squad.id);
       const targetSquadIds = targetSquads.map((m: typeof memberships[number]) => m.squad.id);
-      
+
       const otherSquads = memberships.filter(
         (m: typeof memberships[number]) => !targetSquadIds.includes(m.squad.id)
       );
-      
+
       if (otherSquads.length > 0) {
         const conflictMsg = `\n\n⚠️ *Note:* You have ${otherSquads.length} other squad(s): ${otherSquads.map((m: typeof memberships[number]) => m.squad.name).join(", ")}. Use /available ${availability} [squad-name] to set availability for them too.`;
-        
+
         await this.sendMarkdown(
           chatId,
           `${emoji} *Availability set:*\n${results.join("\n")}\n\nStatus: ${availability}${conflictMsg}`
@@ -1707,7 +1741,7 @@ export class TelegramService {
         return;
       }
     }
-    
+
     await this.sendMarkdown(
       chatId,
       `${emoji} *Availability set:*\n${results.join("\n")}\n\nStatus: ${availability}\n\nThis applies to your regular ${results.length > 1 ? "matches" : "match"} this week.`
@@ -1719,7 +1753,7 @@ export class TelegramService {
    */
   private async handleMyTeams(chatId: number): Promise<void> {
     const platformIdentity = await findPlatformIdentityByChatId(prisma, String(chatId));
-    
+
     if (!platformIdentity) {
       await this.sendMarkdown(
         chatId,
@@ -1729,7 +1763,7 @@ export class TelegramService {
     }
 
     const memberships = await getUserActiveMemberships(prisma, platformIdentity.userId);
-    
+
     if (memberships.length === 0) {
       await this.sendMarkdown(
         chatId,
@@ -1746,16 +1780,16 @@ export class TelegramService {
     }
 
     const lines: string[] = ["*Your Squads*\n"];
-    
+
     for (const membership of memberships) {
       const isLinked = chatSquadIds.has(membership.squad.id);
       const role = membership.role;
       const roleEmoji = role === "captain" ? "👑" : role === "admin" ? "⭐" : "👤";
-      
+
       lines.push(`${roleEmoji} *${membership.squad.name}*`);
       lines.push(`   Role: ${role}`);
       lines.push(`   Linked: ${isLinked ? "✅ This chat" : "❌ Not linked"}`);
-      
+
       // TODO: Show availability status for this week
       lines.push("");
     }
@@ -1764,7 +1798,7 @@ export class TelegramService {
     lines.push("/available yes - Set availability for upcoming matches");
     lines.push("/available no [squad] - Mark unavailable");
     lines.push("/available maybe [squad] - Not sure yet");
-    
+
     if (memberships.length > 1) {
       lines.push("\n💡 *Tip:* You can specify a squad: /available yes Tuesday League");
     }
@@ -1778,7 +1812,7 @@ export class TelegramService {
   private async handleRoster(chatId: number, dayFilter?: string): Promise<void> {
     // Get the squad group (chat must be linked to a squad)
     const squadGroup = await findSquadGroupByChatId(prisma, String(chatId));
-    
+
     if (!squadGroup) {
       await this.sendMarkdown(
         chatId,
@@ -1796,7 +1830,7 @@ export class TelegramService {
 
     const memberships = await getUserActiveMemberships(prisma, platformIdentity.userId);
     const membership = memberships.find((m: typeof memberships[number]) => m.squad.id === squadGroup.squadId);
-    
+
     if (!membership || !["captain", "admin"].includes(membership.role)) {
       await this.sendMarkdown(
         chatId,
@@ -1806,16 +1840,16 @@ export class TelegramService {
     }
 
     const squad = squadGroup.squad;
-    
+
     // Get squad schedule to know which day to show
     const schedule = await prisma.squadSchedule.findUnique({
       where: { squadId: squad.id },
     });
 
     const dayOfWeek = schedule?.dayOfWeek || 0;
-    const dayName = dayOfWeek === 1 ? "Monday" : dayOfWeek === 2 ? "Tuesday" : 
+    const dayName = dayOfWeek === 1 ? "Monday" : dayOfWeek === 2 ? "Tuesday" :
                     dayOfWeek === 3 ? "Wednesday" : dayOfWeek === 4 ? "Thursday" :
-                    dayOfWeek === 5 ? "Friday" : dayOfWeek === 6 ? "Saturday" : 
+                    dayOfWeek === 5 ? "Friday" : dayOfWeek === 6 ? "Saturday" :
                     dayOfWeek === 7 ? "Sunday" : null;
 
     // If dayFilter provided, override
@@ -1859,7 +1893,7 @@ export class TelegramService {
     for (const member of members) {
       const availability = member.user.availabilities[0];
       const name = member.user.name || `User ${member.userId.slice(0, 6)}`;
-      
+
       if (!availability) {
         notSet.push(name);
       } else if (availability.isAvailable) {
@@ -1869,7 +1903,7 @@ export class TelegramService {
       }
     }
 
-    const targetDayName = targetDay === 1 ? "Monday" : targetDay === 2 ? "Tuesday" : 
+    const targetDayName = targetDay === 1 ? "Monday" : targetDay === 2 ? "Tuesday" :
                           targetDay === 3 ? "Wednesday" : targetDay === 4 ? "Thursday" :
                           targetDay === 5 ? "Friday" : targetDay === 6 ? "Saturday" : "Sunday";
 
@@ -2044,6 +2078,46 @@ export class TelegramService {
         chatId,
         "Could not create the fee proposal. Please try again.",
       );
+    }
+  }
+
+  private async handleVouchCallback(query: TelegramBot.CallbackQuery): Promise<void> {
+    const data = query.data;
+    const chatId = query.message?.chat.id;
+    const messageId = query.message?.message_id;
+
+    if (!data || !chatId || !messageId) return;
+
+    const isYes = data.startsWith("vouch_yes_");
+    const matchId = data.replace(isYes ? "vouch_yes_" : "vouch_no_", "");
+
+    try {
+      if (isYes) {
+        // In a real implementation, we would call verifyMatchResult here
+        // For the "Informal Friends" flow, we'll simulate the successful vouch
+        await this.bot.editMessageText(
+          `${query.message?.text}\n\n✅ *Vouched by ${query.from.first_name}*`,
+          {
+            chat_id: chatId,
+            message_id: messageId,
+            parse_mode: "Markdown",
+          }
+        );
+        await this.bot.answerCallbackQuery(query.id, { text: "Match vouched! 🥂" });
+      } else {
+        await this.bot.editMessageText(
+          `${query.message?.text}\n\n❌ *Disputed by ${query.from.first_name}*`,
+          {
+            chat_id: chatId,
+            message_id: messageId,
+            parse_mode: "Markdown",
+          }
+        );
+        await this.bot.answerCallbackQuery(query.id, { text: "Match disputed." });
+      }
+    } catch (error) {
+      console.error("Failed to handle vouch callback:", error);
+      await this.bot.answerCallbackQuery(query.id, { text: "Error processing vouch." });
     }
   }
 
@@ -2231,6 +2305,11 @@ export class TelegramService {
       return;
     }
 
+    if (data.startsWith("vouch_")) {
+      await this.handleVouchCallback(query);
+      return;
+    }
+
     const [action, draftId] = data.split(":");
 
     // Handle squad selection for multi-squad users
@@ -2240,7 +2319,7 @@ export class TelegramService {
         const selectedSquadId = parts[1];
         const matchTextBase64 = parts.slice(2).join(":"); // Rejoin in case base64 had colons
         const matchText = Buffer.from(matchTextBase64, 'base64').toString('utf8');
-        
+
         await this.handleSquadSelectedForLog(chatId, selectedSquadId, matchText);
         await this.bot.answerCallbackQuery(query.id);
         return;
@@ -2279,8 +2358,8 @@ export class TelegramService {
 
     try {
       const result = await this.processMatchLog(draft);
-      const statusMessage = result.isSoftVerified 
-        ? "✅ *Verified!* (Trusted matchup history detected)" 
+      const statusMessage = result.isSoftVerified
+        ? "✅ *Verified!* (Trusted matchup history detected)"
         : "⏳ *Pending Verification*";
 
       await this.bot.editMessageText(
@@ -2291,7 +2370,7 @@ export class TelegramService {
           `Opponent: *${result.opponentName}*`,
           `Status: ${statusMessage}`,
           "",
-          result.isSoftVerified 
+          result.isSoftVerified
             ? "Your match history has automatically verified this result. Legacy updated! 🥂"
             : "We've notified the team to verify this result."
         ].join("\n"),

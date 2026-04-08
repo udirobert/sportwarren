@@ -1,6 +1,12 @@
 import { ethers } from 'ethers';
+import {
+  getAvalancheChain,
+  getAvalancheExplorerBaseUrl,
+  getAvalancheNetworkLabel,
+  getAvalancheRpcUrl,
+} from '@/lib/blockchain/evm-config';
 
-const AVALANCHE_RPC = process.env.NEXT_PUBLIC_AVALANCHE_RPC_URL || 'https://api.avax-test.network/ext/bc/C/rpc';
+const AVALANCHE_RPC = getAvalancheRpcUrl();
 
 export const connectAvalancheWallet = async (): Promise<{ address: string; error?: string }> => {
   try {
@@ -14,20 +20,21 @@ export const connectAvalancheWallet = async (): Promise<{ address: string; error
 
     const provider = new ethers.BrowserProvider((window as any).ethereum);
     const accounts = await provider.send('eth_requestAccounts', []);
+    const targetChain = getAvalancheChain();
     
     if (accounts && accounts.length > 0) {
       const network = await provider.getNetwork();
-      if (network.chainId !== BigInt(43113) && network.chainId !== BigInt(43114)) {
+      if (network.chainId !== BigInt(targetChain.id)) {
         try {
-          await provider.send('wallet_switchEthereumChain', [{ chainId: '0xa869' }]);
+          await provider.send('wallet_switchEthereumChain', [{ chainId: ethers.toBeHex(targetChain.id) }]);
         } catch (switchError: any) {
           if (switchError.code === 4902) {
             await provider.send('wallet_addEthereumChain', [{
-              chainId: '0xa869',
-              chainName: 'Avalanche C-Chain',
-              nativeCurrency: { name: 'AVAX', symbol: 'AVAX', decimals: 18 },
-              rpcUrls: ['https://api.avax-test.network/ext/bc/C/rpc'],
-              blockExplorerUrls: ['https://testnet.snowtrace.io'],
+              chainId: ethers.toBeHex(targetChain.id),
+              chainName: getAvalancheNetworkLabel(),
+              nativeCurrency: targetChain.nativeCurrency,
+              rpcUrls: [getAvalancheRpcUrl()],
+              blockExplorerUrls: [getAvalancheExplorerBaseUrl()],
             }]);
           }
         }

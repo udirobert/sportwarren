@@ -8,6 +8,7 @@ import { trpc } from '@/lib/trpc-client';
 import { useJourneyState } from '@/hooks/useJourneyState';
 import { useSquadDetails } from '@/hooks/squad/useSquad';
 import { isPendingMatchStatus, isSettledMatchStatus } from '@/lib/match/summary';
+import { Avatar } from '@/components/ui/Avatar';
 
 interface SquadDynamicsProps {
   squadId?: string;
@@ -201,9 +202,20 @@ export const SquadDynamics: React.FC<SquadDynamicsProps> = ({ squadId }) => {
 
         <div className="flex items-center justify-between text-xs">
           <span className="text-gray-700 font-medium">Top scorer</span>
-          <span className="bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">
-            {topScorer ? `${topScorer.name} • ${topScorer.stats?.goals ?? 0}G` : 'No goals logged yet'}
-          </span>
+          <div className="flex items-center gap-1.5 bg-gray-100 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold">
+            {topScorer ? (
+              <>
+                <Avatar
+                  src={topScorer.avatar || undefined}
+                  name={topScorer.name}
+                  size="xs"
+                />
+                <span>{topScorer.name} • {topScorer.stats?.goals ?? 0}G</span>
+              </>
+            ) : (
+              'No goals logged yet'
+            )}
+          </div>
         </div>
       </div>
     </Card>

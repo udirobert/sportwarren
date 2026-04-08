@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Search, ShieldAlert, Target, TrendingUp } from 'lucide-react';
+import { Search, ShieldAlert, Target, TrendingUp, Zap } from 'lucide-react';
 import { trpc } from '@/lib/trpc-client';
 import { useJourneyState } from '@/hooks/useJourneyState';
 
@@ -179,12 +179,22 @@ export const ScoutingReport: React.FC<ScoutingReportProps> = ({ squadId }) => {
           </div>
         </div>
 
-        <div className="mt-4">
-          <Link href="/squad?tab=transfers">
+        <div className="mt-4 flex gap-2">
+          <Link href="/squad?tab=transfers" className="flex-1">
             <Button className="w-full bg-blue-600 hover:bg-blue-700 text-white">
               Open Transfer Market
             </Button>
           </Link>
+          <Button
+            variant="outline"
+            className="border-blue-500/30 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400"
+            onClick={() => {
+              // Strategy: Link to Match Engine with preset tactics
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          >
+            <Zap className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     </Card>
