@@ -32,6 +32,9 @@ import { useJourneyState } from "@/hooks/useJourneyState";
 import { usePlatformConnections } from "@/hooks/usePlatformConnections";
 import type { Player, PlayerPosition, Tactics, Formation, PlayStyle, TeamInstructions } from "@/types";
 import { buildSquadInviteUrl } from "@/lib/squad/invite";
+import { PlayerAvatar } from "@/components/ui/PlayerAvatar";
+import { buildDerivedAvatarPresentation } from "@/lib/avatar/builders";
+import type { AvatarPresentation } from "@/lib/avatar/types";
 
 type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance";
 
@@ -85,6 +88,30 @@ function formatDateLabel(value: unknown, options?: Intl.DateTimeFormatOptions): 
   return new Date(timestamp).toLocaleDateString(undefined, options);
 }
 
+function buildSquadMemberAvatar(member: {
+  id: string;
+  name: string;
+  role: string;
+  avatar?: string | null;
+  position?: string | null;
+  stats?: {
+    level?: number;
+    matches?: number;
+    goals?: number;
+  };
+}): AvatarPresentation {
+  return buildDerivedAvatarPresentation({
+    userId: member.id,
+    name: member.name,
+    imageUrl: member.avatar,
+    role: member.role,
+    position: member.position,
+    level: member.stats?.level,
+    totalMatches: member.stats?.matches,
+    totalGoals: member.stats?.goals,
+  });
+}
+
 export default function SquadPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<SquadTab>("overview");
@@ -114,9 +141,12 @@ export default function SquadPage() {
     chain,
   });
   const { squad: detailedSquad, members: realMembers } = useSquadDetails(showSample ? undefined : activeSquadId);
-  const activeSquad = showSample 
-    ? { id: 'sample-squad', name: 'Warriors Pro', shortName: 'WAR', treasuryBalance: 50000, memberCount: 8 } as any
-    : (detailedSquad ?? activeMembership?.squad);
+  const activeSquad = useMemo(
+    () => (showSample
+      ? { id: 'sample-squad', name: 'Warriors Pro', shortName: 'WAR', treasuryBalance: 50000, memberCount: 8 } as any
+      : (detailedSquad ?? activeMembership?.squad)),
+    [activeMembership?.squad, detailedSquad, showSample],
+  );
   const members = showSample ? SAMPLE_MEMBERS as any[] : realMembers;
   const { connections } = usePlatformConnections({ squadId: showSample ? undefined : activeSquadId });
   const telegramConnected = connections.telegram?.connected;
@@ -189,6 +219,10 @@ export default function SquadPage() {
   const squadSize = members.length || activeSquad?.memberCount || 0;
   const captain = useMemo(() => members.find((member) => member.role === 'captain') ?? null, [members]);
   const viceCaptains = useMemo(() => members.filter((member) => member.role === 'vice_captain'), [members]);
+  const leadershipShowcase = useMemo(
+    () => [captain, ...viceCaptains].filter(Boolean).slice(0, 3),
+    [captain, viceCaptains],
+  );
   const averageLevel = useMemo(() => {
     if (members.length === 0) {
       return null;
@@ -586,6 +620,30 @@ export default function SquadPage() {
             <div className="mt-5 grid gap-4 lg:grid-cols-2">
               <div className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
                 <h3 className="font-semibold text-gray-900">Squad Profile</h3>
+                {leadershipShowcase.length > 0 && (
+                  <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3">
+                    {leadershipShowcase.map((member) => {
+                      if (!member) return null;
+                      const avatarPresentation = buildSquadMemberAvatar(member as any);
+
+                      return (
+                        <div key={member.id} className="flex items-center gap-2 rounded-xl bg-gray-50 px-2.5 py-2">
+                          <PlayerAvatar
+                            presentation={avatarPresentation}
+                            size="sm"
+                            showBadge={false}
+                          />
+                          <div className="min-w-0">
+                            <div className="truncate text-xs font-bold text-gray-900">{member.name}</div>
+                            <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                              {member.role === 'captain' ? 'Captain' : 'Vice captain'}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
                 <dl className="mt-4 space-y-3 text-sm">
                   <div className="flex items-start justify-between gap-4">
                     <dt className="text-gray-500">Founded</dt>

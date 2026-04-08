@@ -28,6 +28,9 @@ import { getDashboardEntryState, type DashboardEntryAction } from '@/lib/dashboa
 import { useTactics } from '@/hooks/squad/useTactics';
 import { useMatchCenterData } from '@/hooks/match/useMatchCenterData';
 import { Avatar } from '@/components/ui/Avatar';
+import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
+import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
+import { summarizeAvatarUpgrade } from '@/lib/avatar/diff';
 
 import { QuickLogWidget } from '@/components/dashboard/QuickLogWidget';
 import dynamic from 'next/dynamic';
@@ -73,6 +76,17 @@ export const AdaptiveDashboard: React.FC = () => {
   const [showCreateSquadFlow, setShowCreateSquadFlow] = React.useState(false);
   const [showJoinSquadFlow, setShowJoinSquadFlow] = React.useState(false);
   const [isSquadPickerOpen, setIsSquadPickerOpen] = React.useState(false);
+  const [avatarCelebration, setAvatarCelebration] = React.useState<{
+    visible: boolean;
+    title: string;
+    subtitle: string;
+    type: 'verified' | 'achievement' | 'legendary';
+  }>({
+    visible: false,
+    title: '',
+    subtitle: '',
+    type: 'verified',
+  });
   const squadPickerRef = React.useRef<HTMLDivElement>(null);
   const isVerified = !isGuest && authStatus.state === 'valid';
 
@@ -121,6 +135,15 @@ export const AdaptiveDashboard: React.FC = () => {
     retry: false,
     staleTime: 30 * 1000,
   });
+  const avatarPresentationQuery = trpc.player.getAvatarPresentation.useQuery(
+    { squadId: primarySquadId },
+    {
+      enabled: isVerified,
+      retry: false,
+      staleTime: 30 * 1000,
+    },
+  );
+  const avatarPresentation = avatarPresentationQuery.data;
   const { availableOpponents } = useMatchCenterData(primarySquadId);
   const { completeChecklistItem, allChecklistDone, completedCount, totalCount } = useOnboarding();
   const currentUserId = currentProfile?.userId;
@@ -214,6 +237,7 @@ export const AdaptiveDashboard: React.FC = () => {
             opponents={availableOpponents}
             onLog={async (data) => {
               try {
+                const previousAvatar = avatarPresentation;
                 await submitMatch.mutateAsync({
                   homeSquadId: primarySquadId,
                   awaySquadId: data.awaySquadId,
@@ -229,6 +253,17 @@ export const AdaptiveDashboard: React.FC = () => {
                   message: 'Result submitted to the verification queue.',
                 });
                 await refreshSquads();
+                const refreshedAvatar = (await avatarPresentationQuery.refetch()).data;
+                const avatarUpgrade = summarizeAvatarUpgrade(previousAvatar, refreshedAvatar);
+
+                if (avatarUpgrade) {
+                  setAvatarCelebration({
+                    visible: true,
+                    title: avatarUpgrade.title,
+                    subtitle: avatarUpgrade.subtitle,
+                    type: avatarUpgrade.type,
+                  });
+                }
               } catch (error) {
                 const message = error instanceof Error
                   ? error.message
@@ -675,7 +710,7 @@ export const AdaptiveDashboard: React.FC = () => {
     );
 
     return widgets;
-  }, [allChecklistDone, completeChecklistItem, currentUserId, dataState, entryState.id, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, squadTactics?.formation, stats, trackFeatureUsage]);
+  }, [addToast, allChecklistDone, availableOpponents, avatarPresentation, avatarPresentationQuery, completeChecklistItem, currentUserId, dataState, entryState.id, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, primarySquadName, refreshSquads, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, squadTactics?.formation, stats, submitMatch, trackFeatureUsage]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {
@@ -1032,6 +1067,13 @@ export const AdaptiveDashboard: React.FC = () => {
           </div>
         </div>
       )}
+      <CelebrationOverlay
+        isVisible={avatarCelebration.visible}
+        type={avatarCelebration.type}
+        title={avatarCelebration.title}
+        subtitle={avatarCelebration.subtitle}
+        onComplete={() => setAvatarCelebration((current) => ({ ...current, visible: false }))}
+      />
       <div className="flex items-center justify-between text-xs font-semibold text-gray-400 uppercase tracking-widest">
         <span className="rounded-full border border-gray-200 bg-white px-3 py-1 text-[10px] font-black tracking-[0.18em] text-gray-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300">
           {entryState.surfaceLabel}
@@ -1043,12 +1085,20 @@ export const AdaptiveDashboard: React.FC = () => {
           <div className="space-y-6">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="flex items-start gap-5">
-                <Avatar
-                  src={currentProfile?.user.avatar}
-                  name={currentProfile?.user.name || address}
-                  size="xl"
-                  className="hidden md:block ring-4 ring-green-500/20"
-                />
+                {avatarPresentation ? (
+                  <PlayerAvatar
+                    presentation={avatarPresentation}
+                    size="hero"
+                    className="hidden md:inline-flex"
+                  />
+                ) : (
+                  <Avatar
+                    src={currentProfile?.user.avatar}
+                    name={currentProfile?.user.name || address}
+                    size="xl"
+                    className="hidden md:block ring-4 ring-green-500/20"
+                  />
+                )}
                 <div className="min-w-0">
                   <div className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-green-600 dark:text-green-400">
                     {entryState.eyebrow}
@@ -1059,6 +1109,25 @@ export const AdaptiveDashboard: React.FC = () => {
                   <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-600 dark:text-gray-300 md:text-base">
                     {entryState.description}
                   </p>
+                  {avatarPresentation && (
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-300">
+                      <span>Level {avatarPresentation.level}</span>
+                      <span className="text-gray-300">•</span>
+                      <span>{avatarPresentation.frameTier.replace('_', ' ')}</span>
+                      {avatarPresentation.archetype && (
+                        <>
+                          <span className="text-gray-300">•</span>
+                          <span className="capitalize">{avatarPresentation.archetype}</span>
+                        </>
+                      )}
+                      {avatarPresentation.badge && (
+                        <>
+                          <span className="text-gray-300">•</span>
+                          <span>{avatarPresentation.badge.label}</span>
+                        </>
+                      )}
+                    </div>
+                  )}
                   <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-gray-400">
                   {isGuest ? (
                     <span>{venue} preview</span>

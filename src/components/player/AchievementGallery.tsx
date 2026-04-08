@@ -9,12 +9,22 @@ import {
   getAchievementExplorerUrl,
   getAvalancheNetworkLabel,
 } from '@/lib/blockchain/evm-config';
+import { trpc } from '@/lib/trpc-client';
+import { AvatarHeroCard } from '@/components/ui/AvatarHeroCard';
 
 const avalancheNetworkLabel = getAvalancheNetworkLabel();
 
 export const AchievementGallery: React.FC = () => {
   const { address, chain, hasWallet } = useWallet();
   const { achievements, loading, error } = useAchievements();
+  const { data: avatarPresentation } = trpc.player.getAvatarPresentation.useQuery(
+    { squadId: undefined },
+    {
+      enabled: hasWallet,
+      retry: false,
+      staleTime: 30 * 1000,
+    },
+  );
 
   if (!hasWallet || !address) {
     return (
@@ -78,58 +88,69 @@ export const AchievementGallery: React.FC = () => {
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {achievements.map((nft) => (
-        <Card key={nft.tokenId} className="group overflow-hidden border-none shadow-lg hover:shadow-xl transition-all duration-300 bg-white">
-          <div className="relative aspect-square bg-gray-100 overflow-hidden">
-            {nft.metadata?.image ? (
-              <img 
-                src={nft.metadata.image} 
-                alt={nft.metadata.name} 
-                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700">
-                <Trophy className="w-20 h-20 text-white/20" />
+    <div className="space-y-4">
+      {avatarPresentation && (
+        <AvatarHeroCard
+          presentation={avatarPresentation}
+          title="Achievement Identity"
+          subtitle="Your avatar now reflects the progression story behind every verified trophy and season milestone."
+          statLine={`${achievements.length} on-chain trophy${achievements.length === 1 ? '' : 'ies'} on ${avalancheNetworkLabel}`}
+        />
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {achievements.map((nft) => (
+          <Card key={nft.tokenId} className="group overflow-hidden border-none bg-white shadow-lg transition-all duration-300 hover:shadow-xl">
+            <div className="relative aspect-square overflow-hidden bg-gray-100">
+              {nft.metadata?.image ? (
+                <img
+                  src={nft.metadata.image}
+                  alt={nft.metadata.name}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-blue-500 to-blue-700">
+                  <Trophy className="h-20 w-20 text-white/20" />
+                </div>
+              )}
+              <div className="absolute inset-0 flex items-center justify-center gap-3 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                <a
+                  href={getAchievementExplorerUrl(nft.tokenId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="rounded-full bg-white p-2 text-blue-600 transition-transform hover:scale-110"
+                >
+                  <ExternalLink className="h-5 w-5" />
+                </a>
               </div>
-            )}
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
-              <a 
-                href={getAchievementExplorerUrl(nft.tokenId)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-2 bg-white rounded-full text-blue-600 hover:scale-110 transition-transform"
-              >
-                <ExternalLink className="w-5 h-5" />
-              </a>
-            </div>
-            <div className="absolute top-3 left-3">
-              <span className="px-2 py-1 bg-black/60 backdrop-blur-md text-[10px] font-bold text-white rounded uppercase tracking-widest border border-white/20">
-                #{nft.tokenId}
-              </span>
-            </div>
-          </div>
-          <div className="p-4">
-            <div className="flex items-center space-x-2 mb-1">
-              <Star className="w-3 h-3 text-yellow-500 fill-yellow-500" />
-              <span className="text-[10px] font-bold text-blue-600 uppercase tracking-tighter">Verified Achievement</span>
-            </div>
-            <h4 className="font-bold text-gray-900 truncate">{nft.metadata?.name || 'Achievement NFT'}</h4>
-            <p className="text-xs text-gray-500 mt-1 line-clamp-2">{nft.metadata?.description || 'Earned via SportWarren match performance.'}</p>
-            
-            <div className="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
-              <div className="flex -space-x-1">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="w-5 h-5 rounded-full bg-gray-200 border-2 border-white flex items-center justify-center">
-                    <Shield className="w-2.5 h-2.5 text-gray-400" />
-                  </div>
-                ))}
+              <div className="absolute left-3 top-3">
+                <span className="rounded border border-white/20 bg-black/60 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white backdrop-blur-md">
+                  #{nft.tokenId}
+                </span>
               </div>
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{avalancheNetworkLabel}</span>
             </div>
-          </div>
-        </Card>
-      ))}
+            <div className="p-4">
+              <div className="mb-1 flex items-center space-x-2">
+                <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                <span className="text-[10px] font-bold uppercase tracking-tighter text-blue-600">Verified Achievement</span>
+              </div>
+              <h4 className="truncate font-bold text-gray-900">{nft.metadata?.name || 'Achievement NFT'}</h4>
+              <p className="mt-1 line-clamp-2 text-xs text-gray-500">{nft.metadata?.description || 'Earned via SportWarren match performance.'}</p>
+
+              <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
+                <div className="flex -space-x-1">
+                  {[1, 2, 3].map(i => (
+                    <div key={i} className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-gray-200">
+                      <Shield className="h-2.5 w-2.5 text-gray-400" />
+                    </div>
+                  ))}
+                </div>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{avalancheNetworkLabel}</span>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 };
