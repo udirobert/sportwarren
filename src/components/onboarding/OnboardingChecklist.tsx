@@ -8,6 +8,8 @@ import { useOnboarding, type ChecklistId } from '@/hooks/useOnboarding';
 import { Card } from '@/components/ui/Card';
 import { getJourneyContent } from '@/lib/journey/content';
 import { isNewUserState, type DashboardEntryStateId } from '@/lib/dashboard/entry-state';
+import { getChecklistForPlatform } from '@/lib/onboarding/checklist';
+import { usePlatform } from '@/hooks/usePlatform';
 
 interface OnboardingChecklistProps {
     onStepAction?: (featureKey: ChecklistId) => void;
@@ -25,7 +27,7 @@ export const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ onStep
     const [expanded, setExpanded] = React.useState(isNewUserState(journeyStage));
     const journeyContent = getJourneyContent(journeyStage);
 
-    const progress = Math.round((completedCount / totalCount) * 100);
+    const progress = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
     const handleRestartTour = React.useCallback(() => {
         resetOnboarding();

@@ -3,64 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@/contexts/WalletContext';
 import { trackOnboarding, trackCoreGrowthEvent, type CoreGrowthEvent } from '@/lib/analytics';
+import { CHECKLIST_ITEMS } from '@/lib/onboarding/checklist';
+import type { ChecklistId } from '@/lib/onboarding/types';
 
-export const CHECKLIST_IDS = [
-    'view_match_engine',
-    'verify_match',
-    'claim_identity',
-    'connect_telegram',
-] as const;
-
-export type ChecklistId = (typeof CHECKLIST_IDS)[number];
-
-interface ChecklistConfig {
-    id: ChecklistId;
-    label: string;
-    description: string;
-    emoji: string;
-    href: string;
-    actionLabel: string;
-    xp?: number;
-}
-
-const CHECKLIST_CONFIG: ChecklistConfig[] = [
-    {
-        id: 'view_match_engine',
-        label: 'Set your tactics',
-        description: 'Choose your formation and play style to see your squad on the pitch',
-        emoji: '📋',
-        href: '/squad?tab=tactics',
-        actionLabel: 'Set tactics',
-        xp: 50,
-    },
-    {
-        id: 'connect_telegram',
-        label: 'Connect Telegram',
-        description: 'Get match alerts and manage your squad from the group chat',
-        emoji: '📱',
-        href: '/settings?tab=connections',
-        actionLabel: 'Connect',
-        xp: 75,
-    },
-    {
-        id: 'verify_match',
-        label: 'Log your first game',
-        description: 'Submit one real match result to unlock XP, reputation, and squad momentum',
-        emoji: '✅',
-        href: '/match?mode=capture',
-        actionLabel: 'Log match',
-        xp: 150,
-    },
-    {
-        id: 'claim_identity',
-        label: 'Save your progress',
-        description: 'Create an account so your results, XP, and squad data persist',
-        emoji: '⚡',
-        href: '/settings?tab=wallet',
-        actionLabel: 'Save progress',
-        xp: 100,
-    },
-];
+export { CHECKLIST_IDS } from '@/lib/onboarding/checklist';
+export type { ChecklistId } from '@/lib/onboarding/types';
 
 const CHECKLIST_GROWTH_EVENTS: Partial<Record<ChecklistId, CoreGrowthEvent>> = {
     view_match_engine: 'tactics_customized',
@@ -154,7 +101,7 @@ export function useOnboarding() {
         completeChecklistItem('claim_identity');
     }, [completeChecklistItem, hasAccount, hydrated, isGuest, state.checklistItems.claim_identity]);
 
-    const checklistItems: ChecklistItem[] = CHECKLIST_CONFIG.map((item) => ({
+    const checklistItems: ChecklistItem[] = CHECKLIST_ITEMS.map((item) => ({
         ...item,
         completed: state.checklistItems[item.id] ?? false,
     }));
