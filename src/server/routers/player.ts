@@ -6,6 +6,7 @@ import { calculateSharpnessDecay, calculateActivityGain } from '../../lib/player
 import { getSquadMembership } from '../services/permissions';
 import { applyMatchXP } from '../services/match-xp';
 import { getAvatarPresentation } from '../services/avatar/avatar-presentation';
+import { generateTacticalInsights } from '../../lib/ai/tactical-insights';
 
 const AttributeType = z.enum([
   'pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical',
@@ -450,7 +451,7 @@ export const playerRouter = createTRPCRouter({
       try {
         const { userId } = input;
 
-        // Fetch player profile and recent form
+        // Fetch player profile, attributes and form history
         const profile = await ctx.prisma.playerProfile.findUnique({
           where: { userId },
           include: {
@@ -458,6 +459,28 @@ export const playerRouter = createTRPCRouter({
             formHistory: {
               orderBy: { createdAt: 'desc' },
               take: 5
+            },
+            user: {
+              include: {
+                squads: {
+                  include: {
+                    squad: {
+                      include: {
+                        matchesHome: {
+                          where: { status: 'COMPLETED' },
+                          orderBy: { matchDate: 'desc' },
+                          take: 3
+                        },
+                        matchesAway: {
+                          where: { status: 'COMPLETED' },
+                          orderBy: { matchDate: 'desc' },
+                          take: 3
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             }
           },
         });
@@ -466,51 +489,54 @@ export const playerRouter = createTRPCRouter({
           return {
             insight: "Welcome to SportWarren! Play your first match to unlock personalized AI insights from Coach Kite.",
             type: 'onboarding',
-            confidence: 1.0
+            confidence: 1.0,
+            allInsights: []
           };
         }
 
-        // Logic-based insights (Fallback if Python analytics service is down)
-        let insight = "Keep up the hard work on the pitch! Your consistency is the key to leveling up.";
-        let type = 'general';
+        // Fetch squad context (recent matches for squads the player is in)
+        const recentMatches = profile.user?.squads.flatMap((ms: any) => [
+          ...ms.squad.matchesHome,
+          ...ms.squad.matchesAway
+        ]) || [];
 
-        const shooting = profile.attributes.find(a => a.attribute === 'shooting')?.rating || 0;
-        const passing = profile.attributes.find(a => a.attribute === 'passing')?.rating || 0;
-        const defending = profile.attributes.find(a => a.attribute === 'defending')?.rating || 0;
+        // Call the new Tactical Insights service
+        const insights = await generateTacticalInsights(
+          profile.attributes,
+          recentMatches,
+          { position: profile.user?.position, totalGoals: profile.totalGoals }
+        );
 
-        if (profile.formHistory.length >= 3) {
-          const recentRatings = profile.formHistory.map(f => f.rating);
-          const avgRating = recentRatings.reduce((a, b) => a + b, 0) / recentRatings.length;
-
-          if (avgRating > 8.0) {
-            insight = "You're in elite form! Your recent performances have been outstanding. Consider testing yourself against higher-rated rivals.";
-            type = 'performance';
-          } else if (shooting > 80 && profile.totalGoals < 5) {
-            insight = "Your shooting stats are high but goals are low. Try to get into more advanced positions during the next match.";
-            type = 'tactical';
-          } else if (defending < passing) {
-            insight = "You're strong in build-up play, but your defensive contributions could improve. Focus on interceptions in your next session.";
-            type = 'tactical';
-          }
-        }
+        const primaryInsight = insights[0] || {
+          title: 'Keep Pushing',
+          description: 'Your dedication on the pitch is paying off. Keep up the consistency!',
+          type: 'performance'
+        };
 
         // record interaction with Kite AI service for analytics
         try {
-          // Import dynamic to avoid circular or early loading issues
           const { kiteAIService } = await import('@/server/services/ai/kite');
-          await kiteAIService.recordInteraction('coach_kite', 'generate_insight', { userId, type });
+          await kiteAIService.recordInteraction('coach_kite', 'generate_insight', { 
+            userId, 
+            type: primaryInsight.type 
+          });
         } catch {
           console.warn('Kite AI service not available for analytics');
         }
 
         return {
-          insight,
-          type,
+          insight: primaryInsight.description,
+          title: primaryInsight.title,
+          type: primaryInsight.type,
+          actionLabel: primaryInsight.actionLabel,
+          actionHref: primaryInsight.actionHref,
           agentName: "Coach Kite",
-          confidence: 0.85,
-          timestamp: new Date().toISOString()
+          confidence: 0.9,
+          timestamp: new Date().toISOString(),
+          allInsights: insights
         };
       } catch (error) {
+        console.error('getAiInsights error:', error);
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to generate AI insights',

@@ -30,7 +30,7 @@ export default function MatchPreviewPage() {
     { enabled: !!activeSquadId }
   );
 
-  const match = stats?.matches?.[0];
+  const match = stats?.matches?.[0] as any;
   const opponentName = match
     ? (match.homeSquadId === activeSquadId ? match.awaySquad?.name : match.homeSquad?.name) || "Upcoming Opponent"
     : "Upcoming Opponent";

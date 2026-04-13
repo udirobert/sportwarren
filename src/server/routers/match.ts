@@ -482,6 +482,16 @@ export const matchRouter = createTRPCRouter({
             include: {
               homeSquad: true,
               awaySquad: true,
+              verifications: {
+                include: {
+                  verifier: {
+                    select: {
+                      name: true,
+                      squadContexts: true,
+                    }
+                  }
+                }
+              },
               _count: { select: { verifications: true } },
             },
             orderBy: { createdAt: 'desc' },
@@ -516,6 +526,7 @@ export const matchRouter = createTRPCRouter({
                 verifier: {
                   select: {
                     name: true,
+                    squadContexts: true,
                     playerProfile: {
                       select: { reputationScore: true }
                     }
@@ -546,8 +557,8 @@ export const matchRouter = createTRPCRouter({
               latitude: match.latitude,
               longitude: match.longitude,
               timestamp: Math.floor(match.matchDate.getTime() / 1000),
-              homeTeam: match.homeSquad.name,
-              awayTeam: match.awaySquad.name,
+              homeTeam: (match as any).homeSquad.name,
+              awayTeam: (match as any).awaySquad.name,
             });
             creResult = verification.details;
           } catch (e) {
@@ -598,6 +609,7 @@ export const matchRouter = createTRPCRouter({
                 verifier: {
                   select: {
                     name: true,
+                    squadContexts: true,
                     playerProfile: {
                       select: { reputationScore: true }
                     }

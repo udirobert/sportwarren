@@ -92,4 +92,18 @@ export const agentRouter = createTRPCRouter({
         return { success: false };
       }
     }),
+
+  getAgentAnalytics: protectedProcedure
+    .input(z.object({
+      agentId: z.string(),
+    }))
+    .query(async ({ input }) => {
+      try {
+        const analytics = await kiteAIService.getAgentAnalytics(input.agentId);
+        return { analytics };
+      } catch (error) {
+        console.error('[TRPC-AGENT] Analytics failed:', error);
+        return { analytics: null };
+      }
+    }),
 });

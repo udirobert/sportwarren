@@ -3,6 +3,8 @@
  * Can be easily integrated with PostHog, Mixpanel, Amplitude, etc.
  */
 
+import posthog from 'posthog-js';
+
 type EventProperties = Record<string, string | number | boolean | null | undefined>;
 export type GrowthStage = 'activation' | 'conversion' | 'retention' | 'viral';
 
@@ -71,6 +73,16 @@ const isAnalyticsEnabled = (): boolean => {
   return localStorage.getItem('sw_analytics_enabled') !== 'false';
 };
 
+// Initialize PostHog if in client-side
+if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+  posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
+    api_host: process.env.NEXT_PUBLIC_POSTHOG_HOST || 'https://app.posthog.com',
+    autocapture: true,
+    capture_pageview: false, // We handle this manually
+    persistence: 'localStorage',
+  });
+}
+
 /**
  * Track an analytics event
  */
@@ -109,11 +121,22 @@ export function trackEvent(eventName: string, properties?: EventProperties): voi
     });
   }
   
-  // TODO: Send to analytics provider (PostHog, Mixpanel, etc.)
-  // Example:
-  // if (window.posthog) {
-  //   window.posthog.capture(eventName, properties);
-  // }
+  // Structured logging for production observability (Vercel/CloudWatch)
+  if (process.env.NODE_ENV === 'production') {
+    // We use structured JSON for easy parsing by log aggregators
+    console.info(JSON.stringify({
+      type: 'analytics_event',
+      name: eventName,
+      properties,
+      timestamp: Date.now(),
+      sessionId: getSessionId(),
+    }));
+  }
+
+  // Send to specialized analytics provider (PostHog)
+  if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
+    posthog.capture(eventName, properties);
+  }
 }
 
 /**

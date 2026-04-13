@@ -119,6 +119,28 @@ export async function getMatchParticipantCandidates(
   return Array.from(participants.values());
 }
 
+/**
+ * Checks if two squads have a recurring relationship for "Social Trust" verification.
+ * Threshold: 3+ completed matches between these specific squads.
+ */
+export async function checkSocialTrust(
+  prisma: PrismaClient,
+  squadA: string,
+  squadB: string
+): Promise<boolean> {
+  const recurringMatchCount = await prisma.match.count({
+    where: {
+      OR: [
+        { homeSquadId: squadA, awaySquadId: squadB },
+        { homeSquadId: squadB, awaySquadId: squadA },
+      ],
+      status: { in: ['verified', 'finalized'] },
+    },
+  });
+
+  return recurringMatchCount >= 3;
+}
+
 export async function settleMatchFee(
   prisma: PrismaClient,
   match: RecoverableMatch,
@@ -283,6 +305,12 @@ export async function submitMatchResult({
   let locationVerified = false;
   let verificationDetails: unknown = null;
   let agentInsights: unknown = null;
+  let socialTrust = isSociallyTrusted;
+
+  // Auto-verify if they are recurring friendly opponents
+  if (!socialTrust) {
+    socialTrust = await checkSocialTrust(prisma, homeSquadId, awaySquadId);
+  }
 
   if (latitude !== undefined && longitude !== undefined) {
     try {
@@ -328,11 +356,11 @@ export async function submitMatchResult({
       verificationDetails,
       agentInsights,
       sessionId,
-      isSoftVerified: isSociallyTrusted,
+      isSoftVerified: socialTrust,
       hasKeeper,
     });
 
-    if (isSociallyTrusted) {
+    if (socialTrust) {
       try {
         await postVerifiedMatchToAlgorand(match.id);
         const seededStats = await prisma.playerMatchStats.findMany({

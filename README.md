@@ -80,7 +80,8 @@ npm run dev
 
 ### Tactical Experience
 - **Match Preview Engine** - Interactive PitchCanvas visualization with scouting reports and win probabilities
-- **AI Staff Insights** - Pre-match tactical briefings from the Coach Kite persona (AI Scout, Coach, Physio)
+- **Coach Kite Insights** - AI-driven "Phygital" tactical briefings that bridge physical performance with digital growth
+- **Informal Friends Flow** - Frictionless "Quick Log" match reporting with automated Social Trust verification for recurring squads
 - **Tactical DNA** - Personalize your squad's brand kit (colors/nickname) and formation before every match
 - **Match Hype Notifications** - Automated Telegram briefings delivered 1 hour before kick-off
 
@@ -118,6 +119,9 @@ No chain is redundant in the SportWarren architecture. Each one owns a bounded r
 
 ### AI Staff Layer
 - Multi-persona staff assistants (Agent, Scout, Coach, Physio, Analyst, Commercial)
+- **Kite AI Passports** - Verified on-chain identities for all AI staff with reputation-based trust signals
+- **Agentic Commerce** - Native USDC wage payments and agent-to-player financial flows via Kite AI
+- **Staff Marketplace** - Search and "hire" specialized AI agents from the global Kite network
 - Context-aware responses using squad data, treasury signals, and recent decisions
 - Provider abstraction with Venice AI primary + OpenAI fallback
 

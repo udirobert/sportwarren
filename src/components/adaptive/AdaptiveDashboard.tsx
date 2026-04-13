@@ -1194,15 +1194,15 @@ export const AdaptiveDashboard: React.FC = () => {
                   )}
                 </div>
               </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-                {renderEntryAction(entryState.secondaryAction, 'secondary')}
-                {renderEntryAction(entryState.primaryAction, 'primary')}
-              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              {renderEntryAction(entryState.secondaryAction, 'secondary')}
+              {renderEntryAction(entryState.primaryAction, 'primary')}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
               {[
                 { label: 'Account', value: entryAccountLabel },
                 { label: 'Wallet', value: entryWalletLabel },

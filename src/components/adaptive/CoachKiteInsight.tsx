@@ -1,8 +1,9 @@
 "use client";
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
-import { Sparkles, Brain, TrendingUp, Info, MessageSquare, Send, X, Loader2 } from 'lucide-react';
+import { Sparkles, Brain, TrendingUp, Info, MessageSquare, Send, X, Loader2, ChevronRight, Activity } from 'lucide-react';
 import { trpc } from '@/lib/trpc-client';
 
 interface CoachKiteInsightProps {
@@ -60,19 +61,21 @@ export const CoachKiteInsight: React.FC<CoachKiteInsightProps> = ({ userId }) =>
     return null; // Don't show if there's an error
   }
 
-  const getIcon = () => {
-    switch (data.type) {
+  const getIcon = (type?: string) => {
+    switch (type || data.type) {
       case 'performance': return <TrendingUp className="w-5 h-5 text-green-600" />;
       case 'tactical': return <Brain className="w-5 h-5 text-purple-600" />;
+      case 'fitness': return <Activity className="w-5 h-5 text-orange-600" />;
       case 'onboarding': return <Info className="w-5 h-5 text-blue-600" />;
       default: return <Sparkles className="w-5 h-5 text-blue-600" />;
     }
   };
 
-  const getBgColor = () => {
-    switch (data.type) {
+  const getBgColor = (type?: string) => {
+    switch (type || data.type) {
       case 'performance': return 'bg-green-100';
       case 'tactical': return 'bg-purple-100';
+      case 'fitness': return 'bg-orange-100';
       default: return 'bg-blue-100';
     }
   };
@@ -85,12 +88,19 @@ export const CoachKiteInsight: React.FC<CoachKiteInsightProps> = ({ userId }) =>
           <div className={`w-8 h-8 ${getBgColor()} rounded-full flex items-center justify-center`}>
             {getIcon()}
           </div>
-          <h2 className="text-lg font-bold text-gray-900">{('agentName' in data ? data.agentName : null) || "Coach Kite"}</h2>
+          <div className="flex flex-col">
+            <h2 className="text-sm font-bold text-gray-900 leading-none mb-1">
+              {(data as any).title || (('agentName' in data ? data.agentName : null) || "Coach Kite")}
+            </h2>
+            <span className="text-[10px] font-medium text-gray-500 uppercase tracking-tight">
+              {('agentName' in data ? data.agentName : "Coach Kite")} • {data.type}
+            </span>
+          </div>
         </div>
         {!isChatOpen && (
           <button 
             onClick={() => setIsChatOpen(true)}
-            className="flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold uppercase transition-all"
+            className="flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-[10px] font-bold uppercase transition-all shadow-sm"
           >
             <MessageSquare className="w-3 h-3" />
             <span>Reply</span>
@@ -99,18 +109,46 @@ export const CoachKiteInsight: React.FC<CoachKiteInsightProps> = ({ userId }) =>
       </div>
       
       {!isChatOpen ? (
-        <>
-          <p className="text-sm text-gray-700 mt-2 italic font-medium leading-relaxed">
+        <div className="mt-2 space-y-3">
+          <p className="text-sm text-gray-700 italic font-medium leading-relaxed">
             &quot;{data.insight}&quot;
           </p>
-          {('confidence' in data ? data.confidence : null) && (
-            <div className="mt-2 flex justify-end">
+          
+          <div className="flex items-center justify-between mt-3">
+            { (data as any).actionHref ? (
+              <Link 
+                href={(data as any).actionHref}
+                className="inline-flex items-center space-x-1 text-xs font-bold text-blue-600 hover:text-blue-700 hover:underline"
+              >
+                <span>{(data as any).actionLabel || 'Learn More'}</span>
+                <ChevronRight className="w-3 h-3" />
+              </Link>
+            ) : <div />}
+
+            {('confidence' in data ? data.confidence : null) && (
               <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
                 {Math.round((data as any).confidence * 100)}% Confidence
               </span>
+            )}
+          </div>
+
+          {/* Additional Insights Mini-List */}
+          {(data as any).allInsights && (data as any).allInsights.length > 1 && (
+            <div className="mt-3 pt-3 border-t border-blue-100">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-2">Other Suggestions</span>
+              <div className="space-y-2">
+                {(data as any).allInsights.slice(1, 3).map((insight: any, idx: number) => (
+                  <div key={idx} className="flex items-start space-x-2">
+                    <div className={`w-4 h-4 mt-0.5 ${getBgColor(insight.type)} rounded-full flex items-center justify-center`}>
+                      {React.cloneElement(getIcon(insight.type) as React.ReactElement, { className: 'w-2 h-2' })}
+                    </div>
+                    <span className="text-[10px] text-gray-600 line-clamp-1">{insight.title}</span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-        </>
+        </div>
       ) : (
         <div className="mt-4 space-y-4 animate-in fade-in slide-in-from-top-2">
           <div className="max-h-48 overflow-y-auto space-y-2 pr-2 scrollbar-thin">
