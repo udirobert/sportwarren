@@ -33,6 +33,7 @@ import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { summarizeAvatarUpgrade } from '@/lib/avatar/diff';
 
 import { QuickLogWidget } from '@/components/dashboard/QuickLogWidget';
+import { MatchCoordinationWidget } from '@/components/dashboard/MatchCoordinationWidget';
 import dynamic from 'next/dynamic';
 
 // Statically imported (small / always visible)
@@ -225,6 +226,16 @@ export const AdaptiveDashboard: React.FC = () => {
     }
 
     if (primarySquadId) {
+      widgets.push({
+        id: 'match-coordination',
+        priority: 475, // Higher than quick-log
+        requiredLevel: 'basic',
+        category: 'matches',
+        component: (
+          <MatchCoordinationWidget squadId={primarySquadId} />
+        ),
+      });
+
       widgets.push({
         id: 'quick-log',
         priority: 450,
