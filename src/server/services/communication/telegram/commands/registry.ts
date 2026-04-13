@@ -10,6 +10,8 @@ import type TelegramBot from 'node-telegram-bot-api';
 // Simple commands (modular - straightforward)
 import { StatsCommand } from './stats';
 import { AvailableCommand } from './availability';
+import { RsvpCommand } from './rsvp';
+import { PaidCommand } from './paid';
 import { RosterCommand } from './roster';
 import { HelpCommand } from './help';
 
@@ -33,6 +35,8 @@ export const COMMANDS: TelegramCommand[] = [
   // Simple commands (straightforward, no complex workflows)
   new StatsCommand(),
   new AvailableCommand(),
+  new RsvpCommand(),
+  new PaidCommand(),
   new RosterCommand(),
   new HelpCommand(),
 
@@ -103,9 +107,10 @@ export function buildHelpText(): string {
 *Squad Commands*
 /squad log <score> - Submit match result
 /squad stats - View squad stats
-/squad available yes/no - Set availability
-/squad roster - View squad availability
-/squad fixtures - View upcoming matches
+/rsvp yes/no - Confirm next match
+/paid - Mark yourself as paid
+/squad available yes/no - Set weekly preference
+/squad roster - View availability list
 
 *Account Commands*
 /account app - Open Mini App

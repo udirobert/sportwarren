@@ -163,6 +163,7 @@ model Squad {
   id        String @id @default(cuid())
   name      String
   shortName String @map("short_name")
+  logo      String?
 
   // Squad details
   founded    DateTime @default(now())
@@ -1019,6 +1020,12 @@ model MatchRsvp {
   // Response status
   status    String   @default("pending") // "available", "unavailable", "maybe"
   
+  // Payment tracking for informal games (subs/pitch fees)
+  isPaid      Boolean   @default(false) @map("is_paid")
+  paidAt      DateTime? @map("paid_at")
+  amountPaid  Int?      @map("amount_paid") // in minor units (e.g. pence, or nanoTON)
+  paymentType String?   @map("payment_type") // 'cash', 'transfer', 'crypto'
+
   // Position preference for this match
   position  String?  // GK, DF, MF, ST, WG, any
   

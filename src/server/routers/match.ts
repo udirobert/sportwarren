@@ -103,6 +103,146 @@ export const matchRouter = createTRPCRouter({
       }
     }),
 
+  // Handle RSVP for a match
+  rsvp: protectedProcedure
+    .input(z.object({
+      matchId: z.string().min(1),
+      status: z.enum(['available', 'unavailable', 'maybe']),
+      position: z.string().optional(),
+      notes: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.prisma.matchRsvp.upsert({
+        where: {
+          userId_matchId: {
+            userId: ctx.userId!,
+            matchId: input.matchId,
+          },
+        },
+        create: {
+          userId: ctx.userId!,
+          matchId: input.matchId,
+          status: input.status,
+          position: input.position,
+          notes: input.notes,
+          respondedAt: new Date(),
+        },
+        update: {
+          status: input.status,
+          position: input.position,
+          notes: input.notes,
+          respondedAt: new Date(),
+        },
+      });
+    }),
+
+  // Set payment status for a player (subs/pitch fees)
+  setPaymentStatus: protectedProcedure
+    .input(z.object({
+      matchId: z.string().min(1),
+      userId: z.string().optional(), // If omitted, set for self
+      isPaid: z.boolean(),
+      amountPaid: z.number().optional(),
+      paymentType: z.enum(['cash', 'transfer', 'crypto']).optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const targetUserId = input.userId || ctx.userId!;
+      
+      // If setting for someone else, check if caller is captain of the squad for this match
+      if (targetUserId !== ctx.userId) {
+        const match = await ctx.prisma.match.findUnique({
+          where: { id: input.matchId },
+          select: { homeSquadId: true, awaySquadId: true }
+        });
+        
+        if (!match) throw new TRPCError({ code: 'NOT_FOUND', message: 'Match not found' });
+        
+        const homeMembership = await getSquadMembership(ctx.prisma, match.homeSquadId, ctx.userId!);
+        const awayMembership = await getSquadMembership(ctx.prisma, match.awaySquadId, ctx.userId!);
+        
+        const isCaptain = isSquadLeader(homeMembership?.role) || isSquadLeader(awayMembership?.role);
+                         
+        if (!isCaptain) {
+          throw new TRPCError({ code: 'FORBIDDEN', message: 'Only captains can mark others as paid' });
+        }
+      }
+
+      // Ensure RSVP exists first
+      return ctx.prisma.matchRsvp.upsert({
+        where: {
+          userId_matchId: {
+            userId: targetUserId,
+            matchId: input.matchId,
+          },
+        },
+        create: {
+          userId: targetUserId,
+          matchId: input.matchId,
+          status: 'available', // Default to available if they paid
+          isPaid: input.isPaid,
+          paidAt: input.isPaid ? new Date() : null,
+          amountPaid: input.amountPaid,
+          paymentType: input.paymentType,
+          respondedAt: new Date(),
+        },
+        update: {
+          isPaid: input.isPaid,
+          paidAt: input.isPaid ? new Date() : null,
+          amountPaid: input.amountPaid,
+          paymentType: input.paymentType,
+        },
+      });
+    }),
+
+  // Get RSVPs for a match
+  getRsvps: protectedProcedure
+    .input(z.object({
+      matchId: z.string().min(1),
+    }))
+    .query(async ({ ctx, input }) => {
+      return ctx.prisma.matchRsvp.findMany({
+        where: { matchId: input.matchId },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              avatar: true,
+              walletAddress: true,
+            }
+          }
+        },
+        orderBy: { respondedAt: 'desc' },
+      });
+    }),
+
+  // Get the next upcoming match for a squad
+  getUpcoming: protectedProcedure
+    .input(z.object({
+      squadId: z.string().min(1),
+    }))
+    .query(async ({ ctx, input }) => {
+      return ctx.prisma.match.findFirst({
+        where: {
+          OR: [
+            { homeSquadId: input.squadId },
+            { awaySquadId: input.squadId },
+          ],
+          status: 'pending',
+          matchDate: { gte: new Date() },
+        },
+        include: {
+          homeSquad: { select: { name: true } },
+          awaySquad: { select: { name: true } },
+          rsvps: {
+            where: { userId: ctx.userId },
+            take: 1,
+          }
+        },
+        orderBy: { matchDate: 'asc' },
+      });
+    }),
+
   // Verify a match result
   verify: protectedProcedure
     .input(z.object({
