@@ -71,14 +71,21 @@ function transformMatch(match: any): MatchResult {
     submitterTeam: match.submittedBy === match.homeSquadId ? 'home' : 'away',
     timestamp: new Date(match.createdAt),
     status: match.status as MatchStatus,
-    verifications: match.verifications?.map((v: any) => ({
-      verifier: v.verifier?.name || 'Unknown',
-      verifierAddress: v.verifierId,
-      verified: v.verified,
-      timestamp: new Date(v.createdAt),
-      role: 'captain', // TODO: Get from squad membership
-      trustTier: v.trustTier as TrustTier,
-    })) || [],
+    verifications: match.verifications?.map((v: any) => {
+      // Resolve role from squad membership context
+      const verifierContext = v.verifier?.squadPlayerContext?.find(
+        (c: any) => c.squadId === match.homeSquadId || c.squadId === match.awaySquadId
+      );
+      
+      return {
+        verifier: v.verifier?.name || 'Unknown',
+        verifierAddress: v.verifierId,
+        verified: v.verified,
+        timestamp: new Date(v.createdAt),
+        role: verifierContext?.role || 'player',
+        trustTier: v.trustTier as TrustTier,
+      };
+    }) || [],
     requiredVerifications: 3,
     trustScore: match.verifications ? calculateTrustScore(match.verifications) : 0,
     consensus: {

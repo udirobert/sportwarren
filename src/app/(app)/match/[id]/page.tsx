@@ -32,10 +32,11 @@ export default function PublicMatchPage() {
         }
     };
 
+    const m = match as any;
     const handleNativeShare = async () => {
         try {
             await navigator.share({
-                title: `${match?.homeSquad?.name ?? 'Home'} vs ${match?.awaySquad?.name ?? 'Away'}`,
+                title: `${m?.homeSquad?.name ?? 'Home'} vs ${m?.awaySquad?.name ?? 'Away'}`,
                 text: "Check out this match on SportWarren",
                 url: window.location.href,
             });
@@ -67,11 +68,11 @@ export default function PublicMatchPage() {
         );
     }
 
-    const homeName = match.homeSquad?.name ?? "Home";
-    const awayName = match.awaySquad?.name ?? "Away";
-    const isVerified = match.status === "verified";
-    const isPending = match.status === "pending";
-    const isDisputed = match.status === "disputed";
+    const homeName = m.homeSquad?.name ?? "Home";
+    const awayName = m.awaySquad?.name ?? "Away";
+    const isVerified = m.status === "verified";
+    const isPending = m.status === "pending";
+    const isDisputed = m.status === "disputed";
 
     return (
         <div className="min-h-screen bg-gray-950">
@@ -224,7 +225,7 @@ export default function PublicMatchPage() {
 
                     {/* Player Stats / Attribute Changes */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {match.playerStats.slice(0, 4).map((stats, idx) => (
+                      {m.playerStats.slice(0, 4).map((stats: any, idx: number) => (
                         <motion.div
                           key={stats.id}
                           initial={{ opacity: 0, x: -20 }}
@@ -258,7 +259,7 @@ export default function PublicMatchPage() {
                     </div>
 
                     <div className="text-center">
-                      <Link href={`/match/${match.id}/rate`}>
+                      <Link href={`/match/${m.id}/rate`}>
                         <Button variant="secondary" size="sm">View Full Performance Report</Button>
                       </Link>
                     </div>
@@ -267,11 +268,11 @@ export default function PublicMatchPage() {
                 </AnimatePresence>
 
                 {/* Verifications list */}
-                {match.verifications.length > 0 && (
+                {m.verifications && m.verifications.length > 0 && (
                     <Card className="bg-gray-900 border-gray-800 p-4">
                         <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Verifications</h4>
                         <div className="space-y-2 text-xs">
-                            {match.verifications.map((v) => (
+                            {m.verifications.map((v: any) => (
                                 <div key={v.id} className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <div className="w-6 h-6 rounded-full bg-gray-800 flex items-center justify-center text-[10px] font-bold text-gray-400">
@@ -301,7 +302,7 @@ export default function PublicMatchPage() {
                     <p className="text-gray-400 text-sm mb-6 max-w-sm mx-auto">
                       Rate your teammates performance to award them XP and build your Scout reputation.
                     </p>
-                    <Link href={`/match/${match.id}/rate`}>
+                    <Link href={`/match/${m.id}/rate`}>
                       <Button className="w-full md:w-auto px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-11">
                         Rate Teammates
                       </Button>

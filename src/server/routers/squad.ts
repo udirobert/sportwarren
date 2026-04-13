@@ -17,6 +17,7 @@ import {
 } from '../services/economy/treasury-ledger';
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
 import { kiteAIService } from '../services/ai/kite';
+import { algorandService } from '../services/blockchain/algorand';
 
 const formationSchema = z.enum([
   '4-4-2', '4-3-3', '4-2-3-1', '3-5-2', '5-3-2',
@@ -1775,23 +1776,43 @@ export const squadRouter = createTRPCRouter({
         }
 
         // If action is 'accept', we don't accept yet - we should initiate a DAO vote
-        // TODO: Bridge to On-Chain Governor instead of legacy PrismaProposal
-        /*
-        const proposal = await ctx.prisma.squadProposal.create({
-          data: {
-            squadId: challenge.toSquadId,
-            creatorId: ctx.userId!,
-            title: `Accept match vs ${challenge.fromSquad.name}?`,
-            description: `Proposed for ${challenge.proposedDate.toISOString().split('T')[0]}. Message: ${challenge.message || 'None'}`,
-            type: 'match_challenge',
-            referenceId: challengeId,
-            expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h to vote
-            status: 'active',
-          },
+        const targetSquad = await ctx.prisma.squad.findUnique({
+          where: { id: challenge.toSquadId },
+          select: { governorAddress: true },
         });
-        */
 
-        // Temporary: accept challenge directly until on-chain bridge is complete
+        if (targetSquad?.governorAddress && ctx.walletAddress) {
+          try {
+            // Bridging to On-Chain Governor (Algorand App ID stored in governorAddress)
+            const appId = parseInt(targetSquad.governorAddress);
+            if (!isNaN(appId) && appId > 0) {
+              const description = `Accept match vs ${challenge.fromSquad.name} on ${challenge.proposedDate.toISOString().split('T')[0]}?`;
+              
+              // We'll create the proposal on-chain
+              // NOTE: In a real app, we might want to store the proposal ID in Prisma too
+              const success = await algorandService.createProposal(
+                ctx.walletAddress,
+                description,
+                0, // startRound (0 means current)
+                1000 // endRound (placeholder duration)
+              );
+
+              if (success) {
+                // Keep challenge as pending but mark it as 'proposing' or similar
+                // For now, we'll just return it so the UI can show a success message
+                return await ctx.prisma.matchChallenge.update({
+                  where: { id: challengeId },
+                  data: { message: (challenge.message || '') + ' [Governance Proposal Created]' },
+                });
+              }
+            }
+          } catch (e) {
+            console.error('Governance bridge failed:', e);
+            // Fallback to direct acceptance if bridge fails (per business continuity)
+          }
+        }
+
+        // Temporary: accept challenge directly until on-chain bridge is fully automated
         return await ctx.prisma.matchChallenge.update({
           where: { id: challengeId },
           data: { status: 'accepted' },

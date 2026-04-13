@@ -802,17 +802,49 @@ export class DatabaseService {
     const result = await this.pool.query(`
       SELECT 
         COUNT(*) as total_matches,
-        SUM(CASE WHEN (is_home AND home_score > away_score) OR (NOT is_home AND away_score > home_score) THEN 1 ELSE 0 END) as wins,
+        SUM(CASE WHEN (home_squad_id = $1 AND home_score > away_score) OR (away_squad_id = $1 AND away_score > home_score) THEN 1 ELSE 0 END) as wins,
         SUM(CASE WHEN home_score = away_score THEN 1 ELSE 0 END) as draws,
-        SUM(CASE WHEN (is_home AND home_score < away_score) OR (NOT is_home AND away_score < home_score) THEN 1 ELSE 0 END) as losses,
-        SUM(CASE WHEN is_home THEN home_score ELSE away_score END) as goals_for,
-        SUM(CASE WHEN is_home THEN away_score ELSE home_score END) as goals_against
+        SUM(CASE WHEN (home_squad_id = $1 AND home_score < away_score) OR (away_squad_id = $1 AND away_score < home_score) THEN 1 ELSE 0 END) as losses,
+        SUM(CASE WHEN home_squad_id = $1 THEN home_score ELSE away_score END) as goals_for,
+        SUM(CASE WHEN home_squad_id = $1 THEN away_score ELSE home_score END) as goals_against
       FROM matches 
-      WHERE squad_id = $1 AND status = 'COMPLETED'
+      WHERE (home_squad_id = $1 OR away_squad_id = $1) AND status = 'COMPLETED'
     `, [squadId]);
 
     const stats = result.rows[0];
     const winRate = stats.total_matches > 0 ? (stats.wins / stats.total_matches) * 100 : 0;
+
+    // Calculate current streak
+    const lastMatches = await this.pool.query(`
+      SELECT 
+        CASE 
+          WHEN (home_squad_id = $1 AND home_score > away_score) OR (away_squad_id = $1 AND away_score > home_score) THEN 'W'
+          WHEN home_score = away_score THEN 'D'
+          ELSE 'L'
+        END as result
+      FROM matches 
+      WHERE (home_squad_id = $1 OR away_squad_id = $1) AND status = 'COMPLETED'
+      ORDER BY match_date DESC
+      LIMIT 10
+    `, [squadId]);
+
+    let currentStreak = 0;
+    if (lastMatches.rows.length > 0) {
+        const firstResult = lastMatches.rows[0].result;
+        for (const row of lastMatches.rows) {
+            if (row.result === firstResult) {
+                currentStreak++;
+            } else {
+                break;
+            }
+        }
+        // If the streak is of wins, keep it positive. If losses, make it negative. Draws, keep as 0?
+        if (firstResult === 'L') {
+            currentStreak = -currentStreak;
+        } else if (firstResult === 'D') {
+            currentStreak = 0;
+        }
+    }
 
     return {
       id: squadId,
@@ -824,7 +856,7 @@ export class DatabaseService {
       goals_for: parseInt(stats.goals_for),
       goals_against: parseInt(stats.goals_against),
       win_rate: winRate,
-      current_streak: 0, // TODO: Calculate streak
+      current_streak: currentStreak,
     };
   }
 

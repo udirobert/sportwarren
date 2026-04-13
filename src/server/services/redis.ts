@@ -102,6 +102,20 @@ export class RedisService {
     }
   }
 
+  // Rate limiting & counters
+  async incr(key: string, ttl?: number): Promise<number | null> {
+    try {
+      const result = await this.client.incr(key);
+      if (ttl && result === 1) {
+        await this.client.expire(key, ttl);
+      }
+      return result;
+    } catch (error) {
+      console.warn('Redis INCR error:', error);
+      return null;
+    }
+  }
+
   async getSession(sessionId: string): Promise<any | null> {
     try {
       const data = await this.client.get(`session:${sessionId}`);
@@ -144,3 +158,5 @@ export class RedisService {
     console.log('✅ Disconnected from Redis');
   }
 }
+
+export const redisService = new RedisService();

@@ -1663,8 +1663,24 @@ export class TelegramService {
       const lines: string[] = ["*Your Availability*\n"];
 
       for (const membership of targetSquads) {
-        // TODO: Query availability from SquadSchedule or PlayerAvailability
-        lines.push(`• ${membership.squad.name}: _Not set_`);
+        // Query availability from SquadSchedule or PlayerAvailability
+        const schedule = await prisma.squadSchedule.findUnique({
+          where: { squadId: membership.squad.id }
+        });
+        
+        const avail = await prisma.squadAvailability.findFirst({
+          where: { 
+            userId: platformIdentity.userId,
+            squadId: membership.squad.id,
+            dayOfWeek: schedule?.dayOfWeek || 0
+          }
+        });
+        
+        const statusStr = avail 
+          ? (avail.isAvailable ? "✅ Available" : "❌ Unavailable")
+          : "_Not set_";
+
+        lines.push(`• ${membership.squad.name}: ${statusStr}${schedule?.dayOfWeek ? ` (Plays: ${this.getDayName(schedule.dayOfWeek)})` : ""}`);
       }
 
       lines.push("\n📝 *Set availability:*");
@@ -1790,7 +1806,27 @@ export class TelegramService {
       lines.push(`   Role: ${role}`);
       lines.push(`   Linked: ${isLinked ? "✅ This chat" : "❌ Not linked"}`);
 
-      // TODO: Show availability status for this week
+      // Query availability status for this week
+      const schedule = await prisma.squadSchedule.findUnique({
+        where: { squadId: membership.squad.id }
+      });
+      
+      if (schedule?.dayOfWeek) {
+        const avail = await prisma.squadAvailability.findFirst({
+          where: { 
+            userId: platformIdentity.userId,
+            squadId: membership.squad.id,
+            dayOfWeek: schedule.dayOfWeek
+          }
+        });
+        
+        const statusStr = avail 
+          ? (avail.isAvailable ? "✅ Available" : "❌ Unavailable")
+          : "⚪ _Not set_";
+          
+        lines.push(`   Availability: ${statusStr} (${this.getDayName(schedule.dayOfWeek)})`);
+      }
+
       lines.push("");
     }
 
@@ -1938,6 +1974,20 @@ export class TelegramService {
     lines.push("📝 _Use /available yes in your chat to mark yourself available_");
 
     await this.sendMarkdown(chatId, lines.join("\n"));
+  }
+
+  private getDayName(day: number): string {
+    const days = [
+      "No schedule",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+      "Sunday",
+    ];
+    return days[day] || "Unknown";
   }
 
   private async handleFeeProposal(

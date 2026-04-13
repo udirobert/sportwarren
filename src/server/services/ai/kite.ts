@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { ethers } from 'ethers';
+import { redisService } from '../redis';
 
 type KiteServiceStatus = {
   enabled: boolean;
@@ -73,6 +74,11 @@ export class KiteAIService {
   private apiKey: string;
   private provider: ethers.Provider;
   private wallet: ethers.Wallet;
+  private usageMetrics: {
+    requestsToday: number;
+    lastResetDate: string;
+    totalSpendUsdc: number;
+  };
 
   constructor() {
     const config = readKiteEnv();
@@ -87,6 +93,59 @@ export class KiteAIService {
       throw new Error('WEB3_PRIVATE_KEY required for Kite AI integration');
     }
     this.wallet = new ethers.Wallet(privateKey, this.provider);
+
+    // Initialize in-memory metrics (could be moved to Redis for distributed state)
+    this.usageMetrics = {
+      requestsToday: 0,
+      lastResetDate: new Date().toISOString().split('T')[0],
+      totalSpendUsdc: 0,
+    };
+  }
+
+  /**
+   * Check if the service is within production budget and rate limits
+   */
+  private async checkRateLimit(): Promise<boolean> {
+    const DAILY_LIMIT = Number(process.env.KITE_DAILY_REQUEST_LIMIT || '1000');
+    const today = new Date().toISOString().split('T')[0];
+    const key = `kite:usage:${today}`;
+
+    // Try Redis first for distributed state
+    try {
+      const usage = await redisService.get(key);
+      if (usage && parseInt(usage) >= DAILY_LIMIT) {
+        console.warn(`[KiteAI] Daily distributed request limit reached (${DAILY_LIMIT})`);
+        return false;
+      }
+    } catch (e) {
+      // Fallback to in-memory if Redis fails
+      if (this.usageMetrics.lastResetDate !== today) {
+        this.usageMetrics.requestsToday = 0;
+        this.usageMetrics.lastResetDate = today;
+      }
+      if (this.usageMetrics.requestsToday >= DAILY_LIMIT) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  /**
+   * Track usage after a successful API call
+   */
+  private async trackUsage(costUsdc: number = 0) {
+    const today = new Date().toISOString().split('T')[0];
+    const key = `kite:usage:${today}`;
+
+    this.usageMetrics.requestsToday++;
+    this.usageMetrics.totalSpendUsdc += costUsdc;
+
+    try {
+      await redisService.incr(key, 86400); // 24h TTL
+    } catch (e) {
+      // Ignore Redis tracking errors if it fails
+    }
   }
 
   /**
@@ -99,6 +158,7 @@ export class KiteAIService {
     capabilities: string[];
     walletAddress: string;
   }): Promise<KiteAgentPassport | null> {
+    if (!(await this.checkRateLimit())) return null;
     try {
       const response = await axios.post(
         `${this.apiUrl}/v1/agents/register`,
@@ -123,6 +183,7 @@ export class KiteAIService {
       );
 
       if (response.data.success) {
+        this.trackUsage(0.01); // Assumed registration cost
         return {
           agentId: response.data.agent_id,
           passportId: response.data.passport_id,
@@ -146,6 +207,7 @@ export class KiteAIService {
    * Get agent passport details
    */
   async getAgentPassport(agentId: string): Promise<KiteAgentPassport | null> {
+    if (!(await this.checkRateLimit())) return null;
     try {
       const response = await axios.get(
         `${this.apiUrl}/v1/agents/${agentId}/passport`,
@@ -157,6 +219,7 @@ export class KiteAIService {
       );
 
       if (response.data.success) {
+        this.trackUsage(0.001); // Minimal lookup cost
         return response.data.passport;
       }
 
@@ -175,6 +238,7 @@ export class KiteAIService {
     reputationChange: number,
     reason: string
   ): Promise<boolean> {
+    if (!(await this.checkRateLimit())) return false;
     try {
       const response = await axios.post(
         `${this.apiUrl}/v1/agents/${agentId}/reputation`,
@@ -208,6 +272,7 @@ export class KiteAIService {
     currency: 'USDC' | 'USDT' = 'USDC',
     metadata: Record<string, any> = {}
   ): Promise<KitePayment | null> {
+    if (!(await this.checkRateLimit())) return null;
     try {
       // Kite handles stablecoin payments through their infrastructure
       const response = await axios.post(
@@ -262,9 +327,9 @@ export class KiteAIService {
   ): Promise<KitePayment | null> {
     const config = readKiteEnv();
     if (!config.hasApiKey || !config.hasPrivateKey) {
-        console.warn('Kite credentials missing — simulating squad wage payment');
+        console.warn(`[KiteAI] Credentials missing — simulating squad wage payment for squad ${squadId}`);
         return {
-            transactionId: `sim-kite-${Date.now()}`,
+            transactionId: `sim-kite-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
             from: this.wallet.address,
             to: playerWallet,
             amount: amount.toString(),
@@ -326,6 +391,7 @@ export class KiteAIService {
     minReputation?: number;
     maxPrice?: string;
   }): Promise<any[]> {
+    if (!(await this.checkRateLimit())) return [];
     try {
       const isString = typeof query === 'string';
       const response = await axios.get(
@@ -347,18 +413,24 @@ export class KiteAIService {
 
       return response.data.agents || [];
     } catch (error) {
-      console.error('Marketplace search error:', error);
-      // Return mock data for demonstration if query matches certain keywords
-      const queryString = typeof query === 'string' ? query.toLowerCase() : '';
-      if (queryString.includes('striker')) {
-          return [{
-              id: 'market-striker-01',
-              name: 'Elite Striker Coach',
-              description: 'Specializes in improving conversion rates and positioning for forwards.',
-              price: '500 USDC',
-              rating: 4.8,
-              author: 'GoalAI Labs'
-          }];
+      const config = readKiteEnv();
+      if (!config.hasApiKey) {
+          // Only provide mock data in demo/no-key mode to avoid confusing real API errors
+          const queryString = typeof query === 'string' ? query.toLowerCase() : '';
+          if (queryString.includes('striker')) {
+              console.info('[KiteAI] API key missing — returning "Elite Striker Coach" mock for demonstration');
+              return [{
+                  id: 'market-striker-01',
+                  name: 'Elite Striker Coach',
+                  description: 'Specializes in improving conversion rates and positioning for forwards.',
+                  price: '500 USDC',
+                  rating: 4.8,
+                  author: 'GoalAI Labs',
+                  verified: true
+              }];
+          }
+      } else {
+          console.error('[KiteAI] Marketplace search failed:', error);
       }
       return [];
     }
@@ -372,6 +444,7 @@ export class KiteAIService {
     interactionType: string,
     metadata: any
   ): Promise<boolean> {
+    if (!(await this.checkRateLimit())) return false;
     try {
       const response = await axios.post(
         `${this.apiUrl}/v1/agents/${agentId}/interactions`,
@@ -405,6 +478,7 @@ export class KiteAIService {
     revenue: string;
     topUsers: string[];
   } | null> {
+    if (!(await this.checkRateLimit())) return null;
     try {
       const response = await axios.get(
         `${this.apiUrl}/v1/agents/${agentId}/analytics`,
@@ -433,6 +507,7 @@ export class KiteAIService {
     agentId: string,
     signature: string
   ): Promise<boolean> {
+    if (!(await this.checkRateLimit())) return false;
     try {
       const response = await axios.post(
         `${this.apiUrl}/v1/agents/${agentId}/verify`,
