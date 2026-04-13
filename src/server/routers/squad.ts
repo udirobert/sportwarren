@@ -16,6 +16,7 @@ import {
   reconcilePendingTreasuryTransaction,
 } from '../services/economy/treasury-ledger';
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
+import { kiteAIService } from '../services/ai/kite';
 
 const formationSchema = z.enum([
   '4-4-2', '4-3-3', '4-2-3-1', '3-5-2', '5-3-2',
@@ -1608,6 +1609,85 @@ export const squadRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to fetch nearby squads',
+          cause: error,
+        });
+      }
+    }),
+
+  processSquadWage: protectedProcedure
+    .input(z.object({
+      squadId: z.string(),
+      playerId: z.string(),
+      amount: z.number().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const { squadId, playerId, amount } = input;
+        
+        // Check permissions
+        const membership = await getSquadMembership(ctx.prisma, squadId, ctx.userId);
+        const isLeader = isSquadLeader(membership?.role);
+        if (!isLeader) {
+          throw new TRPCError({
+            code: 'FORBIDDEN',
+            message: 'Only squad leaders can process wage payments',
+          });
+        }
+
+        // Get player wallet
+        const player = await ctx.prisma.user.findUnique({
+          where: { id: playerId },
+          select: { walletAddress: true, name: true },
+        });
+
+        if (!player?.walletAddress) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Player does not have a connected wallet for on-chain payments',
+          });
+        }
+
+        // 1. Process on Kite chain (Agent-to-Player)
+        const kitePayment = await kiteAIService.processSquadWagePayment(
+          squadId,
+          player.walletAddress,
+          amount
+        );
+
+        if (!kitePayment) {
+          throw new TRPCError({
+            code: 'INTERNAL_SERVER_ERROR',
+            message: 'Kite payment processing failed',
+          });
+        }
+
+        // 2. Record in local treasury ledger
+        await postTreasuryLedgerEntry({
+          prisma: ctx.prisma,
+          squadId,
+          amountDelta: -amount,
+          type: 'expense',
+          category: 'wages',
+          description: `Squad wage paid to ${player.name} via Kite Agentic Rail`,
+          txHash: kitePayment.transactionId,
+          metadata: {
+            kiteTransactionId: kitePayment.transactionId,
+            recipientWallet: player.walletAddress,
+            currency: 'USDC',
+          },
+        });
+
+        return { 
+          success: true, 
+          txHash: kitePayment.transactionId,
+          status: kitePayment.status 
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        console.error('[TRPC-SQUAD] Wage payment failed:', error);
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to process squad wage payment',
           cause: error,
         });
       }

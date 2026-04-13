@@ -7,6 +7,7 @@ import {
     X,
     Send,
     Bot,
+    ShieldCheck,
 } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
@@ -194,12 +195,31 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
                         {/* Header */}
                         <div className="p-4 bg-gradient-to-r from-gray-900 to-black border-b border-white/5 flex items-center justify-between">
                             <div className="flex items-center space-x-3">
-                                <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
-                                    <Bot className="w-6 h-6 text-white" />
+                                <div className="relative">
+                                    <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                                        <Bot className="w-6 h-6 text-white" />
+                                    </div>
+                                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center border-2 border-gray-900 shadow-lg" title="Kite Verified Identity">
+                                        <ShieldCheck className="w-2.5 h-2.5 text-white" />
+                                    </div>
                                 </div>
                                 <div>
-                                    <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest leading-none mb-1">Your Assistant</div>
-                                    <h3 className="text-sm font-black text-white uppercase italic tracking-tight">Marcus</h3>
+                                    <div className="flex items-center gap-1.5 leading-none mb-1">
+                                        <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Kite Agent</div>
+                                        <span className="w-1 h-1 bg-gray-700 rounded-full" />
+                                        <a 
+                                            href="https://explorer.gokite.ai/passport/KITE-MARCUS-SW-01" 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="text-[9px] font-mono text-gray-500 hover:text-blue-400 transition-colors underline decoration-dotted"
+                                        >
+                                            KITE-MARCUS
+                                        </a>
+                                    </div>
+                                    <h3 className="text-sm font-black text-white uppercase italic tracking-tight flex items-center gap-2">
+                                        Marcus
+                                        <span className="px-1 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[8px] font-black text-emerald-400 uppercase tracking-widest">Verified</span>
+                                    </h3>
                                 </div>
                             </div>
                             <button
