@@ -42,16 +42,20 @@ interface StaffMember {
     avatar: string;
     mood: 'focused' | 'happy' | 'stressed' | 'busy';
     biography: string;
+    kitePassportId?: string;
+    walletAddress?: string;
 }
 
 const STAFF_MEMBERS: StaffMember[] = [
     {
         id: 'agent-1',
-        name: 'The Agent',
-        role: 'Contract Negotiator',
+        name: 'Marcus',
+        role: 'Academy Director',
         avatar: '🎩',
         mood: 'focused',
-        biography: 'Specializes in reputation-based valuations. Always looking for the next player who can change a season.'
+        biography: 'Specializes in reputation-based valuations. Always looking for the next player who can change a season.',
+        kitePassportId: 'KITE-MARCUS-SW-01',
+        walletAddress: '0x1a2b...3c4d'
     },
     {
         id: 'scout-1',
@@ -59,7 +63,9 @@ const STAFF_MEMBERS: StaffMember[] = [
         role: 'Talent Identification',
         avatar: '🔭',
         mood: 'busy',
-        biography: 'Tracks emerging prospects, squad gaps, and match load to spot the next useful addition.'
+        biography: 'Tracks emerging prospects, squad gaps, and match load to spot the next useful addition.',
+        kitePassportId: 'KITE-SCOUT-SW-02',
+        walletAddress: '0x2b3c...4d5e'
     },
     {
         id: 'coach-1',
@@ -67,7 +73,9 @@ const STAFF_MEMBERS: StaffMember[] = [
         role: 'Tactical Director',
         avatar: '🪁',
         mood: 'happy',
-        biography: 'AI-driven tactical analyst. Thinks in nodes and probability matrices.'
+        biography: 'AI-driven tactical analyst. Thinks in nodes and probability matrices.',
+        kitePassportId: 'KITE-KITE-SW-03',
+        walletAddress: '0x3c4d...5e6f'
     },
     {
         id: 'physio-1',
@@ -75,7 +83,9 @@ const STAFF_MEMBERS: StaffMember[] = [
         role: 'Health & Recovery',
         avatar: '🏥',
         mood: 'focused',
-        biography: 'Specializes in biometric recovery and injury prevention. Monitors real-world activity levels via the Phygital link.'
+        biography: 'Specializes in biometric recovery and injury prevention. Monitors real-world activity levels via the Phygital link.',
+        kitePassportId: 'KITE-PHYSIO-SW-04',
+        walletAddress: '0x4d5e...6f7g'
     },
     {
         id: 'comms-1',
@@ -83,7 +93,9 @@ const STAFF_MEMBERS: StaffMember[] = [
         role: 'Sponsorships & PR',
         avatar: '📈',
         mood: 'happy',
-        biography: 'Maximizes Lens-based reputation for brand deals. Thinks every tackle is a marketing opportunity.'
+        biography: 'Maximizes Lens-based reputation for brand deals. Thinks every tackle is a marketing opportunity.',
+        kitePassportId: 'KITE-COMMS-SW-05',
+        walletAddress: '0x5e6f...7g8h'
     }
 ];
 
@@ -102,9 +114,17 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
     const [negotiatingPlayer, setNegotiatingPlayer] = useState<string>('');
     const [negotiatingWage, setNegotiatingWage] = useState<number>(500);
     const [inputText, setInputText] = useState<string>('');
+    const [isMarketplaceOpen, setIsMarketplaceOpen] = useState(false);
+    const [marketQuery, setMarketQuery] = useState('');
+    const [marketResults, setMarketResults] = useState<any[]>([]);
     const { isVerified } = useWallet();
 
     const agentChat = trpc.agent.chat.useMutation();
+    const marketSearch = trpc.agent.searchMarketplace.useQuery(
+        { query: marketQuery },
+        { enabled: isMarketplaceOpen && marketQuery.length > 2 }
+    );
+    const hireMutation = trpc.agent.hireMarketplaceAgent.useMutation();
     const logDecision = trpc.memory.logDecision.useMutation();
     const { data: decisionData } = trpc.memory.getDecisions.useQuery(
         { staffId: selectedStaff?.id ?? 'agent-1', limit: 5 },
@@ -621,8 +641,11 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                         {STAFF_MEMBERS.map(member => (
                             <button
                                 key={member.id}
-                                onClick={() => setSelectedStaff(member)}
-                                className={`shrink-0 md:w-full p-3 md:p-4 rounded-xl flex items-center space-x-3 md:space-x-4 transition-all ${selectedStaff?.id === member.id
+                                onClick={() => {
+                                    setSelectedStaff(member);
+                                    setIsMarketplaceOpen(false);
+                                }}
+                                className={`shrink-0 md:w-full p-3 md:p-4 rounded-xl flex items-center space-x-3 md:space-x-4 transition-all ${selectedStaff?.id === member.id && !isMarketplaceOpen
                                     ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/20'
                                     : 'text-gray-200 hover:bg-white/5'
                                     }`}
@@ -630,13 +653,34 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                 <div className="text-2xl">{member.avatar}</div>
                                 <div className="text-left flex-1 min-w-0">
                                     <div className="text-sm font-black uppercase truncate">{member.name}</div>
-                                    <div className={`text-xs uppercase font-bold ${selectedStaff?.id === member.id ? 'text-blue-100' : 'text-gray-300'}`}>
+                                    <div className={`text-xs uppercase font-bold ${selectedStaff?.id === member.id && !isMarketplaceOpen ? 'text-blue-100' : 'text-gray-300'}`}>
                                         {member.role}
                                     </div>
                                 </div>
                                 {member.mood === 'busy' && <div className="w-2 h-2 bg-yellow-500 rounded-full animate-pulse" />}
                             </button>
                         ))}
+
+                        <div className="h-px bg-white/5 my-2 hidden md:block" />
+                        
+                        <button
+                            onClick={() => {
+                                setIsMarketplaceOpen(true);
+                                setSelectedStaff(null);
+                            }}
+                            className={`shrink-0 md:w-full p-3 md:p-4 rounded-xl flex items-center space-x-3 md:space-x-4 transition-all ${isMarketplaceOpen
+                                ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-500/20'
+                                : 'text-emerald-400 hover:bg-emerald-500/10 border border-emerald-500/20'
+                                }`}
+                        >
+                            <div className="text-2xl">🏪</div>
+                            <div className="text-left flex-1 min-w-0">
+                                <div className="text-sm font-black uppercase truncate">Marketplace</div>
+                                <div className={`text-xs uppercase font-bold ${isMarketplaceOpen ? 'text-emerald-100' : 'text-emerald-500/70'}`}>
+                                    Hire Experts
+                                </div>
+                            </div>
+                        </button>
                     </div>
                     <div className="p-4 bg-black/20 text-xs text-gray-400 font-mono flex items-center justify-between">
                         <span>SECURITY LEVEL: 4 (MANAGER)</span>
@@ -644,29 +688,138 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                     </div>
                 </div>
 
-                {/* Center: Conversation Space */}
+                {/* Center: Conversation Space / Marketplace */}
                 <div className="flex-1 flex flex-col relative bg-gradient-to-br from-gray-900 to-black">
-                    {/* Header */}
-                    <div className="p-6 border-b border-white/5 flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                            <div className="text-3xl">{selectedStaff?.avatar}</div>
-                            <div>
-                                <h3 className="text-lg font-black text-white uppercase italic">{selectedStaff?.name}</h3>
-                                <p className="text-xs text-blue-400 font-bold uppercase tracking-widest">{selectedStaff?.role}</p>
-                            </div>
-                        </div>
-                        <div className="hidden lg:flex items-center space-x-4">
-                            <div className="text-right">
-                                <div className="text-xs font-bold text-gray-300">NEGOTIATION POWER</div>
-                                <div className="w-24 h-1 bg-gray-800 rounded-full mt-1 overflow-hidden">
-                                    <div className="h-full bg-blue-500 w-3/4" />
+                    {isMarketplaceOpen ? (
+                        <div className="flex-1 flex flex-col p-8 overflow-y-auto">
+                            <div className="max-w-4xl mx-auto w-full space-y-8">
+                                <div className="text-center space-y-4">
+                                    <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-black uppercase tracking-widest">
+                                        Kite Agent Marketplace
+                                    </div>
+                                    <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter">Hire Experts</h2>
+                                    <p className="text-gray-400 max-w-lg mx-auto">
+                                        Expand your backroom staff with specialized AI agents from the global Kite network. 
+                                        Each agent is a verified on-chain identity with unique tactical models.
+                                    </p>
+                                </div>
+
+                                <div className="relative">
+                                    <input 
+                                        type="text"
+                                        value={marketQuery}
+                                        onChange={(e) => setMarketQuery(e.target.value)}
+                                        placeholder="Search for 'striker coach', 'scout', 'analyst'..."
+                                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all shadow-2xl"
+                                    />
+                                    {marketSearch.isLoading && (
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                                            <div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {marketSearch.data?.agents?.map((agent: any) => (
+                                        <Card key={agent.id} className="bg-white/5 border-white/10 p-6 hover:border-emerald-500/40 transition-all group">
+                                            <div className="flex items-start justify-between mb-4">
+                                                <div className="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-2xl shadow-lg group-hover:scale-110 transition-transform">
+                                                    🤖
+                                                </div>
+                                                <div className="text-right">
+                                                    <div className="text-emerald-400 font-black text-lg">{agent.price}</div>
+                                                    <div className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Per Week</div>
+                                                </div>
+                                            </div>
+                                            <h3 className="text-xl font-black text-white uppercase italic mb-1">{agent.name}</h3>
+                                            <div className="text-[10px] text-gray-500 font-bold uppercase tracking-[0.2em] mb-3">By {agent.author}</div>
+                                            <p className="text-sm text-gray-400 mb-6 leading-relaxed">
+                                                {agent.description}
+                                            </p>
+                                            <Button 
+                                                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase tracking-widest py-3 shadow-lg shadow-emerald-600/20"
+                                                onClick={() => {
+                                                    hireMutation.mutate({ agentId: agent.id, squadId: squadId || '' });
+                                                    alert(`${agent.name} hired! They will appear in your staff room shortly.`);
+                                                }}
+                                                disabled={hireMutation.isPending}
+                                            >
+                                                {hireMutation.isPending ? 'Hiring...' : 'Hire Agent'}
+                                            </Button>
+                                        </Card>
+                                    ))}
+                                    {marketQuery.length > 2 && marketSearch.data?.agents?.length === 0 && !marketSearch.isLoading && (
+                                        <div className="col-span-full py-20 text-center text-gray-500 font-bold uppercase tracking-widest">
+                                            No specialized agents found for "{marketQuery}". Try "striker".
+                                        </div>
+                                    )}
+                                    {marketQuery.length <= 2 && (
+                                        <div className="col-span-full py-20 text-center text-gray-500 font-bold uppercase tracking-widest opacity-50 italic">
+                                            Start typing to search the Kite marketplace...
+                                        </div>
+                                    )}
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    ) : (
+                        <>
+                            {/* Header */}
+                            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                                <div className="flex items-center space-x-4">
+                                    <div className="text-3xl relative">
+                                        {selectedStaff?.avatar}
+                                        {selectedStaff?.kitePassportId && (
+                                            <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center border-2 border-gray-900 shadow-lg" title="Kite Verified Identity">
+                                                <ShieldCheck className="w-2 h-2 text-white" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-lg font-black text-white uppercase italic">{selectedStaff?.name}</h3>
+                                            {selectedStaff?.kitePassportId && (
+                                                <span className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[9px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-1">
+                                                    <ShieldCheck className="w-2 h-2" />
+                                                    Kite Verified
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-xs text-blue-400 font-bold uppercase tracking-widest">{selectedStaff?.role}</p>
+                                            {selectedStaff?.kitePassportId && (
+                                                <>
+                                                    <span className="text-gray-600">|</span>
+                                                    <a 
+                                                        href={`https://explorer.gokite.ai/passport/${selectedStaff.kitePassportId}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="text-[10px] text-gray-500 hover:text-blue-400 font-mono transition-colors underline decoration-dotted"
+                                                    >
+                                                        {selectedStaff.kitePassportId}
+                                                    </a>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="hidden lg:flex items-center space-x-4">
+                                    {selectedStaff?.walletAddress && (
+                                        <div className="text-right">
+                                            <div className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Agent Wallet</div>
+                                            <div className="text-xs font-mono text-gray-400">{selectedStaff.walletAddress}</div>
+                                        </div>
+                                    )}
+                                    <div className="text-right">
+                                        <div className="text-xs font-bold text-gray-300 uppercase tracking-widest">NEGOTIATION POWER</div>
+                                        <div className="w-24 h-1 bg-gray-800 rounded-full mt-1 overflow-hidden">
+                                            <div className="h-full bg-blue-500 w-3/4" />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-                    {/* Messages */}
-                    <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-none">
+                            {/* Messages */}
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-none">
                         {dataLoading && (
                             <div className="flex items-center justify-center py-4">
                                 <div className="flex items-center space-x-2 section-title text-gray-500">
@@ -865,7 +1018,9 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                             </button>
                         </form>
                     </div>
-                </div>
+                </>
+            )}
+        </div>
 
                 {/* Right Sidebar: Proactive AI Alerts */}
                 <div className="hidden lg:block w-80 bg-black/40 border-l border-white/5 p-6 overflow-y-auto">

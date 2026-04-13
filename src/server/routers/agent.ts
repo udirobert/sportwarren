@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { createTRPCRouter, publicProcedure } from '../trpc';
+import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { generateStaffReply } from '../services/ai/staff-chat';
+import { kiteAIService } from '../services/ai/kite';
 
 export const agentRouter = createTRPCRouter({
   chat: publicProcedure
@@ -59,6 +60,36 @@ export const agentRouter = createTRPCRouter({
       } catch (error) {
         console.error('[TRPC-AGENT] Chat failed:', error);
         return { reply: "AI staff is warming up. Try again in a moment." };
+      }
+    }),
+
+  searchMarketplace: protectedProcedure
+    .input(z.object({
+      query: z.string().min(1),
+    }))
+    .query(async ({ input }) => {
+      try {
+        const agents = await kiteAIService.searchMarketplace(input.query);
+        return { agents };
+      } catch (error) {
+        console.error('[TRPC-AGENT] Marketplace search failed:', error);
+        return { agents: [] };
+      }
+    }),
+
+  hireMarketplaceAgent: protectedProcedure
+    .input(z.object({
+      agentId: z.string(),
+      squadId: z.string(),
+      durationDays: z.number().default(7),
+    }))
+    .mutation(async ({ input }) => {
+      try {
+        const success = await kiteAIService.hireAgent(input.agentId, input.squadId, input.durationDays);
+        return { success };
+      } catch (error) {
+        console.error('[TRPC-AGENT] Hire failed:', error);
+        return { success: false };
       }
     }),
 });
