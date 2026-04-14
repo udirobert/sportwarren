@@ -22,6 +22,7 @@ import {
 import type { Formation } from '@/types';
 import { FORMATIONS } from '@/lib/formations';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
+import { Avatar } from '@/components/ui/Avatar';
 
 type MatchPhase = 'first_half' | 'halftime' | 'second_half' | 'fulltime';
 
@@ -641,8 +642,8 @@ export const MatchEnginePreview: React.FC<{
         if (playersInitialised.current) return;
         if (membersLoading || awayMembersLoading) return;
 
-        const createPlayer = (id: string, name: string, x: number, y: number, team: 'home' | 'away', role: string, stats: any): PlayerPuck => ({
-            id, name, x, y, vx: 0, vy: 0, team, role, stats,
+        const createPlayer = (id: string, name: string, x: number, y: number, team: 'home' | 'away', role: string, stats: any, avatar?: string): PlayerPuck => ({
+            id, name, avatar, x, y, vx: 0, vy: 0, team, role, stats,
             homePos: { x, y },
             reputationTier: stats.level > 15 ? 'platinum' : stats.level > 8 ? 'gold' : 'silver',
             history: [],
@@ -674,7 +675,8 @@ export const MatchEnginePreview: React.FC<{
             return createPlayer(
                 m?.id || `h${i}`, m ? m.name.split(' ')[0] : homeNames[i],
                 x, y, 'home', role,
-                { level, pace: Math.min(99, baseStat + (role === 'ST' || role.endsWith('W') ? 8 : 0)), agility: Math.min(99, baseStat + 2), strength: Math.min(99, baseStat - 5), passing: Math.min(99, baseStat + (role === 'CM' ? 8 : 0)) }
+                { level, pace: Math.min(99, baseStat + (role === 'ST' || role.endsWith('W') ? 8 : 0)), agility: Math.min(99, baseStat + 2), strength: Math.min(99, baseStat - 5), passing: Math.min(99, baseStat + (role === 'CM' ? 8 : 0)) },
+                m?.avatar
             );
         });
 
@@ -687,11 +689,13 @@ export const MatchEnginePreview: React.FC<{
                 return createPlayer(
                     m.id, m.name.split(' ')[0],
                     x, y, 'away', role,
-                    { level, pace: Math.min(99, baseStat + (role === 'ST' || role.endsWith('W') ? 8 : 0)), agility: Math.min(99, baseStat + 2), strength: Math.min(99, baseStat - 5), passing: Math.min(99, baseStat + (role === 'CM' ? 8 : 0)) }
+                    { level, pace: Math.min(99, baseStat + (role === 'ST' || role.endsWith('W') ? 8 : 0)), agility: Math.min(99, baseStat + 2), strength: Math.min(99, baseStat - 5), passing: Math.min(99, baseStat + (role === 'CM' ? 8 : 0)) },
+                    m.avatar
                 );
             }
             return createPlayer(`a${i}`, awayNames[i], x, y, 'away', role,
-                { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20), passing: 65 + Math.floor(Math.random() * 20) });
+                { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20), passing: 65 + Math.floor(Math.random() * 20) },
+                undefined);
         });
 
         seededPlayers = [...homePlayers, ...awayPlayers];
@@ -901,20 +905,26 @@ export const MatchEnginePreview: React.FC<{
                                 transition={{ type: 'spring', stiffness: 60, damping: 15 }}
                                 className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
                             >
-                                <div className={`relative w-4 h-4 rounded-full border-2 ${p.team === 'home' ? 'border-white' : 'bg-red-500 border-red-300'} shadow-lg group`} style={p.team === 'home' ? { backgroundColor: activeHomeColor } : {}}>
-                                    {hotPlayerIds.has(p.id) && (
-                                        <div className="absolute inset-0 rounded-full border border-white/40 animate-pulse" />
+                                <div className={`relative w-4 h-4 rounded-full border-2 ${p.team === 'home' ? 'border-white' : 'bg-red-500 border-red-300'} shadow-lg group overflow-hidden`} style={p.team === 'home' ? { backgroundColor: activeHomeColor } : {}}>
+                                    {p.avatar ? (
+                                        <img src={p.avatar} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <>
+                                            {hotPlayerIds.has(p.id) && (
+                                                <div className="absolute inset-0 rounded-full border border-white/40 animate-pulse" />
+                                            )}
+                                        </>
                                     )}
                                     {ball.ownerId === p.id && (
-                                        <div className="absolute -inset-1 rounded-full border border-yellow-300/70" />
+                                        <div className="absolute -inset-1 rounded-full border-2 border-yellow-300/90 z-20" />
                                     )}
                                     {p.reputationTier === 'platinum' && (
                                         <div className="absolute inset-0 rounded-full bg-blue-400 blur-[8px] opacity-40 animate-pulse" />
                                     )}
-                                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
-                                        <span className="text-xs font-black text-white bg-black/70 px-1.5 py-0.5 rounded whitespace-nowrap shadow-lg">{p.name}</span>
-                                        {p.reputationTier === 'platinum' && <Trophy className="w-2 h-2 text-yellow-400 drop-shadow-md" />}
-                                    </div>
+                                </div>
+                                <div className="absolute -top-6 left-1/2 -translate-x-1/2 flex flex-col items-center">
+                                    <span className={`text-[10px] font-black text-white px-1 py-0.5 rounded-sm whitespace-nowrap shadow-lg ${ball.ownerId === p.id ? 'bg-blue-600 scale-110' : 'bg-black/70'}`}>{p.name}</span>
+                                    {p.reputationTier === 'platinum' && <Trophy className="w-2 h-2 text-yellow-400 drop-shadow-md" />}
                                 </div>
                             </motion.div>
                         </React.Fragment>

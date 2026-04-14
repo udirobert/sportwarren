@@ -243,6 +243,7 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
                                                 <Avatar
                                                     src={AGENT_AVATARS[m.agentType || 'concierge']}
                                                     size="xs"
+                                                    isAi={true}
                                                     className="border-0 shadow-none bg-transparent"
                                                 />
                                                 <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">

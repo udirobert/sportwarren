@@ -27,6 +27,7 @@ export interface RoleProfile {
 export interface PlayerPuck {
     id: string;
     name: string;
+    avatar?: string;
     x: number;
     y: number;
     vx: number;

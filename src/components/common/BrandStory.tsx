@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { X, Trophy, Users, Target, Zap } from 'lucide-react';
+import { X, Trophy, Users, Target, Zap, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 
@@ -93,12 +93,12 @@ export const BrandStory: React.FC = () => {
               </div>
 
               <div className="flex items-start space-x-3 p-4 bg-white/80 rounded-xl border border-gray-200">
-                <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg">
-                  <Trophy className="w-5 h-5 text-white" />
+                <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-rose-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-lg">
+                  <Sparkles className="w-5 h-5 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-1">Achievements & Rivalries</h3>
-                  <p className="text-sm text-gray-600">Unlock badges, challenge opponents, build your reputation</p>
+                  <h3 className="font-semibold text-gray-900 mb-1">AI Hero Avatars</h3>
+                  <p className="text-sm text-gray-600">Create your digital twin for pitch simulations and squad stats</p>
                 </div>
               </div>
 
