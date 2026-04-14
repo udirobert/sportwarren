@@ -96,6 +96,7 @@ export interface GenerateStaffReplyParams {
     contextBlock?: string;
     decisionBlock?: string;
     signalContext?: string;
+    userId?: string;
 }
 
 /**

@@ -168,7 +168,7 @@ export const matchRouter = createTRPCRouter({
       }
 
       // Ensure RSVP exists first
-      return ctx.prisma.matchRsvp.upsert({
+      const rsvp = await ctx.prisma.matchRsvp.upsert({
         where: {
           userId_matchId: {
             userId: targetUserId,
@@ -192,6 +192,36 @@ export const matchRouter = createTRPCRouter({
           paymentType: input.paymentType,
         },
       });
+
+      // Digital Twin Impact: Payments contribute to Squad resources/prestige
+      if (input.isPaid && input.amountPaid) {
+        try {
+          const match = await ctx.prisma.match.findUnique({
+            where: { id: input.matchId },
+            select: { homeSquadId: true, awaySquadId: true },
+          });
+
+          if (match) {
+            const membership = await ctx.prisma.squadMember.findFirst({
+              where: {
+                userId: targetUserId,
+                squadId: { in: [match.homeSquadId, match.awaySquadId] },
+              },
+              select: { squadId: true },
+            });
+
+            if (membership) {
+              const { getDigitalTwinService } = await import('@/server/services/ai/digital-twin');
+              const dtService = getDigitalTwinService(ctx.prisma);
+              await dtService.processPaymentImpact(membership.squadId, input.amountPaid);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to process digital twin payment impact:', error);
+        }
+      }
+
+      return rsvp;
     }),
 
   // Get RSVPs for a match

@@ -69,6 +69,10 @@ interface KitePayment {
   timestamp: string;
 }
 
+const KITE_DAILY_REQUEST_LIMIT = Number(process.env.KITE_DAILY_REQUEST_LIMIT || '1000');
+const MAX_SINGLE_PAYMENT_USDC = Number(process.env.KITE_MAX_SINGLE_PAYMENT_USDC || '50.00');
+const DAILY_PAYOUT_BUDGET_USDC = Number(process.env.KITE_DAILY_PAYOUT_BUDGET_USDC || '200.00');
+
 export class KiteAIService {
   private apiUrl: string;
   private apiKey: string;
@@ -106,15 +110,14 @@ export class KiteAIService {
    * Check if the service is within production budget and rate limits
    */
   private async checkRateLimit(): Promise<boolean> {
-    const DAILY_LIMIT = Number(process.env.KITE_DAILY_REQUEST_LIMIT || '1000');
     const today = new Date().toISOString().split('T')[0];
     const key = `kite:usage:${today}`;
 
     // Try Redis first for distributed state
     try {
       const usage = await redisService.get(key);
-      if (usage && parseInt(usage) >= DAILY_LIMIT) {
-        console.warn(`[KiteAI] Daily distributed request limit reached (${DAILY_LIMIT})`);
+      if (usage && parseInt(usage) >= KITE_DAILY_REQUEST_LIMIT) {
+        console.warn(`[KiteAI] Daily distributed request limit reached (${KITE_DAILY_REQUEST_LIMIT})`);
         return false;
       }
     } catch (e) {
@@ -123,12 +126,47 @@ export class KiteAIService {
         this.usageMetrics.requestsToday = 0;
         this.usageMetrics.lastResetDate = today;
       }
-      if (this.usageMetrics.requestsToday >= DAILY_LIMIT) {
+      if (this.usageMetrics.requestsToday >= KITE_DAILY_REQUEST_LIMIT) {
         return false;
       }
     }
 
     return true;
+  }
+
+  /**
+   * Additional check for financial operations to prevent runaway payouts
+   */
+  private async checkPayoutLimit(amount: string): Promise<boolean> {
+    const numericAmount = parseFloat(amount);
+    if (isNaN(numericAmount)) return false;
+
+    // 1. Single payout limit
+    if (numericAmount > MAX_SINGLE_PAYMENT_USDC) {
+      console.error(`[KiteAI] Single payout too large: ${numericAmount} USDC (Limit: ${MAX_SINGLE_PAYMENT_USDC})`);
+      return false;
+    }
+
+    // 2. Daily payout budget
+    const today = new Date().toISOString().split('T')[0];
+    const key = `kite:payouts:${today}`;
+    try {
+      const dailySpend = await redisService.get(key);
+      const currentSpend = dailySpend ? parseFloat(dailySpend) : 0;
+      
+      if (currentSpend + numericAmount > DAILY_PAYOUT_BUDGET_USDC) {
+        console.error(`[KiteAI] Daily payout budget reached ($${currentSpend}). Blocked $${numericAmount} payout.`);
+        return false;
+      }
+
+      // Record spend if check passes (we'll commit it in trackUsage or similar, 
+      // but for atomic check-and-reserve we should ideally do it here)
+      await redisService.incrbyfloat(key, numericAmount, 86400);
+      return true;
+    } catch (e) {
+      // Fallback: If Redis is down, we restrict payouts significantly for safety
+      return numericAmount <= 5.00; 
+    }
   }
 
   /**
@@ -273,6 +311,8 @@ export class KiteAIService {
     metadata: Record<string, any> = {}
   ): Promise<KitePayment | null> {
     if (!(await this.checkRateLimit())) return null;
+    if (!(await this.checkPayoutLimit(amount))) return null;
+    
     try {
       // Kite handles stablecoin payments through their infrastructure
       const response = await axios.post(

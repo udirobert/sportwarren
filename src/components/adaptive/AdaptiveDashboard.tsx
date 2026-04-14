@@ -8,6 +8,7 @@ import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosu
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
 import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2, CheckCircle2, ArrowRight, Smartphone, ExternalLink, ChevronDown, Check, Activity } from 'lucide-react';
+import { TrpcErrorBoundary } from '@/components/ui/TrpcErrorBoundary';
 import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
 import { AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
@@ -34,6 +35,7 @@ import { summarizeAvatarUpgrade } from '@/lib/avatar/diff';
 
 import { QuickLogWidget } from '@/components/dashboard/QuickLogWidget';
 import { MatchCoordinationWidget } from '@/components/dashboard/MatchCoordinationWidget';
+import { SquadDigitalTwinWidget } from '@/components/dashboard/SquadDigitalTwinWidget';
 import dynamic from 'next/dynamic';
 
 // Statically imported (small / always visible)
@@ -237,6 +239,16 @@ export const AdaptiveDashboard: React.FC = () => {
       });
 
       widgets.push({
+        id: 'squad-digital-twin',
+        priority: 455,
+        requiredLevel: 'basic',
+        category: 'squad',
+        component: (
+          <SquadDigitalTwinWidget squadId={primarySquadId} />
+        ),
+      });
+
+      widgets.push({
         id: 'quick-log',
         priority: 450,
         requiredLevel: 'basic',
@@ -421,7 +433,11 @@ export const AdaptiveDashboard: React.FC = () => {
       priority: 78,
       requiredLevel: 'basic',
       category: 'social',
-      component: <LensSocialHub />,
+      component: (
+        <TrpcErrorBoundary>
+          <LensSocialHub />
+        </TrpcErrorBoundary>
+      ),
       },
       {
       id: 'nearby-squads',
@@ -655,14 +671,22 @@ export const AdaptiveDashboard: React.FC = () => {
       priority: 89,
       requiredLevel: 'basic',
       category: 'stats',
-      component: <SquadDynamics squadId={primarySquadId} />,
+      component: (
+        <TrpcErrorBoundary>
+          <SquadDynamics squadId={primarySquadId} />
+        </TrpcErrorBoundary>
+      ),
       },
       {
       id: 'scouting-report',
       priority: 87,
       requiredLevel: 'basic',
       category: 'social',
-      component: <ScoutingReport squadId={primarySquadId} />,
+      component: (
+        <TrpcErrorBoundary>
+          <ScoutingReport squadId={primarySquadId} />
+        </TrpcErrorBoundary>
+      ),
       },
       {
         id: 'upcoming-fixtures',

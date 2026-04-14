@@ -11,6 +11,7 @@ export async function generateStaffReply({
     contextBlock,
     decisionBlock,
     signalContext,
+    userId,
 }: GenerateStaffReplyParams): Promise<{ reply: string; staff: any; provider: string }> {
     // Resolve persona
     const resolvedId = staffId.toLowerCase().trim();
@@ -31,7 +32,10 @@ export async function generateStaffReply({
         { role: 'user', content: message },
     ];
 
-    const result = await generateInference(messages);
+    const result = await generateInference(messages, {
+        userId,
+        tier: 'text',
+    });
 
     if (result) {
         return { 

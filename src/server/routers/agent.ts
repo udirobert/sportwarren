@@ -4,7 +4,7 @@ import { generateStaffReply } from '../services/ai/staff-chat';
 import { kiteAIService } from '../services/ai/kite';
 
 export const agentRouter = createTRPCRouter({
-  chat: publicProcedure
+  chat: protectedProcedure
     .input(z.object({
       staffId: z.string(),
       message: z.string().max(500),
@@ -32,7 +32,7 @@ export const agentRouter = createTRPCRouter({
       timestamp: z.string(),
     })).optional(),
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
       const { staffId, message, chatHistory, squadContext, recentDecisions } = input;
 
       const contextBlock = squadContext ? [
@@ -55,6 +55,7 @@ export const agentRouter = createTRPCRouter({
           chatHistory,
           contextBlock,
           decisionBlock,
+          userId: ctx.userId,
         });
         return { reply };
       } catch (error) {

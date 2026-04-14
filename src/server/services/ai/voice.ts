@@ -20,8 +20,15 @@ export class VoiceProcessingService {
     return this.openai;
   }
 
-  async transcribeAudio(audioBuffer: Buffer, language: string = 'en'): Promise<string> {
+  async transcribeAudio(audioBuffer: Buffer, userId?: string, language: string = 'en'): Promise<string> {
     try {
+      // Check guard
+      const { inferenceGuard } = await import('./inference-guard');
+      const guard = await inferenceGuard.checkLimit(userId, 'voice');
+      if (!guard.allowed) {
+        throw new Error(`Voice transcription blocked: ${guard.reason}`);
+      }
+
       // Save buffer to temporary file
       const tempPath = `/tmp/audio_${Date.now()}.wav`;
       const buffer = Buffer.isBuffer(audioBuffer) ? audioBuffer : Buffer.from(audioBuffer as any);
@@ -36,6 +43,9 @@ export class VoiceProcessingService {
         temperature: 0.2, // Lower temperature for more accurate transcription
       });
 
+      // Track usage
+      await inferenceGuard.trackUsage(userId, 'voice', 'openai-whisper');
+
       return response;
     } catch (error) {
       console.error('Voice transcription error:', error);
@@ -43,10 +53,10 @@ export class VoiceProcessingService {
     }
   }
 
-  async processVoiceCommand(audioData: any, matchId?: string): Promise<any> {
+  async processVoiceCommand(audioData: any, userId?: string, matchId?: string): Promise<any> {
     try {
-      const transcription = await this.transcribeAudio(audioData);
-      const processed = await this.processVoiceMatchLog(transcription);
+      const transcription = await this.transcribeAudio(audioData, userId);
+      const processed = await this.processVoiceMatchLog(transcription, userId);
       return {
         ...processed,
         matchId,
@@ -58,7 +68,7 @@ export class VoiceProcessingService {
     }
   }
 
-  async processVoiceMatchLog(transcription: string): Promise<any> {
+  async processVoiceMatchLog(transcription: string, userId?: string): Promise<any> {
     try {
       const prompt = `
         Extract structured match data from this voice transcription of a football match:
@@ -96,6 +106,8 @@ export class VoiceProcessingService {
         systemPrompt: 'You are an AI assistant that extracts structured sports data from natural language descriptions. Always return valid JSON with the exact structure requested.',
         temperature: 0.1,
         max_tokens: 800,
+        userId,
+        tier: 'voice'
       });
 
       if (result?.content) {
@@ -147,7 +159,7 @@ export class VoiceProcessingService {
     };
   }
 
-  async generateMatchNarrative(matchData: any): Promise<string> {
+  async generateMatchNarrative(matchData: any, userId?: string): Promise<string> {
     try {
       const messages: AIMessage[] = [
         {
@@ -163,6 +175,8 @@ export class VoiceProcessingService {
         systemPrompt: 'You are a sports journalist who specializes in grassroots football. Write engaging, fun match reports that celebrate the spirit of amateur football. Use vivid language and capture the emotion of the game. Keep it under 200 words.',
         temperature: 0.7,
         max_tokens: 300,
+        userId,
+        tier: 'text'
       });
 
       return result?.content || 'Match completed successfully!';

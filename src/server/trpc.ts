@@ -2,6 +2,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import { cache } from 'react';
 import { prisma } from '@/lib/db';
 import type { WalletChain } from '@/lib/auth/wallet';
+import { enforceRateLimit } from './services/security/rate-limiter';
 import {
   verifyWalletSignature, 
   extractWalletFromHeaders,
@@ -18,18 +19,22 @@ export interface TRPCContext {
   userId?: string;
   walletAddress?: string;
   chain?: WalletChain;
+  ip?: string;
 }
 
 // Context for tRPC with wallet signature verification
 export const createTRPCContext = cache(async (opts?: { 
   headers?: Headers;
+  ip?: string;
 }): Promise<TRPCContext> => {
-  const walletInfo = extractWalletFromHeaders(opts?.headers || new Headers());
+  const headers = opts?.headers || new Headers();
+  const ip = opts?.ip || headers.get('x-forwarded-for') || 'unknown';
+  const walletInfo = extractWalletFromHeaders(headers);
   const chain = walletInfo.chain?.toLowerCase();
   
   // If no wallet address, return unauthenticated context
   if (!walletInfo.address || !chain || !isSupportedWalletChain(chain)) {
-    return { prisma };
+    return { prisma, ip };
   }
 
   // In development mode without signature, just trust the headers
@@ -55,13 +60,14 @@ export const createTRPCContext = cache(async (opts?: {
   }
 
   if (!verified) {
-    return { prisma };
+    return { prisma, ip };
   }
 
   return { 
     prisma,
     walletAddress: walletInfo.address,
     chain,
+    ip,
   };
 });
 
@@ -70,7 +76,18 @@ const t = initTRPC.context<TRPCContext>().create();
 
 // Export router and procedure helpers
 export const createTRPCRouter = t.router;
-export const publicProcedure = t.procedure;
+
+// Public procedure - available to everyone, but rate-limited by IP
+export const publicProcedure = t.procedure.use(async ({ ctx, next }) => {
+  // Rate limit public procedures by IP
+  await enforceRateLimit(`ip:${ctx.ip || 'unknown'}`, {
+    windowMs: 60 * 1000,
+    max: 30, // 30 requests per minute for public/anonymous access
+    keyPrefix: 'trpc:rl:public',
+  });
+  
+  return next({ ctx });
+});
 
 // Protected procedure - requires wallet authentication
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
@@ -80,6 +97,13 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
       message: 'Wallet authentication required. Please sign the authentication message.',
     });
   }
+
+  // General rate limit: 60 requests per minute per authenticated user
+  await enforceRateLimit(`user:${ctx.walletAddress}`, {
+    windowMs: 60 * 1000,
+    max: 60,
+    keyPrefix: 'trpc:rl',
+  });
 
   // Find or create user
   let user = await ctx.prisma.user.findUnique({

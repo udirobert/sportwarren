@@ -1,6 +1,7 @@
 
 import { generateInference, AIMessage } from './inference';
 import { getNarrativeLedger, updateNarrativeLedger } from './memory';
+import { redisService } from '@/server/services/redis';
 
 export const MARCUS_SYSTEM_PROMPT = `You are Marcus, the Academy Director of SportWarren. 
 Professional, encouraging, and deeply technical about the "Phygital" bridge.
@@ -13,9 +14,7 @@ CORE RULES:
 4. ROLEPLAY: Never break character.
 `;
 
-// Simple in-memory cache to optimize costs
-const responseCache: Record<string, { reply: string, timestamp: number }> = {};
-const CACHE_TTL = 1000 * 60 * 60; // 1 hour
+const CACHE_TTL = 3600; // 1 hour in seconds
 
 export async function getMarcusResponse(message: string, context: { city?: string, venue?: string, history: any[], userId?: string }) {
     const { city, venue, history, userId } = context;
@@ -31,10 +30,13 @@ export async function getMarcusResponse(message: string, context: { city?: strin
     }
     const keyInsights = ledger?.keyInsights.join(". ") || "";
 
-    // Check cache
-    const cacheKey = `${userId || 'guest'}-${message}-${city || ''}-${venue || ''}`;
-    if (responseCache[cacheKey] && (Date.now() - responseCache[cacheKey].timestamp < CACHE_TTL)) {
-        return responseCache[cacheKey].reply;
+    // Check distributed cache
+    const cacheKey = `ai:cache:marcus:${userId || 'guest'}:${Buffer.from(message).toString('base64').slice(0, 32)}:${city || ''}:${venue || ''}`;
+    try {
+        const cached = await redisService.get(cacheKey);
+        if (cached) return cached;
+    } catch (e) {
+        console.warn('[Marcus] Redis cache lookup failed:', e);
     }
 
     const contextPrefix = city && venue ? `[Context: ${city} Chapter near ${venue}] ` : '';
@@ -51,17 +53,19 @@ export async function getMarcusResponse(message: string, context: { city?: strin
             systemPrompt: MARCUS_SYSTEM_PROMPT,
             temperature: 0.7,
             max_tokens: 150,
+            userId,
+            tier: 'text'
         });
 
         if (result) {
             reply = result.content;
+            
+            // Save to distributed cache
+            await redisService.set(cacheKey, reply, CACHE_TTL);
         }
     } catch (error) {
         console.error('[Marcus] Inference failed:', error);
     }
-
-    // Save to cache
-    responseCache[cacheKey] = { reply, timestamp: Date.now() };
 
     // Update ledger
     if (userId) {

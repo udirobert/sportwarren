@@ -15,6 +15,7 @@ import {
 import { createPendingMatchSubmission } from './match-submission';
 import { PEER_RATING } from '@/lib/match/constants';
 import { getTelegramService } from './communication/telegram';
+import { getDigitalTwinService } from './ai/digital-twin';
 
 export type MatchWorkflowErrorCode =
   | 'NOT_FOUND'
@@ -377,6 +378,18 @@ export async function submitMatchResult({
           hasKeeper: match.hasKeeper,
         });
 
+        // Sync Digital Twin progress
+        const dtService = getDigitalTwinService(prisma);
+        await dtService.syncMatchResult(
+          homeSquadId,
+          homeScore > awayScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss',
+          homeScore,
+          awayScore
+        );
+        
+        await dtService.updateSquadEnergy(homeSquadId, match.id);
+        await dtService.updateSquadEnergy(awaySquadId, match.id);
+
         await distributeMatchRewards({
           prisma,
           squadId: awaySquadId,
@@ -386,6 +399,13 @@ export async function submitMatchResult({
           playerStats: seededStats,
           hasKeeper: match.hasKeeper,
         });
+
+        await dtService.syncMatchResult(
+          awaySquadId,
+          awayScore > homeScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss',
+          awayScore,
+          homeScore
+        );
       } catch (err) {
         console.warn('Post-soft-verification automation failed:', err);
       }
@@ -574,6 +594,24 @@ export async function verifyMatchResult({
     });
 
     if (newStatus === 'verified') {
+      // 1. Digital Twin Sync
+      try {
+        const dtService = getDigitalTwinService(prisma);
+        
+        const homeWinner = resultMatch.homeScore! > resultMatch.awayScore! ? 'win' : 
+                           resultMatch.homeScore! < resultMatch.awayScore! ? 'loss' : 'draw';
+        const awayWinner = homeWinner === 'win' ? 'loss' : homeWinner === 'loss' ? 'win' : 'draw';
+
+        await dtService.syncMatchResult(resultMatch.homeSquadId, homeWinner, resultMatch.homeScore!, resultMatch.awayScore!);
+        await dtService.syncMatchResult(resultMatch.awaySquadId, awayWinner, resultMatch.awayScore!, resultMatch.homeScore!);
+        
+        await dtService.updateSquadEnergy(resultMatch.homeSquadId, matchId);
+        await dtService.updateSquadEnergy(resultMatch.awaySquadId, matchId);
+      } catch (e) {
+        console.error('Failed to sync digital twin after verification:', e);
+      }
+
+      // 2. Notify Squads
       const notifySquads = [resultMatch.homeSquad, resultMatch.awaySquad];
       for (const squad of notifySquads) {
         const tgGroup = squad.groups[0];
@@ -625,6 +663,15 @@ export async function verifyMatchResult({
             playerStats: seededStats, // Using seeded participation stats
           });
 
+          // Sync Digital Twin progress
+          const dtService = getDigitalTwinService(prisma);
+          await dtService.syncMatchResult(
+            resultMatch.homeSquadId,
+            homeFinalScore > awayFinalScore ? 'win' : isDraw ? 'draw' : 'loss',
+            homeFinalScore,
+            awayFinalScore
+          );
+
           await distributeMatchRewards({
             prisma,
             squadId: resultMatch.awaySquadId,
@@ -633,6 +680,13 @@ export async function verifyMatchResult({
             isDraw,
             playerStats: seededStats, // Using seeded participation stats
           });
+
+          await dtService.syncMatchResult(
+            resultMatch.awaySquadId,
+            awayFinalScore > homeFinalScore ? 'win' : isDraw ? 'draw' : 'loss',
+            awayFinalScore,
+            homeFinalScore
+          );
         }
       } catch (error) {
         console.error(
