@@ -116,6 +116,19 @@ export class RedisService {
     }
   }
 
+  async incrbyfloat(key: string, increment: number, ttl?: number): Promise<number | null> {
+    try {
+      const result = await this.client.incrbyfloat(key, increment);
+      if (ttl && parseFloat(String(result)) === increment) {
+        await this.client.expire(key, ttl);
+      }
+      return parseFloat(String(result));
+    } catch (error) {
+      console.warn('Redis INCRBYFLOAT error:', error);
+      return null;
+    }
+  }
+
   async getSession(sessionId: string): Promise<any | null> {
     try {
       const data = await this.client.get(`session:${sessionId}`);

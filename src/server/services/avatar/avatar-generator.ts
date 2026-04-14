@@ -1,15 +1,33 @@
 import { getVeniceClient } from '@/lib/ai/providers/venice';
 import { getOpenAIClient } from '@/lib/ai/providers/openai';
+import { inferenceGuard } from '../ai/inference-guard';
 
 export interface AvatarGenerationOptions {
     prompt?: string;
     style?: 'realistic' | 'stylized' | 'pixel' | 'sketch';
     position?: string;
     attributes?: Record<string, number>;
+    userId?: string;
 }
 
 export async function generateAiAvatar(options: AvatarGenerationOptions): Promise<string | null> {
-    const { position, style = 'stylized', attributes } = options;
+    const { position, style = 'stylized', attributes, userId } = options;
+    
+    // Check moderation first if prompt is provided
+    if (options.prompt) {
+        const mod = await inferenceGuard.moderatePrompt(options.prompt);
+        if (!mod.safe) {
+            console.warn(`[AvatarGen] Prompt moderation failed: ${mod.reason}`);
+            return null;
+        }
+    }
+
+    // Check guard
+    const guard = await inferenceGuard.checkLimit(userId, 'image');
+    if (!guard.allowed) {
+        console.warn(`[AvatarGen] Blocked by guard: ${guard.reason}`);
+        return null;
+    }
     
     // Construct a rich prompt based on player data
     const attrSummary = attributes 
@@ -40,7 +58,10 @@ export async function generateAiAvatar(options: AvatarGenerationOptions): Promis
             });
             
             const url = response.data?.[0]?.url;
-            if (url) return url;
+            if (url) {
+                await inferenceGuard.trackUsage(userId, 'image', 'venice');
+                return url;
+            }
         } catch (error) {
             console.error('[AvatarGen] Venice generation failed:', error);
         }
@@ -60,7 +81,12 @@ export async function generateAiAvatar(options: AvatarGenerationOptions): Promis
                 response_format: 'url',
             });
             
-            return response.data?.[0]?.url || null;
+            const url = response.data?.[0]?.url;
+            if (url) {
+                await inferenceGuard.trackUsage(userId, 'image', 'openai-dalle');
+                return url;
+            }
+            return null;
         } catch (error) {
             console.error('[AvatarGen] OpenAI generation failed:', error);
         }

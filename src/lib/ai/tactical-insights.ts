@@ -1,4 +1,5 @@
 import { generateInference, AIMessage } from './inference';
+import { redisService } from '@/server/services/redis';
 
 export interface TacticalInsight {
   id: string;
@@ -26,11 +27,25 @@ Each insight should be a JSON object with:
 Tone: Professional, firm, analytical, but deeply encouraging.
 Format: Return only a JSON array of objects.`;
 
+const CACHE_TTL = 3600; // 1 hour
+
 export async function generateTacticalInsights(
   playerStats: any,
   recentMatches: any[],
-  squadContext?: any
+  squadContext?: any,
+  userId?: string
 ): Promise<TacticalInsight[]> {
+  // 1. Try cache
+  const cacheKey = `ai:cache:insights:${userId || 'anon'}`;
+  if (userId) {
+    try {
+      const cached = await redisService.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+    } catch (e) {
+      console.warn('[TacticalInsights] Cache lookup failed:', e);
+    }
+  }
+
   const messages: AIMessage[] = [
     {
       role: 'user',
@@ -45,16 +60,25 @@ export async function generateTacticalInsights(
       systemPrompt: INSIGHT_SYSTEM_PROMPT,
       temperature: 0.7,
       max_tokens: 400,
+      userId,
+      tier: 'text'
     });
 
     if (result?.content) {
       const cleanContent = result.content.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleanContent);
       if (Array.isArray(parsed)) {
-        return parsed.map((insight: any, index: number) => ({
+        const insights = parsed.map((insight: any, index: number) => ({
           id: `insight-${Date.now()}-${index}`,
           ...insight
         }));
+
+        // 2. Save to cache
+        if (userId) {
+          await redisService.set(cacheKey, JSON.stringify(insights), CACHE_TTL);
+        }
+
+        return insights;
       }
     }
   } catch (error) {

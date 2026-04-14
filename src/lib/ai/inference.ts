@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { getKilocodeClient, KILOCODE_MODEL_ID, KILOCODE_FALLBACK_MODEL } from './providers/kilocode';
 import { getVeniceClient, VENICE_MODEL_ID } from './providers/venice';
 import { getOpenAIClient, OPENAI_MODEL_ID } from './providers/openai';
+import { inferenceGuard, InferenceTier } from '@/server/services/ai/inference-guard';
 
 /**
  * Shared AI Inference Orchestrator - Single Source of Truth
@@ -24,6 +25,8 @@ export interface InferenceOptions {
     max_tokens?: number;
     modelOverride?: string;
     systemPrompt?: string;
+    userId?: string;
+    tier?: InferenceTier;
 }
 
 /**
@@ -64,6 +67,14 @@ export async function generateInference(
         return null;
     }
 
+    // 1. Guard check
+    const tier = options.tier || 'text';
+    const guard = await inferenceGuard.checkLimit(options.userId, tier);
+    if (!guard.allowed) {
+        console.warn(`[AI] Inference blocked by guard: ${guard.reason}`);
+        return null;
+    }
+
     const fullMessages = options.systemPrompt
         ? [{ role: 'system' as const, content: options.systemPrompt }, ...messages]
         : messages;
@@ -82,6 +93,10 @@ export async function generateInference(
             const content = completion.choices[0]?.message?.content?.trim();
             if (content) {
                 console.log(`[AI] ${provider.name} inference succeeded using model ${modelToUse}.`);
+                
+                // 2. Track usage
+                await inferenceGuard.trackUsage(options.userId, tier, provider.name);
+                
                 return { content, provider: provider.name };
             }
 
@@ -98,6 +113,10 @@ export async function generateInference(
                     const fallbackContent = fallbackCompletion.choices[0]?.message?.content?.trim();
                     if (fallbackContent) {
                         console.log('[AI] kilocode fallback inference succeeded.');
+                        
+                        // Track usage for fallback too
+                        await inferenceGuard.trackUsage(options.userId, tier, 'kilocode-fallback');
+                        
                         return { content: fallbackContent, provider: 'kilocode-fallback' };
                     }
                     console.warn('[AI] kilocode fallback returned empty content.');
@@ -120,6 +139,9 @@ export async function generateInference(
                     const fallbackContent = fallbackCompletion.choices[0]?.message?.content?.trim();
                     if (fallbackContent) {
                         console.log('[AI] kilocode fallback inference succeeded.');
+                        
+                        await inferenceGuard.trackUsage(options.userId, tier, 'kilocode-fallback');
+                        
                         return { content: fallbackContent, provider: 'kilocode-fallback' };
                     }
                 } catch (fallbackError) {

@@ -15,6 +15,7 @@ export const peerRatingRouter = createTRPCRouter({
         targetId: z.string().min(1),
         attribute: z.string().min(1),
         score: z.number().min(1).max(10),
+        hypeTags: z.array(z.string()).optional(),
       })).max(PEER_RATING.TEAMMATES_TO_RATE * PEER_RATING.ATTRIBUTES_PER_TEAMMATE),
       motmVote: z.string().min(1).optional(),
     }))
@@ -68,13 +69,18 @@ export const peerRatingRouter = createTRPCRouter({
               attribute: r.attribute,
             }
           },
-          update: { score: r.score },
+          update: { 
+            score: r.score,
+            hypeTags: r.hypeTags || [],
+            weighted: false // Reset weighted if they update their rating
+          },
           create: {
             matchId,
             raterId: raterProfile.id,
             targetId: r.targetId,
             attribute: r.attribute,
             score: r.score,
+            hypeTags: r.hypeTags || [],
           }
         })
       );
@@ -100,6 +106,15 @@ export const peerRatingRouter = createTRPCRouter({
       }
 
       await Promise.all(ratingPromises);
+
+      // 5. Trigger Digital Twin Sync
+      try {
+        const { getDigitalTwinService } = await import('@/server/services/ai/digital-twin');
+        const dtService = getDigitalTwinService(ctx.prisma);
+        await dtService.syncPeerRatings(matchId);
+      } catch (e) {
+        console.error('Failed to sync peer ratings to digital twin:', e);
+      }
 
       return { success: true };
     }),

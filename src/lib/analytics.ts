@@ -73,6 +73,25 @@ const isAnalyticsEnabled = (): boolean => {
   return localStorage.getItem('sw_analytics_enabled') !== 'false';
 };
 
+/**
+ * Sanitize properties to prevent PII (like wallet addresses) from leaking
+ */
+const sanitizeProperties = (properties?: EventProperties): EventProperties | undefined => {
+  if (!properties) return properties;
+  
+  const sanitized = { ...properties };
+  const walletRegex = /^(0x[a-fA-F0-9]{40}|[A-Z2-7]{58})$/; // ETH and Algorand
+  
+  for (const key in sanitized) {
+    const value = sanitized[key];
+    if (typeof value === 'string' && walletRegex.test(value)) {
+      sanitized[key] = `${value.slice(0, 4)}...${value.slice(-4)} (PII_REDACTED)`;
+    }
+  }
+  
+  return sanitized;
+};
+
 // Initialize PostHog if in client-side
 if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
   posthog.init(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
@@ -89,10 +108,12 @@ if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
 export function trackEvent(eventName: string, properties?: EventProperties): void {
   if (!isAnalyticsEnabled()) return;
   
+  const sanitizedProperties = sanitizeProperties(properties);
+  
   const event: AnalyticsEvent = {
     name: eventName,
     properties: {
-      ...properties,
+      ...sanitizedProperties,
       url: typeof window !== 'undefined' ? window.location.pathname : undefined,
       userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
     },
@@ -102,7 +123,7 @@ export function trackEvent(eventName: string, properties?: EventProperties): voi
   
   // Log to console in development
   if (process.env.NODE_ENV === 'development') {
-    console.log('[Analytics]', eventName, properties || '');
+    console.log('[Analytics]', eventName, sanitizedProperties || '');
   }
   
   // Store locally
@@ -116,7 +137,7 @@ export function trackEvent(eventName: string, properties?: EventProperties): voi
     (window as any).Sentry.addBreadcrumb({
       category: 'analytics',
       message: eventName,
-      data: properties,
+      data: sanitizedProperties,
       level: 'info',
     });
   }
@@ -127,7 +148,7 @@ export function trackEvent(eventName: string, properties?: EventProperties): voi
     console.info(JSON.stringify({
       type: 'analytics_event',
       name: eventName,
-      properties,
+      properties: sanitizedProperties,
       timestamp: Date.now(),
       sessionId: getSessionId(),
     }));
@@ -135,7 +156,7 @@ export function trackEvent(eventName: string, properties?: EventProperties): voi
 
   // Send to specialized analytics provider (PostHog)
   if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_POSTHOG_KEY) {
-    posthog.capture(eventName, properties);
+    posthog.capture(eventName, sanitizedProperties);
   }
 }
 

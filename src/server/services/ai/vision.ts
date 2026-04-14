@@ -4,7 +4,7 @@ import { writeFile } from 'fs/promises';
 export class ComputerVisionService {
   constructor() {}
 
-  async analyzeMatchPhoto(imageData: any, _matchId?: string): Promise<any> {
+  async analyzeMatchPhoto(imageData: any, userId?: string, _matchId?: string): Promise<any> {
     try {
       const imageBuffer = Buffer.isBuffer(imageData) ? imageData : Buffer.from(imageData as any);
 
@@ -43,6 +43,8 @@ export class ComputerVisionService {
         modelOverride: 'gpt-4o', // Use vision-capable model
         max_tokens: 500,
         temperature: 0.3,
+        userId,
+        tier: 'vision'
       });
 
       if (result?.content) {
@@ -142,7 +144,7 @@ export class ComputerVisionService {
     }
   }
 
-  async detectPlayerPositions(imageBuffer: Buffer): Promise<any> {
+  async detectPlayerPositions(imageBuffer: Buffer, userId?: string): Promise<any> {
     try {
       const base64Image = imageBuffer.toString('base64');
 
@@ -183,6 +185,8 @@ export class ComputerVisionService {
         modelOverride: 'gpt-4o',
         max_tokens: 800,
         temperature: 0.2,
+        userId,
+        tier: 'vision'
       });
 
       if (result?.content) {

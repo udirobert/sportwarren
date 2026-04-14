@@ -77,6 +77,7 @@ model PlayerProfile {
   // Scout (Peer Rating)
   scoutXP   Int    @default(0) @map("scout_xp")
   scoutTier String @default("rookie") @map("scout_tier") // rookie, trusted, elite
+  hypeTags  Json?  @map("hype_tags") // { "Clutch": 5, "Engine": 3 }
 
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
@@ -178,6 +179,15 @@ model Squad {
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Digital Twin & Seasonality
+  level            Int      @default(1)
+  xp               Int      @default(0)
+  digitalAttributes Json?    @map("digital_attributes") // { attack, defense, midfield, teamwork, prestige }
+  seasonPoints     Int      @default(0) @map("season_points")
+  squadEnergy      Int      @default(100) @map("squad_energy") // 0-100, affected by IRL commitment
+  lastSeasonSync   DateTime @default(now()) @map("last_season_sync")
+  isDigitalTwinActive Boolean @default(true) @map("is_digital_twin_active")
 
   // Relations
   members       SquadMember[]
@@ -656,6 +666,8 @@ model PeerRating {
 
   attribute String // "pace", "shooting", "passing", "dribbling", "defending", "physical"
   score     Int    // 1-10
+  hypeTags  Json?  @map("hype_tags") // ["Clutch", "Engine"]
+  weighted  Boolean @default(false)
 
   // Consensus result (populated after window closes)
   deviation Int? // How far this rating was from the median
@@ -726,6 +738,7 @@ model PlayerMatchStats {
   cleanSheet    Boolean @default(false) @map("clean_sheet")
   rating        Float? // 1-10 match rating
   minutesPlayed Int     @default(90) @map("minutes_played")
+  hypeTags      Json?   @map("hype_tags") // Aggregated consensus tags for the match
 
   // Calculated XP
   xpEarned Int @default(0) @map("xp_earned")

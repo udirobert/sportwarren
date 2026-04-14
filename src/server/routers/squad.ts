@@ -347,6 +347,99 @@ export const squadRouter = createTRPCRouter({
       }
     }),
 
+  // Get Digital Twin Stats & Season Progress
+  getDigitalTwin: publicProcedure
+    .input(z.object({ squadId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const squad = await ctx.prisma.squad.findUnique({
+        where: { id: input.squadId },
+        select: {
+          id: true,
+          name: true,
+          level: true,
+          xp: true,
+          digitalAttributes: true,
+          seasonPoints: true,
+          squadEnergy: true,
+          isDigitalTwinActive: true,
+          lastSeasonSync: true,
+          members: {
+            select: {
+              user: {
+                select: {
+                  playerProfile: {
+                    select: { hypeTags: true }
+                  }
+                }
+              }
+            }
+          }
+        },
+      });
+
+      if (!squad) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Squad not found' });
+      }
+
+      // Aggregate top 5 Hype Tags from members
+      const squadHypeTags: Record<string, number> = {};
+      const members = (squad as any).members || [];
+      for (const member of members) {
+        const tags = (member.user?.playerProfile?.hypeTags as Record<string, number>) || {};
+        for (const [tag, count] of Object.entries(tags)) {
+          squadHypeTags[tag] = (squadHypeTags[tag] || 0) + count;
+        }
+      }
+
+      const topTags = Object.entries(squadHypeTags)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .reduce((acc, [tag, count]) => ({ ...acc, [tag]: count }), {});
+
+      // Generate AI narrative if needed
+      const { getDigitalTwinService } = await import('../services/ai/digital-twin');
+      const dtService = getDigitalTwinService(ctx.prisma);
+      const narrative = await dtService.generateSeasonNarrative(input.squadId);
+
+      return {
+        id: squad.id,
+        name: squad.name,
+        level: squad.level,
+        xp: squad.xp,
+        digitalAttributes: squad.digitalAttributes,
+        seasonPoints: squad.seasonPoints,
+        squadEnergy: squad.squadEnergy,
+        isDigitalTwinActive: squad.isDigitalTwinActive,
+        lastSeasonSync: squad.lastSeasonSync,
+        nextLevelXp: squad.level * 1000,
+        squadHypeTags: topTags,
+        narrative,
+      };
+    }),
+
+  // Simulate a Ghost Match (Digital Twin progression)
+  simulateGhostMatch: protectedProcedure
+    .input(z.object({ squadId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      // Check if user is a member of the squad
+      const membership = await ctx.prisma.squadMember.findUnique({
+        where: { squadId_userId: { squadId: input.squadId, userId: ctx.userId! } }
+      });
+
+      if (!membership) {
+        throw new TRPCError({ code: 'FORBIDDEN', message: 'Must be a member to simulate matches' });
+      }
+
+      const { getDigitalTwinService } = await import('../services/ai/digital-twin');
+      const dtService = getDigitalTwinService(ctx.prisma);
+      
+      try {
+        return await dtService.simulateGhostMatch(input.squadId);
+      } catch (e: any) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
+      }
+    }),
+
   // Join a squad
   join: protectedProcedure
     .input(z.object({

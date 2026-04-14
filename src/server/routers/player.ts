@@ -148,6 +148,7 @@ export const playerRouter = createTRPCRouter({
           style: input.style,
           position: profile.user.position || 'Forward',
           attributes,
+          userId: ctx.userId,
         });
 
         if (!imageUrl) {
@@ -483,7 +484,7 @@ export const playerRouter = createTRPCRouter({
     }),
 
   // Get AI-driven insights (Coach Kite)
-  getAiInsights: publicProcedure
+  getAiInsights: protectedProcedure
     .input(z.object({
       userId: z.string().min(1, 'User ID is required'),
     }))
@@ -544,7 +545,8 @@ export const playerRouter = createTRPCRouter({
         const insights = await generateTacticalInsights(
           profile.attributes,
           recentMatches,
-          { position: profile.user?.position, totalGoals: profile.totalGoals }
+          { position: profile.user?.position, totalGoals: profile.totalGoals },
+          userId
         );
 
         const primaryInsight = insights[0] || {
@@ -586,7 +588,7 @@ export const playerRouter = createTRPCRouter({
     }),
 
   // Chat with Coach Kite
-  chatWithCoach: publicProcedure
+  chatWithCoach: protectedProcedure
     .input(z.object({
       userId: z.string().min(1, 'User ID is required'),
       message: z.string().min(1, 'Message is required'),
@@ -627,7 +629,11 @@ export const playerRouter = createTRPCRouter({
                 Previous Advice Context: ${context || 'None'}`
             },
             { role: "user", content: message }
-          ], { max_tokens: 150 });
+          ], { 
+            max_tokens: 150,
+            userId: ctx.userId,
+            tier: 'text'
+          });
 
           return {
             reply: result?.content || "I'm focusing on the next match, let's talk later!",
