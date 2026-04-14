@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Check, ChevronRight, Palette, Shield, Users, User, Camera } from 'lucide-react';
+import { Check, ChevronRight, Palette, Shield, Users, User, Camera, Sparkles, Loader2 } from 'lucide-react';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { Card } from '@/components/ui/Card';
 import { trpc } from '@/lib/trpc-client';
@@ -39,7 +39,22 @@ export const QuickPersonalization: React.FC<{ onComplete: () => void; journeySta
     const [isCompleting, setIsCompleting] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const updateProfile = trpc.player.updateProfile.useMutation();
+    const generateAiAvatar = trpc.player.generateAiAvatar.useMutation();
     const journeyContent = getJourneyContent(journeyStage);
+
+    const handleGenerateAiAvatar = async () => {
+        try {
+            const result = await generateAiAvatar.mutateAsync({
+                style: 'stylized',
+                prompt: `Dynamic football player avatar, team colors ${primaryColor}, position ${formation?.includes('ST') ? 'Striker' : 'Midfielder'}`
+            });
+            if (result.imageUrl) {
+                setAvatarPreview(result.imageUrl);
+            }
+        } catch (error) {
+            console.error('AI Avatar generation failed:', error);
+        }
+    };
 
     // Skip if already personalized
     if (preferences.onboardingCompleted) return null;
@@ -130,13 +145,29 @@ export const QuickPersonalization: React.FC<{ onComplete: () => void; journeySta
                                     </div>
                                 </div>
                                 <div>
-                                    <button
-                                        onClick={() => fileInputRef.current?.click()}
-                                        className="text-sm font-bold text-green-400 hover:text-green-300 transition-colors"
-                                    >
-                                        {avatarPreview ? 'Change photo' : 'Add a photo'}
-                                    </button>
-                                    <p className="text-xs text-gray-500 mt-1">JPG or PNG, max 2MB</p>
+                                    <div className="flex flex-col gap-2">
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="text-sm font-bold text-green-400 hover:text-green-300 transition-colors flex items-center gap-2"
+                                        >
+                                            <Camera className="w-4 h-4" />
+                                            {avatarPreview ? 'Change photo' : 'Upload photo'}
+                                        </button>
+                                        
+                                        <button
+                                            onClick={handleGenerateAiAvatar}
+                                            disabled={generateAiAvatar.isPending}
+                                            className="text-sm font-bold text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-2 disabled:opacity-50"
+                                        >
+                                            {generateAiAvatar.isPending ? (
+                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                            ) : (
+                                                <Sparkles className="w-4 h-4" />
+                                            )}
+                                            {generateAiAvatar.isPending ? 'Generating...' : 'AI Generate'}
+                                        </button>
+                                    </div>
+                                    <p className="text-xs text-gray-500 mt-2">JPG, PNG or AI Magic</p>
                                 </div>
                                 <input
                                     ref={fileInputRef}

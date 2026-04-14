@@ -6,6 +6,7 @@ import { calculateSharpnessDecay, calculateActivityGain } from '../../lib/player
 import { getSquadMembership } from '../services/permissions';
 import { applyMatchXP } from '../services/match-xp';
 import { getAvatarPresentation } from '../services/avatar/avatar-presentation';
+import { generateAiAvatar } from '../services/avatar/avatar-generator';
 import { generateTacticalInsights } from '../../lib/ai/tactical-insights';
 
 const AttributeType = z.enum([
@@ -128,11 +129,50 @@ export const playerRouter = createTRPCRouter({
       }
     }),
 
+  generateAiAvatar: protectedProcedure
+    .input(z.object({
+      prompt: z.string().max(200).optional(),
+      style: z.enum(['realistic', 'stylized', 'pixel', 'sketch']).default('stylized'),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const profile = await ensurePlayerProfile(ctx.prisma, ctx.userId!);
+        
+        const attributes: Record<string, number> = {};
+        profile.attributes.forEach(a => {
+          attributes[a.attribute] = a.rating;
+        });
+
+        const imageUrl = await generateAiAvatar({
+          prompt: input.prompt,
+          style: input.style,
+          position: profile.user.position || 'Forward',
+          attributes,
+        });
+
+        if (!imageUrl) {
+          throw new TRPCError({
+            code: 'SERVICE_UNAVAILABLE',
+            message: 'Failed to generate AI avatar',
+          });
+        }
+
+        return { imageUrl };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Avatar generation failed',
+          cause: error,
+        });
+      }
+    }),
+
   updateProfile: protectedProcedure
     .input(z.object({
       name: z.string().trim().min(2, 'Name must be at least 2 characters').max(40, 'Name must be 40 characters or fewer'),
       position: z.enum(['GK', 'DF', 'MF', 'ST', 'WG']),
-      avatar: z.string().max(500_000, 'Avatar data too large').optional(),
+      avatar: z.string().max(1_000_000, 'Avatar data too large').optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {

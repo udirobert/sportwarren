@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { User } from 'lucide-react';
+import { User, Sparkles } from 'lucide-react';
 
 type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 
@@ -10,6 +10,7 @@ interface AvatarProps {
   name?: string | null;
   size?: AvatarSize;
   className?: string;
+  isAi?: boolean;
 }
 
 const sizeClasses: Record<AvatarSize, string> = {
@@ -32,7 +33,8 @@ export const Avatar: React.FC<AvatarProps> = ({
   src, 
   name, 
   size = 'md', 
-  className = '' 
+  className = '',
+  isAi = false,
 }) => {
   const [hasError, setHasError] = React.useState(false);
 
@@ -74,8 +76,13 @@ export const Avatar: React.FC<AvatarProps> = ({
   };
 
   return (
-    <div className={`relative shrink-0 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-50 ${sizeClasses[size]} ${className}`}>
+    <div className={`relative shrink-0 rounded-full overflow-hidden border-2 border-white shadow-sm bg-gray-50 ${isAi ? 'ring-2 ring-blue-400 ring-offset-1' : ''} ${sizeClasses[size]} ${className}`}>
       {renderContent()}
+      {isAi && (
+        <div className="absolute top-0 right-0 p-0.5 bg-blue-500 rounded-bl-md border-b border-l border-white shadow-sm">
+          <Sparkles className="w-2 h-2 text-white" />
+        </div>
+      )}
     </div>
   );
 };
