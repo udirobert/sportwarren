@@ -1,22 +1,80 @@
-import { generateInference, AIMessage } from '@/lib/ai/inference';
-import { writeFile } from 'fs/promises';
+import { generateInference } from '@/lib/ai/inference';
+
+export interface PhotoAnalysisResult {
+  scene_type: 'goal_celebration' | 'team_photo' | 'action_shot' | 'crowd' | 'other';
+  players_visible: number;
+  key_moments: string[];
+  emotions: string[];
+  suggested_caption: string;
+  confidence: number;
+}
+
+export interface VideoAnalysisResult {
+  scene_types: string[];
+  total_players: number;
+  key_moments: string[];
+  emotions: string[];
+  highlight_timestamps: number[];
+  suggested_title: string;
+  confidence: number;
+}
+
+export interface PositionDetectionResult {
+  formation: '4-4-2' | '3-5-2' | '4-3-3' | 'other';
+  player_positions: Array<{
+    position: 'GK' | 'DF' | 'MF' | 'FW';
+    x: number;
+    y: number;
+    team: 'home' | 'away';
+  }>;
+  tactical_analysis: string;
+  confidence: number;
+}
+
+interface HighlightEventInput {
+  minute: number;
+  type: string;
+  description: string;
+}
+
+interface MatchHighlight {
+  timestamp: number;
+  type: string;
+  description: string;
+  importance: number;
+  suggested_clip_duration: number;
+}
+
+interface MatchHighlightsResult {
+  highlights: MatchHighlight[];
+  total_duration: number;
+  suggested_music: string;
+  confidence: number;
+}
 
 export class ComputerVisionService {
   constructor() {}
 
-  async analyzeMatchPhoto(imageData: any, userId?: string, _matchId?: string): Promise<any> {
-    try {
-      const imageBuffer = Buffer.isBuffer(imageData) ? imageData : Buffer.from(imageData as any);
+  async analyzeMatchPhoto(imageData: Buffer | ArrayBuffer | string, userId?: string, _matchId?: string): Promise<PhotoAnalysisResult> {
+     try {
+       let imageBuffer: Buffer;
+       if (Buffer.isBuffer(imageData)) {
+         imageBuffer = imageData;
+       } else if (typeof imageData === 'string') {
+         imageBuffer = Buffer.from(imageData, 'base64');
+       } else {
+         imageBuffer = Buffer.from(imageData as ArrayBuffer);
+       }
 
-      // Convert to base64 for Vision API (gpt-4o or similar)
-      const base64Image = imageBuffer.toString('base64');
+       // Convert to base64 for Vision API (gpt-4o or similar)
+       const base64Image = imageBuffer.toString('base64');
 
-      const messages: any[] = [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
+       const messages: Parameters<typeof generateInference>[0] = [
+         {
+           role: 'user',
+           content: [
+             {
+               type: 'text',
               text: `Analyze this football match photo and extract relevant information.
                      Return a JSON object with:
                      {
@@ -63,7 +121,7 @@ export class ComputerVisionService {
     }
   }
 
-  async analyzeMatchVideo(videoBuffer: Buffer): Promise<any> {
+   async analyzeMatchVideo(videoBuffer: Buffer): Promise<VideoAnalysisResult> {
     try {
       // For video analysis, we'd typically extract frames first
       // This is a simplified version - in production, you'd use specialized video processing
@@ -89,16 +147,8 @@ export class ComputerVisionService {
     return [videoBuffer];
   }
 
-  private aggregateVideoAnalysis(analyses: any[]): any {
-    const aggregated: {
-      scene_types: string[];
-      total_players: number;
-      key_moments: string[];
-      emotions: string[];
-      highlight_timestamps: number[];
-      suggested_title: string;
-      confidence: number;
-    } = {
+   private aggregateVideoAnalysis(analyses: PhotoAnalysisResult[]): VideoAnalysisResult {
+     const aggregated: VideoAnalysisResult = {
       scene_types: [],
       total_players: 0,
       key_moments: [],
@@ -130,7 +180,7 @@ export class ComputerVisionService {
     return aggregated;
   }
 
-  private generateVideoTitle(analysis: any): string {
+   private generateVideoTitle(analysis: VideoAnalysisResult): string {
     const sceneTypes = analysis.scene_types;
 
     if (sceneTypes.includes('goal_celebration')) {
@@ -144,16 +194,16 @@ export class ComputerVisionService {
     }
   }
 
-  async detectPlayerPositions(imageBuffer: Buffer, userId?: string): Promise<any> {
+   async detectPlayerPositions(imageBuffer: Buffer, userId?: string): Promise<PositionDetectionResult> {
     try {
       const base64Image = imageBuffer.toString('base64');
 
-      const messages: any[] = [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
+       const messages: Parameters<typeof generateInference>[0] = [
+         {
+           role: 'user',
+           content: [
+             {
+               type: 'text',
               text: `Analyze this football field image and detect player positions.
                      Return a JSON object with:
                      {
@@ -189,36 +239,37 @@ export class ComputerVisionService {
         tier: 'vision'
       });
 
-      if (result?.content) {
-        try {
-          const cleanContent = result.content.replace(/```json|```/g, '').trim();
-          return JSON.parse(cleanContent);
-        } catch (_parseError) {
-          return this.createFallbackPositionAnalysis();
-        }
-      }
+       if (result?.content) {
+         try {
+           const cleanContent = result.content.replace(/```json|```/g, '').trim();
+           const parsed = JSON.parse(cleanContent) as PositionDetectionResult;
+           return parsed;
+         } catch (_parseError) {
+           return this.createFallbackPositionAnalysis();
+         }
+       }
 
-      return this.createFallbackPositionAnalysis();
+       return this.createFallbackPositionAnalysis();
     } catch (error) {
       console.error('Position detection error:', error);
       return this.createFallbackPositionAnalysis();
     }
   }
 
-  async detectMatchEvents(imageBuffer: any): Promise<any> {
-    try {
-      // Logic for match event detection from photo
-      // For now, call analyzeMatchPhoto as it already includes scene/moment analysis
-      const analysis = await this.analyzeMatchPhoto(imageBuffer);
-      return analysis.key_moments || [];
-    } catch (error) {
-      console.error('Event detection error:', error);
-      return [];
-    }
-  }
+   async detectMatchEvents(imageData: Buffer | ArrayBuffer | string): Promise<string[]> {
+     try {
+       // Logic for match event detection from photo
+       // For now, call analyzeMatchPhoto as it already includes scene/moment analysis
+       const analysis = await this.analyzeMatchPhoto(imageData);
+       return analysis.key_moments || [];
+     } catch (error) {
+       console.error('Event detection error:', error);
+       return [];
+     }
+   }
 
-  private createFallbackPhotoAnalysis(): any {
-    return {
+   private createFallbackPhotoAnalysis(): PhotoAnalysisResult {
+     return {
       scene_type: 'other',
       players_visible: 0,
       key_moments: ['Photo uploaded'],
@@ -228,8 +279,8 @@ export class ComputerVisionService {
     };
   }
 
-  private createFallbackVideoAnalysis(): any {
-    return {
+   private createFallbackVideoAnalysis(): VideoAnalysisResult {
+     return {
       scene_types: ['other'],
       total_players: 0,
       key_moments: ['Video uploaded'],
@@ -240,8 +291,8 @@ export class ComputerVisionService {
     };
   }
 
-  private createFallbackPositionAnalysis(): any {
-    return {
+   private createFallbackPositionAnalysis(): PositionDetectionResult {
+     return {
       formation: 'other',
       player_positions: [],
       tactical_analysis: 'Unable to analyze player positions',
@@ -249,38 +300,38 @@ export class ComputerVisionService {
     };
   }
 
-  async generateMatchHighlights(_videoBuffer: Buffer, events: any[]): Promise<any> {
-    try {
-      // This would involve more sophisticated video processing
-      // For now, return a simplified highlight structure
+   async generateMatchHighlights(_videoBuffer: Buffer, events: HighlightEventInput[]): Promise<MatchHighlightsResult> {
+     try {
+       // This would involve more sophisticated video processing
+       // For now, return a simplified highlight structure
 
-      const highlights = events.map((event, _index) => ({
-        timestamp: event.minute * 60, // Convert minutes to seconds
-        type: event.type,
-        description: event.description,
-        importance: this.calculateEventImportance(event),
-        suggested_clip_duration: this.getSuggestedClipDuration(event.type),
-      }));
+       const highlights = events.map((event, _index) => ({
+         timestamp: event.minute * 60, // Convert minutes to seconds
+         type: event.type,
+         description: event.description,
+         importance: this.calculateEventImportance(event),
+         suggested_clip_duration: this.getSuggestedClipDuration(event.type),
+       }));
 
-      return {
-        highlights: highlights.sort((a, b) => b.importance - a.importance),
-        total_duration: highlights.reduce((sum, h) => sum + h.suggested_clip_duration, 0),
-        suggested_music: this.suggestBackgroundMusic(events),
-        confidence: 0.8,
-      };
-    } catch (error) {
-      console.error('Highlight generation error:', error);
-      return {
-        highlights: [],
-        total_duration: 0,
-        suggested_music: 'upbeat',
-        confidence: 0.1,
-      };
-    }
-  }
+       return {
+         highlights: highlights.sort((a, b) => b.importance - a.importance),
+         total_duration: highlights.reduce((sum, h) => sum + h.suggested_clip_duration, 0),
+         suggested_music: this.suggestBackgroundMusic(events),
+         confidence: 0.8,
+       };
+     } catch (error) {
+       console.error('Highlight generation error:', error);
+       return {
+         highlights: [],
+         total_duration: 0,
+         suggested_music: 'upbeat',
+         confidence: 0.1,
+       };
+     }
+   }
 
-  private calculateEventImportance(event: any): number {
-    const importanceMap: Record<string, number> = {
+   private calculateEventImportance(event: HighlightEventInput): number {
+     const importanceMap: Record<string, number> = {
       'goal': 10,
       'red_card': 9,
       'penalty': 8,
@@ -305,7 +356,7 @@ export class ComputerVisionService {
     return durationMap[eventType] || 5;
   }
 
-  private suggestBackgroundMusic(events: any[]): string {
+   private suggestBackgroundMusic(events: HighlightEventInput[]): string {
     const goalCount = events.filter(e => e.type === 'goal').length;
     const cardCount = events.filter(e => e.type === 'red_card' || e.type === 'yellow_card').length;
 

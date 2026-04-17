@@ -1,5 +1,25 @@
 import { Redis } from 'ioredis';
 
+export interface SessionData {
+  userId: string;
+  identityId: string;
+  squadId?: string;
+  createdAt: number;
+}
+
+export interface MatchLiveData {
+  matchId: string;
+  homeScore: number;
+  awayScore: number;
+  events: Array<{
+    type: string;
+    minute: number;
+    playerId?: string;
+    details?: string;
+  }>;
+  lastUpdated: number;
+}
+
 export class RedisService {
   private client: Redis;
 
@@ -94,7 +114,7 @@ export class RedisService {
   }
 
   // Session management
-  async setSession(sessionId: string, userData: any, ttl: number = 86400): Promise<void> {
+  async setSession(sessionId: string, userData: SessionData, ttl: number = 86400): Promise<void> {
     try {
       await this.client.setex(`session:${sessionId}`, ttl, JSON.stringify(userData));
     } catch (error) {
@@ -129,7 +149,7 @@ export class RedisService {
     }
   }
 
-  async getSession(sessionId: string): Promise<any | null> {
+  async getSession(sessionId: string): Promise<SessionData | null> {
     try {
       const data = await this.client.get(`session:${sessionId}`);
       return data ? JSON.parse(data) : null;
@@ -148,7 +168,7 @@ export class RedisService {
   }
 
   // Match live updates
-  async setMatchLiveData(matchId: string, data: any): Promise<void> {
+  async setMatchLiveData(matchId: string, data: MatchLiveData): Promise<void> {
     try {
       await this.client.setex(`match:live:${matchId}`, 7200, JSON.stringify(data)); // 2 hours TTL
     } catch (error) {
@@ -156,7 +176,7 @@ export class RedisService {
     }
   }
 
-  async getMatchLiveData(matchId: string): Promise<any | null> {
+  async getMatchLiveData(matchId: string): Promise<MatchLiveData | null> {
     try {
       const data = await this.client.get(`match:live:${matchId}`);
       return data ? JSON.parse(data) : null;

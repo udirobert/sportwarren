@@ -1,4 +1,4 @@
-import type { CommandContext, ResolvedIdentity, TelegramCommand, RateLimitResult } from '../types';
+import type { CommandContext, ResolvedIdentity, TelegramCommand } from '../types';
 
 /**
  * Base class for Telegram commands

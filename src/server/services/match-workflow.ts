@@ -14,7 +14,6 @@ import {
 } from './economy/treasury-ledger';
 import { createPendingMatchSubmission } from './match-submission';
 import { PEER_RATING } from '@/lib/match/constants';
-import { getTelegramService } from './communication/telegram';
 import { getDigitalTwinService } from './ai/digital-twin';
 
 export type MatchWorkflowErrorCode =
@@ -609,18 +608,6 @@ export async function verifyMatchResult({
         await dtService.updateSquadEnergy(resultMatch.awaySquadId, matchId);
       } catch (e) {
         console.error('Failed to sync digital twin after verification:', e);
-      }
-
-      // 2. Notify Squads
-      const notifySquads = [resultMatch.homeSquad, resultMatch.awaySquad];
-      for (const squad of notifySquads) {
-        const tgGroup = squad.groups[0];
-        if (tgGroup?.chatId) {
-          const telegramService = getTelegramService();
-          if (telegramService) {
-            await telegramService.sendPeerRatingPrompt(tgGroup.chatId, matchId, squad.name);
-          }
-        }
       }
     }
 

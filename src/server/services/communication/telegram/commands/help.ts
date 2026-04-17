@@ -1,6 +1,6 @@
 import { BaseCommand } from './base';
 import type { CommandContext, ResolvedIdentity } from '../types';
-import { buildHelpText } from './registry';
+import { buildHelpText } from './help-text';
 
 /**
  * Help Command

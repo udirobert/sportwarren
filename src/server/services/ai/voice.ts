@@ -3,6 +3,43 @@ import OpenAI from 'openai';
 import { createReadStream } from 'fs';
 import { writeFile } from 'fs/promises';
 
+export type AudioInput = Buffer | Uint8Array;
+
+export interface VoiceExtractedMatchData {
+  events: Array<{
+    type: 'goal' | 'assist' | 'substitution' | 'yellow_card' | 'red_card' | 'penalty';
+    player?: string;
+    minute: number;
+    description?: string;
+  }>;
+  score: { home: number | null; away: number | null };
+  opponent: string | null;
+  result: 'win' | 'loss' | 'draw' | null;
+  summary: string | null;
+  confidence: number;
+  error?: string;
+}
+
+export interface VoiceCommandResult extends VoiceExtractedMatchData {
+  matchId?: string;
+  transcription: string;
+}
+
+export interface RealtimeEvent {
+  type: string;
+  confidence: number;
+  timestamp: number;
+}
+
+export interface MatchNarrativeInput {
+  homeTeam: string;
+  awayTeam: string;
+  homeScore: number;
+  awayScore: number;
+  events: unknown[];
+  playerStats?: unknown[];
+}
+
 export class VoiceProcessingService {
   private openai: OpenAI | null = null;
 
@@ -31,7 +68,7 @@ export class VoiceProcessingService {
 
       // Save buffer to temporary file
       const tempPath = `/tmp/audio_${Date.now()}.wav`;
-      const buffer = Buffer.isBuffer(audioBuffer) ? audioBuffer : Buffer.from(audioBuffer as any);
+      const buffer = Buffer.isBuffer(audioBuffer) ? audioBuffer : Buffer.from(audioBuffer as ArrayBuffer);
       await writeFile(tempPath, buffer);
 
       // Transcribe using Whisper
@@ -53,9 +90,10 @@ export class VoiceProcessingService {
     }
   }
 
-  async processVoiceCommand(audioData: any, userId?: string, matchId?: string): Promise<any> {
+  async processVoiceCommand(audioData: AudioInput, userId?: string, matchId?: string): Promise<VoiceCommandResult> {
     try {
-      const transcription = await this.transcribeAudio(audioData, userId);
+      const audioBuffer = Buffer.isBuffer(audioData) ? audioData : Buffer.from(audioData);
+      const transcription = await this.transcribeAudio(audioBuffer, userId);
       const processed = await this.processVoiceMatchLog(transcription, userId);
       return {
         ...processed,
@@ -68,36 +106,8 @@ export class VoiceProcessingService {
     }
   }
 
-  async processVoiceMatchLog(transcription: string, userId?: string): Promise<any> {
+  async processVoiceMatchLog(transcription: string, userId?: string): Promise<VoiceExtractedMatchData> {
     try {
-      const prompt = `
-        Extract structured match data from this voice transcription of a football match:
-        "${transcription}"
-        
-        Return a JSON object with this exact structure:
-        {
-          "events": [
-            {
-              "type": "goal" | "assist" | "substitution" | "yellow_card" | "red_card" | "penalty",
-              "player": "player name",
-              "minute": number,
-              "description": "description of what happened"
-            }
-          ],
-          "score": {
-            "home": number,
-            "away": number
-          },
-          "opponent": "opponent team name",
-          "result": "win" | "loss" | "draw",
-          "summary": "brief summary of the match",
-          "confidence": number between 0 and 1
-        }
-        
-        If you can't extract specific information, use null values.
-        Be conservative with confidence scores - only use high confidence for clear, unambiguous information.
-      `;
-
       const messages: AIMessage[] = [
         { role: 'user', content: transcription }
       ];
@@ -128,26 +138,46 @@ export class VoiceProcessingService {
     }
   }
 
-  private validateMatchData(data: any): any {
+  private validateMatchData(data: unknown): VoiceExtractedMatchData {
     // Validate and sanitize the extracted data
-    const validated = {
-      events: Array.isArray(data.events) ? data.events.filter((event: any) =>
-        event.type && ['goal', 'assist', 'substitution', 'yellow_card', 'red_card', 'penalty'].includes(event.type)
-      ) : [],
-      score: {
-        home: typeof data.score?.home === 'number' ? data.score.home : null,
-        away: typeof data.score?.away === 'number' ? data.score.away : null,
-      },
-      opponent: typeof data.opponent === 'string' ? data.opponent : null,
-      result: ['win', 'loss', 'draw'].includes(data.result) ? data.result : null,
-      summary: typeof data.summary === 'string' ? data.summary : null,
-      confidence: typeof data.confidence === 'number' ? Math.max(0, Math.min(1, data.confidence)) : 0.5,
+    if (typeof data !== 'object' || data === null) {
+      return this.createFallbackResponse('') as VoiceExtractedMatchData;
+    }
+    
+    const raw = data as Record<string, unknown>;
+    const validEvents = Array.isArray(raw.events) ? raw.events.filter((event): event is Record<string, unknown> => {
+      if (typeof event !== 'object' || event === null) return false;
+      const e = event as Record<string, unknown>;
+      return typeof e.type === 'string' && ['goal', 'assist', 'substitution', 'yellow_card', 'red_card', 'penalty'].includes(e.type);
+    }) : [];
+    
+    const validated: VoiceExtractedMatchData = {
+      events: validEvents.map(e => {
+        const event = e as Record<string, unknown>;
+        return {
+          type: event.type as VoiceExtractedMatchData['events'][number]['type'],
+          player: typeof event.player === 'string' ? event.player : undefined,
+          minute: typeof event.minute === 'number' ? event.minute : 0,
+          description: typeof event.description === 'string' ? event.description : undefined,
+        };
+      }),
+      score: (() => {
+        const scoreObj = raw.score as { home?: number; away?: number } | undefined;
+        return {
+          home: typeof scoreObj?.home === 'number' ? scoreObj.home : null,
+          away: typeof scoreObj?.away === 'number' ? scoreObj.away : null,
+        };
+      })(),
+      opponent: typeof raw.opponent === 'string' ? raw.opponent : null,
+      result: ['win', 'loss', 'draw'].includes(raw.result as string) ? raw.result as 'win' | 'loss' | 'draw' : null,
+      summary: typeof raw.summary === 'string' ? raw.summary : null,
+      confidence: typeof raw.confidence === 'number' ? Math.max(0, Math.min(1, raw.confidence)) : 0.5,
     };
 
     return validated;
   }
 
-  private createFallbackResponse(transcription: string): any {
+  private createFallbackResponse(transcription: string): VoiceExtractedMatchData {
     return {
       events: [],
       score: { home: null, away: null },

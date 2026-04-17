@@ -54,17 +54,29 @@ export function usePitchExport() {
         const filename = `${EXPORT_FILENAME_PREFIX}-${formation}`;
         const opts = { pixelRatio, backgroundColor: PITCH_BACKGROUND_COLOR };
 
-        try { success = await exportElementAsImage(target, filename, finalFormat, opts); } catch {}
+        try { success = await exportElementAsImage(target, filename, finalFormat, opts); }
+        catch (e) {
+          if (process.env.NODE_ENV === 'development') console.error('exportElementAsImage failed (1st attempt)', e);
+        }
         if (!success && finalFormat === 'webp') {
           finalFormat = 'png';
-          try { success = await exportElementAsImage(target, filename, 'png', opts); } catch {}
+          try { success = await exportElementAsImage(target, filename, 'png', opts); }
+          catch (e) {
+            if (process.env.NODE_ENV === 'development') console.error('exportElementAsImage failed (png fallback)', e);
+          }
         }
         if (!success && pixelRatio > 2) {
           pixelRatio = 2;
-          try { success = await exportElementAsImage(target, filename, 'png', { ...opts, pixelRatio: 2 }); } catch {}
+          try { success = await exportElementAsImage(target, filename, 'png', { ...opts, pixelRatio: 2 }); }
+          catch (e) {
+            if (process.env.NODE_ENV === 'development') console.error('exportElementAsImage failed (pixelRatio=2 fallback)', e);
+          }
         }
         if (!success) {
-          try { success = await exportElementAsImage(target, filename, 'png', { ...opts, pixelRatio: 1 }); } catch {}
+          try { success = await exportElementAsImage(target, filename, 'png', { ...opts, pixelRatio: 1 }); }
+          catch (e) {
+            if (process.env.NODE_ENV === 'development') console.error('exportElementAsImage failed (pixelRatio=1 fallback - giving up)', e);
+          }
         }
 
         trackFeatureUsed('tactics_preview_export', {
@@ -77,7 +89,12 @@ export function usePitchExport() {
           tip.className = 'fixed top-4 left-1/2 -translate-x-1/2 z-[100] rounded-md border border-white/10 bg-black/80 px-3 py-1.5 text-xs text-white shadow-xl';
           tip.textContent = 'Saved';
           document.body.appendChild(tip);
-          setTimeout(() => { try { document.body.removeChild(tip); } catch {} }, 1200);
+          setTimeout(() => {
+            try { document.body.removeChild(tip); }
+            catch (e) {
+              if (process.env.NODE_ENV === 'development') console.error('Failed to remove export toast tip', e);
+            }
+          }, 1200);
         }
       } finally {
         setIsExporting(false);

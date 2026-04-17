@@ -4,8 +4,8 @@ import { getJourneyNextAction, getJourneyZeroState } from '@/lib/journey/content
 describe('journey content helpers', () => {
   it('routes account-ready users toward the first match', () => {
     expect(getJourneyNextAction('account_ready')).toEqual({
-      label: 'Log your first match',
-      href: '/match?mode=capture',
+      label: 'Set up your tactics',
+      href: '/match/preview',
     });
   });
 

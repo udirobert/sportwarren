@@ -1,6 +1,5 @@
 import { BaseCommand } from './base';
 import type { CommandContext, ResolvedIdentity } from '../types';
-import { prisma } from "@/lib/db";
 import { getUserSquads } from '../middleware/identity';
 import { getErrorMessage } from '../responses/errors';
 import { isSquadLeader } from "@/server/services/permissions";

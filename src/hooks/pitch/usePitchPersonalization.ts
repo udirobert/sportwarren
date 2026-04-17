@@ -43,8 +43,8 @@ export function usePitchPersonalization(formation: Formation) {
       const s = window.localStorage.getItem(key(STORAGE_KEYS.SHOW_NAMES)) || window.localStorage.getItem(STORAGE_KEYS.SHOW_NAMES);
       const b = window.localStorage.getItem(key(STORAGE_KEYS.BLUR_FACES)) || window.localStorage.getItem(STORAGE_KEYS.BLUR_FACES);
       const bl = window.localStorage.getItem(key(STORAGE_KEYS.BLUR_LEVEL)) || window.localStorage.getItem(STORAGE_KEYS.BLUR_LEVEL);
-      if (n) { try { const v = JSON.parse(n); if (Array.isArray(v) && v.length) setNames(v); } catch {} }
-      if (a) { try { const v = JSON.parse(a); if (Array.isArray(v) && v.length) setAvatars(v); } catch {} }
+       if (n) { const v = JSON.parse(n); if (Array.isArray(v) && v.length) setNames(v); }
+       if (a) { const v = JSON.parse(a); if (Array.isArray(v) && v.length) setAvatars(v); }
       if (s) setShowNames(s === '1');
       if (b) setBlurFaces(b === '1');
       if (bl === 'low' || bl === 'med' || bl === 'high') setBlurLevel(bl);

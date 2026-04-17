@@ -71,8 +71,7 @@ export class LogCommand extends BaseCommand {
     }
 
     try {
-      // Submit the match - use correct API from match-workflow.ts
-      const result = await submitMatchResult({
+      await submitMatchResult({
         prisma,
         homeSquadId,
         awaySquadId: opponentSquad.id,

@@ -148,9 +148,11 @@ export interface PlayerAttributes {
   // Scout fields
   scoutXP: number;
   scoutTier: 'rookie' | 'trusted' | 'elite';
-  // Avatar
-  avatar?: string;
-}
+   // Avatar
+   avatar?: string;
+   // Fitness / match readiness (optional, used in simulation)
+   sharpness?: number;
+ }
 
 export interface Endorsement {
   endorser: string;
