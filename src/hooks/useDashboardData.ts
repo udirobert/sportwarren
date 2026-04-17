@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import type { AsyncState } from './types';
 import { createSuccessState } from './types';
 import { isSettledMatchStatus, describeMatchForSquad } from '@/lib/match/summary';

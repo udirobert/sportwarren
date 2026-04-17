@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { trpc } from "@/lib/trpc-client";
 
 interface MatchCenterData {

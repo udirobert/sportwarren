@@ -86,7 +86,7 @@ export function usePitchPersonalization(formation: Formation) {
         [STORAGE_KEYS.NAMES, STORAGE_KEYS.AVATARS, STORAGE_KEYS.SHOW_NAMES, STORAGE_KEYS.BLUR_FACES, STORAGE_KEYS.BLUR_LEVEL]
           .forEach((k) => window.localStorage.removeItem(key(k)));
       }
-    } catch {}
+    } catch { /* localStorage unavailable */ }
   }, [formation]);
 
   const resetAllFormations = useCallback(() => {
@@ -97,13 +97,14 @@ export function usePitchPersonalization(formation: Formation) {
     setBlurLevel('med');
     try {
       if (typeof window !== 'undefined') {
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { FORMATIONS } = require('@/lib/formations');
         const fmList = Object.keys(FORMATIONS);
         const keys = [STORAGE_KEYS.NAMES, STORAGE_KEYS.AVATARS, STORAGE_KEYS.SHOW_NAMES, STORAGE_KEYS.BLUR_FACES, STORAGE_KEYS.BLUR_LEVEL];
         fmList.forEach((fm: string) => keys.forEach((k) => window.localStorage.removeItem(`${k}_${fm}`)));
         keys.forEach((k) => window.localStorage.removeItem(k));
       }
-    } catch {}
+    } catch { /* localStorage unavailable */ }
   }, []);
 
   return {
