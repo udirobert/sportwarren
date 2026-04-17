@@ -10,7 +10,7 @@ export class HelpCommand extends BaseCommand {
   pattern = /\/help/;
   description = 'Show available commands';
 
-  async executeWithIdentity(ctx: CommandContext, identity: ResolvedIdentity): Promise<void> {
+  async executeWithIdentity(ctx: CommandContext, _identity: ResolvedIdentity): Promise<void> {
     const helpText = buildHelpText();
     await ctx.bot.sendMessage(ctx.chatId, helpText, { parse_mode: 'Markdown' });
   }

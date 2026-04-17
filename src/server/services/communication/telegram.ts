@@ -3,7 +3,7 @@ import { generateInference } from "@/lib/ai/inference";
 import { AGENT_PERSONAS } from "../ai/prompts";
 import TelegramBot from "node-telegram-bot-api";
 import { prisma } from "@/lib/db";
-import type { Prisma, SquadMember, Match } from '@prisma/client';
+import type { SquadMember, Match } from '@prisma/client';
 
 type LatestMatch =
   | (Match & { type: 'home'; awaySquad: { name: string } })
@@ -934,7 +934,7 @@ export class TelegramService {
   }
 
   // Helper for /account link
-  private async handleAccountLink(chatId: number, msg: TelegramBot.Message): Promise<void> {
+  private async handleAccountLink(chatId: number, _msg: TelegramBot.Message): Promise<void> {
     const identity = await findPlatformIdentityByChatId(prisma, String(chatId));
     if (identity) {
       await this.sendMarkdown(chatId, `✅ This chat is already linked to a SportWarren account.`);
@@ -951,7 +951,7 @@ export class TelegramService {
   }
 
   // Helper for /account unlink
-  private async handleAccountUnlink(chatId: number, msg: TelegramBot.Message): Promise<void> {
+  private async handleAccountUnlink(chatId: number, _msg: TelegramBot.Message): Promise<void> {
     const identity = await findPlatformIdentityByChatId(prisma, String(chatId));
     if (!identity) {
       await this.sendMarkdown(chatId, "⚠️ This chat is not linked to any account.");
@@ -1757,7 +1757,6 @@ export class TelegramService {
     // Check for conflicts with other squads
     if (targetSquads.length > 1 && availability === "available") {
       // Find other squads user is in but didn't set availability for
-      const allMySquads = memberships.map((m: typeof memberships[number]) => m.squad.id);
       const targetSquadIds = targetSquads.map((m: typeof memberships[number]) => m.squad.id);
 
       const otherSquads = memberships.filter(

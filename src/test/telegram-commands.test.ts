@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { describe, expect, it, vi, afterEach } from 'vitest';
 // CONSOLIDATION: Link/unlink moved to /account group in telegram.ts
 import { StatsCommand } from '../server/services/communication/telegram/commands/stats';
 import { AvailableCommand } from '../server/services/communication/telegram/commands/availability';

@@ -28,7 +28,7 @@ export function usePitchExport() {
       window.localStorage.setItem(STORAGE_KEYS.EXPORT_FORMAT, exportFormat);
       window.localStorage.setItem(STORAGE_KEYS.HD, hdExport ? '1' : '0');
       window.localStorage.setItem(STORAGE_KEYS.EXPORT_SCOPE, exportScope);
-    } catch {}
+    } catch { /* localStorage unavailable */ }
   }, [exportFormat, hdExport, exportScope]);
 
   const handleExport = useCallback(

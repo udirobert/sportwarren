@@ -7,7 +7,7 @@ import { generateInference } from '@/lib/ai/inference';
 import { AGENT_PERSONAS } from './prompts';
 import { simulateMatch, calculateWinProbabilities } from '@/lib/match/simulation-engine';
 import { calculatePlayerValue } from '@/lib/player/valuation-engine';
-import { Tactics, PlayerAttributes, Formation, PlayStyle, TeamInstructions, SetPieceInstructions, AttributeType, SkillRating, PlayerPosition, Achievement, CareerHighlight } from '@/types';
+import { Tactics, PlayerAttributes, Formation, PlayStyle, TeamInstructions, SetPieceInstructions, AttributeType, SkillRating, PlayerPosition } from '@/types';
 
 /**
  * Minimal type shapes required for mapping Prisma data to engine types.
