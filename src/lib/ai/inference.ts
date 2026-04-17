@@ -9,9 +9,18 @@ import { inferenceGuard, InferenceTier } from '@/server/services/ai/inference-gu
  * Priority: kilocode (Primary) → Venice (First Fallback) → OpenAI (Second Fallback)
  */
 
+export type AIMessageContent = string | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string; detail?: string } }>;
+
 export interface AIMessage {
     role: 'system' | 'user' | 'assistant';
+    content: AIMessageContent;
+}
+
+export interface AIChatMessage {
+    role: 'system' | 'user' | 'assistant' | 'tool';
     content: string;
+    name?: string;
+    tool_call_id?: string;
 }
 
 export interface AIProvider {
@@ -85,7 +94,7 @@ export async function generateInference(
 
             const completion = await provider.client.chat.completions.create({
                 model: modelToUse,
-                messages: fullMessages as any,
+                messages: fullMessages as unknown as OpenAI.Chat.ChatCompletionMessageParam[],
                 temperature: options.temperature ?? 0.7,
                 max_tokens: options.max_tokens ?? 300,
             });
@@ -106,7 +115,7 @@ export async function generateInference(
                 try {
                     const fallbackCompletion = await provider.client.chat.completions.create({
                         model: KILOCODE_FALLBACK_MODEL,
-                        messages: messages as any,
+                        messages: messages as unknown as OpenAI.Chat.ChatCompletionMessageParam[],
                         temperature: options.temperature ?? 0.7,
                         max_tokens: options.max_tokens ?? 300,
                     });
@@ -132,7 +141,7 @@ export async function generateInference(
                 try {
                     const fallbackCompletion = await provider.client.chat.completions.create({
                         model: KILOCODE_FALLBACK_MODEL,
-                        messages: messages as any,
+                        messages: messages as unknown as OpenAI.Chat.ChatCompletionMessageParam[],
                         temperature: options.temperature ?? 0.7,
                         max_tokens: options.max_tokens ?? 300,
                     });

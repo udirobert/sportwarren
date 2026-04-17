@@ -32,9 +32,9 @@ describe('getDashboardEntryState', () => {
       totalMatches: 0,
     });
 
-    expect(state.id).toBe('account_ready');
-    expect(state.primaryAction.label).toBe('Log your first match');
-    expect(state.secondaryAction?.label).toBe('Explore the Staff Room');
+     expect(state.id).toBe('account_ready');
+     expect(state.primaryAction.label).toBe('Set Tactics');
+     expect(state.secondaryAction?.label).toBe('Explore the Staff Room');
   });
 
   it('returns wallet verification state when a wallet is connected but not verified', () => {
@@ -50,9 +50,9 @@ describe('getDashboardEntryState', () => {
       totalMatches: 0,
     });
 
-    expect(state.id).toBe('wallet_unverified');
-    expect(state.primaryAction.intent).toBe('log_match');
-    expect(state.secondaryAction?.intent).toBe('verify_wallet');
+     expect(state.id).toBe('wallet_unverified');
+     expect(state.primaryAction.intent).toBe('preview_match');
+     expect(state.secondaryAction?.intent).toBe('verify_wallet');
   });
 
   it('returns verified-no-squad state for verified users without a squad', () => {
@@ -85,8 +85,8 @@ describe('getDashboardEntryState', () => {
       totalMatches: 0,
     });
 
-    expect(state.id).toBe('season_kickoff');
-    expect(state.primaryAction.label).toBe('Log your first result');
+     expect(state.id).toBe('season_kickoff');
+     expect(state.primaryAction.label).toBe('Preview your squad');
   });
 
   it('returns returning-manager state for active squads with season momentum', () => {

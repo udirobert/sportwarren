@@ -587,5 +587,9 @@ function mixWithWhite(hex: string, amount = 0.12): string {
 
 function tintStroke(primary: string): string {
   // Slightly tint the stroke towards the team color, keep it bright
-  try { return mixWithWhite(primary, 0.2); } catch { return 'rgb(240,240,240)'; }
+  try { return mixWithWhite(primary, 0.2); }
+  catch (e) {
+    if (process.env.NODE_ENV === 'development') console.error('tintStroke: invalid primary color', primary, e);
+    return 'rgb(240,240,240)';
+  }
 }

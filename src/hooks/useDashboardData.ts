@@ -137,47 +137,29 @@ export function useDashboardData({
     { enabled: !!squadId && hasAccount && isVerified, staleTime: 30 * 1000 }
   );
 
-  const dataState = useMemo<'preview' | 'empty' | 'live'>(() => {
-    if (isGuest) {
-      return 'preview';
-    }
+   // Determine data state without useMemo to avoid TypeScript deep instantiation issue
+   let dataState: UseDashboardDataReturn['dataState'];
+   if (isGuest) dataState = 'preview';
+   else if (!hasAccount || !isVerified || !profileQuery.data) dataState = 'empty';
+   else dataState = 'live';
 
-    if (!hasAccount || !isVerified || !profileQuery.data) {
-      return 'empty';
-    }
-
-    return 'live';
-  }, [hasAccount, isGuest, isVerified, profileQuery.data]);
-
-  const data = useMemo<DashboardStats>(() => {
-    if (isGuest) {
-      return PREVIEW_STATS;
-    }
-
-    if (!hasAccount || !isVerified || !profileQuery.data) {
-      return EMPTY_STATS;
-    }
-
-    // Use squad-scoped stats when a squad is active
-    const squadContext = squadContextQuery.data;
-    const useSquadStats = !!squadId && squadContext;
-
-    return {
-      goals: useSquadStats ? squadContext.goals : profileQuery.data.totalGoals ?? 0,
-      assists: useSquadStats ? squadContext.assists : profileQuery.data.totalAssists ?? 0,
-      matches: useSquadStats ? squadContext.matchesPlayed : profileQuery.data.totalMatches ?? 0,
-      rating: formatRating(profileQuery.data.formHistory),
-      recentMatches: formatRecentMatches(matchesQuery.data?.matches ?? [], squadId),
-    };
-  }, [
-    hasAccount,
-    isGuest,
-    isVerified,
-    matchesQuery.data?.matches,
-    profileQuery.data,
-    squadContextQuery.data,
-    squadId,
-  ]);
+   // Compute data directly (avoid useMemo deep type instantiation issue)
+   let data: DashboardStats;
+   if (isGuest) {
+     data = PREVIEW_STATS;
+   } else if (!hasAccount || !isVerified || !profileQuery.data) {
+     data = EMPTY_STATS;
+   } else {
+     const squadContext = squadContextQuery.data;
+     const useSquadStats = !!squadId && squadContext;
+     data = {
+       goals: useSquadStats ? squadContext.goals : profileQuery.data.totalGoals ?? 0,
+       assists: useSquadStats ? squadContext.assists : profileQuery.data.totalAssists ?? 0,
+       matches: useSquadStats ? squadContext.matchesPlayed : profileQuery.data.totalMatches ?? 0,
+       rating: formatRating(profileQuery.data.formHistory),
+       recentMatches: formatRecentMatches(matchesQuery.data?.matches ?? [], squadId),
+     };
+   }
 
   const loading = !isGuest && hasAccount && isVerified && (
     profileQuery.isLoading || (!!squadId && matchesQuery.isLoading) || (!!squadId && squadContextQuery.isLoading)

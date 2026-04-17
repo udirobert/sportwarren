@@ -13,12 +13,16 @@ export function useMatchCenterData(activeSquadId?: string): MatchCenterData {
     { staleTime: 30 * 1000 },
   );
 
-  const availableOpponents = useMemo(
-    () => (squadPool?.squads || []).filter((squad) => squad.id !== activeSquadId),
-    [activeSquadId, squadPool?.squads],
-  );
+  // Compute directly with simplified types to avoid deep instantiation
+  const rawSquads = squadPool?.squads ?? [];
+  const filtered: Array<{ id: string; name: string }> = [];
+  for (const s of rawSquads) {
+    if (s.id !== activeSquadId) {
+      filtered.push({ id: s.id, name: s.name });
+    }
+  }
 
   return {
-    availableOpponents,
+    availableOpponents: filtered,
   };
 }

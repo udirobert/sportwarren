@@ -142,7 +142,9 @@ describe('Command execution', () => {
 });
 
 // Test registry - import synchronously via top-level import
-import { COMMANDS, registerCommands, buildHelpText } from '../server/services/communication/telegram/commands/registry';
+// Test registry - import synchronously via top-level import
+import { COMMANDS, registerCommands } from '../server/services/communication/telegram/commands/registry';
+import { buildHelpText } from '../server/services/communication/telegram/commands/help-text';
 
 describe('Command registry', () => {
   it('includes expected modular commands', () => {
@@ -168,6 +170,7 @@ describe('Command registry', () => {
       onText: vi.fn(),
     };
     expect(() => registerCommands(mockBot as any)).not.toThrow();
-    expect(mockBot.onText).toHaveBeenCalledTimes(COMMANDS.length);
+    // registerCommands also registers 3 legacy aliases (/app, /profile, /myteams) in addition to COMMANDS
+    expect(mockBot.onText).toHaveBeenCalledTimes(COMMANDS.length + 3);
   });
 });

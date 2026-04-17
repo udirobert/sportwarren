@@ -1,7 +1,11 @@
+import type { PrismaClient } from '@prisma/client';
+
 export type SquadRole = 'captain' | 'vice_captain' | 'player';
 
+export type PlatformStore = PrismaClient;
+
 export async function getSquadMembership(
-  prisma: any,
+  prisma: PlatformStore,
   squadId: string,
   userId: string,
   asOfDate?: Date
@@ -37,7 +41,7 @@ export async function getSquadMembership(
 /**
  * Get all active memberships for a user across all squads
  */
-export async function getUserActiveMemberships(prisma: any, userId: string) {
+export async function getUserActiveMemberships(prisma: PlatformStore, userId: string) {
   return prisma.squadMember.findMany({
     where: {
       userId,
@@ -54,7 +58,7 @@ export async function getUserActiveMemberships(prisma: any, userId: string) {
  * Useful for determining which squad a match belongs to historically
  */
 export async function getMembershipAtDate(
-  prisma: any,
+  prisma: PlatformStore,
   userId: string,
   date: Date
 ) {

@@ -13,7 +13,7 @@ import {
 } from '../services/match-workflow';
 import { simulateMatch, calculateWinProbabilities } from '@/lib/match/simulation-engine';
 import { INTEL_LEVELS, maskMatchIntel } from '@/lib/match/intel-disclosure';
-import { Tactics, PlayerAttributes } from '@/types';
+import { Tactics, PlayerAttributes, Formation, PlayStyle, TeamInstructions, SetPieceInstructions } from '@/types';
 
 const MatchStatus = z.enum(['pending', 'verified', 'disputed', 'finalized']);
 
@@ -321,6 +321,21 @@ export const matchRouter = createTRPCRouter({
           homeScore,
           awayScore,
           yellowSettlement,
+        }).then(async (result) => {
+          if (result.newStatus === 'verified') {
+            const match = await ctx.prisma.match.findUnique({
+              where: { id: matchId },
+              include: {
+                homeSquad: { select: { name: true } },
+                awaySquad: { select: { name: true } },
+              },
+            });
+            if (match) {
+              const { notifyMatchVerified } = await import('../services/communication/match-notifications');
+              notifyMatchVerified(matchId, match.homeSquad.name, match.awaySquad.name).catch(console.error);
+            }
+          }
+          return result;
         });
       } catch (error) {
         throw toTRPCError(error);
@@ -443,7 +458,7 @@ export const matchRouter = createTRPCRouter({
           const homeWon = homeScore > awayScore;
           const awayWon = awayScore > homeScore;
 
-          const processTeam = async (members: any[], isWinner: boolean, isDraw: boolean) => {
+          const processTeam = async (members: Array<{ user: { id: string; walletAddress?: string | null; chain?: string | null } }>, isWinner: boolean, isDraw: boolean) => {
             const repGain = isDraw ? 2 : (isWinner ? 5 : 1); // 5 for win, 2 for draw, 1 for loss
 
             for (const member of members) {
@@ -497,7 +512,7 @@ export const matchRouter = createTRPCRouter({
       try {
         const { status, squadId, limit, offset } = input;
 
-        const where: any = {};
+        const where: Record<string, unknown> = {};
         if (status) where.status = status;
         if (squadId) {
           where.OR = [
@@ -587,8 +602,8 @@ export const matchRouter = createTRPCRouter({
               latitude: match.latitude,
               longitude: match.longitude,
               timestamp: Math.floor(match.matchDate.getTime() / 1000),
-              homeTeam: (match as any).homeSquad.name,
-              awayTeam: (match as any).awaySquad.name,
+              homeTeam: match.homeSquad.name,
+              awayTeam: match.awaySquad.name,
             });
             creResult = verification.details;
           } catch (e) {
@@ -599,7 +614,7 @@ export const matchRouter = createTRPCRouter({
         const response = {
           ...match,
           creResult,
-          agentInsights: (match as any).agentInsights,
+          agentInsights: (match as { agentInsights?: unknown }).agentInsights,
           paymentRail: {
             enabled: !!match.yellowFeeSessionId,
             assetSymbol: yellowService.getRailStatus().assetSymbol,
@@ -771,16 +786,16 @@ export const matchRouter = createTRPCRouter({
 
           // Map to simulation engine types
           const tactics: Tactics = {
-            formation: (squad.tactics?.formation as any) || '4-4-2',
-            style: (squad.tactics?.playStyle as any) || 'balanced',
-            instructions: (squad.tactics?.instructions as any) || {
+            formation: (squad.tactics?.formation as Formation) || '4-4-2',
+            style: (squad.tactics?.playStyle as PlayStyle) || 'balanced',
+            instructions: (squad.tactics?.instructions as unknown as TeamInstructions) || {
               width: 'normal',
               tempo: 'normal',
               passing: 'mixed',
               pressing: 'medium',
               defensiveLine: 'normal'
             },
-            setPieces: (squad.tactics?.setPieces as any) || {
+            setPieces: (squad.tactics?.setPieces as unknown as SetPieceInstructions) || {
               corners: 'near_post',
               freeKicks: 'shoot',
               penalties: ''
@@ -794,15 +809,15 @@ export const matchRouter = createTRPCRouter({
               return {
                 address: m.user.walletAddress,
                 playerName: m.user.name || 'Unknown',
-                position: (m.user.position as any) || 'MF',
+                position: m.user.position || 'MF',
                 skills: profile.attributes.map(a => ({
-                  skill: a.attribute as any,
+                  skill: a.attribute,
                   rating: a.rating,
                   history: a.history,
                   // other fields omitted for simplicity in simulation
-                } as any)),
+                })),
                 // other fields omitted
-              } as any;
+              } as PlayerAttributes;
             });
 
           return { players, tactics };

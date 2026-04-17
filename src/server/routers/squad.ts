@@ -6,7 +6,7 @@ import { isAddress, type Address } from 'viem';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { verifyTonTopUpTransfer } from '../services/blockchain/ton';
 import { yellowService } from '../services/blockchain/yellow';
-import { managerInsightService } from '../services/ai/manager-insights';
+import { managerInsightService, type ManagerInsight } from '../services/ai/manager-insights';
 import {
   ensureSquadTreasury,
   postTreasuryLedgerEntry,
@@ -128,7 +128,7 @@ async function movePlayerToSquad(prisma: PrismaClient, offer: { playerId: string
     },
   });
 
-  await prisma.$transaction(async (tx: any) => {
+  await prisma.$transaction(async (tx) => {
     if (currentMembership) {
       await tx.squadMember.delete({
         where: {
@@ -248,7 +248,7 @@ export const squadRouter = createTRPCRouter({
       try {
         const { search, limit, offset } = input;
 
-        const where: any = {};
+        const where: Record<string, unknown> = {};
         if (search) {
           where.OR = [
             { name: { contains: search, mode: 'insensitive' } },
@@ -383,9 +383,9 @@ export const squadRouter = createTRPCRouter({
 
       // Aggregate top 5 Hype Tags from members
       const squadHypeTags: Record<string, number> = {};
-      const members = (squad as any).members || [];
+      const members = squad.members || [];
       for (const member of members) {
-        const tags = (member.user?.playerProfile?.hypeTags as Record<string, number>) || {};
+        const tags = member.user?.playerProfile?.hypeTags || {};
         for (const [tag, count] of Object.entries(tags)) {
           squadHypeTags[tag] = (squadHypeTags[tag] || 0) + count;
         }
@@ -433,11 +433,12 @@ export const squadRouter = createTRPCRouter({
       const { getDigitalTwinService } = await import('../services/ai/digital-twin');
       const dtService = getDigitalTwinService(ctx.prisma);
       
-      try {
-        return await dtService.simulateGhostMatch(input.squadId);
-      } catch (e: any) {
-        throw new TRPCError({ code: 'BAD_REQUEST', message: e.message });
-      }
+       try {
+         return await dtService.simulateGhostMatch(input.squadId);
+       } catch (e) {
+         const message = e instanceof Error ? e.message : 'Ghost match simulation failed';
+         throw new TRPCError({ code: 'BAD_REQUEST', message });
+       }
     }),
 
   // Join a squad
@@ -755,9 +756,9 @@ export const squadRouter = createTRPCRouter({
             corners: 'near_post',
             freeKicks: 'cross',
             penalties: '',
-          },
-          lineup: (tactics as any).lineup ?? [],
-        };
+           },
+           lineup: [],
+         };
       } catch (error) {
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
@@ -1358,7 +1359,7 @@ export const squadRouter = createTRPCRouter({
             )
           : null;
 
-        let offer: any = await ctx.prisma.transferOffer.create({
+         let offer = await ctx.prisma.transferOffer.create({
           data: {
             fromSquadId: fromMembership.squadId,
             toSquadId,
@@ -2024,7 +2025,7 @@ export const squadRouter = createTRPCRouter({
 
         if (!squad) throw new TRPCError({ code: 'NOT_FOUND', message: 'Squad not found' });
 
-        const alerts: any[] = [];
+        const alerts: ManagerInsight[] = [];
 
         // 2. TACTICAL ALERT: Check next upcoming match
         const nextMatch = await ctx.prisma.match.findFirst({
@@ -2054,10 +2055,10 @@ export const squadRouter = createTRPCRouter({
           .filter(m => m.user.playerProfile)
           .slice(0, 3);
 
-        for (const member of topPlayers) {
-          const marketInsight = await managerInsightService.generateMarketInsight(member.user.playerProfile);
-          if (marketInsight) alerts.push(marketInsight);
-        }
+         for (const member of topPlayers) {
+            const marketInsight = await managerInsightService.generateMarketInsight(member.user.playerProfile!);
+           if (marketInsight) alerts.push(marketInsight);
+         }
 
         // 4. FITNESS ALERT: Check for squad-wide exhaustion
         const lowFitnessPlayers = squad.members.filter(m => (m.user.playerProfile?.sharpness || 50) < 40);

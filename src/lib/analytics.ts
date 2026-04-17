@@ -5,6 +5,19 @@
 
 import posthog from 'posthog-js';
 
+interface SentryBreadcrumb {
+  category: string;
+  message: string;
+  data?: Record<string, string | number | boolean | null | undefined>;
+  level: string;
+}
+
+interface SentryGlobal {
+  Sentry?: {
+    addBreadcrumb: (breadcrumb: SentryBreadcrumb) => void;
+  };
+}
+
 type EventProperties = Record<string, string | number | boolean | null | undefined>;
 export type GrowthStage = 'activation' | 'conversion' | 'retention' | 'viral';
 
@@ -133,8 +146,8 @@ export function trackEvent(eventName: string, properties?: EventProperties): voi
   }
   
   // Send to Sentry as breadcrumb for context
-  if (typeof window !== 'undefined' && (window as any).Sentry) {
-    (window as any).Sentry.addBreadcrumb({
+  if (typeof window !== 'undefined' && (window as unknown as SentryGlobal).Sentry) {
+    (window as unknown as SentryGlobal).Sentry!.addBreadcrumb({
       category: 'analytics',
       message: eventName,
       data: sanitizedProperties,

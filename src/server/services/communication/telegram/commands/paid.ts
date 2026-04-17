@@ -2,7 +2,7 @@ import { BaseCommand } from './base';
 import type { CommandContext, ResolvedIdentity } from '../types';
 import { prisma } from "@/lib/db";
 import { getUserSquads } from '../middleware/identity';
-import { SUCCESS, getErrorMessage } from '../responses/errors';
+import { getErrorMessage } from '../responses/errors';
 
 /**
  * Paid Command - Mark yourself as paid for the next match

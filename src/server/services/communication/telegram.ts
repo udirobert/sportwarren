@@ -3,9 +3,16 @@ import { generateInference } from "@/lib/ai/inference";
 import { AGENT_PERSONAS } from "../ai/prompts";
 import TelegramBot from "node-telegram-bot-api";
 import { prisma } from "@/lib/db";
+import type { Prisma, SquadMember, Match } from '@prisma/client';
+
+type LatestMatch =
+  | (Match & { type: 'home'; awaySquad: { name: string } })
+  | (Match & { type: 'away'; homeSquad: { name: string } })
+  | null;
 
 // Modular commands (DRY: Auto-discovered command registry)
-import { registerCommands, wireCommandHandlers, buildWelcomeMessage } from "./telegram/commands/registry";
+import { registerCommands, wireCommandHandlers } from "./telegram/commands/registry";
+import { buildWelcomeMessage } from "./telegram/commands/help-text";
 import { setupGeneralChatHandler } from "./telegram/commands/ask";
 
 import {
@@ -13,7 +20,6 @@ import {
   getUserActiveMemberships,
   isSquadLeader,
 } from "@/server/services/permissions";
-import { submitMatchResult } from "../match-workflow";
 import {
   buildTelegramMiniAppUrl,
   connectTelegramChatByToken,
@@ -27,7 +33,7 @@ import {
   parseTelegramMatchResult,
   type ParsedTelegramMatchResult,
 } from "./telegram-match-parser";
-import { parseNaturalLanguageMatch, type ParsedMatchResult } from "@/lib/ai/match-parser";
+import { parseNaturalLanguageMatch } from "@/lib/ai/match-parser";
 import {
   buildVerificationNudgeMessage,
   shouldSendNudge,
@@ -140,7 +146,7 @@ export class TelegramService {
       },
       treasury: {
         handleMiniAppRequest: (chatId: number, tab: string, userId?: string) =>
-          this.handleMiniAppRequest(chatId, tab as any, userId),
+          this.handleMiniAppRequest(chatId, tab, userId),
         handleFeeProposal: this.handleFeeProposal.bind(this),
         sendMarkdown: (chatId: number, text: string) => this.sendMarkdown(chatId, text),
         sendMessage: (chatId: number, text: string) => this.bot.sendMessage(chatId, text),
@@ -536,9 +542,19 @@ export class TelegramService {
         return;
       }
 
-      // Fallback to static templates if AI fails
-      const staffResponses: Record<string, (q: string, stats: any) => string> =
-        {
+       // Fallback to static templates if AI fails
+       interface StaffStats {
+         matches: number;
+         form: string;
+         winRate: number;
+         wins?: number;
+         draws?: number;
+         losses?: number;
+         goalsFor?: number;
+         goalsAgainst?: number;
+       }
+       const staffResponses: Record<string, (q: string, stats: StaffStats) => string> =
+         {
           coach: (_q, stats) =>
             [
               `🎯 Coach Analysis`,
@@ -1037,11 +1053,11 @@ export class TelegramService {
         targetSquadName = memberships[0].squad.name;
       } else {
         // No chat link and multiple squads - need to ask which one
-        const keyboard = {
-          inline_keyboard: memberships.map((m: any) => [
-            { text: m.squad.name, callback_data: `select_squad_log:${m.squad.id}:${Buffer.from(matchText).toString('base64')}` }
-          ]),
-        };
+         const keyboard = {
+           inline_keyboard: memberships.map((m: SquadMember & { squad: { id: string; name: string } }) => [
+             { text: m.squad.name, callback_data: `select_squad_log:${m.squad.id}:${Buffer.from(matchText).toString('base64')}` }
+           ]),
+         };
         await this.bot.sendMessage(
           chatId,
           "⚽ You're a member of multiple squads. Which one is this match for?",
@@ -1050,8 +1066,8 @@ export class TelegramService {
         return;
       }
 
-      // Check if user is captain of the target squad
-      const membership = memberships.find((m: any) => m.squadId === targetSquadId);
+       // Check if user is captain of the target squad
+       const membership = memberships.find((m: SquadMember) => m.squadId === targetSquadId);
       if (!membership || !isSquadLeader(membership.role)) {
         await this.sendMarkdown(
           chatId,
@@ -1318,6 +1334,7 @@ export class TelegramService {
 
     const isSociallyTrusted = await this.checkSocialTrust(squad.id, opponent.id);
 
+    const { submitMatchResult } = await import("../match-workflow");
     const match = await submitMatchResult({
       prisma,
       homeSquadId: squad.id,
@@ -1500,17 +1517,17 @@ export class TelegramService {
     const lastMatchHome = squad.matchesHome[0];
     const lastMatchAway = squad.matchesAway[0];
 
-    let latestMatch: any = null;
-    if (lastMatchHome && lastMatchAway) {
-      latestMatch =
-        lastMatchHome.matchDate > lastMatchAway.matchDate
-          ? { ...lastMatchHome, type: "home" }
-          : { ...lastMatchAway, type: "away" };
-    } else if (lastMatchHome) {
-      latestMatch = { ...lastMatchHome, type: "home" };
-    } else if (lastMatchAway) {
-      latestMatch = { ...lastMatchAway, type: "away" };
-    }
+     let latestMatch: LatestMatch = null;
+     if (lastMatchHome && lastMatchAway) {
+       latestMatch =
+         lastMatchHome.matchDate > lastMatchAway.matchDate
+           ? ({ ...lastMatchHome, type: "home" } as LatestMatch)
+           : ({ ...lastMatchAway, type: "away" } as LatestMatch);
+     } else if (lastMatchHome) {
+       latestMatch = ({ ...lastMatchHome, type: "home" } as LatestMatch);
+     } else if (lastMatchAway) {
+       latestMatch = ({ ...lastMatchAway, type: "away" } as LatestMatch);
+     }
 
     const treasuryBalance = squad.treasury?.balance ?? 0;
     const formattedBalance = (treasuryBalance / 1000).toFixed(2);

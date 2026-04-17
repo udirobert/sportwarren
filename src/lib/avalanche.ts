@@ -8,17 +8,29 @@ import {
 
 const AVALANCHE_RPC = getAvalancheRpcUrl();
 
+interface EthereumProvider {
+  isMetaMask?: boolean;
+  isCoinbaseWallet?: boolean;
+  request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
+}
+
+declare global {
+  interface Window {
+    ethereum?: EthereumProvider;
+  }
+}
+
 export const connectAvalancheWallet = async (): Promise<{ address: string; error?: string }> => {
   try {
     if (typeof window === 'undefined') {
       return { address: '', error: 'Window is undefined' };
     }
 
-    if (!(window as any).ethereum) {
+    if (!window.ethereum) {
       return { address: '', error: 'No wallet found. Please install MetaMask or another Avalanche-compatible wallet.' };
     }
 
-    const provider = new ethers.BrowserProvider((window as any).ethereum);
+    const provider = new ethers.BrowserProvider(window.ethereum);
     const accounts = await provider.send('eth_requestAccounts', []);
     const targetChain = getAvalancheChain();
     
@@ -27,8 +39,9 @@ export const connectAvalancheWallet = async (): Promise<{ address: string; error
       if (network.chainId !== BigInt(targetChain.id)) {
         try {
           await provider.send('wallet_switchEthereumChain', [{ chainId: ethers.toBeHex(targetChain.id) }]);
-        } catch (switchError: any) {
-          if (switchError.code === 4902) {
+        } catch (switchError) {
+          const err = switchError as { code?: number };
+          if (err.code === 4902) {
             await provider.send('wallet_addEthereumChain', [{
               chainId: ethers.toBeHex(targetChain.id),
               chainName: getAvalancheNetworkLabel(),
@@ -45,9 +58,10 @@ export const connectAvalancheWallet = async (): Promise<{ address: string; error
 
     return { address: '', error: 'No accounts found' };
 
-  } catch (error: any) {
+  } catch (error) {
+    const err = error as Error;
     console.error('Error connecting to Avalanche wallet:', error);
-    return { address: '', error: error.message || 'Failed to connect wallet' };
+    return { address: '', error: err.message || 'Failed to connect wallet' };
   }
 };
 
