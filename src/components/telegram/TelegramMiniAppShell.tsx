@@ -10,6 +10,7 @@ import { TelegramNavigation, type TabId } from './TelegramNavigation';
 export interface PlayerContext {
   id: string;
   name: string | null;
+  avatar: string | null;
   position: string | null;
   level: number;
   totalXP: number;
@@ -23,6 +24,7 @@ export interface PlayerContext {
 export interface SquadMember {
   userId: string;
   name: string | null;
+  avatar: string | null;
   role: string;
   position: string | null;
 }

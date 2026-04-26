@@ -102,6 +102,7 @@ export function TelegramSquadDashboard({ context, onNavigate }: TelegramSquadDas
       id: m.userId,
       address: '',
       name: m.name || 'Player',
+      avatar: m.avatar || undefined,
       position: (m.position || 'MF') as PlayerPosition,
       status: 'available' as const,
     }));

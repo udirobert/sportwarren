@@ -39,6 +39,7 @@ export async function POST(request: NextRequest) {
     chatId: verification.data.chatId,
     username: verification.data.username,
     displayName: verification.data.displayName,
+    photoUrl: verification.data.photoUrl,
   });
 
   if (!identity) {

@@ -3,10 +3,11 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Plus, Minus, Trophy, Zap, MessageSquare, X } from 'lucide-react';
+import { Plus, Minus, Zap } from 'lucide-react';
 import { trpc } from '@/lib/trpc-client';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Avatar } from '@/components/ui/Avatar';
+import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
+import { buildAvatarPresentationFromSummary } from '@/lib/avatar/adapters';
 
 interface QuickLogOpponent {
   id: string;
@@ -22,6 +23,18 @@ interface QuickLogPayload {
   scorerIds: string[];
   status: 'pending';
   timestamp: Date;
+}
+
+interface QuickLogTeammate {
+  id: string;
+  name: string;
+  avatar?: string | null;
+  position?: string | null;
+  level?: number;
+  totalMatches?: number;
+  totalGoals?: number;
+  totalAssists?: number;
+  reputationScore?: number;
 }
 
 interface QuickLogWidgetProps {
@@ -151,7 +164,20 @@ export const QuickLogWidget: React.FC<QuickLogWidgetProps> = ({
             {isLoading ? (
               [1, 2, 3].map(i => <Skeleton key={i} className="h-8 w-20 rounded-lg" />)
             ) : (
-              teammates?.map(player => (
+              teammates?.map((player: QuickLogTeammate) => {
+                const avatarPresentation = buildAvatarPresentationFromSummary({
+                  id: player.id,
+                  name: player.name,
+                  avatar: player.avatar,
+                  position: player.position,
+                  level: player.level,
+                  totalMatches: player.totalMatches,
+                  totalGoals: player.totalGoals,
+                  totalAssists: player.totalAssists,
+                  reputationScore: player.reputationScore,
+                });
+
+                return (
                 <button
                   key={player.id}
                   onClick={() => toggleScorer(player.id)}
@@ -161,15 +187,18 @@ export const QuickLogWidget: React.FC<QuickLogWidgetProps> = ({
                       : 'bg-white border-gray-100 text-gray-600 hover:border-emerald-200'
                   }`}
                 >
-                  <Avatar
-                    src={player.avatar}
-                    name={player.name}
+                  <PlayerAvatar
+                    presentation={avatarPresentation}
                     size="xs"
-                    className="border-0 shadow-none bg-transparent"
+                    showBadge={false}
+                    showCaptainMarker={false}
+                    showSquadAccent={false}
+                    showStateFx={false}
                   />
                   <span className="text-[10px] font-bold truncate max-w-[60px]">{player.name.split(' ')[0]}</span>
                 </button>
-              ))
+                );
+              })
             )}
             <button className="flex items-center gap-1.5 px-2 py-1 rounded-lg border border-dashed border-gray-200 text-gray-400 hover:border-gray-300 transition-all">
               <Plus className="w-3 h-3" />

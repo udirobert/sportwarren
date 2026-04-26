@@ -90,7 +90,12 @@ describe('telegram mini app auth', () => {
     const params = new URLSearchParams({
       auth_date: String(Math.floor(Date.now() / 1000)),
       query_id: 'AAEAAEAA',
-      user: JSON.stringify({ id: 9917, first_name: 'Marcus', username: 'marcus' }),
+      user: JSON.stringify({
+        id: 9917,
+        first_name: 'Marcus',
+        username: 'marcus',
+        photo_url: 'https://t.me/i/userpic/320/marcus.jpg',
+      }),
     });
 
     const dataCheckString = [...params.entries()]
@@ -110,6 +115,7 @@ describe('telegram mini app auth', () => {
       expect(result.data.platformUserId).toBe('9917');
       expect(result.data.username).toBe('marcus');
       expect(result.data.displayName).toBe('Marcus');
+      expect(result.data.photoUrl).toBe('https://t.me/i/userpic/320/marcus.jpg');
     }
   });
 

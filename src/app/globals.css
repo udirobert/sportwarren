@@ -2,9 +2,34 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Mobile-first responsive design utilities */
+/* Design Tokens - Single Source of Truth */
 @layer base {
   :root {
+    /* ── Design Token Variables ────────────────────────────── */
+    /* Semantic colors using HSL for easy theming */
+    --primary: 142 76% 36%;           /* Green-600 */
+    --primary-foreground: 0 0% 100%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;            /* Amber-500 */
+    --warning-foreground: 0 0% 9%;
+    --destructive: 0 84% 60%;         /* Red-500 */
+    --destructive-foreground: 0 0% 100%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 3.9%;
+    --muted: 0 0% 96.1%;
+    --muted-foreground: 0 0% 45.1%;
+    --accent: 0 0% 96.1%;
+    --accent-foreground: 0 0% 9%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 3.9%;
+    --border: 0 0% 89.8%;
+    --input: 0 0% 89.8%;
+    --ring: 142 76% 36%;
+    --radius: 0.625rem;
+
     /* Navigation spacing - single source of truth */
     --nav-height-mobile: 3.5rem;
     --nav-height-desktop: 4rem;
@@ -14,8 +39,33 @@
     --fab-margin: 1.5rem;
     --safe-area-bottom: env(safe-area-inset-bottom, 0px);
     --safe-area-top: env(safe-area-inset-top, 0px);
+
+    /* Team colors for game UI */
+    --team-home: 142 76% 36%;   /* Emerald */
+    --team-away: 0 84% 60%;     /* Red */
+    --xp-gold: 38 92% 50%;      /* Amber */
   }
-  
+
+  .dark {
+    --background: 0 0% 3.9%;
+    --foreground: 0 0% 98%;
+    --card: 0 0% 7%;            /* Gray-950 */
+    --card-foreground: 0 0% 98%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 0 0% 98%;
+    --muted: 0 0% 14.9%;
+    --muted-foreground: 0 0% 63.9%;
+    --accent: 0 0% 14.9%;
+    --accent-foreground: 0 0% 98%;
+    --primary: 142 76% 36%;
+    --primary-foreground: 0 0% 100%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 14.9%;
+    --input: 0 0% 14.9%;
+    --ring: 142 76% 36%;
+  }
+
   html {
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
@@ -23,10 +73,12 @@
     min-height: 100vh;
     min-height: 100dvh;
   }
-  
+
   body {
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
   }
 }
 

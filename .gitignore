@@ -1,140 +1,47 @@
-# Node.js
-node_modules/
-dist/
-dist-ssr/
-*.local
+# Playwright test results
+/playwright-report
+/test-results
+/e2e/test-results
+/e2e/playwright-report
 
-# Logs
-logs/
-*.log
+# Next.js build output
+/.next
+/out
+
+# Production
+/build
+
+# Debug
 npm-debug.log*
 yarn-debug.log*
-pnpm-debug.log*
-lerna-debug.log*
+yarn-error.log*
 
-# Editor directories and files
-.vscode/
-!.vscode/extensions.json
-.idea/
-.DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
-.env
-.env.*
-!.env.example
+# Local env files
+.env*.local
+.env.local
+.local
 
-# XMTP local database files
-xmtp-*.db3
-xmtp-*.db3-shm
-xmtp-*.db3-wal
-.xmtp_db/
+# Vercel
+.vercel
 
-# Deployment files
-deployment-*.json
-*.deployment
-.terraform/
-terraform.tfstate*
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
-
-# Cache and temporary files
-.cache/
-temp/
-tmp/
-*.tmp
-
-# OS generated files
-Thumbs.db
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-
-# Algorand
-*.goal
-sandbox/
-algorand-sandbox/
-*_approval.teal
-*_clear_state.teal
-
-# Python
-__pycache__/
-*.py[cod]
-*.class
-*.so
-.Python
-env/
-/build/
-develop-eggs/
-/dist/
-downloads/
-eggs/
-.eggs/
-/lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# IDE and editor files
-*.swp
-*.swo
-*~
-.project
-.settings/
-nbproject/
-
-# Runtime and process files
-*.pid
-*.seed
-*.pid.lock
-
-# Coverage and testing
-coverage/
-.nyc_output
-test-results/
-junit.xml
-
-# Build artifacts
-/build/
-/out/
-.next/
+# TypeScript
 *.tsbuildinfo
-*.tgz
-*.tar.gz
+next-env.d.ts
 
-# Bolt
-.bolt/
-.junie
-.bolt
+# Testing
+/coverage
 
-# WhatsApp session data
-.wwebjs_auth/
-.wwebjs_cache/
+# Misc
+.DS_Store
+*.pem
 
-# Python virtual environments
-.venv/
-venv/
+# Build output
+/dist
+/build
 
-# Puppeteer/Chromium
-.local-chromium/
+# Logs
+dev.log
+*.log
 
-# Hardhat
-artifacts/
-cache/
-typechain-types/
-.output.txt
-dump.rdb
-.blackboxcli/
+# Environment files with secrets
+src/server/services/communication/.env

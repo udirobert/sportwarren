@@ -1,15 +1,12 @@
 import { z } from 'zod';
 import { createTRPCRouter, publicProcedure, protectedProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
+import { squadIdSchema, sessionCreateSchema, sessionJoinSchema } from '../lib/validation-schemas';
 
 export const sessionRouter = createTRPCRouter({
   // Create a new weekly session for a squad
   create: protectedProcedure
-    .input(z.object({
-      squadId: z.string(),
-      name: z.string().min(3),
-      date: z.date().optional(),
-    }))
+    .input(sessionCreateSchema)
     .mutation(async ({ ctx, input }) => {
       return await ctx.prisma.session.create({
         data: {
@@ -23,10 +20,7 @@ export const sessionRouter = createTRPCRouter({
 
   // Register attendance for a session
   join: protectedProcedure
-    .input(z.object({
-      sessionId: z.string(),
-      teamPreference: z.enum(['bibs', 'no_bibs']).optional(),
-    }))
+    .input(sessionJoinSchema)
     .mutation(async ({ ctx, input }) => {
       if (!ctx.userId) {
         throw new TRPCError({ code: 'UNAUTHORIZED', message: 'User not authenticated' });
@@ -62,7 +56,7 @@ export const sessionRouter = createTRPCRouter({
 
   // Get session details with attendees
   getById: publicProcedure
-    .input(z.object({ id: z.string() }))
+    .input(z.object({ id: z.string().min(1, 'Session ID is required') }))
     .query(async ({ ctx, input }) => {
       const session = await ctx.prisma.session.findUnique({
         where: { id: input.id },
@@ -95,7 +89,7 @@ export const sessionRouter = createTRPCRouter({
 
   // List sessions for a squad
   listBySquad: publicProcedure
-    .input(z.object({ squadId: z.string() }))
+    .input(z.object({ squadId: squadIdSchema }))
     .query(async ({ ctx, input }) => {
       return await ctx.prisma.session.findMany({
         where: { squadId: input.squadId },

@@ -309,6 +309,7 @@ model PlatformIdentity {
   chatId         String?  @map("chat_id") // Last group chat context
   username       String?
   firstName      String?  @map("first_name") // Telegram first name
+  photoUrl       String?  @map("photo_url") // Telegram profile photo URL
 
   // Session fields (moved from PlatformConnection)
   miniAppToken         String?   @unique @map("mini_app_token")

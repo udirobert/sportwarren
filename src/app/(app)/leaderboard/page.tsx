@@ -10,7 +10,7 @@ import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useJourneyState } from "@/hooks/useJourneyState";
 import { PlayerAvatar } from "@/components/ui/PlayerAvatar";
-import { buildDerivedAvatarPresentation } from "@/lib/avatar/builders";
+import { buildAvatarPresentationFromSummary } from "@/lib/avatar/adapters";
 import type { AvatarPresentation } from "@/lib/avatar/types";
 
 function buildLeaderboardAvatar(player: {
@@ -23,12 +23,12 @@ function buildLeaderboardAvatar(player: {
   totalGoals?: number;
   totalAssists?: number;
 }): AvatarPresentation {
-  return buildDerivedAvatarPresentation({
-    userId: player.userId,
+  return buildAvatarPresentationFromSummary({
+    id: player.userId,
     name: player.name ?? 'Anonymous',
-    imageUrl: player.avatar,
+    avatar: player.avatar,
     level: player.level,
-    xp: player.totalXP,
+    totalXP: player.totalXP,
     totalMatches: player.totalMatches,
     totalGoals: player.totalGoals,
     totalAssists: player.totalAssists,

@@ -1,19 +1,57 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { redisService } from '@/server/services/redis';
 import { yellowService } from '@/server/services/blockchain/yellow';
 import { getKiteServiceStatus } from '@/server/services/ai/kite';
 
-export async function GET() {
+interface HealthCheckResult {
+  status: 'ok' | 'degraded' | 'unhealthy';
+  timestamp: string;
+  version: string;
+  uptime: number;
+  services: {
+    database: { status: 'ok' | 'error'; latencyMs?: number };
+    redis: { status: 'ok' | 'unavailable' | 'error'; latencyMs?: number };
+    ai: { provider: string; available: boolean };
+    paymentRail: { enabled: boolean; provider: string };
+  };
+  environment: {
+    nodeEnv: string;
+    region?: string;
+  };
+  checks: Record<string, 'ok' | 'missing' | 'error'>;
+}
+
+export async function GET(): Promise<NextResponse> {
+  const startTime = Date.now();
   const checks: Record<string, 'ok' | 'missing' | 'error'> = {};
+  let overallStatus: 'ok' | 'degraded' | 'unhealthy' = 'ok';
   let httpStatus = 200;
 
-  // ── DB connectivity ───────────────────────────────────────
+  // ── Database connectivity ────────────────────────────────
+  const dbStart = Date.now();
   try {
     await prisma.$queryRaw`SELECT 1`;
     checks.database = 'ok';
   } catch {
     checks.database = 'error';
     httpStatus = 503;
+    overallStatus = 'unhealthy';
+  }
+  const dbLatency = Date.now() - dbStart;
+
+  // ── Redis connectivity ────────────────────────────────────
+  let redisStatus: 'ok' | 'unavailable' | 'error' = 'unavailable';
+  let redisLatency: number | undefined;
+  try {
+    const pingStart = Date.now();
+    await redisService.get('_health_check_');
+    redisLatency = Date.now() - pingStart;
+    redisStatus = 'ok';
+  } catch {
+    // Redis is optional but should be monitored
+    redisStatus = 'unavailable';
+    if (overallStatus === 'ok') overallStatus = 'degraded';
   }
 
   // ── Required env vars ─────────────────────────────────────
@@ -58,21 +96,23 @@ export async function GET() {
   const kiteStatus = getKiteServiceStatus();
   const paymentRail = yellowRail.enabled ? 'yellow-configured' : 'yellow-missing';
 
-  return NextResponse.json({
-    status: httpStatus === 200 ? 'ok' : 'degraded',
+  const result: HealthCheckResult = {
+    status: overallStatus,
     timestamp: new Date().toISOString(),
     version: process.env.npm_package_version || 'unknown',
-    ai: {
-      provider: aiProvider,
-      note: aiProvider === 'none'
-        ? 'Set VENICE_API_KEY (preferred) or OPENAI_API_KEY to enable AI staff chat'
-        : undefined,
+    uptime: Math.floor(process.uptime()),
+    services: {
+      database: { status: checks.database as 'ok' | 'error', latencyMs: dbLatency },
+      redis: { status: redisStatus, latencyMs: redisLatency },
+      ai: { provider: aiProvider, available: aiProvider !== 'none' },
+      paymentRail: { enabled: yellowRail.enabled, provider: 'yellow' },
     },
-    paymentRail,
-    rails: {
-      yellow: yellowRail,
-      kite: kiteStatus,
+    environment: {
+      nodeEnv: process.env.NODE_ENV || 'development',
+      region: process.env.VERCEL_REGION || undefined,
     },
     checks,
-  }, { status: httpStatus });
+  };
+
+  return NextResponse.json(result, { status: httpStatus });
 }

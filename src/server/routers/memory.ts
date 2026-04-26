@@ -1,22 +1,16 @@
 import { z } from 'zod';
 import { createTRPCRouter, publicProcedure } from '../trpc';
+import { staffDecisionSchema } from '../lib/validation-schemas';
 
-const DecisionSchema = z.object({
-  staffId: z.string(),
-  action: z.string(),
-  decision: z.enum(['confirmed', 'declined']),
-  context: z.string().optional(),
-  timestamp: z.string(),
-});
-
-export type StaffDecision = z.infer<typeof DecisionSchema>;
+// Re-export type for convenience
+export type StaffDecision = z.infer<typeof staffDecisionSchema>;
 
 type MemoryHistory = Record<string, StaffDecision[]>;
 
 export const memoryRouter = createTRPCRouter({
   // Log a manager decision for a specific staff member
   logDecision: publicProcedure
-    .input(DecisionSchema)
+    .input(staffDecisionSchema)
     .mutation(async ({ ctx, input }) => {
       const userId = (ctx as { userId?: string }).userId;
       if (!userId) return { ok: false };
@@ -47,7 +41,10 @@ export const memoryRouter = createTRPCRouter({
 
   // Fetch recent decisions for a specific staff member
   getDecisions: publicProcedure
-    .input(z.object({ staffId: z.string(), limit: z.number().min(1).max(20).default(5) }))
+    .input(z.object({ 
+      staffId: z.string().min(1, 'Staff ID is required'), 
+      limit: z.number().int().min(1).max(20).default(5) 
+    }))
     .query(async ({ ctx, input }) => {
       const userId = (ctx as { userId?: string }).userId;
       if (!userId) return { decisions: [] as StaffDecision[] };

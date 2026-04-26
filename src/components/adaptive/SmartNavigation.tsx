@@ -14,6 +14,8 @@ import { SELF_SERVE_PLATFORM_LIST } from '@/types';
 import { ContextualHelp } from './ContextualHelp';
 import { AccountStatusControl } from '@/components/common/AccountStatusControl';
 import { trpc } from '@/lib/trpc-client';
+import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
+import { buildAvatarPresentationFromSummary } from '@/lib/avatar/adapters';
 
 const BOTTOM_NAV_MAX = 5;
 
@@ -40,6 +42,24 @@ export const SmartNavigation: React.FC = () => {
     staleTime: 1000 * 60 * 5,
     retry: false,
   });
+  const playerAvatarPresentation = useMemo(() => {
+    if (!playerProfile) {
+      return null;
+    }
+
+    return buildAvatarPresentationFromSummary({
+      id: playerProfile.userId,
+      name: playerProfile.user?.name,
+      avatar: playerProfile.user?.avatar,
+      position: playerProfile.user?.position,
+      level: playerProfile.level,
+      totalXP: playerProfile.totalXP,
+      totalMatches: playerProfile.totalMatches,
+      totalGoals: playerProfile.totalGoals,
+      totalAssists: playerProfile.totalAssists,
+      reputationScore: playerProfile.reputationScore,
+    });
+  }, [playerProfile]);
   const hasUnconnectedPlatforms = Boolean(
     isVerified &&
     primarySquadId &&
@@ -209,13 +229,21 @@ export const SmartNavigation: React.FC = () => {
               className="flex items-center space-x-3 group"
               onClick={() => handleNavClick('/dashboard')}
             >
-              <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-green-700 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-transform overflow-hidden shrink-0">
-                {playerProfile?.user?.avatar ? (
-                  <img src={playerProfile.user.avatar} alt="" className="w-full h-full object-cover" />
-                ) : (
+              {playerAvatarPresentation ? (
+                <PlayerAvatar
+                  presentation={playerAvatarPresentation}
+                  size="md"
+                  showBadge={false}
+                  showStateFx={false}
+                  showSquadAccent={false}
+                  showCaptainMarker={false}
+                  className="transform transition-transform group-hover:scale-105"
+                />
+              ) : (
+                <div className="w-10 h-10 bg-gradient-to-br from-green-600 to-green-700 rounded-xl flex items-center justify-center transform group-hover:scale-105 transition-transform overflow-hidden shrink-0">
                   <Target className="w-6 h-6 text-white" />
-                )}
-              </div>
+                </div>
+              )}
               <div>
                 <h1 className="text-xl font-bold text-gray-900 dark:text-white">
                   {playerProfile?.user?.name ? playerProfile.user.name : 'SportWarren'}
