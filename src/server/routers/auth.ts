@@ -82,7 +82,7 @@ export const authRouter = createTRPCRouter({
                                     userId: playerId,
                                     role: 'player'
                                 }
-                            }).catch(e => console.warn(`Failed to migrate player ${playerId}:`, e));
+                            }).catch((e: unknown) => console.warn(`Failed to migrate player ${playerId}:`, e));
                         }
                     }
                 }

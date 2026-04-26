@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
     `Club: ${activeSquad.name}`,
     `Squad size: ${squadMembers.length} players`,
     squadMembers.length > 0 &&
-      `Squad: ${squadMembers.map((m) => `${m.user.name || 'Player'} (Lvl ${m.user.playerProfile?.level ?? 1}, ${m.user.playerProfile?.totalMatches ?? 0} matches)`).join(', ')}`,
+      `Squad: ${squadMembers.map((m: typeof squadMembers[0]) => `${m.user.name || 'Player'} (Lvl ${m.user.playerProfile?.level ?? 1}, ${m.user.playerProfile?.totalMatches ?? 0} matches)`).join(', ')}`,
     treasury && `Treasury: ${treasury.balance} TON`,
   ].filter(Boolean).join('\n');
 
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
     treasury && treasury.balance < 100 && 'Treasury risk: low runway (<100 TON). Prioritise conservative recommendations.',
     squadMembers.length < 8 && 'Squad depth risk: fewer than 8 players available.',
     squadMembers.length >= 14 && 'Squad depth signal: broad rotation options are available.',
-    squadMembers.length > 0 && `Average tracked level: ${Math.round(squadMembers.reduce((sum, member) => sum + (member.user.playerProfile?.level ?? 1), 0) / squadMembers.length)}`,
+    squadMembers.length > 0 && `Average tracked level: ${Math.round(squadMembers.reduce((sum: number, member: typeof squadMembers[0]) => sum + (member.user.playerProfile?.level ?? 1), 0) / squadMembers.length)}`,
   ].filter(Boolean).join('\n');
 
   const decisionBlock = recentTransactions.length

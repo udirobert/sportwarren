@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
   const memberships = identity.user.squads;
   const membershipBySquad = new Map(
-    memberships.map((membership) => [membership.squad.id, membership]),
+    memberships.map((membership: typeof memberships[0]) => [membership.squad.id, membership]),
   );
 
   let activeSquadId = identity.activeSquadId && membershipBySquad.has(identity.activeSquadId)
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
   }
 
   if (!activeSquadId && memberships.length > 0) {
-    activeSquadId = memberships[0].squad.id;
+    activeSquadId = (memberships[0] as { squad: { id: string } }).squad.id;
   }
 
   if (activeSquadId && activeSquadId !== identity.activeSquadId) {

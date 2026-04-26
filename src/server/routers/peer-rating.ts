@@ -146,8 +146,8 @@ export const peerRatingRouter = createTRPCRouter({
 
       // Teammates excluding self
       const teammates = squad.members
-        .filter(m => m.userId !== userId && m.user.playerProfile)
-        .map(m => ({
+        .filter((m) => m.userId !== userId && m.user.playerProfile)
+        .map((m) => ({
           id: m.user.playerProfile!.id,
           name: m.user.name || 'Anonymous',
           avatar: m.user.avatar,
@@ -167,7 +167,7 @@ export const peerRatingRouter = createTRPCRouter({
         return Math.abs(hash) / 2147483647;
       };
 
-      const selectedTeammates = teammates
+      const selectedTeammates: typeof teammates = teammates
         .sort((a, b) => seededRandom(teammates.indexOf(a)) - seededRandom(teammates.indexOf(b)))
         .slice(0, PEER_RATING.TEAMMATES_TO_RATE);
 
@@ -215,17 +215,17 @@ export const peerRatingRouter = createTRPCRouter({
       ].filter(Boolean);
 
       const results = allPlayerProfiles.map(profile => {
-        const playerRatings = match.peerRatings.filter(r => r.targetId === profile!.id);
-        const attrs = [...new Set(playerRatings.map(r => r.attribute))];
+        const playerRatings = match.peerRatings.filter((r: { targetId: string }) => r.targetId === profile!.id);
+        const attrs = [...new Set(playerRatings.map((r: { attribute: string }) => r.attribute))];
         
         const medians = attrs.map(attr => {
-          const scores = playerRatings.filter(r => r.attribute === attr).map(r => r.score).sort((a, b) => a - b);
+          const scores = playerRatings.filter((r: { attribute: string; score: number }) => r.attribute === attr).map((r: { score: number }) => r.score).sort((a: number, b: number) => a - b);
           const mid = Math.floor(scores.length / 2);
           const median = scores.length % 2 !== 0 ? scores[mid] : (scores[mid - 1] + scores[mid]) / 2;
           return { attribute: attr, median, count: scores.length };
         }).filter(m => m.count >= PEER_RATING.MIN_QUORUM);
 
-        const motmVotesCount = match.motmVotes.filter(v => v.targetId === profile!.id).length;
+        const motmVotesCount = match.motmVotes.filter((v: { targetId: string }) => v.targetId === profile!.id).length;
 
         // Find the user for this profile from either squad
         const allMembers = [...match.homeSquad.members, ...match.awaySquad.members];
@@ -240,9 +240,8 @@ export const peerRatingRouter = createTRPCRouter({
       });
 
       // Find MOTM winner
-      const motmWinnerId = results.reduce((prev, current) => (prev.motmVotes > current.motmVotes) ? prev : current, results[0]).motmVotes > 0 
-        ? results.reduce((prev, current) => (prev.motmVotes > current.motmVotes) ? prev : current).profileId
-        : null;
+      const winner = results.reduce((prev, current) => (prev.motmVotes > current.motmVotes) ? prev : current, results[0]);
+      const motmWinnerId = winner.motmVotes > 0 ? winner.profileId : null;
 
       return {
         isClosed: true,

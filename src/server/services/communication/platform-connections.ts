@@ -320,6 +320,7 @@ export async function ensureTelegramIdentityForMiniApp(
     chatId?: string | null;
     username?: string | null;
     displayName?: string | null;
+    photoUrl?: string | null;
   }
 ) {
   const existing = await prisma.platformIdentity.findUnique({
@@ -351,6 +352,10 @@ export async function ensureTelegramIdentityForMiniApp(
 
     if (context.username !== undefined && context.username !== existing.username) {
       identityUpdates.username = context.username;
+    }
+
+    if (context.photoUrl !== undefined && context.photoUrl !== existing.photoUrl) {
+      identityUpdates.photoUrl = context.photoUrl;
     }
 
     if (Object.keys(identityUpdates).length > 0) {
@@ -415,11 +420,13 @@ export async function ensureTelegramIdentityForMiniApp(
         userId: user.id,
         chatId: context.chatId ?? null,
         username: context.username ?? null,
+        photoUrl: context.photoUrl ?? null,
       },
       update: {
         userId: user.id,
         chatId: context.chatId ?? null,
         username: context.username ?? null,
+        photoUrl: context.photoUrl ?? null,
       },
     });
   });

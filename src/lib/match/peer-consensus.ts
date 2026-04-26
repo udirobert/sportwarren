@@ -45,24 +45,26 @@ export async function calculateConsensus(prisma: PrismaClient, matchId: string) 
   if (!match) throw new Error('Match not found');
   if (match.peerRatingsClosed) return { success: false, message: 'Consensus already calculated' };
 
+  type PlayerProfileWithId = { id: string; [key: string]: unknown };
+
   const allPlayers = [
-    ...match.homeSquad.members.map(m => m.user.playerProfile).filter(Boolean),
-    ...match.awaySquad.members.map(m => m.user.playerProfile).filter(Boolean),
+    ...match.homeSquad.members.map((m: { user: { playerProfile: unknown } }) => m.user.playerProfile as PlayerProfileWithId).filter(Boolean),
+    ...match.awaySquad.members.map((m: { user: { playerProfile: unknown } }) => m.user.playerProfile as PlayerProfileWithId).filter(Boolean),
   ];
 
   const results = [];
 
   // 1. Calculate Median Ratings per Player per Attribute
   for (const player of allPlayers) {
-    const playerRatings = match.peerRatings.filter(r => r.targetId === player!.id);
-    const attributes = [...new Set(playerRatings.map(r => r.attribute))];
+    const playerRatings = match.peerRatings.filter((r: { targetId: string }) => r.targetId === player!.id);
+    const attributes = [...new Set(playerRatings.map((r: { attribute: string }) => r.attribute))];
     
     const playerAttributeMedians: Record<string, number> = {};
 
     for (const attr of attributes) {
       const scores = playerRatings
-        .filter(r => r.attribute === attr)
-        .map(r => r.score)
+        .filter((r: { attribute: string; score: number }) => r.attribute === attr)
+        .map((r: { score: number }) => r.score)
         .sort((a, b) => a - b);
 
       if (scores.length < PEER_RATING.MIN_QUORUM) continue;
@@ -99,11 +101,11 @@ export async function calculateConsensus(prisma: PrismaClient, matchId: string) 
     }
 
     // 2. Handle MOTM Bonus
-    const votesForPlayer = match.motmVotes.filter(v => v.targetId === player!.id).length;
+    const votesForPlayer = match.motmVotes.filter((v: { targetId: string }) => v.targetId === player!.id).length;
 
     // A player wins MOTM if they have the most votes (and at least 1)
     // Simple logic: find max votes
-    const voteCounts = match.motmVotes.reduce((acc, v) => {
+    const voteCounts = match.motmVotes.reduce((acc: Record<string, number>, v: { targetId: string }) => {
       acc[v.targetId] = (acc[v.targetId] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);
@@ -139,22 +141,22 @@ export async function calculateConsensus(prisma: PrismaClient, matchId: string) 
           baseXP: motmBonus,
           source: 'motm_bonus',
           description: 'Player of the Match bonus',
-          attributeBreakdown: attributesToBonus.reduce((acc, attr) => {
+          attributeBreakdown: attributesToBonus        .reduce((acc: Record<string, number>, attr: string) => {
             acc[attr] = xpPerAttr;
             return acc;
-          }, {} as any)
+          }, {} as Record<string, number>)
         }
       });
     }
 
     // Create XPGain entry for peer ratings if any
-    const playerPeerResults = results.filter(r => r.profileId === player!.id);
+    const playerPeerResults = results.filter((r: { profileId: string }) => r.profileId === player!.id);
     if (playerPeerResults.length > 0) {
-      const totalPeerXP = playerPeerResults.reduce((sum, r) => sum + r.peerXP, 0);
-      const breakdown = playerPeerResults.reduce((acc, r) => {
+      const totalPeerXP = playerPeerResults      .reduce((sum: number, r: { peerXP: number }) => sum + r.peerXP, 0);
+      const breakdown = playerPeerResults      .reduce((acc: Record<string, number>, r: { attribute: string; peerXP: number }) => {
         acc[r.attribute] = r.peerXP;
         return acc;
-      }, {} as any);
+      }, {} as Record<string, number>);
 
       await prisma.xPGain.create({
         data: {
@@ -172,7 +174,7 @@ export async function calculateConsensus(prisma: PrismaClient, matchId: string) 
 
   // 3. Calculate Rater Deviations and Award Scout XP
   for (const rating of match.peerRatings) {
-    const playerAttrResults = results.find(r => r.profileId === rating.targetId && r.attribute === rating.attribute);
+    const playerAttrResults = results.find((r: { profileId: string; attribute: string; median: number }) => r.profileId === rating.targetId && r.attribute === rating.attribute);
     if (!playerAttrResults) continue;
 
     const deviation = Math.abs(rating.score - playerAttrResults.median);
