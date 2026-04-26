@@ -79,7 +79,7 @@ function MatchPreviewContent() {
     if (!squadData?.members) return [];
     return squadData.members
       .filter(m => m.user)
-      .map(m => ({
+      .map((m: { userId: string; user: { name: string | null; position: string | null; avatar: string | null } }) => ({
         id: m.userId,
         name: m.user.name || 'Player',
         position: m.user.position || 'MF',

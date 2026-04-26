@@ -710,7 +710,7 @@ export const matchRouter = createTRPCRouter({
           return { summary: "No recent matches found. Get out there and play!", matchesFound: 0 };
         }
 
-        const matchSummaries = matches.map(m => {
+        const matchSummaries = matches.map((m: { homeSquadId: string; awaySquadId: string; homeScore: number | null; awayScore: number | null; homeSquad: { name: string }; awaySquad: { name: string } }) => {
           const isHome = m.homeSquadId === input.squadId;
           const ourScore = isHome ? m.homeScore : m.awayScore;
           const theirScore = isHome ? m.awayScore : m.homeScore;
@@ -801,7 +801,7 @@ export const matchRouter = createTRPCRouter({
 
           const players: PlayerAttributes[] = squad.members
             .filter(m => m.user.playerProfile)
-            .map(m => {
+            .map((m) => {
               const profile = m.user.playerProfile!;
               return {
                 address: m.user.walletAddress,

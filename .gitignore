@@ -44,4 +44,5 @@ dev.log
 *.log
 
 # Environment files with secrets
-src/server/services/communication/.env
+**/.env
+!.env.example

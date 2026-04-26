@@ -139,7 +139,7 @@ export const playerRouter = createTRPCRouter({
         const profile = await ensurePlayerProfile(ctx.prisma, ctx.userId!);
         
         const attributes: Record<string, number> = {};
-        profile.attributes.forEach(a => {
+        profile.attributes.forEach((a: { attribute: string; rating: number }) => {
           attributes[a.attribute] = a.rating;
         });
 
@@ -287,7 +287,7 @@ export const playerRouter = createTRPCRouter({
 
           // Apply attribute XP
           for (const [attrName, xpAmount] of Object.entries(gain.attributeBreakdown)) {
-            const attr = profile.attributes.find(a => a.attribute === attrName);
+            const attr = profile.attributes.find((a: { attribute: string }) => a.attribute === attrName);
             if (!attr) continue;
 
             let newXp = attr.xp + xpAmount;
@@ -443,13 +443,13 @@ export const playerRouter = createTRPCRouter({
         let ranked;
         switch (type) {
           case 'goals':
-            ranked = profiles.sort((a, b) => b.totalGoals - a.totalGoals);
+            ranked = profiles.sort((a: { totalGoals: number }, b: { totalGoals: number }) => b.totalGoals - a.totalGoals);
             break;
           case 'assists':
-            ranked = profiles.sort((a, b) => b.totalAssists - a.totalAssists);
+            ranked = profiles.sort((a: { totalAssists: number }, b: { totalAssists: number }) => b.totalAssists - a.totalAssists);
             break;
           case 'matches':
-            ranked = profiles.sort((a, b) => b.totalMatches - a.totalMatches);
+            ranked = profiles.sort((a: { totalMatches: number }, b: { totalMatches: number }) => b.totalMatches - a.totalMatches);
             break;
           default:
             // Overall by average rating
@@ -457,10 +457,10 @@ export const playerRouter = createTRPCRouter({
               .map(p => ({
                 ...p,
                 averageRating: p.attributes.length > 0
-                  ? Math.round(p.attributes.reduce((sum, a) => sum + a.rating, 0) / p.attributes.length)
+                  ? Math.round(p.attributes.reduce((sum: number, a: { rating: number }) => sum + a.rating, 0) / p.attributes.length)
                   : 0
               }))
-              .sort((a, b) => b.averageRating - a.averageRating);
+              .sort((a: { averageRating: number }, b: { averageRating: number }) => b.averageRating - a.averageRating);
         }
 
         return ranked.slice(0, limit).map(p => ({
@@ -695,7 +695,7 @@ export const playerRouter = createTRPCRouter({
           weeklyTarget: 150, // 150 minutes per week
           weeklyProgress: profile.activities
             .filter(a => a.createdAt >= weekStart)
-            .reduce((sum, a) => sum + a.duration, 0)
+            .reduce((sum: number, a: { duration: number }) => sum + a.duration, 0)
         };
       } catch (error) {
         throw new TRPCError({

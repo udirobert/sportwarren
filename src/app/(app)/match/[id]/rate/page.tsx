@@ -143,7 +143,7 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
                   )}
                 </div>
                 <div>
-                  <span className="inline-flex items-center rounded-md border border-gray-700 px-2 py-0.5 text-xs font-semibold mb-1 text-gray-400">{currentTeammate.position}</span>
+                  <span className="inline-flex items-center rounded-md border border-gray-700 px-2 py-0.5 text-xs font-semibold mb-1 text-gray-400">{currentTeammate.position || 'Unknown'}</span>
                   <h3 className="text-2xl font-bold">{currentTeammate.name}</h3>
                   <p className="text-sm text-muted-foreground">Scouting {teammateIndex + 1} of {assignments.teammates.length}</p>
                 </div>
@@ -220,7 +220,7 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
                       </div>
                       <div className="flex flex-col items-start">
                         <span className="font-bold">{t.name}</span>
-                        <span className="text-xs opacity-70">{t.position}</span>
+                        <span className="text-xs opacity-70">{t.position || 'Unknown'}</span>
                       </div>
                       {motmVote === t.id && <CheckCircle2 className="ml-auto w-6 h-6 text-white" />}
                     </Button>

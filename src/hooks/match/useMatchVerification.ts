@@ -154,7 +154,7 @@ export function useMatchVerification(squadId?: string): UseMatchVerificationRetu
     [matches],
   );
   const railEnabledCount = useMemo(
-    () => matches.reduce((count, match) => count + (match.paymentRail?.enabled ? 1 : 0), 0),
+    () => matches.reduce((count: number, match: { paymentRail?: { enabled: boolean } }) => count + (match.paymentRail?.enabled ? 1 : 0), 0),
     [matches],
   );
   const hasMore = data?.hasMore || false;

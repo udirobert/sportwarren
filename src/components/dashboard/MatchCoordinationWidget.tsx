@@ -54,8 +54,8 @@ export const MatchCoordinationWidget: React.FC<MatchCoordinationWidgetProps> = (
   const isHome = upcomingMatch.homeSquadId === squadId;
   const opponent = isHome ? upcomingMatch.awaySquad : upcomingMatch.homeSquad;
   
-  const availableCount = rsvps?.filter(r => r.status === 'available').length || 0;
-  const paidCount = rsvps?.filter(r => r.isPaid).length || 0;
+  const availableCount = rsvps?.filter((r: { status: string }) => r.status === 'available').length || 0;
+  const paidCount = rsvps?.filter((r: { isPaid: boolean }) => r.isPaid).length || 0;
 
   const handleRsvp = (status: 'available' | 'unavailable' | 'maybe') => {
     rsvpMutation.mutate({ matchId: upcomingMatch.id, status });
@@ -174,7 +174,7 @@ export const MatchCoordinationWidget: React.FC<MatchCoordinationWidgetProps> = (
           </button>
         </div>
         <div className="flex -space-x-2 overflow-hidden">
-          {rsvps?.filter(r => r.status === 'available').slice(0, 6).map((rsvp) => (
+          {rsvps?.filter((r: { status: string }) => r.status === 'available').slice(0, 6).map((rsvp: { user: { id: string; avatar: string | null; name: string | null }; isPaid: boolean }) => (
             <Avatar 
               key={rsvp.user.id}
               src={rsvp.user.avatar}

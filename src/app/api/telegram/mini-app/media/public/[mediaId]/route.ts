@@ -37,7 +37,7 @@ export async function GET(request: NextRequest, context: { params: { mediaId: st
     const secret = await prisma.squadSecret.findUnique({ where: { squadId_kind: { squadId: media.squadId, kind: 'media_enc' } } });
     const key = secret ? unwrapKeyWithMaster(secret.keyEnc, master) : Buffer.alloc(32);
     const buffer = tryDecryptMedia(stored, key);
-    return new NextResponse(buffer, {
+    return new NextResponse(new Uint8Array(buffer), {
       status: 200,
       headers: { 'Content-Type': media.mimeType, 'Cache-Control': 'public, max-age=300' },
     });
