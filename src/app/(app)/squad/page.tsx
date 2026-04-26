@@ -33,7 +33,7 @@ import { usePlatformConnections } from "@/hooks/usePlatformConnections";
 import type { Player, PlayerPosition, Tactics, Formation, PlayStyle, TeamInstructions } from "@/types";
 import { buildSquadInviteUrl } from "@/lib/squad/invite";
 import { PlayerAvatar } from "@/components/ui/PlayerAvatar";
-import { buildDerivedAvatarPresentation } from "@/lib/avatar/builders";
+import { buildAvatarPresentationFromSummary } from "@/lib/avatar/adapters";
 import type { AvatarPresentation } from "@/lib/avatar/types";
 
 type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance";
@@ -100,10 +100,10 @@ function buildSquadMemberAvatar(member: {
     goals?: number;
   };
 }): AvatarPresentation {
-  return buildDerivedAvatarPresentation({
-    userId: member.id,
+  return buildAvatarPresentationFromSummary({
+    id: member.id,
     name: member.name,
-    imageUrl: member.avatar,
+    avatar: member.avatar,
     role: member.role,
     position: member.position,
     level: member.stats?.level,

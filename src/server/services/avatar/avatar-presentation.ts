@@ -1,6 +1,7 @@
 import type { PrismaClient } from '@prisma/client';
-import { buildDerivedAvatarPresentation } from '@/lib/avatar/builders';
+import { buildAvatarPresentationFromSummary } from '@/lib/avatar/adapters';
 import type { AvatarPresentation } from '@/lib/avatar/types';
+import { resolveAvatarImageUrl } from './avatar-source';
 
 export async function getAvatarPresentation(
   prisma: PrismaClient,
@@ -11,6 +12,13 @@ export async function getAvatarPresentation(
     where: { id: userId },
     include: {
       playerProfile: true,
+      platformIdentities: {
+        where: { platform: 'telegram' },
+        select: {
+          platform: true,
+          photoUrl: true,
+        },
+      },
       squads: {
         include: {
           squad: {
@@ -41,12 +49,12 @@ export async function getAvatarPresentation(
   const totalXP = profile?.totalXP ?? 0;
   const isCaptain = membership?.role === 'captain';
   return {
-    ...buildDerivedAvatarPresentation({
-      userId: user.id,
+    ...buildAvatarPresentationFromSummary({
+      id: user.id,
       name: user.name || 'Player',
-      imageUrl: user.avatar,
+      avatar: resolveAvatarImageUrl(user),
       level,
-      xp: totalXP,
+      totalXP,
       totalMatches,
       totalGoals,
       totalAssists,

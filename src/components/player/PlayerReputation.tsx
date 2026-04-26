@@ -9,6 +9,8 @@ import { usePlayerForm } from '@/hooks/player/usePlayerForm';
 import { AttributeProgress, AttributesSummary } from './AttributeProgress';
 import { FormIndicator, FormBadge } from './FormIndicator';
 import type { PlayerAttributes as PlayerReputationData } from '@/types';
+import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
+import { buildAvatarPresentationFromPlayerAttributes } from '@/lib/avatar/adapters';
 
 interface PlayerReputationProps {
   attributes: PlayerReputationData | null;
@@ -75,6 +77,7 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
   const endorsements = attributesToUse.endorsements ?? [];
   const scoutInterest = attributesToUse.professionalInterest ?? [];
   const seasonProgress = Math.min((attributesToUse.xp.seasonXP / attributesToUse.xp.nextLevelXP) * 100, 100);
+  const avatarPresentation = buildAvatarPresentationFromPlayerAttributes(attributesToUse);
 
   const scoutXPToNext = attributesToUse.scoutTier === 'rookie' ? 100 : attributesToUse.scoutTier === 'trusted' ? 500 : null;
   const scoutProgress = scoutXPToNext ? Math.min((attributesToUse.scoutXP / scoutXPToNext) * 100, 100) : 100;
@@ -107,13 +110,11 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
       <Card>
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center space-x-4">
-            <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center overflow-hidden">
-              {attributesToUse.avatar ? (
-                <img src={attributesToUse.avatar} alt={attributesToUse.playerName} className="w-full h-full object-cover" />
-              ) : (
-                <User className="w-10 h-10 text-white" />
-              )}
-            </div>
+            <PlayerAvatar
+              presentation={avatarPresentation}
+              size="hero"
+              showBadge={false}
+            />
             <div>
               <div className="flex items-center space-x-3 mb-1">
                 <h1 className="text-2xl font-bold text-gray-900">{attributesToUse.playerName}</h1>

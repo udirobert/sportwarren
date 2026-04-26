@@ -18,32 +18,18 @@ import {
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
 import { kiteAIService } from '../services/ai/kite';
 import { algorandService } from '../services/blockchain/algorand';
+import {
+  squadIdSchema,
+  squadNameSchema,
+  shortNameSchema,
+  paginationSchema,
+  formationSchema,
+  playStyleSchema,
+  treasuryAmountSchema,
+  yellowTreasurySettlementSchema,
+} from '../lib/validation-schemas';
 
-const formationSchema = z.enum([
-  '4-4-2', '4-3-3', '4-2-3-1', '3-5-2', '5-3-2',
-  '4-5-1', '4-1-4-1', '3-4-3', '4-3-1-2', '5-4-1',
-  '1-2-1', '1-1-2',
-  '1-3-1', '1-2-2', '1-2-1-1',
-  '1-4-1', '1-3-2', '1-3-1-1', '2-3-1',
-]);
-
-const playStyleSchema = z.enum([
-  'balanced', 'possession', 'direct', 'counter', 'high_press', 'low_block'
-]);
-
-const instructionsSchema = z.object({
-  width: z.enum(['narrow', 'normal', 'wide']).optional(),
-  tempo: z.enum(['slow', 'normal', 'fast']).optional(),
-  passing: z.enum(['short', 'mixed', 'long']).optional(),
-  pressing: z.enum(['low', 'medium', 'high']).optional(),
-  defensiveLine: z.enum(['deep', 'normal', 'high']).optional(),
-});
-
-const yellowTreasurySettlementSchema = z.object({
-  sessionId: z.string().min(1, 'Yellow session ID is required'),
-  version: z.number().int().nonnegative('Yellow version must be non-negative'),
-  settlementId: z.string().min(1).optional(),
-});
+// Use shared schemas from validation-schemas.ts
 
 function getDefaultTonTreasuryAddress(): string | null {
   const value = process.env.TON_TREASURY_WALLET_ADDRESS?.trim();
@@ -194,9 +180,9 @@ export const squadRouter = createTRPCRouter({
   // Create a new squad
   create: protectedProcedure
     .input(z.object({
-      name: z.string().min(2, 'Squad name must be at least 2 characters'),
-      shortName: z.string().min(2).max(5, 'Short name must be 2-5 characters'),
-      homeGround: z.string().optional(),
+      name: squadNameSchema,
+      shortName: shortNameSchema,
+      homeGround: z.string().max(120).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -241,8 +227,7 @@ export const squadRouter = createTRPCRouter({
   list: publicProcedure
     .input(z.object({
       search: z.string().optional(),
-      limit: z.number().min(1).max(100).default(20),
-      offset: z.number().min(0).default(0),
+      ...paginationSchema.shape,
     }))
     .query(async ({ ctx, input }) => {
       try {
@@ -281,7 +266,7 @@ export const squadRouter = createTRPCRouter({
 
   // Get squad by ID with members
   getById: publicProcedure
-    .input(z.object({ id: z.string().min(1, 'Squad ID is required') }))
+    .input(z.object({ id: squadIdSchema }))
     .query(async ({ ctx, input }) => {
       try {
         const squad = await ctx.prisma.squad.findUnique({
@@ -349,7 +334,7 @@ export const squadRouter = createTRPCRouter({
 
   // Get Digital Twin Stats & Season Progress
   getDigitalTwin: publicProcedure
-    .input(z.object({ squadId: z.string().min(1) }))
+    .input(z.object({ squadId: squadIdSchema }))
     .query(async ({ ctx, input }) => {
       const squad = await ctx.prisma.squad.findUnique({
         where: { id: input.squadId },
@@ -419,7 +404,7 @@ export const squadRouter = createTRPCRouter({
 
   // Simulate a Ghost Match (Digital Twin progression)
   simulateGhostMatch: protectedProcedure
-    .input(z.object({ squadId: z.string().min(1) }))
+    .input(z.object({ squadId: squadIdSchema }))
     .mutation(async ({ ctx, input }) => {
       // Check if user is a member of the squad
       const membership = await ctx.prisma.squadMember.findUnique({
@@ -443,9 +428,7 @@ export const squadRouter = createTRPCRouter({
 
   // Join a squad
   join: protectedProcedure
-    .input(z.object({
-      squadId: z.string().min(1, 'Squad ID is required'),
-    }))
+    .input(z.object({ squadId: squadIdSchema }))
     .mutation(async ({ ctx, input }) => {
       try {
         // Check if squad exists
@@ -498,9 +481,7 @@ export const squadRouter = createTRPCRouter({
 
   // Leave a squad
   leave: protectedProcedure
-    .input(z.object({
-      squadId: z.string().min(1, 'Squad ID is required'),
-    }))
+    .input(z.object({ squadId: squadIdSchema }))
     .mutation(async ({ ctx, input }) => {
       try {
         // Check if member exists
@@ -582,9 +563,7 @@ export const squadRouter = createTRPCRouter({
 
   // Get player context for a specific squad (per-squad stats)
   getPlayerContext: protectedProcedure
-    .input(z.object({
-      squadId: z.string().min(1, 'Squad ID is required'),
-    }))
+    .input(z.object({ squadId: squadIdSchema }))
     .query(async ({ ctx, input }) => {
       try {
         const { squadId } = input;
@@ -658,7 +637,7 @@ export const squadRouter = createTRPCRouter({
   // Get top teammates (most matches together) for quick logging
   getTopTeammates: protectedProcedure
     .input(z.object({
-      squadId: z.string().min(1, 'Squad ID is required'),
+      squadId: squadIdSchema,
       limit: z.number().int().min(1).max(10).default(5),
     }))
     .query(async ({ ctx, input }) => {
@@ -675,6 +654,16 @@ export const squadRouter = createTRPCRouter({
                 id: true,
                 name: true,
                 avatar: true,
+                position: true,
+                playerProfile: {
+                  select: {
+                    level: true,
+                    totalMatches: true,
+                    totalGoals: true,
+                    totalAssists: true,
+                    reputationScore: true,
+                  },
+                },
               },
             },
           },
@@ -688,6 +677,12 @@ export const squadRouter = createTRPCRouter({
           id: m.user.id,
           name: m.user.name || 'Unknown Player',
           avatar: m.user.avatar,
+          position: m.user.position,
+          level: m.user.playerProfile?.level ?? 1,
+          totalMatches: m.user.playerProfile?.totalMatches ?? 0,
+          totalGoals: m.user.playerProfile?.totalGoals ?? 0,
+          totalAssists: m.user.playerProfile?.totalAssists ?? 0,
+          reputationScore: m.user.playerProfile?.reputationScore ?? 100,
         }));
       } catch (error) {
         throw new TRPCError({
@@ -704,9 +699,7 @@ export const squadRouter = createTRPCRouter({
 
   // Get squad tactics
   getTactics: protectedProcedure
-    .input(z.object({
-      squadId: z.string().min(1, 'Squad ID is required'),
-    }))
+    .input(z.object({ squadId: squadIdSchema }))
     .query(async ({ ctx, input }) => {
       try {
         const member = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
@@ -771,16 +764,22 @@ export const squadRouter = createTRPCRouter({
   // Save squad tactics (captain only)
   saveTactics: protectedProcedure
     .input(z.object({
-      squadId: z.string().min(1, 'Squad ID is required'),
+      squadId: squadIdSchema,
       formation: formationSchema,
       playStyle: playStyleSchema,
-      instructions: instructionsSchema.optional(),
-      setPieces: z.object({
-        corners: z.string().optional(),
-        freeKicks: z.string().optional(),
-        penalties: z.string().optional(),
+      instructions: z.object({
+        width: z.enum(['narrow', 'normal', 'wide']).optional(),
+        tempo: z.enum(['slow', 'normal', 'fast']).optional(),
+        passing: z.enum(['short', 'mixed', 'long']).optional(),
+        pressing: z.enum(['low', 'medium', 'high']).optional(),
+        defensiveLine: z.enum(['deep', 'normal', 'high']).optional(),
       }).optional(),
-      lineup: z.array(z.string()).optional(),
+      setPieces: z.object({
+        corners: z.string().max(30).optional(),
+        freeKicks: z.string().max(30).optional(),
+        penalties: z.string().max(30).optional(),
+      }).optional(),
+      lineup: z.array(z.string()).max(11).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -830,9 +829,7 @@ export const squadRouter = createTRPCRouter({
 
   // Get squad treasury
   getTreasury: protectedProcedure
-    .input(z.object({
-      squadId: z.string().min(1, 'Squad ID is required'),
-    }))
+    .input(z.object({ squadId: squadIdSchema }))
     .query(async ({ ctx, input }) => {
       try {
         const member = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
@@ -886,7 +883,7 @@ export const squadRouter = createTRPCRouter({
 
   setTonTreasuryWalletAddress: protectedProcedure
     .input(z.object({
-      squadId: z.string().min(1, 'Squad ID is required'),
+      squadId: squadIdSchema,
       walletAddress: z.string().trim().min(1, 'TON wallet address is required').nullable(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -937,7 +934,7 @@ export const squadRouter = createTRPCRouter({
 
   reconcileTonTopUp: protectedProcedure
     .input(z.object({
-      squadId: z.string().min(1, 'Squad ID is required'),
+      squadId: squadIdSchema,
       transactionId: z.string().min(1, 'Transaction ID is required'),
       settledTxHash: z.string().trim().min(1).optional(),
     }))
@@ -1029,9 +1026,9 @@ export const squadRouter = createTRPCRouter({
   // Deposit to treasury
   depositToTreasury: protectedProcedure
     .input(z.object({
-      squadId: z.string().min(1, 'Squad ID is required'),
-      amount: z.number().positive('Amount must be positive'),
-      description: z.string().optional(),
+      squadId: squadIdSchema,
+      amount: treasuryAmountSchema,
+      description: z.string().max(500).optional(),
       yellowSettlement: yellowTreasurySettlementSchema.optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -1114,9 +1111,9 @@ export const squadRouter = createTRPCRouter({
   // Withdraw from treasury
   withdrawFromTreasury: protectedProcedure
     .input(z.object({
-      squadId: z.string().min(1, 'Squad ID is required'),
-      amount: z.number().positive('Amount must be positive'),
-      reason: z.string().min(1, 'Reason is required'),
+      squadId: squadIdSchema,
+      amount: treasuryAmountSchema,
+      reason: z.string().min(1, 'Reason is required').max(200),
       category: z.enum(['wages', 'transfers', 'facilities', 'other']),
       yellowSettlement: yellowTreasurySettlementSchema.optional(),
     }))
@@ -1222,7 +1219,7 @@ export const squadRouter = createTRPCRouter({
   // Get transfer offers for a squad
   getTransferOffers: protectedProcedure
     .input(z.object({
-      squadId: z.string().min(1, 'Squad ID is required'),
+      squadId: squadIdSchema,
       type: z.enum(['incoming', 'outgoing']).default('incoming'),
     }))
     .query(async ({ ctx, input }) => {
@@ -2001,7 +1998,7 @@ export const squadRouter = createTRPCRouter({
 
   // Get proactive AI-driven alerts for squad management
   getManagerAlerts: protectedProcedure
-    .input(z.object({ squadId: z.string().min(1) }))
+    .input(z.object({ squadId: squadIdSchema }))
     .query(async ({ ctx, input }) => {
       try {
         const { squadId } = input;
@@ -2087,7 +2084,7 @@ export const squadRouter = createTRPCRouter({
 
   // Get user's availability for a specific squad
   getMyAvailability: protectedProcedure
-    .input(z.object({ squadId: z.string().min(1) }))
+    .input(z.object({ squadId: squadIdSchema }))
     .query(async ({ ctx, input }) => {
       const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
       if (!membership) {
@@ -2103,11 +2100,11 @@ export const squadRouter = createTRPCRouter({
   // Set recurring availability for a squad
   setAvailability: protectedProcedure
     .input(z.object({
-      squadId: z.string().min(1),
-      dayOfWeek: z.number().min(1).max(7),
-      timeSlot: z.string().optional(),
+      squadId: squadIdSchema,
+      dayOfWeek: z.number().int().min(1, 'Day of week must be 1-7').max(7),
+      timeSlot: z.string().max(20).optional(),
       isAvailable: z.boolean().default(true),
-      notes: z.string().optional(),
+      notes: z.string().max(200).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
@@ -2141,7 +2138,7 @@ export const squadRouter = createTRPCRouter({
 
   // Remove availability for a squad
   removeAvailability: protectedProcedure
-    .input(z.object({ squadId: z.string().min(1), dayOfWeek: z.number().min(1).max(7) }))
+    .input(z.object({ squadId: squadIdSchema, dayOfWeek: z.number().int().min(1).max(7) }))
     .mutation(async ({ ctx, input }) => {
       const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
       if (!membership) {
@@ -2161,7 +2158,7 @@ export const squadRouter = createTRPCRouter({
 
   // Get squad's availability summary (for captains)
   getSquadAvailabilitySummary: protectedProcedure
-    .input(z.object({ squadId: z.string().min(1) }))
+    .input(z.object({ squadId: squadIdSchema }))
     .query(async ({ ctx, input }) => {
       const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
       if (!membership) {

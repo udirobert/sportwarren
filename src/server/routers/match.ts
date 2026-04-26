@@ -14,8 +14,18 @@ import {
 import { simulateMatch, calculateWinProbabilities } from '@/lib/match/simulation-engine';
 import { INTEL_LEVELS, maskMatchIntel } from '@/lib/match/intel-disclosure';
 import { Tactics, PlayerAttributes, Formation, PlayStyle, TeamInstructions, SetPieceInstructions } from '@/types';
+import {
+  squadIdSchema,
+  matchIdSchema,
+  matchScoreSchema,
+  paginationSchema,
+  matchStatusSchema,
+  yellowMatchSettlementSchema,
+  latitudeSchema,
+  longitudeSchema,
+} from '../lib/validation-schemas';
 
-const MatchStatus = z.enum(['pending', 'verified', 'disputed', 'finalized']);
+// Use shared validation schemas
 
 // Custom error messages
 const Errors = {
@@ -25,12 +35,6 @@ const Errors = {
   ALREADY_VERIFIED: { code: 'CONFLICT' as const, message: 'Already verified this match' },
   INVALID_SCORE: { code: 'BAD_REQUEST' as const, message: 'Invalid score provided' },
 };
-
-const yellowMatchSettlementSchema = z.object({
-  sessionId: z.string().min(1, 'Yellow session ID is required'),
-  version: z.number().int().nonnegative('Yellow version must be non-negative'),
-  settlementId: z.string().min(1).optional(),
-});
 
 function toTRPCError(error: unknown) {
   if (error instanceof TRPCError) {
@@ -56,13 +60,13 @@ export const matchRouter = createTRPCRouter({
   // Submit a new match result
   submit: protectedProcedure
     .input(z.object({
-      homeSquadId: z.string().min(1, 'Home squad is required'),
-      awaySquadId: z.string().min(1, 'Away squad is required'),
-      homeScore: z.number().min(0, 'Score cannot be negative'),
-      awayScore: z.number().min(0, 'Score cannot be negative'),
+      homeSquadId: squadIdSchema,
+      awaySquadId: squadIdSchema,
+      homeScore: matchScoreSchema,
+      awayScore: matchScoreSchema,
       matchDate: z.date().default(() => new Date()),
-      latitude: z.number().optional(),
-      longitude: z.number().optional(),
+      latitude: latitudeSchema.optional(),
+      longitude: longitudeSchema.optional(),
       yellowSettlement: yellowMatchSettlementSchema.optional(),
       isSociallyTrusted: z.boolean().optional(),
       hasKeeper: z.boolean().optional(),
@@ -106,10 +110,10 @@ export const matchRouter = createTRPCRouter({
   // Handle RSVP for a match
   rsvp: protectedProcedure
     .input(z.object({
-      matchId: z.string().min(1),
+      matchId: matchIdSchema,
       status: z.enum(['available', 'unavailable', 'maybe']),
-      position: z.string().optional(),
-      notes: z.string().optional(),
+      position: z.string().max(10).optional(),
+      notes: z.string().max(200).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       return ctx.prisma.matchRsvp.upsert({
@@ -139,10 +143,10 @@ export const matchRouter = createTRPCRouter({
   // Set payment status for a player (subs/pitch fees)
   setPaymentStatus: protectedProcedure
     .input(z.object({
-      matchId: z.string().min(1),
-      userId: z.string().optional(), // If omitted, set for self
+      matchId: matchIdSchema,
+      userId: z.string().min(1).optional(), // If omitted, set for self
       isPaid: z.boolean(),
-      amountPaid: z.number().optional(),
+      amountPaid: z.number().positive().optional(),
       paymentType: z.enum(['cash', 'transfer', 'crypto']).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -226,9 +230,7 @@ export const matchRouter = createTRPCRouter({
 
   // Get RSVPs for a match
   getRsvps: protectedProcedure
-    .input(z.object({
-      matchId: z.string().min(1),
-    }))
+    .input(z.object({ matchId: matchIdSchema }))
     .query(async ({ ctx, input }) => {
       return ctx.prisma.matchRsvp.findMany({
         where: { matchId: input.matchId },
@@ -248,9 +250,7 @@ export const matchRouter = createTRPCRouter({
 
   // Get the next upcoming match for a squad
   getUpcoming: protectedProcedure
-    .input(z.object({
-      squadId: z.string().min(1),
-    }))
+    .input(z.object({ squadId: squadIdSchema }))
     .query(async ({ ctx, input }) => {
       return ctx.prisma.match.findFirst({
         where: {
@@ -276,10 +276,10 @@ export const matchRouter = createTRPCRouter({
   // Verify a match result
   verify: protectedProcedure
     .input(z.object({
-      matchId: z.string().min(1, 'Match ID is required'),
+      matchId: matchIdSchema,
       verified: z.boolean(),
-      homeScore: z.number().min(0).optional(),
-      awayScore: z.number().min(0).optional(),
+      homeScore: matchScoreSchema.optional(),
+      awayScore: matchScoreSchema.optional(),
       yellowSettlement: yellowMatchSettlementSchema.optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -344,7 +344,7 @@ export const matchRouter = createTRPCRouter({
 
   settleFeeSession: protectedProcedure
     .input(z.object({
-      matchId: z.string().min(1, 'Match ID is required'),
+      matchId: matchIdSchema,
       yellowSettlement: yellowMatchSettlementSchema,
     }))
     .mutation(async ({ ctx, input }) => {
@@ -408,9 +408,7 @@ export const matchRouter = createTRPCRouter({
 
   // Finalize a verified match and issue Reputation tracking SBT logic
   finalize: protectedProcedure
-    .input(z.object({
-      matchId: z.string().min(1, 'Match ID is required')
-    }))
+    .input(z.object({ matchId: matchIdSchema }))
     .mutation(async ({ ctx, input }) => {
       try {
         const { matchId } = input;
@@ -503,10 +501,9 @@ export const matchRouter = createTRPCRouter({
   // List matches with filtering
   list: publicProcedure
     .input(z.object({
-      status: MatchStatus.optional(),
-      squadId: z.string().optional(),
-      limit: z.number().min(1).max(100).default(20),
-      offset: z.number().min(0).default(0),
+      status: matchStatusSchema.optional(),
+      squadId: squadIdSchema.optional(),
+      ...paginationSchema.shape,
     }))
     .query(async ({ ctx, input }) => {
       try {
@@ -558,7 +555,7 @@ export const matchRouter = createTRPCRouter({
 
   // Get single match with details
   getById: publicProcedure
-    .input(z.object({ id: z.string().min(1, 'Match ID is required') }))
+    .input(z.object({ id: matchIdSchema }))
     .query(async ({ ctx, input }) => {
       try {
         const match = await ctx.prisma.match.findUnique({
@@ -682,7 +679,7 @@ export const matchRouter = createTRPCRouter({
 
   // Get Captain's Log (Summarize last 5 matches)
   getCaptainsLog: protectedProcedure
-    .input(z.object({ squadId: z.string().min(1, 'Squad ID is required') }))
+    .input(z.object({ squadId: squadIdSchema }))
     .query(async ({ ctx, input }) => {
       try {
         const member = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
@@ -758,8 +755,8 @@ export const matchRouter = createTRPCRouter({
   // Preview a match between two squads (Simulation)
   preview: publicProcedure
     .input(z.object({
-      homeSquadId: z.string().min(1, 'Home squad is required'),
-      awaySquadId: z.string().min(1, 'Away squad is required'),
+      homeSquadId: squadIdSchema,
+      awaySquadId: squadIdSchema,
     }))
     .query(async ({ ctx, input }) => {
       try {
@@ -849,7 +846,7 @@ export const matchRouter = createTRPCRouter({
    * Admin procedure to trigger consensus calculation for expired rating windows
    */
   triggerConsensus: adminProcedure
-    .input(z.object({ matchId: z.string().optional() }))
+    .input(z.object({ matchId: matchIdSchema.optional() }))
     .mutation(async ({ ctx, input }) => {
       try {
         const { calculateConsensus } = await import('@/lib/match/peer-consensus');

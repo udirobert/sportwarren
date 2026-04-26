@@ -7,6 +7,7 @@ interface TelegramInitDataUser {
   first_name?: string;
   last_name?: string;
   username?: string;
+  photo_url?: string;
 }
 
 interface TelegramInitDataChat {
@@ -18,6 +19,7 @@ export interface VerifiedTelegramInitData {
   chatId: string | null;
   username: string | null;
   displayName: string | null;
+  photoUrl: string | null;
   authDate: Date;
   startParam: string | null;
 }
@@ -84,6 +86,7 @@ export function verifyTelegramWebAppInitData(
       chatId: chat ? String(chat.id) : null,
       username: user.username ?? null,
       displayName,
+      photoUrl: user.photo_url?.trim() || null,
       authDate: new Date(authDateSeconds * 1000),
       startParam: parsed.get("start_param"),
     },
@@ -113,6 +116,9 @@ function parseUser(raw: string): TelegramInitDataUser | null {
     }
     if (typeof candidate.username === "string") {
       user.username = candidate.username;
+    }
+    if (typeof candidate.photo_url === "string") {
+      user.photo_url = candidate.photo_url;
     }
 
     return user;

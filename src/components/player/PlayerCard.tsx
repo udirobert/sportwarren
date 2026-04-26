@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Card } from '@/components/ui/Card';
-import { User, Award, Bot } from 'lucide-react';
+import { Award, Bot } from 'lucide-react';
 import { FormBadge } from './FormIndicator';
 import type { PlayerAttributes, PlayerPosition } from '@/types';
 import {
@@ -16,6 +16,8 @@ import {
   detectPositionFromSkills,
 } from '@/lib/utils';
 import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
+import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
+import { buildAvatarPresentationFromPlayerAttributes } from '@/lib/avatar/adapters';
 
 interface PlayerCardProps {
   player: PlayerAttributes;
@@ -38,6 +40,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
   // Get player position from highest attribute using centralized utility
   const position = detectPositionFromSkills(player.skills) as PlayerPosition;
+  const avatarPresentation = buildAvatarPresentationFromPlayerAttributes(player);
 
   const isGlowing = player.form.current > 7;
 
@@ -48,13 +51,12 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         onClick={onClick}
       >
         <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 overflow-hidden">
-            {player.avatar ? (
-              <img src={player.avatar} alt={player.playerName} className="w-full h-full object-cover" />
-            ) : (
-              <User className="w-6 h-6 text-white" />
-            )}
-          </div>
+          <PlayerAvatar
+            presentation={avatarPresentation}
+            size="lg"
+            showBadge={false}
+            className="flex-shrink-0"
+          />
           <div className="flex-1 min-w-0">
             <div className="flex items-center space-x-2">
               <h4 className="font-semibold text-gray-900 truncate">{player.playerName}</h4>
@@ -85,13 +87,11 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         {/* Header */}
         <div className="flex items-start justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center overflow-hidden">
-              {player.avatar ? (
-                <img src={player.avatar} alt={player.playerName} className="w-full h-full object-cover" />
-              ) : (
-                <User className="w-8 h-8 text-white" />
-              )}
-            </div>
+            <PlayerAvatar
+              presentation={avatarPresentation}
+              size="xl"
+              showBadge={false}
+            />
             <div>
               <div className="flex items-center space-x-2 mb-1">
                 <h3 className="text-lg font-bold text-gray-900">{player.playerName}</h3>

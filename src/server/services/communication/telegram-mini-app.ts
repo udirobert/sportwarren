@@ -12,6 +12,7 @@ import {
   findPlatformIdentityByMiniAppToken,
   updateActiveSquadContext,
 } from "./platform-connections";
+import { resolveAvatarImageUrl } from "../avatar/avatar-source";
 import { getSquadMembership, isSquadLeader } from "../permissions";
 import {
   getRequiredMatchVerifications,
@@ -50,6 +51,7 @@ export interface TelegramMiniAppContext {
   player: {
     id: string;
     name: string | null;
+    avatar: string | null;
     position: string | null;
     level: number;
     totalXP: number;
@@ -79,6 +81,7 @@ export interface TelegramMiniAppContext {
     members: Array<{
       userId: string;
       name: string | null;
+      avatar: string | null;
       role: string;
       position: string | null;
     }>;
@@ -484,7 +487,20 @@ export async function getTelegramMiniAppContext(
   const playerProfile = await prisma.playerProfile.findUnique({
     where: { userId },
     include: {
-      user: { select: { name: true, position: true } },
+      user: {
+        select: {
+          name: true,
+          avatar: true,
+          position: true,
+          platformIdentities: {
+            where: { platform: "telegram" },
+            select: {
+              platform: true,
+              photoUrl: true,
+            },
+          },
+        },
+      },
       attributes: {
         orderBy: { attribute: "asc" },
       },
@@ -495,7 +511,21 @@ export async function getTelegramMiniAppContext(
   const squadMembers = await prisma.squadMember.findMany({
     where: { squadId },
     include: {
-      user: { select: { id: true, name: true, position: true } },
+      user: {
+        select: {
+          id: true,
+          name: true,
+          avatar: true,
+          position: true,
+          platformIdentities: {
+            where: { platform: "telegram" },
+            select: {
+              platform: true,
+              photoUrl: true,
+            },
+          },
+        },
+      },
     },
     orderBy: [
       { role: "asc" }, // captain first
@@ -617,6 +647,7 @@ export async function getTelegramMiniAppContext(
       ? {
           id: playerProfile.id,
           name: playerProfile.user.name,
+          avatar: resolveAvatarImageUrl(playerProfile.user),
           position: playerProfile.user.position,
           level: playerProfile.level,
           totalXP: playerProfile.totalXP,
@@ -647,6 +678,7 @@ export async function getTelegramMiniAppContext(
       members: squadMembers.map((member) => ({
         userId: member.user.id,
         name: member.user.name,
+        avatar: resolveAvatarImageUrl(member.user),
         role: member.role,
         position: member.user.position,
       })),

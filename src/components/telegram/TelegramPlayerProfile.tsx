@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo } from 'react';
+import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
+import { buildAvatarPresentationFromSummary } from '@/lib/avatar/adapters';
 import {
   User,
   Zap,
@@ -244,6 +246,27 @@ export function TelegramPlayerProfile({ context }: TelegramPlayerProfileProps) {
     };
   }, [player]);
 
+  const avatarPresentation = useMemo(() => {
+    if (!player) {
+      return null;
+    }
+
+    const currentMembership = squad.members.find((member) => member.userId === context.userId);
+    return buildAvatarPresentationFromSummary({
+      id: context.userId,
+      name: player.name || 'Player',
+      avatar: player.avatar,
+      level: player.level,
+      totalXP: player.totalXP,
+      totalMatches: player.stats.matches,
+      totalGoals: player.stats.goals,
+      totalAssists: player.stats.assists,
+      role: currentMembership?.role,
+      position: player.position,
+      reputationScore: player.reputationScore,
+    });
+  }, [context.userId, player, squad.members]);
+
   // If no player profile exists
   if (!player) {
     return (
@@ -267,16 +290,19 @@ export function TelegramPlayerProfile({ context }: TelegramPlayerProfileProps) {
 
         <div className="relative p-6">
           <div className="flex items-start gap-4">
-            {/* Avatar/Overall Circle */}
-            <div className="relative">
-              <div className="flex h-20 w-20 flex-col items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-cyan-500">
-                <span className="text-3xl font-black text-white">{overall}</span>
-                <span className="text-[10px] font-bold uppercase text-white/80">OVR</span>
-              </div>
-              {/* Level badge */}
-              <div className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-xs font-black text-white shadow-lg">
-                {player.level}
-              </div>
+            <div className="shrink-0">
+              {avatarPresentation ? (
+                <PlayerAvatar
+                  presentation={avatarPresentation}
+                  size="hero"
+                  showBadge={false}
+                  className="drop-shadow-lg"
+                />
+              ) : (
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white/10">
+                  <User className="h-8 w-8 text-slate-400" />
+                </div>
+              )}
             </div>
 
             {/* Player Info */}
@@ -300,6 +326,14 @@ export function TelegramPlayerProfile({ context }: TelegramPlayerProfileProps) {
                     style={{ width: `${xpProgress.percentage}%` }}
                   />
                 </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-white/10 bg-black/20 px-3 py-2 text-center shadow-lg">
+              <div className="text-3xl font-black text-white">{overall}</div>
+              <div className="text-[10px] font-bold uppercase tracking-wide text-white/70">OVR</div>
+              <div className="mt-2 rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-black uppercase text-white">
+                Lvl {player.level}
               </div>
             </div>
           </div>

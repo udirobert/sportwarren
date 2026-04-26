@@ -2,9 +2,11 @@ import { z } from 'zod';
 import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 
+import { squadIdSchema } from '../lib/validation-schemas';
+
 export const authRouter = createTRPCRouter({
     setActiveSquad: protectedProcedure
-        .input(z.object({ squadId: z.string() }))
+        .input(z.object({ squadId: squadIdSchema }))
         .mutation(async ({ ctx, input }) => {
             const { userId, prisma } = ctx;
 

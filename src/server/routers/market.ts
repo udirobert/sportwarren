@@ -13,10 +13,11 @@ import {
   listLiveMarketFeed,
 } from '../services/market-feed';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
+import { squadIdSchema, userIdSchema, treasuryAmountSchema } from '../lib/validation-schemas';
 
 export const marketRouter = createTRPCRouter({
   getPlayerValuation: publicProcedure
-    .input(z.object({ userId: z.string() }))
+    .input(z.object({ userId: userIdSchema }))
     .query(async ({ ctx, input }) => {
       const profile = await getMarketPlayerRecord(ctx.prisma, input.userId);
 
@@ -37,7 +38,7 @@ export const marketRouter = createTRPCRouter({
   }),
 
   listScoutingFeed: protectedProcedure
-    .input(z.object({ squadId: z.string().min(1, 'Squad ID is required') }))
+    .input(z.object({ squadId: squadIdSchema }))
     .query(async ({ ctx, input }) => {
       const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
       if (!membership) {
@@ -55,8 +56,8 @@ export const marketRouter = createTRPCRouter({
 
   signProspect: protectedProcedure
     .input(z.object({
-      playerId: z.string(),
-      squadId: z.string().optional(),
+      playerId: userIdSchema,
+      squadId: squadIdSchema.optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       const membership = input.squadId

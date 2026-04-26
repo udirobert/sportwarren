@@ -9,7 +9,31 @@ const nextConfig = {
   reactStrictMode: true,
   productionBrowserSourceMaps: false,
   images: {
-    unoptimized: true,
+    // Enable optimization for production - images served via /_next/image
+    // CDN domains can be added for external image sources
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: '**.telegram.org',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.twitter.com',
+      },
+      {
+        protocol: 'https',
+        hostname: '**.lens.xyz',
+      },
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+    ],
+    // Optimize for performance
+    formats: ['image/avif', 'image/webp'],
+    minimumCacheTTL: 60 * 60, // 1 hour cache
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   webpack: (config, { dev, isServer }) => {
     config.resolve.alias = {

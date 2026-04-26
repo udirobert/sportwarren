@@ -9,7 +9,7 @@ import { useJourneyState } from '@/hooks/useJourneyState';
 import { useSquadDetails } from '@/hooks/squad/useSquad';
 import { isPendingMatchStatus, isSettledMatchStatus } from '@/lib/match/summary';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
-import { buildDerivedAvatarPresentation } from '@/lib/avatar/builders';
+import { buildAvatarPresentationFromSummary } from '@/lib/avatar/adapters';
 import type { AvatarPresentation } from '@/lib/avatar/types';
 
 interface SquadDynamicsProps {
@@ -33,10 +33,10 @@ function buildMemberAvatar(member: {
     matches: number;
   };
 }): AvatarPresentation {
-  return buildDerivedAvatarPresentation({
-    userId: member.id,
+  return buildAvatarPresentationFromSummary({
+    id: member.id,
     name: member.name,
-    imageUrl: member.avatar,
+    avatar: member.avatar,
     role: member.role,
     level: member.stats?.level,
     totalMatches: member.stats?.matches,
