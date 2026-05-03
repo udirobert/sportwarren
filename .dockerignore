@@ -1,0 +1,49 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Next.js build output
+.next
+
+# Git
+.git
+.gitignore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Test & docs
+e2e
+playwright-report
+test-results
+docs
+*.md
+
+# Contracts (not needed at runtime)
+contracts
+
+# Scripts (not needed at runtime)
+scripts
+
+# Standalone server (not part of Next.js build)
+server
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Sentry
+sentry.properties
