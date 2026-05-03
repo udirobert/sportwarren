@@ -17,6 +17,7 @@ const TIER_COSTS: Record<InferenceTier, number> = {
 const GLOBAL_DAILY_BUDGET_USDC = Number(process.env.AI_GLOBAL_DAILY_BUDGET_USDC || '10.00');
 const USER_DAILY_LIMIT_REQUESTS = Number(process.env.AI_USER_DAILY_LIMIT_REQUESTS || '50');
 const USER_DAILY_LIMIT_IMAGES = Number(process.env.AI_USER_DAILY_LIMIT_IMAGES || '5');
+const BUDGET_WARNING_THRESHOLD = 0.8; // Alert at 80% of budget
 
 // Basic keyword list to catch egregious prompt injection or offensive content
 const BANNED_KEYWORDS = [
@@ -98,9 +99,18 @@ export class InferenceGuard {
 
         // 1. Global usage (atomic)
         const globalKey = `ai:usage:global:${today}`;
-        await redisService.incrbyfloat(globalKey, cost, 86400);
+        const newGlobalSpend = await redisService.incrbyfloat(globalKey, cost, 86400);
 
-        // 2. User usage
+        // 2. Check budget threshold and log warning
+        if (newGlobalSpend !== null) {
+            const spend = parseFloat(String(newGlobalSpend));
+            const threshold = GLOBAL_DAILY_BUDGET_USDC * BUDGET_WARNING_THRESHOLD;
+            if (spend >= threshold && spend - cost < threshold) {
+                console.warn(`[InferenceGuard] AI budget warning: $${spend.toFixed(4)} spent of $${GLOBAL_DAILY_BUDGET_USDC} daily limit (${Math.round(spend / GLOBAL_DAILY_BUDGET_USDC * 100)}%)`);
+            }
+        }
+
+        // 3. User usage
         if (userId) {
             const userKey = `ai:usage:user:${userId}:${today}`;
             await redisService.incr(userKey, 86400);

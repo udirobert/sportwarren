@@ -538,19 +538,38 @@ async function startServer() {
     console.log('ℹ️ Telegram using polling mode (set TELEGRAM_WEBHOOK_URL for webhook mode)');
   }
 
-  // Health check endpoint
-  app.get('/health', (_req, res) => {
-    res.json({
-      status: 'ok',
+  // Health check endpoint — actually verifies service connectivity
+  app.get('/health', async (_req, res) => {
+    const checks: Record<string, string> = {};
+    let overallStatus: 'ok' | 'degraded' = 'ok';
+
+    // Database check
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      checks.database = 'connected';
+    } catch {
+      checks.database = 'disconnected';
+      overallStatus = 'degraded';
+    }
+
+    // Redis check
+    try {
+      const pong = await redisService.ping?.();
+      checks.redis = pong ? 'connected' : 'degraded';
+    } catch {
+      checks.redis = 'disconnected';
+      overallStatus = 'degraded';
+    }
+
+    checks.communication = communicationBridge ? 'initialized' : 'unavailable';
+    checks.algorand = algorandService ? 'ready' : 'unavailable';
+    checks.events = isEnabled(process.env.ENABLE_EVENT_STREAMING) ? 'streaming' : 'disabled';
+
+    const statusCode = overallStatus === 'ok' ? 200 : 503;
+    res.status(statusCode).json({
+      status: overallStatus,
       timestamp: new Date().toISOString(),
-      services: {
-        database: 'connected',
-        redis: 'connected',
-        communication: 'initialized',
-        ai: 'ready',
-        algorand: 'ready',
-        events: 'streaming',
-      }
+      services: checks,
     });
   });
 
