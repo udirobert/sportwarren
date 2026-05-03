@@ -5,6 +5,8 @@ export interface RateLimitOptions {
   windowMs: number;
   max: number;
   keyPrefix?: string;
+  /** When true, deny requests if Redis is unavailable (for financial/critical operations) */
+  strict?: boolean;
 }
 
 export async function checkRateLimit(
@@ -15,7 +17,7 @@ export async function checkRateLimit(
   remaining: number; 
   resetAt: number;
 }> {
-  const { windowMs, max, keyPrefix = 'rl' } = options;
+  const { windowMs, max, keyPrefix = 'rl', strict = false } = options;
   const key = `${keyPrefix}:${identifier}`;
   
   // Use window bucket (e.g., 1-minute bucket)
@@ -26,7 +28,10 @@ export async function checkRateLimit(
   const count = await redisService.incr(bucketKey, Math.ceil(windowMs / 1000) * 2);
   
   if (count === null) {
-    // If Redis is down, we allow the request but log a warning
+    if (strict) {
+      console.error('[RateLimiter] Redis is down, DENYING request for', identifier);
+      return { allowed: false, remaining: 0, resetAt: now + windowMs };
+    }
     console.warn('[RateLimiter] Redis is down, bypassing rate limit for', identifier);
     return { allowed: true, remaining: max, resetAt: now + windowMs };
   }

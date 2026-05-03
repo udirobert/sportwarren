@@ -311,7 +311,7 @@ export const AdaptiveDashboard: React.FC = () => {
         requiredLevel: 'basic' as const,
         category: 'matches' as const,
         component: (
-          <div onClick={() => completeChecklistItem('view_match_engine')}>
+          <div onClick={() => completeChecklistItem('set_formation')}>
             <MatchEnginePreview
               squadId={primarySquadId}
               formation={squadTactics?.formation}
@@ -988,7 +988,7 @@ export const AdaptiveDashboard: React.FC = () => {
             {entryState.primaryAction.href ? (
               <Link
                 href={entryState.primaryAction.href}
-                onClick={() => completeChecklistItem(entryState.primaryAction.intent === 'log_match' ? 'verify_match' : 'view_match_engine')}
+                onClick={() => completeChecklistItem(entryState.primaryAction.intent === 'log_match' ? 'log_match' : 'set_formation')}
                 className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-xl shadow-green-500/30 hover:shadow-green-500/50 transition-all duration-200 hover:scale-[1.02]"
               >
                 <Zap className="w-5 h-5 mr-2" />

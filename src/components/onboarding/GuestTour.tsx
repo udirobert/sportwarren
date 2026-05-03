@@ -52,7 +52,7 @@ const TOUR_STEPS: TourStep[] = [
         emoji: '🎮',
         icon: Cpu,
         position: 'left',
-        checklistId: 'view_match_engine',
+        checklistId: 'set_formation',
     },
     {
         id: 'claim-identity',

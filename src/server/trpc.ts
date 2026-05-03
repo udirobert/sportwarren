@@ -37,15 +37,14 @@ export const createTRPCContext = cache(async (opts?: {
     return { prisma, ip };
   }
 
-  // In development mode without signature, just trust the headers
-  // In production, require signature verification
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const skipVerification = isDevelopment && !walletInfo.signature;
+  // Auth bypass requires explicit opt-in via SKIP_AUTH_DEV=true
+  // This prevents accidental auth skipping in development
+  const skipVerification = process.env.SKIP_AUTH_DEV === 'true' && !walletInfo.signature;
 
   let verified = false;
 
   if (skipVerification) {
-    console.warn('Development mode: Skipping signature verification');
+    console.warn('[Auth] SKIP_AUTH_DEV enabled — skipping signature verification');
     verified = true;
   } else if (walletInfo.signature && walletInfo.message && walletInfo.timestamp) {
     // Verify the signature
