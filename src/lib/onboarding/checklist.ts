@@ -1,36 +1,36 @@
 import type { ChecklistItemConfig, ChecklistId, Platform } from './types';
 
 export const CHECKLIST_IDS: readonly ChecklistId[] = [
-    'view_match_engine',
-    'verify_match',
+    'join_squad',
+    'set_formation',
+    'log_match',
     'claim_identity',
-    'connect_telegram',
 ] as const;
 
 export const CHECKLIST_ITEMS: ChecklistItemConfig[] = [
     {
-        id: 'view_match_engine',
-        label: 'Set your tactics',
-        description: 'Choose your formation and play style to see your squad on the pitch',
+        id: 'join_squad',
+        label: 'Create or join a squad',
+        description: 'Squads are the core of SportWarren — form your team to start logging matches and earning XP',
+        emoji: '👥',
+        href: '/squad',
+        actionLabel: 'Find a squad',
+        xp: 100,
+    },
+    {
+        id: 'set_formation',
+        label: 'Set your formation',
+        description: 'Pick a formation and play style to define how your squad lines up on match day',
         emoji: '📋',
         href: '/squad?tab=tactics',
         actionLabel: 'Set tactics',
         xp: 50,
     },
     {
-        id: 'connect_telegram',
-        label: 'Connect Telegram',
-        description: 'Get match alerts and manage your squad from the group chat',
-        emoji: '📱',
-        href: '/settings?tab=connections',
-        actionLabel: 'Connect',
-        xp: 75,
-    },
-    {
-        id: 'verify_match',
-        label: 'Log your first game',
-        description: 'Submit one real match result to unlock XP, reputation, and squad momentum',
-        emoji: '✅',
+        id: 'log_match',
+        label: 'Log your first match',
+        description: 'Submit a real match result to unlock XP, reputation, and peer ratings',
+        emoji: '⚽',
         href: '/match?mode=capture',
         actionLabel: 'Log match',
         xp: 150,
@@ -38,7 +38,7 @@ export const CHECKLIST_ITEMS: ChecklistItemConfig[] = [
     {
         id: 'claim_identity',
         label: 'Save your progress',
-        description: 'Create an account so your results, XP, and squad data persist',
+        description: 'Create an account so your results, XP, and squad data persist across devices',
         emoji: '⚡',
         href: '/settings?tab=wallet',
         actionLabel: 'Save progress',
@@ -49,7 +49,7 @@ export const CHECKLIST_ITEMS: ChecklistItemConfig[] = [
 export const PLATFORM_CHECKLIST_FILTERS: Record<Platform, string[]> = {
     web: [],
     mobile: [],
-    telegram: ['connect_telegram'],
+    telegram: [],
 };
 
 export function getChecklistForPlatform(platform: Platform): ChecklistItemConfig[] {

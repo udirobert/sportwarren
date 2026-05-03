@@ -18,7 +18,7 @@ export const TOUR_STEPS: TourStepConfig[] = [
         emoji: '🎮',
         iconName: 'Cpu',
         position: 'left',
-        checklistId: 'view_match_engine',
+        checklistId: 'set_formation',
     },
     {
         id: 'claim-identity',

@@ -88,8 +88,8 @@ export default function MatchPage() {
   });
 
   const { checklistItems, completeChecklistItem } = useOnboarding();
-  const firstMatchSubmitted = checklistItems.find((item) => item.id === "verify_match")?.completed ?? false;
-  const verificationInviteShared = checklistItems.find((item) => item.id === "view_match_engine")?.completed ?? false;
+  const firstMatchSubmitted = checklistItems.find((item) => item.id === "log_match")?.completed ?? false;
+  const verificationInviteShared = checklistItems.find((item) => item.id === "set_formation")?.completed ?? false;
   const identityConnected = checklistItems.find((item) => item.id === "claim_identity")?.completed ?? false;
   const inviteTargetMatchId = lastSubmittedMatchId ?? pendingMatches[0]?.id ?? null;
   const currentPlayerId = currentPlayerAttributes?.address ?? "";
@@ -177,7 +177,7 @@ export default function MatchPage() {
         setInviteShareState("copied");
       }
 
-      completeChecklistItem("view_match_engine");
+      completeChecklistItem("set_formation");
       trackFeatureUsed("verification_invite_shared", {
         match_id: inviteTargetMatchId,
         share_method: shareMethod,
@@ -210,7 +210,7 @@ export default function MatchPage() {
     const opponentName = availableOpponents.find((squad) => squad.id === selectedOpponentId)?.name || "unknown";
     setLastSubmittedMatchId(submittedMatchId);
     setInviteShareState("idle");
-    completeChecklistItem("verify_match");
+    completeChecklistItem("log_match");
     trackMatchSubmission(submittedMatchId, "capture");
     trackFeatureUsed("first_match_submitted", {
       match_id: submittedMatchId,
@@ -283,7 +283,7 @@ export default function MatchPage() {
       }
       setXpSummaryData(nextSummary);
       setXpResultState(nextSummary ? "available" : "pending");
-      completeChecklistItem("verify_match");
+      completeChecklistItem("log_match");
       setShowXPSummary(true);
       setViewMode("xp-summary");
     } else {

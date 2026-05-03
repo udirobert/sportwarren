@@ -273,10 +273,14 @@ function CommunityPageInner() {
   );
 }
 
+import { FeatureGate } from "@/components/common/FeatureGate";
+
 export default function CommunityPage() {
   return (
-    <TrpcErrorBoundary>
-      <CommunityPageInner />
-    </TrpcErrorBoundary>
+    <FeatureGate flag="COMMUNITY">
+      <TrpcErrorBoundary>
+        <CommunityPageInner />
+      </TrpcErrorBoundary>
+    </FeatureGate>
   );
 }

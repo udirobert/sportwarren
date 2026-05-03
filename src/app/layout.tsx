@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
+import { CookieConsent } from "@/components/legal/CookieConsent";
 
 export const metadata: Metadata = {
   title: "SportWarren — Rec Football, Tactically Elevated",
@@ -45,6 +46,7 @@ export default function RootLayout({
         </a>
         <Providers>
           {children}
+          <CookieConsent />
         </Providers>
       </body>
     </html>

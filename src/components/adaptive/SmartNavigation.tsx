@@ -16,6 +16,7 @@ import { AccountStatusControl } from '@/components/common/AccountStatusControl';
 import { trpc } from '@/lib/trpc-client';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { buildAvatarPresentationFromSummary } from '@/lib/avatar/adapters';
+import { isEnabled } from '@/lib/feature-flags';
 
 const BOTTOM_NAV_MAX = 5;
 
@@ -95,7 +96,7 @@ export const SmartNavigation: React.FC = () => {
       label: 'Analytics', 
       priority: 75,
       unlockLevel: 'intermediate' as const,
-      showCondition: () => preferences.uiComplexity !== 'simple',
+      showCondition: () => isEnabled('ANALYTICS') && preferences.uiComplexity !== 'simple',
     },
     { 
       path: '/squad', 
@@ -110,7 +111,7 @@ export const SmartNavigation: React.FC = () => {
       label: 'Community', 
       priority: 60,
       unlockLevel: 'intermediate' as const,
-      showCondition: () => preferences.preferredFeatures.social === 'active',
+      showCondition: () => isEnabled('COMMUNITY') && preferences.preferredFeatures.social === 'active',
     },
     // /achievements redirects to /reputation — not a standalone nav destination
     // /verification redirects to /match?mode=verify — not a standalone nav destination

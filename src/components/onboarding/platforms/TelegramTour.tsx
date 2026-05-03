@@ -37,7 +37,7 @@ const TELEGRAM_STEPS: TourStepConfig[] = [
         content: "Start by creating your squad. Invite friends to join and track results together.",
         emoji: '👥',
         position: 'center',
-        checklistId: 'view_match_engine',
+        checklistId: 'join_squad',
     },
     {
         id: 'log-match',
@@ -46,7 +46,7 @@ const TELEGRAM_STEPS: TourStepConfig[] = [
         content: "Record match results with our easy form. Your opponent confirms to verify the score.",
         emoji: '📝',
         position: 'center',
-        checklistId: 'verify_match',
+        checklistId: 'log_match',
     },
     {
         id: 'connect-wallet',

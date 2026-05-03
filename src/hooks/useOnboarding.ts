@@ -10,8 +10,8 @@ export { CHECKLIST_IDS } from '@/lib/onboarding/checklist';
 export type { ChecklistId } from '@/lib/onboarding/types';
 
 const CHECKLIST_GROWTH_EVENTS: Partial<Record<ChecklistId, CoreGrowthEvent>> = {
-    view_match_engine: 'tactics_customized',
-    verify_match: 'first_match_submitted',
+    set_formation: 'tactics_customized',
+    log_match: 'first_match_submitted',
     claim_identity: 'identity_connected',
 };
 
@@ -34,10 +34,10 @@ interface OnboardingState {
 
 const DEFAULT_STATE: OnboardingState = {
     checklistItems: {
-        view_match_engine: false,
-        verify_match: false,
+        join_squad: false,
+        set_formation: false,
+        log_match: false,
         claim_identity: false,
-        connect_telegram: false,
     },
 };
 

@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
     url: baseUrl,
     name: 'SportWarren Telegram Treasury',
     iconUrl: `${baseUrl}/tonconnect-icon.png`,
-    termsOfUseUrl: baseUrl,
-    privacyPolicyUrl: baseUrl,
+    termsOfUseUrl: `${baseUrl}/terms`,
+    privacyPolicyUrl: `${baseUrl}/privacy`,
   });
 }

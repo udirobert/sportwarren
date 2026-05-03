@@ -340,10 +340,14 @@ function AnalyticsPageInner() {
   );
 }
 
+import { FeatureGate } from "@/components/common/FeatureGate";
+
 export default function AnalyticsPage() {
   return (
-    <TrpcErrorBoundary>
-      <AnalyticsPageInner />
-    </TrpcErrorBoundary>
+    <FeatureGate flag="ANALYTICS">
+      <TrpcErrorBoundary>
+        <AnalyticsPageInner />
+      </TrpcErrorBoundary>
+    </FeatureGate>
   );
 }

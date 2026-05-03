@@ -27,6 +27,17 @@ export const LandingFooter: React.FC = () => (
             Contact
           </a>
         </nav>
+        <nav aria-label="Legal links" className="flex items-center gap-4 sm:gap-6">
+          <a href="/terms" className="text-xs sm:text-sm text-gray-500 hover:text-gray-300 transition-colors">
+            Terms
+          </a>
+          <a href="/privacy" className="text-xs sm:text-sm text-gray-500 hover:text-gray-300 transition-colors">
+            Privacy
+          </a>
+          <a href="/cookies" className="text-xs sm:text-sm text-gray-500 hover:text-gray-300 transition-colors">
+            Cookies
+          </a>
+        </nav>
       </div>
 
       <div className="mt-8 sm:mt-12 pt-6 sm:pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4">

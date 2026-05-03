@@ -1,10 +1,10 @@
 export type Platform = 'web' | 'mobile' | 'telegram';
 
 export type ChecklistId = 
-    | 'view_match_engine'
-    | 'verify_match'
-    | 'claim_identity'
-    | 'connect_telegram';
+    | 'join_squad'
+    | 'set_formation'
+    | 'log_match'
+    | 'claim_identity';
 
 export interface ChecklistItemConfig {
     id: ChecklistId;
