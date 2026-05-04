@@ -15,6 +15,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { ethers } from 'ethers';
 import type { PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 import { redisService } from '../redis';
 import { prisma } from '@/lib/db';
@@ -272,7 +273,7 @@ export class KiteAIService {
         taskSummary: input.taskSummary,
         maxPerTx: input.maxPerTxUsdc,
         maxTotal: input.maxTotalUsdc,
-        scope: input.scope ?? undefined,
+        scope: (input.scope as any) ?? Prisma.JsonNull,
         expiresAt: new Date(Date.now() + input.ttlSeconds * 1000),
         status: 'active',
         approvedBy: input.approvedBy,
