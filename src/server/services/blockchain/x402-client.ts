@@ -318,6 +318,37 @@ export async function paidFetch<T = unknown>(opts: PaidFetchOptions): Promise<Pa
 // Inbound: we are the service. Helpers used by /api/x402/* routes.
 // ---------------------------------------------------------------------------
 
+/** Platform take rate — percentage of each x402 payment that goes to SportWarren. */
+const DEFAULT_PLATFORM_FEE_PERCENT = 15;
+
+export function getPlatformFeePercent(): number {
+  return Number(process.env.PLATFORM_FEE_PERCENT || DEFAULT_PLATFORM_FEE_PERCENT);
+}
+
+export function getPlatformWallet(): string | null {
+  const pk = process.env.WEB3_PRIVATE_KEY?.trim();
+  if (!pk) return null;
+  return new ethers.Wallet(pk).address;
+}
+
+/**
+ * Split a payment amount between service provider and platform.
+ * Returns { providerAmount, platformAmount } in USDC (decimal).
+ */
+export function splitPayment(totalAmountUsdc: number, feePercent?: number): {
+  providerAmountUsdc: number;
+  platformAmountUsdc: number;
+  feePercent: number;
+} {
+  const pct = feePercent ?? getPlatformFeePercent();
+  const platformAmount = totalAmountUsdc * (pct / 100);
+  return {
+    providerAmountUsdc: totalAmountUsdc - platformAmount,
+    platformAmountUsdc: platformAmount,
+    feePercent: pct,
+  };
+}
+
 export function buildPaymentRequirements(input: {
   payTo: string;
   amountUsdc: number;
