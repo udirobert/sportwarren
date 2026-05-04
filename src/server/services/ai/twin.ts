@@ -176,7 +176,6 @@ export class PlayerTwinService {
         attribute: input.attribute,
         modifier: input.modifier,
         reason: `Coach hired for ${input.durationDays} days`,
-        sessionId: session.id,
         startsAt: new Date(),
         expiresAt: new Date(Date.now() + input.durationDays * 86400 * 1000),
         active: true,
