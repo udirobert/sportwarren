@@ -48,7 +48,7 @@ test.describe('Dashboard', () => {
     await expect(page.locator('body')).toBeVisible();
 
     // Bottom navigation should be visible on mobile
-    const bottomNav = page.locator('[class*=\"bottom-0\"]');
+    const bottomNav = page.locator('[class*="bottom-0"]');
     await expect(bottomNav.first()).toBeVisible();
   });
 });
@@ -113,7 +113,7 @@ test.describe('Squad', () => {
     await page.goto('/squad');
 
     // Either squad view or creation prompt
-    const hasContent = await page.locator('[class*=\"rounded\"]').first().isVisible().catch(() => false);
+    const hasContent = await page.locator('[class*="rounded"]').first().isVisible().catch(() => false);
     expect(hasContent).toBeTruthy();
   });
 });

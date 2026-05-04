@@ -1,4 +1,4 @@
-import { test, expect, describe } from '@playwright/test';
+import { test, expect } from '@playwright/test';
 
 /**
  * tRPC Endpoint Validation Integration Tests
@@ -6,7 +6,7 @@ import { test, expect, describe } from '@playwright/test';
  * Tests the integration between frontend forms and backend Zod schemas
  */
 
-describe('tRPC Input Validation - Squad Router', () => {
+test.describe('tRPC Input Validation - Squad Router', () => {
   test.describe.configure({ mode: 'serial' });
 
   // Squad creation validation
@@ -87,7 +87,7 @@ describe('tRPC Input Validation - Squad Router', () => {
   });
 });
 
-describe('tRPC Input Validation - Match Router', () => {
+test.describe('tRPC Input Validation - Match Router', () => {
   test('rejects invalid match ID format', async ({ page }) => {
     const response = await page.request.post('/api/trpc/match.getById', {
       data: {
@@ -154,7 +154,7 @@ describe('tRPC Input Validation - Match Router', () => {
   });
 });
 
-describe('tRPC Pagination Validation', () => {
+test.describe('tRPC Pagination Validation', () => {
   test('rejects limit above maximum of 100', async ({ page }) => {
     const response = await page.request.post('/api/trpc/squad.list', {
       data: {
@@ -196,7 +196,7 @@ describe('tRPC Pagination Validation', () => {
   });
 });
 
-describe('tRPC Chat/AI Input Validation', () => {
+test.describe('tRPC Chat/AI Input Validation', () => {
   test('rejects empty chat message', async ({ page }) => {
     const response = await page.request.post('/api/trpc/agent.chat', {
       data: {
@@ -239,7 +239,7 @@ describe('tRPC Chat/AI Input Validation', () => {
   });
 });
 
-describe('tRPC Peer Rating Validation', () => {
+test.describe('tRPC Peer Rating Validation', () => {
   test('rejects score outside 1-10 range', async ({ page }) => {
     const response = await page.request.post('/api/trpc/peerRating.submit', {
       data: {
@@ -275,7 +275,7 @@ describe('tRPC Peer Rating Validation', () => {
   });
 });
 
-describe('tRPC Availability Validation', () => {
+test.describe('tRPC Availability Validation', () => {
   test('rejects day of week outside 1-7 range', async ({ page }) => {
     const response = await page.request.post('/api/trpc/squad.setAvailability', {
       data: {
