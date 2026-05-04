@@ -15,6 +15,7 @@ import {
 import { createPendingMatchSubmission } from './match-submission';
 import { PEER_RATING } from '@/lib/match/constants';
 import { getDigitalTwinService } from './ai/digital-twin';
+import { getPlayerTwinService } from './ai/twin';
 
 export type MatchWorkflowErrorCode =
   | 'NOT_FOUND'
@@ -405,6 +406,41 @@ export async function submitMatchResult({
           awayScore,
           homeScore
         );
+
+        // Player Twin attestations — record each player's match performance
+        try {
+          const twinService = getPlayerTwinService();
+          for (const stat of seededStats) {
+            try {
+              await twinService.getOrCreateTwin(stat.profileId, stat.playerName ?? 'Player');
+              const deltas: Record<string, number> = {};
+              if (stat.goals > 0) deltas.shooting = Math.min(2, stat.goals * 0.5);
+              if (stat.assists > 0) deltas.passing = Math.min(1.5, stat.assists * 0.5);
+              if (stat.cleanSheet) deltas.defending = 1;
+              if (stat.minutesPlayed > 60) deltas.physical = 0.3;
+              deltas.pace = 0.1; // participation baseline
+
+              await twinService.recordAttestation({
+                profileId: stat.profileId,
+                kind: 'match_result',
+                payload: {
+                  matchId: match.id,
+                  goals: stat.goals,
+                  assists: stat.assists,
+                  cleanSheet: stat.cleanSheet,
+                  minutes: stat.minutesPlayed,
+                  result: stat.goals > 0 ? 'played' : 'sub',
+                },
+                attributeDeltas: deltas,
+                xpGain: 20 + stat.goals * 15 + stat.assists * 10,
+              });
+            } catch (twinErr) {
+              console.warn(`Player twin attestation failed for ${stat.profileId}:`, twinErr);
+            }
+          }
+        } catch (twinErr) {
+          console.warn('Player twin batch attestation failed:', twinErr);
+        }
       } catch (err) {
         console.warn('Post-soft-verification automation failed:', err);
       }

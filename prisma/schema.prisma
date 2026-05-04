@@ -872,16 +872,142 @@ model AiAgent {
   agentId      String   @unique @map("agent_id")
   passportId   String   @unique @map("passport_id")
   name         String
-  type         String // squad_manager, scout, fitness, social
+  type         String // squad_manager, scout, fitness, social, twin_player, twin_squad, coach_external
   description  String
   reputation   Int      @default(100)
   capabilities String[]
+
+  // Kite Passport ownership / scope
+  ownerType    String?  @map("owner_type") // 'player' | 'squad' | 'platform' | 'external'
+  ownerId      String?  @map("owner_id")
+  walletAddress String? @map("wallet_address") // Kite chain address controlled by this agent
+
+  // Service-provider mode (this agent sells an x402 service to other agents)
+  serviceUrl     String? @map("service_url")
+  servicePrice   String? @map("service_price")   // e.g. "0.10"
+  serviceAsset   String? @map("service_asset") @default("USDC")
+  serviceActive  Boolean @default(false) @map("service_active")
 
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  // Relations
+  sessions       KiteSession[]
+  attestations   Attestation[]    @relation("AttestationSigner")
+  coachingGiven  CoachingEffect[] @relation("CoachingEffectCoach")
+
+  @@index([ownerType, ownerId])
   @@map("ai_agents")
+}
+
+// ============================================================================
+// KITE PASSPORT SPENDING SESSIONS
+// Mirrors `kpass agent:session` — every paid call by an agent runs inside a
+// session bounded by per-tx + total budget + ttl + scope. Persisted for audit.
+// ============================================================================
+
+model KiteSession {
+  id           String   @id @default(cuid())
+  agentId      String   @map("agent_id")
+  agent        AiAgent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  taskSummary  String   @map("task_summary")
+  scope        Json?    // free-form scope hints (service categories, allowlisted urls)
+  asset        String   @default("USDC")
+  paymentApproach String @default("x402_http") @map("payment_approach")
+
+  maxPerTx     Float    @map("max_per_tx")
+  maxTotal     Float    @map("max_total")
+  spent        Float    @default(0)
+  txCount      Int      @default(0) @map("tx_count")
+
+  status       String   @default("pending") // pending | active | expired | exhausted | revoked
+  approvedBy   String?  @map("approved_by") // user id (passkey approval)
+  requestId    String?  @unique @map("request_id") // kpass session request id when human-approved
+
+  expiresAt    DateTime @map("expires_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  attestations Attestation[]
+
+  @@index([agentId, status])
+  @@map("kite_sessions")
+}
+
+// ============================================================================
+// ATTESTATIONS
+// Every twin stat change requires a signed attestation. Records the on-chain
+// settlement tx hash on Kite when the originating action was a paid x402 call.
+// ============================================================================
+
+model Attestation {
+  id           String   @id @default(cuid())
+
+  subjectType  String   @map("subject_type") // 'player' | 'squad' | 'match' | 'agent'
+  subjectId    String   @map("subject_id")
+
+  kind         String   // 'match_result' | 'peer_rating' | 'activity_sync' | 'coaching_effect' | 'motm' | 'rsvp_compliance'
+  payload      Json     // canonicalized data that was signed
+
+  signerAgentId String?  @map("signer_agent_id")
+  signerAgent   AiAgent? @relation("AttestationSigner", fields: [signerAgentId], references: [id])
+  signature     String?  // hex EIP-712 / personal_sign
+
+  // Kite-chain settlement
+  network      String   @default("kite-testnet")
+  txHash       String?  @map("tx_hash")
+  facilitator  String?  // pieverse address used
+  amountUsdc   Float?   @map("amount_usdc") // amount paid for this attestation, if any
+
+  // Optional link back to the spending session that paid for this attestation
+  sessionId    String?  @map("session_id")
+  session      KiteSession? @relation(fields: [sessionId], references: [id])
+
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@index([subjectType, subjectId, kind])
+  @@index([txHash])
+  @@map("attestations")
+}
+
+// ============================================================================
+// COACHING EFFECTS
+// Time-decaying buffs purchased via x402 from a coach agent. Stat = base +
+// sum(active CoachingEffect modifiers). Every effect points back to the
+// attestation that paid for + signed it.
+// ============================================================================
+
+model CoachingEffect {
+  id            String   @id @default(cuid())
+
+  // who is being coached
+  targetType    String   @map("target_type") // 'player' | 'squad'
+  targetId      String   @map("target_id")
+
+  // who provided the coaching
+  coachAgentId  String   @map("coach_agent_id")
+  coachAgent    AiAgent  @relation("CoachingEffectCoach", fields: [coachAgentId], references: [id])
+
+  // what the buff is
+  attribute     String   // e.g. 'shooting' | 'attack' | 'sharpness' | 'teamwork'
+  modifier      Float    // additive, can be negative (e.g. fatigue from over-training)
+  reason        String?
+
+  // proof
+  attestationId String?  @map("attestation_id")
+  amountUsdc    Float?   @map("amount_usdc")
+
+  // lifetime
+  startsAt      DateTime @default(now()) @map("starts_at")
+  expiresAt     DateTime @map("expires_at")
+  active        Boolean  @default(true)
+
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@index([targetType, targetId, active, expiresAt])
+  @@map("coaching_effects")
 }
 
 model AiMemory {
@@ -1082,6 +1208,117 @@ model SquadSchedule {
   updatedAt   DateTime @updatedAt @map("updated_at")
   
   @@map("squad_schedules")
+}
+
+// ============================================================================
+// PLAYER TWINS — Kite Passport-backed autonomous agents per player
+// Every player gets a twin whose stats are a verifiable function of IRL
+// attestations (match results, peer ratings, activity sync). Twins can hire
+// coaches (paid via x402), compete in simulated tournaments, and trade
+// scouting data with other twins.
+// ============================================================================
+
+model PlayerTwin {
+  id            String   @id @default(cuid())
+  profileId     String   @unique @map("profile_id")
+  profile       PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  // Kite Passport identity
+  agentId       String   @unique @map("agent_id") // AiAgent.id
+  agent         AiAgent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  // Twin state
+  level         Int      @default(1)
+  xp            Int      @default(0)
+  prestige      Int      @default(0) // earned through wins, coaching, attestations
+
+  // Autonomous config (what the twin is allowed to do within its session budget)
+  autoHireCoaches    Boolean @default(false) @map("auto_hire_coaches")
+  autoCompete        Boolean @default(false) @map("auto_compete")
+  weeklyBudgetUsdc   Float   @default(5.0) @map("weekly_budget_usdc")
+
+  // Stats snapshot (denormalized from attestations for fast reads)
+  baseAttributes    Json    @default("{}") @map("base_attributes") // { pace: 50, shooting: 50, ... }
+  activeModifiers   Json    @default("[]") @map("active_modifiers") // CoachingEffect[] with expiry
+  lastAttestationAt DateTime? @map("last_attestation_at")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  simulations   TwinSimulationParticipant[]
+
+  @@map("player_twins")
+}
+
+// ============================================================================
+// TWIN SIMULATIONS — overnight tournaments between player twins
+// ============================================================================
+
+model TwinSimulation {
+  id            String   @id @default(cuid())
+  name          String   // "Week 14 Round-Robin"
+  format        String   @default("round_robin") // round_robin | knockout | league
+  status        String   @default("pending") // pending | running | completed | settled
+
+  // Prize pool funded by entry fees (x402 settled)
+  entryFeeUsdc  Float    @default(0)
+  totalPrizeUsdc Float   @default(0)
+  prizePoolTxHash String? @map("prize_pool_tx_hash")
+
+  // Kite-chain settlement
+  network       String   @default("kite-testnet")
+  attestationId String?  @map("attestation_id") // master attestation for the whole simulation
+
+  startedAt     DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  participants  TwinSimulationParticipant[]
+  matches       TwinSimulationMatch[]
+
+  @@map("twin_simulations")
+}
+
+model TwinSimulationParticipant {
+  id            String   @id @default(cuid())
+  simulationId  String   @map("simulation_id")
+  simulation    TwinSimulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  twinId        String   @map("twin_id")
+  twin          PlayerTwin @relation(fields: [twinId], references: [id], onDelete: Cascade)
+
+  // Tournament standing
+  wins          Int      @default(0)
+  draws         Int      @default(0)
+  losses        Int      @default(0)
+  goalsFor      Int      @default(0) @map("goals_for")
+  goalsAgainst  Int      @default(0) @map("goals_against")
+  points        Int      @default(0)
+  prizeUsdc     Float    @default(0) @map("prize_usdc")
+
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@unique([simulationId, twinId])
+  @@map("twin_simulation_participants")
+}
+
+model TwinSimulationMatch {
+  id            String   @id @default(cuid())
+  simulationId  String   @map("simulation_id")
+  simulation    TwinSimulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+
+  homeTwinId    String   @map("home_twin_id")
+  awayTwinId    String   @map("away_twin_id")
+  homeScore     Int?
+  awayScore     Int?
+  round         Int      @default(1)
+
+  // Each simulated match produces an attestation
+  attestationId String?  @map("attestation_id")
+
+  playedAt      DateTime?
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  @@map("twin_simulation_matches")
 }
 
 // ============================================================================

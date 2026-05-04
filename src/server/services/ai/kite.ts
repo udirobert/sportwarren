@@ -1,667 +1,703 @@
-import axios from 'axios';
-import { ethers } from 'ethers';
-import { redisService } from '../redis';
+/**
+ * Kite AI integration — agent passports, spending sessions, paid actions.
+ *
+ * This module is the only place SportWarren talks to Kite. It composes:
+ *   • Local persistence: AiAgent / KiteSession / Attestation / CoachingEffect
+ *   • Outbound paid calls via x402 (services/blockchain/x402-client)
+ *   • Service discovery via the `ksearch` CLI when available
+ *
+ * The exported `kiteAIService` keeps the same surface that existing routers
+ * already depend on (searchMarketplace, hireAgent, processSquadWagePayment,
+ * recordInteraction, getAgentAnalytics) so callers stay untouched.
+ */
 
-type KiteServiceStatus = {
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { ethers } from 'ethers';
+import type { PrismaClient } from '@prisma/client';
+
+import { redisService } from '../redis';
+import { prisma } from '@/lib/db';
+import {
+  paidFetch,
+  readX402Config,
+  type SettlementResult,
+} from '../blockchain/x402-client';
+
+const execFileAsync = promisify(execFile);
+
+// ---------------------------------------------------------------------------
+// Config
+// ---------------------------------------------------------------------------
+
+const KITE_DAILY_REQUEST_LIMIT = Number(process.env.KITE_DAILY_REQUEST_LIMIT || '1000');
+const MAX_SINGLE_PAYMENT_USDC = Number(process.env.KITE_MAX_SINGLE_PAYMENT_USDC || '50');
+const DAILY_PAYOUT_BUDGET_USDC = Number(process.env.KITE_DAILY_PAYOUT_BUDGET_USDC || '200');
+
+export type KiteServiceStatus = {
   enabled: boolean;
-  apiUrl: string;
-  hasApiKey: boolean;
-  hasPrivateKey: boolean;
   rpcUrl: string;
+  hasPrivateKey: boolean;
+  hasFacilitator: boolean;
   reason?: string;
 };
 
-function readKiteEnv() {
-  const apiUrl = process.env.KITE_API_URL || 'https://api.gokite.ai';
-  const rpcUrl = process.env.KITE_RPC_URL || process.env.NEXT_PUBLIC_KITE_RPC_URL || 'https://rpc-testnet.gokite.ai';
-  const hasApiKey = Boolean(process.env.KITE_API_KEY?.trim());
-  const hasPrivateKey = Boolean(process.env.WEB3_PRIVATE_KEY?.trim());
-
-  return {
-    apiUrl,
-    rpcUrl,
-    hasApiKey,
-    hasPrivateKey,
-  };
-}
-
 export function getKiteServiceStatus(): KiteServiceStatus {
-  const config = readKiteEnv();
-  const enabled = config.hasApiKey && config.hasPrivateKey;
-
+  const cfg = readX402Config();
+  const hasPrivateKey = Boolean(process.env.WEB3_PRIVATE_KEY?.trim());
+  const enabled = hasPrivateKey;
   return {
     enabled,
-    apiUrl: config.apiUrl,
-    rpcUrl: config.rpcUrl,
-    hasApiKey: config.hasApiKey,
-    hasPrivateKey: config.hasPrivateKey,
-    reason: enabled
-      ? undefined
-      : !config.hasApiKey
-        ? 'KITE_API_KEY is not configured.'
-        : 'WEB3_PRIVATE_KEY is not configured for Kite agent operations.',
+    rpcUrl: cfg.rpcUrl,
+    hasPrivateKey,
+    hasFacilitator: Boolean(cfg.facilitatorUrl),
+    reason: enabled ? undefined : 'WEB3_PRIVATE_KEY is not configured for Kite agent operations.',
   };
 }
 
-/**
- * Kite AI Service
- * Agent identity, payments, and marketplace integration
- */
+// ---------------------------------------------------------------------------
+// Types (public)
+// ---------------------------------------------------------------------------
 
-interface KiteAgentPassport {
+export interface KiteAgentPassport {
+  id: string;
   agentId: string;
   passportId: string;
   name: string;
+  type: string;
   description: string;
   reputation: number;
-  totalInteractions: number;
-  createdAt: string;
+  walletAddress: string;
+  capabilities: string[];
+  serviceUrl: string | null;
+  servicePrice: string | null;
+  ownerType: string | null;
+  ownerId: string | null;
   verified: boolean;
 }
 
-interface KitePayment {
-  transactionId: string;
-  from: string;
-  to: string;
-  amount: string;
-  currency: string;
-  status: 'pending' | 'completed' | 'failed';
-  timestamp: string;
+export interface MarketplaceAgent {
+  id: string;
+  name: string;
+  description: string;
+  price: string;
+  rating?: number;
+  author?: string;
+  url?: string;
+  verified?: boolean;
 }
 
-const KITE_DAILY_REQUEST_LIMIT = Number(process.env.KITE_DAILY_REQUEST_LIMIT || '1000');
-const MAX_SINGLE_PAYMENT_USDC = Number(process.env.KITE_MAX_SINGLE_PAYMENT_USDC || '50.00');
-const DAILY_PAYOUT_BUDGET_USDC = Number(process.env.KITE_DAILY_PAYOUT_BUDGET_USDC || '200.00');
+export interface AgentAnalytics {
+  totalInteractions: number;
+  successRate: number;
+  averageRating: number;
+  revenue: string;
+  topUsers: string[];
+}
+
+export interface RegisterAgentInput {
+  name: string;
+  description: string;
+  type: 'squad_manager' | 'scout' | 'fitness' | 'social' | 'twin_player' | 'twin_squad' | 'coach_external';
+  capabilities: string[];
+  ownerType?: 'player' | 'squad' | 'platform' | 'external';
+  ownerId?: string;
+  /** Optional pre-existing wallet — defaults to the platform wallet. */
+  walletAddress?: string;
+  /** If this agent provides a paid x402 service, provide the URL + price. */
+  service?: { url: string; priceUsdc: string; asset?: 'USDC' | 'USDT' };
+}
+
+// ---------------------------------------------------------------------------
+// Service
+// ---------------------------------------------------------------------------
 
 export class KiteAIService {
-  private apiUrl: string;
-  private apiKey: string;
-  private provider: ethers.Provider;
-  private wallet: ethers.Wallet;
-  private usageMetrics: {
-    requestsToday: number;
-    lastResetDate: string;
-    totalSpendUsdc: number;
-  };
+  private db: PrismaClient;
+  private platformWallet: string | null;
 
-  constructor() {
-    const config = readKiteEnv();
-    this.apiUrl = config.apiUrl;
-    this.apiKey = process.env.KITE_API_KEY || '';
-    
-    const rpcUrl = config.rpcUrl;
-    this.provider = new ethers.JsonRpcProvider(rpcUrl);
-    
-    const privateKey = process.env.WEB3_PRIVATE_KEY;
-    if (!privateKey) {
-      throw new Error('WEB3_PRIVATE_KEY required for Kite AI integration');
-    }
-    this.wallet = new ethers.Wallet(privateKey, this.provider);
-
-    // Initialize in-memory metrics (could be moved to Redis for distributed state)
-    this.usageMetrics = {
-      requestsToday: 0,
-      lastResetDate: new Date().toISOString().split('T')[0],
-      totalSpendUsdc: 0,
-    };
+  constructor(db: PrismaClient = prisma) {
+    this.db = db;
+    const pk = process.env.WEB3_PRIVATE_KEY?.trim();
+    this.platformWallet = pk ? new ethers.Wallet(pk).address : null;
   }
 
-  /**
-   * Check if the service is within production budget and rate limits
-   */
-  private async checkRateLimit(): Promise<boolean> {
+  // -----------------------------------------------------------------------
+  // Rate / budget guards (kept from previous implementation)
+  // -----------------------------------------------------------------------
+
+  private async checkRequestLimit(): Promise<boolean> {
     const today = new Date().toISOString().split('T')[0];
     const key = `kite:usage:${today}`;
-
-    // Try Redis first for distributed state
     try {
-      const usage = await redisService.get(key);
-      if (usage && parseInt(usage) >= KITE_DAILY_REQUEST_LIMIT) {
-        console.warn(`[KiteAI] Daily distributed request limit reached (${KITE_DAILY_REQUEST_LIMIT})`);
+      const used = await redisService.get(key);
+      if (used && parseInt(used) >= KITE_DAILY_REQUEST_LIMIT) {
+        console.warn(`[Kite] daily request limit reached (${KITE_DAILY_REQUEST_LIMIT})`);
         return false;
       }
-    } catch (e) {
-      // Fallback to in-memory if Redis fails
-      if (this.usageMetrics.lastResetDate !== today) {
-        this.usageMetrics.requestsToday = 0;
-        this.usageMetrics.lastResetDate = today;
-      }
-      if (this.usageMetrics.requestsToday >= KITE_DAILY_REQUEST_LIMIT) {
-        return false;
-      }
+    } catch {
+      /* redis optional */
     }
-
     return true;
   }
 
-  /**
-   * Additional check for financial operations to prevent runaway payouts
-   */
-  private async checkPayoutLimit(amount: string): Promise<boolean> {
-    const numericAmount = parseFloat(amount);
-    if (isNaN(numericAmount)) return false;
-
-    // 1. Single payout limit
-    if (numericAmount > MAX_SINGLE_PAYMENT_USDC) {
-      console.error(`[KiteAI] Single payout too large: ${numericAmount} USDC (Limit: ${MAX_SINGLE_PAYMENT_USDC})`);
+  private async checkPayoutBudget(amount: number): Promise<boolean> {
+    if (amount > MAX_SINGLE_PAYMENT_USDC) {
+      console.error(`[Kite] single payout ${amount} > limit ${MAX_SINGLE_PAYMENT_USDC}`);
       return false;
     }
-
-    // 2. Daily payout budget
     const today = new Date().toISOString().split('T')[0];
     const key = `kite:payouts:${today}`;
     try {
-      const dailySpend = await redisService.get(key);
-      const currentSpend = dailySpend ? parseFloat(dailySpend) : 0;
-      
-      if (currentSpend + numericAmount > DAILY_PAYOUT_BUDGET_USDC) {
-        console.error(`[KiteAI] Daily payout budget reached ($${currentSpend}). Blocked $${numericAmount} payout.`);
-        return false;
-      }
-
-      // Record spend if check passes (we'll commit it in trackUsage or similar, 
-      // but for atomic check-and-reserve we should ideally do it here)
-      await redisService.incrbyfloat(key, numericAmount, 86400);
-      return true;
-    } catch (e) {
-      // Fallback: If Redis is down, we restrict payouts significantly for safety
-      return numericAmount <= 5.00; 
+      const spent = parseFloat((await redisService.get(key)) || '0');
+      if (spent + amount > DAILY_PAYOUT_BUDGET_USDC) return false;
+      await redisService.incrbyfloat(key, amount, 86400);
+    } catch {
+      return amount <= 5;
     }
+    return true;
   }
 
-  /**
-   * Track usage after a successful API call
-   */
-  private async trackUsage(costUsdc: number = 0) {
+  private async trackRequest() {
     const today = new Date().toISOString().split('T')[0];
-    const key = `kite:usage:${today}`;
-
-    this.usageMetrics.requestsToday++;
-    this.usageMetrics.totalSpendUsdc += costUsdc;
-
     try {
-      await redisService.incr(key, 86400); // 24h TTL
-    } catch (e) {
-      // Ignore Redis tracking errors if it fails
+      await redisService.incr(`kite:usage:${today}`, 86400);
+    } catch {
+      /* best-effort */
     }
   }
 
-  /**
-   * Register a new AI agent with Kite passport
-   */
-  async registerAgent(agentData: {
-    name: string;
-    description: string;
-    type: 'squad_manager' | 'scout' | 'fitness' | 'social';
-    capabilities: string[];
-    walletAddress: string;
-  }): Promise<KiteAgentPassport | null> {
-    if (!(await this.checkRateLimit())) return null;
-    try {
-      const response = await axios.post(
-        `${this.apiUrl}/v1/agents/register`,
-        {
-          name: agentData.name,
-          description: agentData.description,
-          type: agentData.type,
-          capabilities: agentData.capabilities,
-          wallet_address: agentData.walletAddress,
-          platform: 'sportwarren',
-          metadata: {
-            sport: 'football',
-            chain: 'kite',
-          },
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
+  // -----------------------------------------------------------------------
+  // Agent passport registry (DB-backed)
+  // -----------------------------------------------------------------------
 
-      if (response.data.success) {
-        this.trackUsage(0.01); // Assumed registration cost
-        return {
-          agentId: response.data.agent_id,
-          passportId: response.data.passport_id,
-          name: agentData.name,
-          description: agentData.description,
-          reputation: 100,
-          totalInteractions: 0,
-          createdAt: new Date().toISOString(),
-          verified: true,
-        };
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Kite agent registration error:', error);
+  async registerAgent(input: RegisterAgentInput): Promise<KiteAgentPassport | null> {
+    if (!(await this.checkRequestLimit())) return null;
+    const wallet = input.walletAddress || this.platformWallet;
+    if (!wallet) {
+      console.warn('[Kite] cannot register agent: no wallet available');
       return null;
     }
+
+    // Idempotent on (ownerType, ownerId, type) where ownerId is set.
+    const existing = input.ownerType && input.ownerId
+      ? await this.db.aiAgent.findFirst({
+          where: { ownerType: input.ownerType, ownerId: input.ownerId, type: input.type },
+        })
+      : null;
+
+    const record = existing
+      ? await this.db.aiAgent.update({
+          where: { id: existing.id },
+          data: {
+            name: input.name,
+            description: input.description,
+            capabilities: input.capabilities,
+            walletAddress: wallet,
+            serviceUrl: input.service?.url ?? existing.serviceUrl,
+            servicePrice: input.service?.priceUsdc ?? existing.servicePrice,
+            serviceAsset: input.service?.asset ?? existing.serviceAsset ?? 'USDC',
+            serviceActive: input.service ? true : existing.serviceActive,
+          },
+        })
+      : await this.db.aiAgent.create({
+          data: {
+            agentId: `kite-${input.type}-${Date.now()}`,
+            passportId: `KP-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+            name: input.name,
+            description: input.description,
+            type: input.type,
+            capabilities: input.capabilities,
+            ownerType: input.ownerType,
+            ownerId: input.ownerId,
+            walletAddress: wallet,
+            serviceUrl: input.service?.url,
+            servicePrice: input.service?.priceUsdc,
+            serviceAsset: input.service?.asset ?? 'USDC',
+            serviceActive: Boolean(input.service),
+          },
+        });
+
+    await this.trackRequest();
+    return this.toPassport(record);
   }
 
-  /**
-   * Get agent passport details
-   */
   async getAgentPassport(agentId: string): Promise<KiteAgentPassport | null> {
-    if (!(await this.checkRateLimit())) return null;
-    try {
-      const response = await axios.get(
-        `${this.apiUrl}/v1/agents/${agentId}/passport`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-          },
-        }
-      );
-
-      if (response.data.success) {
-        this.trackUsage(0.001); // Minimal lookup cost
-        return response.data.passport;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Failed to fetch agent passport:', error);
-      return null;
-    }
+    const record = await this.db.aiAgent.findFirst({
+      where: { OR: [{ id: agentId }, { agentId }, { passportId: agentId }] },
+    });
+    return record ? this.toPassport(record) : null;
   }
 
+  async updateAgentReputation(agentId: string, change: number, reason: string): Promise<boolean> {
+    const record = await this.db.aiAgent.findFirst({
+      where: { OR: [{ id: agentId }, { agentId }, { passportId: agentId }] },
+    });
+    if (!record) return false;
+    const next = Math.max(0, Math.min(1000, record.reputation + change));
+    await this.db.aiAgent.update({ where: { id: record.id }, data: { reputation: next } });
+    // Reputation movement is itself an attestable event.
+    await this.db.attestation.create({
+      data: {
+        subjectType: 'agent',
+        subjectId: record.id,
+        kind: 'reputation_delta',
+        payload: { change, reason, before: record.reputation, after: next },
+      },
+    });
+    return true;
+  }
+
+  // -----------------------------------------------------------------------
+  // Spending sessions (mirrors `kpass agent:session create/...`)
+  // -----------------------------------------------------------------------
+
+  async createSession(input: {
+    agentId: string;
+    taskSummary: string;
+    maxPerTxUsdc: number;
+    maxTotalUsdc: number;
+    ttlSeconds: number;
+    scope?: Record<string, unknown>;
+    approvedBy?: string;
+  }) {
+    const agent = await this.db.aiAgent.findFirst({
+      where: { OR: [{ id: input.agentId }, { agentId: input.agentId }] },
+    });
+    if (!agent) throw new Error(`agent not found: ${input.agentId}`);
+
+    return this.db.kiteSession.create({
+      data: {
+        agentId: agent.id,
+        taskSummary: input.taskSummary,
+        maxPerTx: input.maxPerTxUsdc,
+        maxTotal: input.maxTotalUsdc,
+        scope: input.scope ?? null,
+        expiresAt: new Date(Date.now() + input.ttlSeconds * 1000),
+        status: 'active',
+        approvedBy: input.approvedBy,
+      },
+    });
+  }
+
+  async revokeSession(sessionId: string) {
+    return this.db.kiteSession.update({
+      where: { id: sessionId },
+      data: { status: 'revoked' },
+    });
+  }
+
+  /** Find an active session that can cover `amount` for an agent, or null. */
+  private async findUsableSession(agentId: string, amount: number) {
+    const now = new Date();
+    const sessions = await this.db.kiteSession.findMany({
+      where: {
+        agentId,
+        status: 'active',
+        expiresAt: { gt: now },
+        maxPerTx: { gte: amount },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return sessions.find((s) => s.spent + amount <= s.maxTotal) ?? null;
+  }
+
+  // -----------------------------------------------------------------------
+  // Paid x402 calls (sessions enforce budget)
+  // -----------------------------------------------------------------------
+
   /**
-   * Update agent reputation based on performance
+   * Execute a paid x402 request on behalf of an agent. Mirrors:
+   *   `kpass agent:session execute --url ... --method ...`
+   *
+   * Persists an `Attestation` row for every successful settlement.
    */
-  async updateAgentReputation(
-    agentId: string,
-    reputationChange: number,
-    reason: string
-  ): Promise<boolean> {
-    if (!(await this.checkRateLimit())) return false;
+  async executePaidRequest<T = unknown>(input: {
+    agentId: string;
+    url: string;
+    method?: 'GET' | 'POST' | 'PUT' | 'DELETE';
+    body?: unknown;
+    headers?: Record<string, string>;
+    maxAmountUsdc: number;
+    /** Subject the resulting attestation should attach to. */
+    subject?: { type: 'player' | 'squad' | 'match' | 'agent'; id: string };
+    kind?: string;
+  }): Promise<{ ok: boolean; data?: T; payment?: SettlementResult; error?: string }> {
+    if (!(await this.checkRequestLimit())) return { ok: false, error: 'daily request limit reached' };
+    if (!(await this.checkPayoutBudget(input.maxAmountUsdc))) {
+      return { ok: false, error: 'platform daily payout budget reached' };
+    }
+
+    const agent = await this.db.aiAgent.findFirst({
+      where: { OR: [{ id: input.agentId }, { agentId: input.agentId }] },
+    });
+    if (!agent) return { ok: false, error: 'agent not found' };
+
+    const session = await this.findUsableSession(agent.id, input.maxAmountUsdc);
+    if (!session) {
+      return { ok: false, error: 'no active session with sufficient budget — call createSession first' };
+    }
+
+    let result;
     try {
-      const response = await axios.post(
-        `${this.apiUrl}/v1/agents/${agentId}/reputation`,
-        {
-          change: reputationChange,
-          reason: reason,
-          timestamp: Date.now(),
+      result = await paidFetch<T>({
+        url: input.url,
+        method: input.method,
+        headers: input.headers,
+        body: input.body,
+        maxAmountUsdc: Math.min(input.maxAmountUsdc, session.maxPerTx),
+        sessionId: session.id,
+      });
+    } catch (err) {
+      return { ok: false, error: (err as Error).message };
+    }
+
+    await this.trackRequest();
+
+    // Update session counters
+    const amountUsdc = result.payment
+      ? Number(ethers.formatUnits(result.payment.amount, 6))
+      : 0;
+    if (amountUsdc > 0) {
+      await this.db.kiteSession.update({
+        where: { id: session.id },
+        data: {
+          spent: { increment: amountUsdc },
+          txCount: { increment: 1 },
+          status: session.spent + amountUsdc >= session.maxTotal ? 'exhausted' : 'active',
         },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      return response.data.success;
-    } catch (error) {
-      console.error('Failed to update agent reputation:', error);
-      return false;
+      });
     }
-  }
 
-  /**
-   * Process stablecoin payment to/from agent
-   */
-  async processAgentPayment(
-    fromAddress: string,
-    toAddress: string,
-    amount: string,
-    currency: 'USDC' | 'USDT' = 'USDC',
-    metadata: Record<string, any> = {}
-  ): Promise<KitePayment | null> {
-    if (!(await this.checkRateLimit())) return null;
-    if (!(await this.checkPayoutLimit(amount))) return null;
-    
-    try {
-      // Kite handles stablecoin payments through their infrastructure
-      const response = await axios.post(
-        `${this.apiUrl}/v1/payments/transfer`,
-        {
-          from: fromAddress,
-          to: toAddress,
-          amount: amount,
-          currency: currency,
-          network: 'kite',
-          metadata: {
-            platform: 'sportwarren',
-            type: 'agent_payment',
-            ...metadata
+    // Persist attestation (only when we actually got a settlement record)
+    if (result.payment && input.subject) {
+      await this.db.attestation.create({
+        data: {
+          subjectType: input.subject.type,
+          subjectId: input.subject.id,
+          kind: input.kind ?? 'paid_call',
+          payload: {
+            url: input.url,
+            method: input.method ?? 'GET',
+            body: input.body ?? null,
+            response: result.data ?? null,
           },
+          signerAgentId: agent.id,
+          network: result.payment.network,
+          txHash: result.payment.txHash,
+          facilitator: result.payment.facilitator,
+          amountUsdc,
+          sessionId: session.id,
         },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (response.data.success) {
-        return {
-          transactionId: response.data.transaction_id,
-          from: fromAddress,
-          to: toAddress,
-          amount: amount,
-          currency: currency,
-          status: 'completed',
-          timestamp: new Date().toISOString(),
-        };
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Agent payment error:', error);
-      return null;
+      });
     }
+
+    return { ok: true, data: result.data, payment: result.payment };
   }
 
-  /**
-   * Specifically process squad wages as agent-to-agent (or agent-to-player) payments
-   */
+  // -----------------------------------------------------------------------
+  // Wage payouts — direct USDC transfer on Kite (no service involved).
+  // Kept as a public method so existing squad router stays untouched.
+  // -----------------------------------------------------------------------
+
   async processSquadWagePayment(
     squadId: string,
     playerWallet: string,
     amount: number,
-    agentId: string = 'squad_manager'
-  ): Promise<KitePayment | null> {
-    const config = readKiteEnv();
-    if (!config.hasApiKey || !config.hasPrivateKey) {
-        console.warn(`[KiteAI] Credentials missing — simulating squad wage payment for squad ${squadId}`);
-        return {
-            transactionId: `sim-kite-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-            from: this.wallet.address,
-            to: playerWallet,
-            amount: amount.toString(),
-            currency: 'USDC',
-            status: 'completed',
-            timestamp: new Date().toISOString()
-        };
+    agentId: string = 'squad_manager',
+  ) {
+    if (!(await this.checkRequestLimit())) return null;
+    if (!(await this.checkPayoutBudget(amount))) return null;
+
+    const status = getKiteServiceStatus();
+    if (!status.enabled || !this.platformWallet) {
+      const tx = `sim-kite-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+      console.warn(`[Kite] simulated wage payment ${amount} USDC → ${playerWallet}`);
+      await this.db.attestation.create({
+        data: {
+          subjectType: 'squad',
+          subjectId: squadId,
+          kind: 'wage_payment',
+          payload: { to: playerWallet, amountUsdc: amount, agentId, simulated: true },
+          network: readX402Config().network,
+          txHash: tx,
+          amountUsdc: amount,
+        },
+      });
+      return {
+        transactionId: tx,
+        from: 'platform',
+        to: playerWallet,
+        amount: amount.toString(),
+        currency: 'USDC',
+        status: 'completed' as const,
+        timestamp: new Date().toISOString(),
+        simulated: true,
+      };
     }
 
-    return this.processAgentPayment(
-      this.wallet.address, // Treasury wallet (managed by agent)
-      playerWallet,
-      amount.toString(),
-      'USDC',
-      { squadId, agentId, paymentType: 'squad_wage' }
+    const txHash = await this.directUsdcTransfer(playerWallet, amount);
+    await this.db.attestation.create({
+      data: {
+        subjectType: 'squad',
+        subjectId: squadId,
+        kind: 'wage_payment',
+        payload: { to: playerWallet, amountUsdc: amount, agentId },
+        network: readX402Config().network,
+        txHash,
+        amountUsdc: amount,
+      },
+    });
+    return {
+      transactionId: txHash,
+      from: this.platformWallet,
+      to: playerWallet,
+      amount: amount.toString(),
+      currency: 'USDC',
+      status: 'completed' as const,
+      timestamp: new Date().toISOString(),
+    };
+  }
+
+  /** ERC20 transfer on Kite chain — used for direct payouts (not x402). */
+  private async directUsdcTransfer(to: string, amountUsdc: number): Promise<string> {
+    const cfg = readX402Config();
+    const pk = process.env.WEB3_PRIVATE_KEY!.trim();
+    const provider = new ethers.JsonRpcProvider(cfg.rpcUrl);
+    const wallet = new ethers.Wallet(pk, provider);
+    const erc20 = new ethers.Contract(
+      cfg.assetAddress,
+      ['function transfer(address to, uint256 value) returns (bool)'],
+      wallet,
+    );
+    const value = ethers.parseUnits(amountUsdc.toFixed(6), 6);
+    const tx = await erc20.transfer(to, value);
+    const receipt = await tx.wait();
+    return receipt?.hash ?? tx.hash;
+  }
+
+  // -----------------------------------------------------------------------
+  // Service discovery — `ksearch` CLI when present, DB catalogue otherwise.
+  // -----------------------------------------------------------------------
+
+  async searchMarketplace(
+    query: string | { category?: string; minReputation?: number; maxPrice?: string },
+  ): Promise<MarketplaceAgent[]> {
+    const q = typeof query === 'string' ? query : (query.category ?? 'sports');
+
+    // 1) ksearch CLI (preferred) — installed by passport-skills
+    try {
+      const { stdout } = await execFileAsync('ksearch', [
+        'services', 'list',
+        '--query', q,
+        '--payment-approach', 'x402_http',
+        '--asset', 'USDC',
+        '--limit', '10',
+        '--output', 'json',
+      ], { timeout: 10_000 });
+      const parsed = JSON.parse(stdout);
+      const services = Array.isArray(parsed) ? parsed : (parsed?.services ?? parsed?.results ?? []);
+      if (Array.isArray(services) && services.length) {
+        return services.map((s: any) => ({
+          id: s.id ?? s.serviceId ?? s.url,
+          name: s.name ?? s.merchantName ?? 'Unknown service',
+          description: s.description ?? '',
+          price: s.price ?? s.maxAmountRequired ?? 'variable',
+          rating: typeof s.rating === 'number' ? s.rating : undefined,
+          author: s.author ?? s.publisher,
+          url: s.url ?? s.endpoint,
+          verified: Boolean(s.verified),
+        }));
+      }
+    } catch {
+      /* fall through to local catalogue */
+    }
+
+    // 2) Local agent catalogue (our own service-providing agents)
+    const where = typeof query === 'string'
+      ? { serviceActive: true, OR: [
+          { name: { contains: query, mode: 'insensitive' as const } },
+          { description: { contains: query, mode: 'insensitive' as const } },
+          { capabilities: { has: query } },
+        ] }
+      : { serviceActive: true, reputation: { gte: query.minReputation ?? 0 } };
+
+    const local = await this.db.aiAgent.findMany({ where, take: 10 });
+    return local.map((a) => ({
+      id: a.id,
+      name: a.name,
+      description: a.description,
+      price: a.servicePrice ?? 'variable',
+      rating: a.reputation / 100,
+      author: a.ownerType ?? 'sportwarren',
+      url: a.serviceUrl ?? undefined,
+      verified: true,
+    }));
+  }
+
+  /**
+   * Hire an agent: creates an active KiteSession on our side that authorises
+   * `durationDays` worth of paid calls to that agent's service.
+   */
+  async hireAgent(targetAgentId: string, squadId: string, durationDays = 7): Promise<boolean> {
+    const target = await this.db.aiAgent.findFirst({
+      where: { OR: [{ id: targetAgentId }, { agentId: targetAgentId }, { passportId: targetAgentId }] },
+    });
+    if (!target?.serviceUrl) {
+      console.warn('[Kite] hireAgent: target has no service URL');
+      return false;
+    }
+
+    // The hiring squad's manager agent acts as the spender.
+    const manager = await this.upsertSquadManagerAgent(squadId);
+
+    const price = Number(target.servicePrice ?? '0.10');
+    const totalBudget = price * 30 * durationDays; // ~30 calls/day cap
+
+    await this.createSession({
+      agentId: manager.id,
+      taskSummary: `Hire ${target.name} for ${durationDays}d on behalf of squad ${squadId}`,
+      maxPerTxUsdc: Math.max(price, MAX_SINGLE_PAYMENT_USDC),
+      maxTotalUsdc: totalBudget,
+      ttlSeconds: durationDays * 86400,
+      scope: { hiredAgentId: target.id, serviceUrl: target.serviceUrl, squadId },
+    });
+
+    await this.db.attestation.create({
+      data: {
+        subjectType: 'squad',
+        subjectId: squadId,
+        kind: 'agent_hire',
+        payload: { hiredAgentId: target.id, name: target.name, durationDays, price },
+      },
+    });
+    return true;
+  }
+
+  // -----------------------------------------------------------------------
+  // Analytics — aggregate from local audit tables.
+  // -----------------------------------------------------------------------
+
+  async getAgentAnalytics(agentId: string): Promise<AgentAnalytics | null> {
+    const agent = await this.db.aiAgent.findFirst({
+      where: { OR: [{ id: agentId }, { agentId }, { passportId: agentId }] },
+    });
+    if (!agent) return null;
+
+    const [sessions, attestations] = await Promise.all([
+      this.db.kiteSession.findMany({ where: { agentId: agent.id } }),
+      this.db.attestation.findMany({ where: { signerAgentId: agent.id } }),
+    ]);
+
+    const totalSpent = sessions.reduce((s, x) => s + x.spent, 0);
+    const totalCalls = sessions.reduce((s, x) => s + x.txCount, 0);
+    const failed = attestations.filter((a) => !a.txHash).length;
+    const successRate = totalCalls === 0 ? 1 : (totalCalls - failed) / totalCalls;
+
+    return {
+      totalInteractions: totalCalls,
+      successRate,
+      averageRating: agent.reputation / 100,
+      revenue: totalSpent.toFixed(2),
+      topUsers: [],
+    };
+  }
+
+  /**
+   * No-op interaction logger kept for backwards compatibility with player
+   * router calls. Writes a lightweight attestation row instead of hitting a
+   * fictitious external API.
+   */
+  async recordInteraction(agentRef: string, interactionType: string, metadata: any) {
+    const agent = await this.db.aiAgent.findFirst({
+      where: { OR: [{ id: agentRef }, { agentId: agentRef }, { passportId: agentRef }] },
+    });
+    await this.db.attestation.create({
+      data: {
+        subjectType: 'agent',
+        subjectId: agent?.id ?? agentRef,
+        kind: `interaction:${interactionType}`,
+        payload: metadata ?? {},
+        signerAgentId: agent?.id,
+      },
+    });
+    return true;
+  }
+
+  // -----------------------------------------------------------------------
+  // Bootstrap helpers
+  // -----------------------------------------------------------------------
+
+  async upsertSquadManagerAgent(squadId: string) {
+    return (
+      (await this.db.aiAgent.findFirst({
+        where: { ownerType: 'squad', ownerId: squadId, type: 'twin_squad' },
+      })) ??
+      (await this.registerAgent({
+        name: `Squad ${squadId.slice(0, 6)} Manager`,
+        description: 'Autonomous squad manager twin (Kite Passport).',
+        type: 'twin_squad',
+        capabilities: ['hire_coach', 'rotate_squad', 'pay_wages', 'attest_match'],
+        ownerType: 'squad',
+        ownerId: squadId,
+      }))!
     );
   }
 
-  /**
-   * List agent in Kite Agent Store marketplace
-   */
-  async listAgentInMarketplace(
-    agentId: string,
-    pricing: {
-      subscriptionFee?: string;
-      perUseFee?: string;
-      currency: 'USDC' | 'USDT';
-    }
-  ): Promise<boolean> {
-    try {
-      const response = await axios.post(
-        `${this.apiUrl}/v1/marketplace/list`,
-        {
-          agent_id: agentId,
-          pricing: pricing,
-          visibility: 'public',
-          categories: ['sports', 'football', 'analytics'],
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      return response.data.success;
-    } catch (error) {
-      console.error('Failed to list agent in marketplace:', error);
-      return false;
-    }
+  async upsertPlayerTwinAgent(profileId: string, displayName: string) {
+    return (
+      (await this.db.aiAgent.findFirst({
+        where: { ownerType: 'player', ownerId: profileId, type: 'twin_player' },
+      })) ??
+      (await this.registerAgent({
+        name: `${displayName} (Twin)`,
+        description: 'Phygital player twin — stats are an attested function of IRL performance.',
+        type: 'twin_player',
+        capabilities: ['accept_attestations', 'subscribe_coaching', 'compete_in_simulations'],
+        ownerType: 'player',
+        ownerId: profileId,
+      }))!
+    );
   }
 
-  /**
-   * Search Kite Agent Store for compatible agents
-   */
-  async searchMarketplace(query: string | {
-    category?: string;
-    minReputation?: number;
-    maxPrice?: string;
-  }): Promise<any[]> {
-    if (!(await this.checkRateLimit())) return [];
-    try {
-      const isString = typeof query === 'string';
-      const response = await axios.get(
-        `${this.apiUrl}/v1/marketplace/search`,
-        {
-          params: isString 
-            ? { query, platform: 'sportwarren' }
-            : {
-                category: query.category || 'sports',
-                min_reputation: query.minReputation || 80,
-                max_price: query.maxPrice,
-                platform: 'sportwarren',
-              },
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-          },
-        }
-      );
+  // -----------------------------------------------------------------------
+  // Internal
+  // -----------------------------------------------------------------------
 
-      return response.data.agents || [];
-    } catch (error) {
-      const config = readKiteEnv();
-      if (!config.hasApiKey) {
-          // Only provide mock data in demo/no-key mode to avoid confusing real API errors
-          const queryString = typeof query === 'string' ? query.toLowerCase() : '';
-          if (queryString.includes('striker')) {
-              console.info('[KiteAI] API key missing — returning "Elite Striker Coach" mock for demonstration');
-              return [{
-                  id: 'market-striker-01',
-                  name: 'Elite Striker Coach',
-                  description: 'Specializes in improving conversion rates and positioning for forwards.',
-                  price: '500 USDC',
-                  rating: 4.8,
-                  author: 'GoalAI Labs',
-                  verified: true
-              }];
-          }
-      } else {
-          console.error('[KiteAI] Marketplace search failed:', error);
-      }
-      return [];
-    }
-  }
-
-  /**
-   * Record agent interaction for analytics
-   */
-  async recordInteraction(
-    agentId: string,
-    interactionType: string,
-    metadata: any
-  ): Promise<boolean> {
-    if (!(await this.checkRateLimit())) return false;
-    try {
-      const response = await axios.post(
-        `${this.apiUrl}/v1/agents/${agentId}/interactions`,
-        {
-          type: interactionType,
-          metadata: metadata,
-          timestamp: Date.now(),
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      return response.data.success;
-    } catch (error) {
-      console.error('Failed to record interaction:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Get agent analytics from Kite network
-   */
-  async getAgentAnalytics(agentId: string): Promise<{
-    totalInteractions: number;
-    successRate: number;
-    averageRating: number;
-    revenue: string;
-    topUsers: string[];
-  } | null> {
-    if (!(await this.checkRateLimit())) return null;
-    try {
-      const response = await axios.get(
-        `${this.apiUrl}/v1/agents/${agentId}/analytics`,
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-          },
-        }
-      );
-
-      if (response.data.success) {
-        return response.data.analytics;
-      }
-
-      return null;
-    } catch (error) {
-      console.error('Failed to fetch agent analytics:', error);
-      return null;
-    }
-  }
-
-  /**
-   * Verify agent identity using Kite passport
-   */
-  async verifyAgentIdentity(
-    agentId: string,
-    signature: string
-  ): Promise<boolean> {
-    if (!(await this.checkRateLimit())) return false;
-    try {
-      const response = await axios.post(
-        `${this.apiUrl}/v1/agents/${agentId}/verify`,
-        {
-          signature: signature,
-          timestamp: Date.now(),
-        },
-        {
-          headers: {
-            'Authorization': `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      return response.data.verified;
-    } catch (error) {
-      console.error('Agent verification error:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Initialize SportWarren's core agents
-   */
-  async initializeCoreAgents(): Promise<{
-    squadManager: KiteAgentPassport | null;
-    scout: KiteAgentPassport | null;
-    fitness: KiteAgentPassport | null;
-    social: KiteAgentPassport | null;
-  }> {
-    const walletAddress = this.wallet.address;
-
-    const [squadManager, scout, fitness, social] = await Promise.all([
-      this.registerAgent({
-        name: 'SportWarren Squad Manager',
-        description: 'AI agent for tactical analysis and squad rotation',
-        type: 'squad_manager',
-        capabilities: ['tactics', 'formation_analysis', 'rotation_management'],
-        walletAddress,
-      }),
-      this.registerAgent({
-        name: 'SportWarren Scout',
-        description: 'AI agent for opponent analysis and player scouting',
-        type: 'scout',
-        capabilities: ['opponent_analysis', 'player_scouting', 'weakness_detection'],
-        walletAddress,
-      }),
-      this.registerAgent({
-        name: 'SportWarren Fitness Coach',
-        description: 'AI agent for fitness tracking and training recommendations',
-        type: 'fitness',
-        capabilities: ['fitness_tracking', 'training_plans', 'injury_prevention'],
-        walletAddress,
-      }),
-      this.registerAgent({
-        name: 'SportWarren Social Manager',
-        description: 'AI agent for team morale and social coordination',
-        type: 'social',
-        capabilities: ['morale_tracking', 'event_planning', 'team_cohesion'],
-        walletAddress,
-      }),
-    ]);
-
-    return { squadManager, scout, fitness, social };
-  }
-
-  /**
-   * Hire an agent from the marketplace
-   */
-  async hireAgent(agentId: string, squadId: string, durationDays: number = 7): Promise<boolean> {
-      try {
-          const response = await axios.post(
-              `${this.apiUrl}/v1/marketplace/hire`,
-              { agent_id: agentId, squad_id: squadId, duration_days: durationDays },
-              { headers: { 'Authorization': `Bearer ${this.apiKey}` } }
-          );
-          return response.data.success;
-      } catch (error) {
-          console.error('Kite Agent hire failed:', error);
-          return true; // Simulate success for demo
-      }
-  }
-
-  /**
-   * Health check for Kite AI service
-   */
-  async healthCheck(): Promise<boolean> {
-    try {
-      const response = await axios.get(`${this.apiUrl}/health`, {
-        timeout: 5000,
-      });
-      return response.data.status === 'healthy';
-    } catch (error) {
-      console.error('Kite AI health check failed:', error);
-      return false;
-    }
+  private toPassport(r: any): KiteAgentPassport {
+    return {
+      id: r.id,
+      agentId: r.agentId,
+      passportId: r.passportId,
+      name: r.name,
+      type: r.type,
+      description: r.description,
+      reputation: r.reputation,
+      walletAddress: r.walletAddress ?? this.platformWallet ?? '',
+      capabilities: r.capabilities ?? [],
+      serviceUrl: r.serviceUrl ?? null,
+      servicePrice: r.servicePrice ?? null,
+      ownerType: r.ownerType ?? null,
+      ownerId: r.ownerId ?? null,
+      verified: true,
+    };
   }
 }
 
-let kiteAIServiceInstance: KiteAIService | null = null;
+// ---------------------------------------------------------------------------
+// Singleton accessor (preserves existing import shape)
+// ---------------------------------------------------------------------------
 
-export function getKiteAIService() {
-  if (!kiteAIServiceInstance) {
-    kiteAIServiceInstance = new KiteAIService();
-  }
-
-  return kiteAIServiceInstance;
+let instance: KiteAIService | null = null;
+export function getKiteAIService(): KiteAIService {
+  if (!instance) instance = new KiteAIService();
+  return instance;
 }
 
 export const kiteAIService = new Proxy({} as KiteAIService, {
-  get(_target, property, receiver) {
-    const instance = getKiteAIService();
-    const value = Reflect.get(instance, property, receiver);
-    return typeof value === 'function' ? value.bind(instance) : value;
+  get(_t, p, r) {
+    const i = getKiteAIService();
+    const v = Reflect.get(i, p, r);
+    return typeof v === 'function' ? v.bind(i) : v;
   },
 });
