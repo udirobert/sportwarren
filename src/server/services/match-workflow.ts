@@ -412,7 +412,12 @@ export async function submitMatchResult({
           const twinService = getPlayerTwinService();
           for (const stat of seededStats) {
             try {
-              await twinService.getOrCreateTwin(stat.profileId, stat.playerName ?? 'Player');
+              const profile = await prisma.playerProfile.findUnique({
+                where: { id: stat.profileId },
+                include: { user: { select: { name: true } } },
+              });
+              const displayName = profile?.user?.name ?? 'Player';
+              await twinService.getOrCreateTwin(stat.profileId, displayName);
               const deltas: Record<string, number> = {};
               if (stat.goals > 0) deltas.shooting = Math.min(2, stat.goals * 0.5);
               if (stat.assists > 0) deltas.passing = Math.min(1.5, stat.assists * 0.5);
