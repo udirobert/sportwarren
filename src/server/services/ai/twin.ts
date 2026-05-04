@@ -11,6 +11,7 @@
  */
 
 import type { PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { kiteAIService } from './kite';
 
@@ -95,7 +96,7 @@ export class PlayerTwinService {
         subjectType: 'player',
         subjectId: input.profileId,
         kind: input.kind,
-        payload: input.payload,
+        payload: input.payload as any,
         signerAgentId: twin.agentId,
         network: 'kite-testnet',
       },
@@ -194,7 +195,7 @@ export class PlayerTwinService {
           modifier: input.modifier,
           durationDays: input.durationDays,
           priceUsdc: input.priceUsdc,
-        },
+        } as any,
         signerAgentId: twin.agentId,
         network: 'kite-testnet',
         sessionId: session.id,
