@@ -93,6 +93,7 @@ model PlayerProfile {
   motmVotesGiven    MotmVote[] @relation("MotmVoteGiven")
   motmVotesReceived MotmVote[] @relation("MotmVoteReceived")
   sessionsAttended  SessionAttendee[]
+  twin              PlayerTwin?
 
   @@map("player_profiles")
 }
@@ -896,6 +897,7 @@ model AiAgent {
   sessions       KiteSession[]
   attestations   Attestation[]    @relation("AttestationSigner")
   coachingGiven  CoachingEffect[] @relation("CoachingEffectCoach")
+  playerTwin     PlayerTwin?
 
   @@index([ownerType, ownerId])
   @@map("ai_agents")
