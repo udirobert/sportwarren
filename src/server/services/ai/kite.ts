@@ -272,7 +272,7 @@ export class KiteAIService {
         taskSummary: input.taskSummary,
         maxPerTx: input.maxPerTxUsdc,
         maxTotal: input.maxTotalUsdc,
-        scope: input.scope ?? null,
+        scope: input.scope ?? undefined,
         expiresAt: new Date(Date.now() + input.ttlSeconds * 1000),
         status: 'active',
         approvedBy: input.approvedBy,
