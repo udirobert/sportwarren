@@ -101,7 +101,7 @@ describe('validation-schemas', () => {
     });
 
     it('rejects short names longer than 5 characters', () => {
-      expect(() => shortNameSchema.parse('FCDU')).toThrow();
+      expect(() => shortNameSchema.parse('FCBARCA')).toThrow();
     });
 
     it('accepts valid short names', () => {

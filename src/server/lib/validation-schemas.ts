@@ -23,13 +23,13 @@ export const paginationSchema = z.object({
 });
 
 /** Squad ID with validation */
-export const squadIdSchema = z.string().min(1, 'Squad ID is required');
+export const squadIdSchema = z.string().trim().min(1, 'Squad ID is required');
 
 /** User ID with validation */
-export const userIdSchema = z.string().min(1, 'User ID is required');
+export const userIdSchema = z.string().trim().min(1, 'User ID is required');
 
 /** Match ID with validation */
-export const matchIdSchema = z.string().min(1, 'Match ID is required');
+export const matchIdSchema = z.string().trim().min(1, 'Match ID is required');
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SQUAD VALIDATORS
