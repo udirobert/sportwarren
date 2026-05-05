@@ -100,6 +100,22 @@
 
 ---
 
+## Phase 4: Immersive Evolution (Q4 2026+) 🚀 Future
+
+**Goal:** High-fidelity "Digital Twin" simulation and monetization
+
+### 3D Simulation Engine
+- High-fidelity 11v11 "Broadcast Mode"
+- Direct mapping of IRL stats (sleep, nutrition) to 3D performance
+- Automated "Broadcast Director" camera system
+
+### Premium Utility
+- High-engagement rewards (DAU/WAU/MAU streaks)
+- Premium subscription tiers for advanced tactical analysis
+- Custom stadium and kit visual upgrades
+
+---
+
 ## Growth Funnel (Activation → Conversion → Retention → Viral)
 
 ### Objective
@@ -132,6 +148,7 @@ Configure the first user journey so every early action supports one of four outc
 - Channel connection rate after first match
 - Identity connection rate after channel connection
 - 7-day return rate with at least one verification queue review
+- **3D engine engagement (premium/streak conversion rate)**
 
 ---
 

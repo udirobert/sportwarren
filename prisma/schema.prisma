@@ -189,6 +189,8 @@ model Squad {
   squadEnergy      Int      @default(100) @map("squad_energy") // 0-100, affected by IRL commitment
   lastSeasonSync   DateTime @default(now()) @map("last_season_sync")
   isDigitalTwinActive Boolean @default(true) @map("is_digital_twin_active")
+  digitalTwin3dEnabled Boolean @default(false) @map("digital_twin_3d_enabled")
+  digitalTwin3dTier    String? @map("digital_twin_3d_tier") // premium, streak_reward, partner, internal
 
   // Relations
   members       SquadMember[]

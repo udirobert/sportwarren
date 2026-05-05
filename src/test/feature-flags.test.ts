@@ -14,6 +14,7 @@ describe('Feature Flags', () => {
   describe('isEnabled', () => {
     it('returns default value when no env var is set', () => {
       expect(isEnabled('MATCH_SUBMISSION')).toBe(true);
+      expect(isEnabled('DIGITAL_TWIN_3D')).toBe(false);
       expect(isEnabled('PREDICTION_MARKETS')).toBe(false);
       expect(isEnabled('DAO_GOVERNANCE')).toBe(false);
     });
@@ -52,6 +53,7 @@ describe('Feature Flags', () => {
       const flags = getAllFlags();
       expect(Object.keys(flags).length).toBe(Object.keys(FLAGS).length);
       expect(flags.MATCH_SUBMISSION).toBe(true);
+      expect(flags.DIGITAL_TWIN_3D).toBe(false);
       expect(flags.PREDICTION_MARKETS).toBe(false);
     });
   });

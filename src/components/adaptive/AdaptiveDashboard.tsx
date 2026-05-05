@@ -28,6 +28,7 @@ import { trpc } from '@/lib/trpc-client';
 import { getDashboardEntryState, type DashboardEntryAction } from '@/lib/dashboard/entry-state';
 import { useTactics } from '@/hooks/squad/useTactics';
 import { useMatchCenterData } from '@/hooks/match/useMatchCenterData';
+import { useDigitalTwinBroadcastAccess } from '@/hooks/useDigitalTwinBroadcastAccess';
 import { Avatar } from '@/components/ui/Avatar';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
@@ -36,7 +37,12 @@ import { summarizeAvatarUpgrade } from '@/lib/avatar/diff';
 import { QuickLogWidget } from '@/components/dashboard/QuickLogWidget';
 import { MatchCoordinationWidget } from '@/components/dashboard/MatchCoordinationWidget';
 import { SquadDigitalTwinWidget } from '@/components/dashboard/SquadDigitalTwinWidget';
+import { DigitalTwinUpgradeGate } from '@/components/dashboard/DigitalTwinUpgradeGate';
 import dynamic from 'next/dynamic';
+import {
+  DIGITAL_TWIN_3D_TEASER_KEY,
+  DIGITAL_TWIN_3D_UNLOCK_KEY,
+} from '@/lib/digital-twin/access';
 
 // Statically imported (small / always visible)
 import { AgentProvider } from '@/context/AgentContext';
@@ -70,7 +76,7 @@ interface DashboardWidget {
 }
 
 export const AdaptiveDashboard: React.FC = () => {
-  const { preferences, trackFeatureUsage } = useUserPreferences();
+  const { preferences, trackFeatureUsage, unlockFeature } = useUserPreferences();
   const { address, isGuest, hasAccount, hasWallet, authStatus, refreshAuthSignature } = useWallet();
   const { venue } = useEnvironment();
   const { addToast } = useToast();
@@ -150,6 +156,28 @@ export const AdaptiveDashboard: React.FC = () => {
   const { availableOpponents } = useMatchCenterData(primarySquadId);
   const { completeChecklistItem, allChecklistDone, completedCount, totalCount } = useOnboarding();
   const currentUserId = currentProfile?.userId;
+  const { access: digitalTwin3DAccess } = useDigitalTwinBroadcastAccess({
+    squadId: primarySquadId || undefined,
+    preferences,
+    totalMatches: stats?.matches ?? 0,
+    avatarRecentUnlock: (avatarPresentation as any)?.recentUnlock,
+  });
+
+  const handleDigitalTwin3DPreview = React.useCallback(() => {
+    unlockFeature(DIGITAL_TWIN_3D_TEASER_KEY);
+    if (digitalTwin3DAccess.canLaunch) {
+      unlockFeature(DIGITAL_TWIN_3D_UNLOCK_KEY);
+    }
+    trackFeatureUsage('digital-twin-3d', 5_000);
+    addToast({
+      tone: 'success',
+      title: digitalTwin3DAccess.canLaunch ? '3D Broadcast Tracked' : 'Upgrade Path Tracked',
+      message: digitalTwin3DAccess.canLaunch
+        ? 'Your squad is marked for immersive broadcast rollout.'
+        : 'We will keep the 2D experience primary and surface 3D as your squad qualifies.',
+    });
+    router.push(primarySquadId ? `/broadcast?squadId=${primarySquadId}` : '/broadcast');
+  }, [addToast, digitalTwin3DAccess.canLaunch, primarySquadId, router, trackFeatureUsage, unlockFeature]);
 
   // Fetch squad tactics for MatchEnginePreview
   const { tactics: squadTactics } = useTactics(primarySquadId || undefined);
@@ -245,6 +273,19 @@ export const AdaptiveDashboard: React.FC = () => {
         category: 'squad',
         component: (
           <SquadDigitalTwinWidget squadId={primarySquadId} />
+        ),
+      });
+
+      widgets.push({
+        id: 'digital-twin-3d-gate',
+        priority: 452,
+        requiredLevel: 'basic',
+        category: 'squad',
+        component: (
+          <DigitalTwinUpgradeGate
+            access={digitalTwin3DAccess}
+            onPreview={handleDigitalTwin3DPreview}
+          />
         ),
       });
 
@@ -745,7 +786,7 @@ export const AdaptiveDashboard: React.FC = () => {
     );
 
     return widgets;
-  }, [addToast, allChecklistDone, availableOpponents, avatarPresentation, avatarPresentationQuery, completeChecklistItem, currentUserId, dataState, entryState.id, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, primarySquadName, refreshSquads, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, squadTactics?.formation, stats, submitMatch, trackFeatureUsage]);
+  }, [addToast, allChecklistDone, availableOpponents, avatarPresentation, avatarPresentationQuery, completeChecklistItem, currentUserId, dataState, digitalTwin3DAccess, entryState.id, handleDigitalTwin3DPreview, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, primarySquadName, refreshSquads, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, squadTactics?.formation, stats, submitMatch, trackFeatureUsage]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {
@@ -1295,7 +1336,7 @@ export const AdaptiveDashboard: React.FC = () => {
 
       {(() => {
         const todayIds = ['quick-log', 'onboarding-checklist', 'pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine', 'quick-stats', 'achievements', 'upcoming-fixtures'];
-        const squadIds = ['governance', 'squad-dynamics', 'captains-log', 'communication-hub'];
+        const squadIds = ['governance', 'squad-dynamics', 'captains-log', 'communication-hub', 'squad-digital-twin', 'digital-twin-3d-gate'];
         const progressIds = ['training', 'scouting-report', 'lens-social', 'nearby-squads', 'territory'];
 
         const todayWidgets = visibleWidgets.filter(w => todayIds.includes(w.id));
@@ -1320,6 +1361,8 @@ export const AdaptiveDashboard: React.FC = () => {
             'communication-hub': 'md:col-span-12 lg:col-span-5',
             'squad-dynamics': 'md:col-span-12 lg:col-span-6',
             'governance': 'md:col-span-12 lg:col-span-6',
+            'squad-digital-twin': 'md:col-span-12 lg:col-span-6',
+            'digital-twin-3d-gate': 'md:col-span-12 lg:col-span-6',
           },
           Progress: {
             'training': 'md:col-span-12 lg:col-span-6',

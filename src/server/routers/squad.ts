@@ -347,6 +347,8 @@ export const squadRouter = createTRPCRouter({
           seasonPoints: true,
           squadEnergy: true,
           isDigitalTwinActive: true,
+          digitalTwin3dEnabled: true,
+          digitalTwin3dTier: true,
           lastSeasonSync: true,
           members: {
             select: {
@@ -395,6 +397,8 @@ export const squadRouter = createTRPCRouter({
         seasonPoints: squad.seasonPoints,
         squadEnergy: squad.squadEnergy,
         isDigitalTwinActive: squad.isDigitalTwinActive,
+        digitalTwin3dEnabled: squad.digitalTwin3dEnabled,
+        digitalTwin3dTier: squad.digitalTwin3dTier,
         lastSeasonSync: squad.lastSeasonSync,
         nextLevelXp: squad.level * 1000,
         squadHypeTags: topTags,

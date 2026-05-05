@@ -44,8 +44,17 @@ SportWarren's current MVP scope is the **Championship Manager-style squad loop, 
 | Payments | Multi-network treasury, fees, rewards, and agent settlements | ✅ Complete |
 | XP System | Player progression, reputation | ✅ Complete |
 | AI Staff | 5 agents (Scout, Coach, Physio, etc.) | ✅ Complete |
+| Digital Twin (3D) | High-fidelity 11v11 "Broadcast" simulation engine | 🚀 Premium Upgrade |
 
 **Telegram is a primary distribution surface. TON owns Telegram-native wallet flows, while Algorand, Avalanche, Kite, Yellow, and Lens each handle separate responsibilities.**
+
+### Digital Twin Simulation (3D)
+The **Digital Twin Simulation** is a high-fidelity 3D "Broadcast Engine" that moves beyond tactical dots to an immersive 11v11 visual experience. 
+
+- **Data-Driven Performance:** Performance in the 3D sim is directly influenced by real-world "Phygital" inputs (sleep, nutrition, training intensity).
+- **Broadcast Director:** Instead of direct playability, the engine uses an automated cinematic camera system that follows the flow of play, providing a "Spectator Mode" for squad leaders.
+- **Premium Tier:** This experience is reserved for high-engagement users (DAU/WAU streaks) and premium subscribers.
+- **2D Coexistence:** The 3D engine does NOT replace the baseline 2D PitchCanvas. 2D remains the reliable, low-power baseline for all users.
 
 ### Out of Scope (Future Build)
 
