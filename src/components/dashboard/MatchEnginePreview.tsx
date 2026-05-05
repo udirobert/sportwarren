@@ -18,7 +18,12 @@ import {
     type PlayerPuck, type BallState, type MatchCommentary,
     type MatchEvent, type SupportOptions,
 } from '@/lib/match/matchEngine';
-import { createInitialMatchSimulationSnapshot, type MatchPhase } from '@/lib/match/matchSimulation';
+import {
+    createInitialMatchSimulationSnapshot,
+    createMatchCommentaryEntry,
+    createMatchSimulationSnapshot,
+    type MatchPhase,
+} from '@/lib/match/matchSimulation';
 
 import type { Formation } from '@/types';
 import { FORMATIONS } from '@/lib/formations';
@@ -982,6 +987,12 @@ export const MatchEnginePreview: React.FC<{
                             ))}
                         </div>
                     </div>
+                </div>
+            </div>
+        </Card>
+    );
+};
+</div>
                 </div>
             </div>
         </Card>

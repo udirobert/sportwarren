@@ -22,16 +22,54 @@ export interface MatchSimulationSnapshot {
   matchPhase: MatchPhase;
 }
 
+export interface CreateMatchCommentaryEntryInput {
+  id: string;
+  tick: number;
+  text: string;
+  type: MatchCommentary['type'];
+}
+
 export function createInitialMatchSimulationSnapshot(venue: string): MatchSimulationSnapshot {
   return {
     ball: { x: 50, y: 50, vx: 0, vy: 0, ownerId: null },
     ballState: 'controlled',
     players: [],
-    commentary: [{ id: 'init-0', time: '0:00', text: `Preview canvas ready for ${venue}.`, type: 'incident' }],
+    commentary: [createMatchCommentaryEntry({
+      id: 'init-0',
+      tick: 0,
+      text: `Preview canvas ready for ${venue}.`,
+      type: 'incident',
+    })],
     latestEvent: '',
     time: 0,
     tempo: 1,
     score: { home: 0, away: 0 },
     matchPhase: 'first_half',
+  };
+}
+
+export function createMatchCommentaryEntry({ id, tick, text, type }: CreateMatchCommentaryEntryInput): MatchCommentary {
+  const clockMin = Math.floor(tick / 60);
+  const clockSec = tick % 60;
+
+  return {
+    id,
+    time: `${clockMin}:${clockSec.toString().padStart(2, '0')}`,
+    text,
+    type,
+  };
+}
+
+export function createMatchSimulationSnapshot(input: MatchSimulationSnapshot): MatchSimulationSnapshot {
+  return {
+    ball: { ...input.ball },
+    ballState: input.ballState,
+    players: [...input.players],
+    commentary: [...input.commentary],
+    latestEvent: input.latestEvent,
+    time: input.time,
+    tempo: input.tempo,
+    score: { ...input.score },
+    matchPhase: input.matchPhase,
   };
 }
