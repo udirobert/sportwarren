@@ -6,6 +6,12 @@ interface SceneProps {
 }
 
 export const Scene: React.FC<SceneProps> = ({ viewModel }) => {
+  const highlightStyles = {
+    calm: 'from-cyan-400/10 to-transparent border-cyan-400/20',
+    pressure: 'from-amber-400/15 to-transparent border-amber-400/30',
+    surge: 'from-emerald-400/15 to-transparent border-emerald-400/30',
+  } as const;
+
   return (
     <div className="relative aspect-[16/9] overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.18),transparent_40%),linear-gradient(180deg,rgba(15,23,42,0.85),rgba(2,6,23,1))]">
       <div className="absolute inset-0 opacity-70">
@@ -15,6 +21,8 @@ export const Scene: React.FC<SceneProps> = ({ viewModel }) => {
         <div className="absolute left-[18%] top-[32%] h-[36%] w-[10%] border border-white/15 border-l-0" />
         <div className="absolute right-[18%] top-[32%] h-[36%] w-[10%] border border-white/15 border-r-0" />
       </div>
+
+      <div className={`absolute inset-0 bg-gradient-to-r ${highlightStyles[viewModel.highlightTone]} pointer-events-none`} />
 
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="grid grid-cols-6 gap-4 md:gap-6 w-[64%] max-w-3xl px-6">
@@ -40,6 +48,11 @@ export const Scene: React.FC<SceneProps> = ({ viewModel }) => {
 
       <div className="absolute bottom-4 left-4 rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] font-semibold text-slate-200 backdrop-blur-md">
         {viewModel.statusTone === 'live' ? 'Live-ready renderer boundary' : viewModel.statusTone === 'paused' ? 'Gated preview mode' : 'Access hidden'}
+      </div>
+
+      <div className="absolute bottom-4 right-4 rounded-2xl border border-white/10 bg-black/35 px-3 py-2 backdrop-blur-md text-right">
+        <div className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-500">Highlight</div>
+        <div className="mt-1 text-sm font-semibold text-white">{viewModel.highlightLabel}</div>
       </div>
     </div>
   );
