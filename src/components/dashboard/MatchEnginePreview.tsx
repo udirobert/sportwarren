@@ -18,13 +18,12 @@ import {
     type PlayerPuck, type BallState, type MatchCommentary,
     type MatchEvent, type SupportOptions,
 } from '@/lib/match/matchEngine';
+import { createInitialMatchSimulationSnapshot, type MatchPhase } from '@/lib/match/matchSimulation';
 
 import type { Formation } from '@/types';
 import { FORMATIONS } from '@/lib/formations';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { Avatar } from '@/components/ui/Avatar';
-
-type MatchPhase = 'first_half' | 'halftime' | 'second_half' | 'fulltime';
 
 export const MatchEnginePreview: React.FC<{ 
     squadId?: string; 
@@ -36,32 +35,34 @@ export const MatchEnginePreview: React.FC<{
 }> = ({ squadId, awaySquadId, formation, playersPerSide = 11, hasKeeper = true, homeColor }) => {
     const { preferences } = useUserPreferences();
     const activeHomeColor = homeColor || preferences.squadBranding?.primaryColor || '#10b981';
+    const env = useEnvironment();
+    const initialSnapshot = useMemo(() => createInitialMatchSimulationSnapshot(env.venue), [env.venue]);
 
     // ── React state (rendering only) ──────────────────────────────────────────
     const [isPlaying, setIsPlaying] = useState(false);
-    const [matchPhase, setMatchPhase] = useState<MatchPhase>('first_half');
-    const [ball, setBall] = useState({ x: 50, y: 50, vx: 0, vy: 0, ownerId: null as string | null });
-    const [_ballState, setBallState] = useState<BallState>('controlled');
-    const [players, setPlayers] = useState<PlayerPuck[]>([]);
-    const [commentary, setCommentary] = useState<MatchCommentary[]>([]);
-    const [time, setTime] = useState(0);
-    const [score, setScore] = useState({ home: 0, away: 0 });
-    const [tempo, setTempo] = useState(1);
+    const [matchPhase, setMatchPhase] = useState<MatchPhase>(initialSnapshot.matchPhase);
+    const [ball, setBall] = useState(initialSnapshot.ball);
+    const [_ballState, setBallState] = useState<BallState>(initialSnapshot.ballState);
+    const [players, setPlayers] = useState<PlayerPuck[]>(initialSnapshot.players);
+    const [commentary, setCommentary] = useState<MatchCommentary[]>(initialSnapshot.commentary);
+    const [time, setTime] = useState(initialSnapshot.time);
+    const [score, setScore] = useState(initialSnapshot.score);
+    const [tempo, setTempo] = useState(initialSnapshot.tempo);
     const [showIntent, setShowIntent] = useState(true);
-    const [latestEvent, setLatestEvent] = useState<string>('');
+    const [latestEvent, setLatestEvent] = useState<string>(initialSnapshot.latestEvent);
     const [_interactions, setInteractions] = useState(0);
     const [showSoftGate, setShowSoftGate] = useState(false);
     const [lowPowerMode, setLowPowerMode] = useState(false);
     const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
     // ── Mutable simulation state (refs — stable across renders) ───────────────
-    const ballRef = useRef({ x: 50, y: 50, vx: 0, vy: 0, ownerId: null as string | null });
-    const playersRef = useRef<PlayerPuck[]>([]);
-    const timeRef = useRef(0);
-    const tempoRef = useRef(1);
-    const matchPhaseRef = useRef<MatchPhase>('first_half');
-    const lastRenderedPhaseRef = useRef<MatchPhase>('first_half');
-    const scoreRef = useRef({ home: 0, away: 0 });
+    const ballRef = useRef(initialSnapshot.ball);
+    const playersRef = useRef<PlayerPuck[]>(initialSnapshot.players);
+    const timeRef = useRef(initialSnapshot.time);
+    const tempoRef = useRef(initialSnapshot.tempo);
+    const matchPhaseRef = useRef<MatchPhase>(initialSnapshot.matchPhase);
+    const lastRenderedPhaseRef = useRef<MatchPhase>(initialSnapshot.matchPhase);
+    const scoreRef = useRef(initialSnapshot.score);
 
     const ownerCarryTicks = useRef(0);
     const passFlightRef = useRef<{ startX: number; startY: number; endX: number; endY: number; startTime: number } | null>(null);
@@ -78,7 +79,6 @@ export const MatchEnginePreview: React.FC<{
     const lowPowerModeRef = useRef(false);
     const halftimeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const { isGuest, hasAccount } = useWallet();
-    const env = useEnvironment();
 
     // ── Sync refs from React state when tempo/lowPowerMode changes externally ──
     useEffect(() => { tempoRef.current = tempo; }, [tempo]);
@@ -134,19 +134,20 @@ export const MatchEnginePreview: React.FC<{
             clearTimeout(halftimeTimerRef.current);
             halftimeTimerRef.current = null;
         }
+        const nextSnapshot = createInitialMatchSimulationSnapshot(env.venue);
         setIsPlaying(false);
-        setMatchPhase('first_half');
-        matchPhaseRef.current = 'first_half';
-        setBall({ x: 50, y: 50, vx: 0, vy: 0, ownerId: null });
-        ballRef.current = { x: 50, y: 50, vx: 0, vy: 0, ownerId: null };
-        setTime(0);
-        timeRef.current = 0;
-        setScore({ home: 0, away: 0 });
-        scoreRef.current = { home: 0, away: 0 };
-        setTempo(1);
-        tempoRef.current = 1;
-        setCommentary([{ id: 'init-0', time: '0:00', text: `Preview canvas ready for ${env.venue}.`, type: 'incident' }]);
-        setLatestEvent('');
+        setMatchPhase(nextSnapshot.matchPhase);
+        matchPhaseRef.current = nextSnapshot.matchPhase;
+        setBall(nextSnapshot.ball);
+        ballRef.current = nextSnapshot.ball;
+        setTime(nextSnapshot.time);
+        timeRef.current = nextSnapshot.time;
+        setScore(nextSnapshot.score);
+        scoreRef.current = nextSnapshot.score;
+        setTempo(nextSnapshot.tempo);
+        tempoRef.current = nextSnapshot.tempo;
+        setCommentary(nextSnapshot.commentary);
+        setLatestEvent(nextSnapshot.latestEvent);
         passTargetRef.current = null;
         ownerCarryTicks.current = 0;
         playersInitialised.current = false;

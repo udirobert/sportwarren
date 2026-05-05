@@ -22,6 +22,9 @@ export const FLAGS = {
   STATS:               { default: true,  description: 'Player and squad statistics' },
   SETTINGS:            { default: true,  description: 'Profile and connection settings' },
 
+  // ── Enhanced experiences (disabled by default) ─────────────────────
+  DIGITAL_TWIN_3D:     { default: false, description: 'Optional 3D broadcast view for digital twin match simulations' },
+
   // ── Post-MVP (disabled) ─────────────────────────────────────────────
   PREDICTION_MARKETS:  { default: false, description: 'TON prediction markets' },
   DAO_GOVERNANCE:      { default: false, description: 'On-chain DAO voting (Avalanche)' },

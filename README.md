@@ -80,6 +80,7 @@ npm run dev
 
 ### Tactical Experience
 - **Match Preview Engine** - Interactive PitchCanvas visualization with scouting reports and win probabilities
+- **Digital Twin 3D Simulation** - High-fidelity "Broadcast Engine" that simulates 11v11 matches using real-world inputs (sleep, training, nutrition) as performance multipliers. *Available as an optional reward for high-engagement streaks (DAU/WAU) or premium subscribers.*
 - **Coach Kite Insights** - AI-driven "Phygital" tactical briefings that bridge physical performance with digital growth
 - **Informal Friends Flow** - Frictionless "Quick Log" match reporting with automated Social Trust verification for recurring squads
 - **Tactical DNA** - Personalize your squad's brand kit (colors/nickname) and formation before every match
