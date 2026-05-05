@@ -8,6 +8,7 @@ import { useDashboardData } from '@/hooks/useDashboardData';
 import { useWallet } from '@/contexts/WalletContext';
 import { useActiveSquad } from '@/contexts/ActiveSquadContext';
 import { useDigitalTwinBroadcastAccess } from '@/hooks/useDigitalTwinBroadcastAccess';
+import type { MatchBroadcastTwinData } from '@/components/match3d';
 
 const MatchBroadcast3DView = dynamic(
   () => import('@/components/match3d').then(mod => ({ default: mod.MatchBroadcast3DView })),
@@ -55,5 +56,17 @@ function DigitalTwinBroadcastPageContent() {
     totalMatches: stats?.matches ?? 0,
   });
 
-  return <MatchBroadcast3DView squadId={squadId} access={access} twin={twin} />;
+  const broadcastTwin: MatchBroadcastTwinData | null = twin ? {
+    level: twin.level,
+    squadEnergy: twin.squadEnergy,
+    seasonPoints: twin.seasonPoints,
+    nextLevelXp: twin.nextLevelXp,
+    xp: twin.xp,
+    digitalAttributes: typeof twin.digitalAttributes === 'object' && twin.digitalAttributes !== null
+      ? twin.digitalAttributes as MatchBroadcastTwinData['digitalAttributes']
+      : undefined,
+    narrative: twin.narrative,
+  } : null;
+
+  return <MatchBroadcast3DView squadId={squadId} access={access} twin={broadcastTwin} />;
 }
