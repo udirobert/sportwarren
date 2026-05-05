@@ -27,6 +27,9 @@ export interface MatchBroadcastViewModel {
   momentumLabel: string;
   intensityLabel: string;
   conditionLabel: string;
+  cameraLabel: string;
+  highlightLabel: string;
+  highlightTone: 'calm' | 'pressure' | 'surge';
   commentary: string[];
   keyMetrics: Array<{ label: string; value: string }>;
 }
@@ -69,6 +72,24 @@ export function useMatchBroadcastViewModel({ squadId, access, snapshot, twin }: 
         ? 'Match-ready'
         : 'Fatigue visible';
 
+    const highlightTone: MatchBroadcastViewModel['highlightTone'] = squadEnergy >= 80
+      ? 'surge'
+      : attack >= 70
+        ? 'pressure'
+        : 'calm';
+
+    const cameraLabel = highlightTone === 'surge'
+      ? 'Spotlight tracking'
+      : highlightTone === 'pressure'
+        ? 'Press-side follow cam'
+        : 'Broadcast wide';
+
+    const highlightLabel = highlightTone === 'surge'
+      ? 'Momentum spike detected'
+      : highlightTone === 'pressure'
+        ? 'Pressure sequence building'
+        : 'Shape and spacing focus';
+
     const keyMetrics = [
       { label: 'Squad', value: squadId || 'No active squad' },
       { label: 'Energy', value: `${squadEnergy}%` },
@@ -86,6 +107,9 @@ export function useMatchBroadcastViewModel({ squadId, access, snapshot, twin }: 
       momentumLabel,
       intensityLabel,
       conditionLabel,
+      cameraLabel,
+      highlightLabel,
+      highlightTone,
       commentary: commentary.length > 0 ? commentary : ['No live events yet — 2D preview remains the primary simulation surface.'],
       keyMetrics,
     };

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { MatchBroadcastViewModel } from './useMatchBroadcastViewModel';
+import { CameraDirector } from './CameraDirector';
 
 interface BroadcastHudProps {
   viewModel: MatchBroadcastViewModel;
@@ -15,10 +16,13 @@ export const BroadcastHud: React.FC<BroadcastHudProps> = ({ viewModel }) => {
           <p className="mt-2 text-xs md:text-sm text-slate-300 leading-relaxed">{viewModel.heroSubtitle}</p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-black/45 backdrop-blur-md px-4 py-3 text-right min-w-[120px]">
-          <div className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Phase</div>
-          <div className="mt-2 text-lg md:text-2xl font-black text-white">{viewModel.phaseLabel}</div>
-          <div className="text-xs text-cyan-300 mt-1">{viewModel.scoreline}</div>
+        <div className="flex flex-col items-end gap-3">
+          <CameraDirector viewModel={viewModel} />
+          <div className="rounded-2xl border border-white/10 bg-black/45 backdrop-blur-md px-4 py-3 text-right min-w-[120px]">
+            <div className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400">Phase</div>
+            <div className="mt-2 text-lg md:text-2xl font-black text-white">{viewModel.phaseLabel}</div>
+            <div className="text-xs text-cyan-300 mt-1">{viewModel.scoreline}</div>
+          </div>
         </div>
       </div>
 
