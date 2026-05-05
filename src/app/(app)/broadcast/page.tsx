@@ -9,6 +9,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { useActiveSquad } from '@/contexts/ActiveSquadContext';
 import { useDigitalTwinBroadcastAccess } from '@/hooks/useDigitalTwinBroadcastAccess';
 import type { MatchBroadcastTwinData } from '@/components/match3d';
+import { trackDigitalTwin3DInteraction } from '@/lib/digital-twin/analytics';
 
 const MatchBroadcast3DView = dynamic(
   () => import('@/components/match3d').then(mod => ({ default: mod.MatchBroadcast3DView })),
@@ -55,6 +56,15 @@ function DigitalTwinBroadcastPageContent() {
     preferences,
     totalMatches: stats?.matches ?? 0,
   });
+
+  React.useEffect(() => {
+    trackDigitalTwin3DInteraction({
+      action: 'broadcast_opened',
+      squadId,
+      access,
+      source: 'broadcast_page',
+    });
+  }, [access, squadId]);
 
   const broadcastTwin: MatchBroadcastTwinData | null = twin ? {
     level: twin.level,

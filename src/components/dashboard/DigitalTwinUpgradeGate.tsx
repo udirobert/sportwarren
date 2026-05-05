@@ -3,14 +3,35 @@ import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Eye, Lock, Sparkles, Stars, Zap } from 'lucide-react';
 import type { DigitalTwin3DAccessResult } from '@/lib/digital-twin/access';
+import { trackDigitalTwin3DInteraction } from '@/lib/digital-twin/analytics';
 
 interface DigitalTwinUpgradeGateProps {
   access: DigitalTwin3DAccessResult;
   onPreview: () => void;
+  squadId?: string;
 }
 
-export const DigitalTwinUpgradeGate: React.FC<DigitalTwinUpgradeGateProps> = ({ access, onPreview }) => {
+export const DigitalTwinUpgradeGate: React.FC<DigitalTwinUpgradeGateProps> = ({ access, onPreview, squadId }) => {
   const isUnlocked = access.state === 'unlocked';
+
+  React.useEffect(() => {
+    trackDigitalTwin3DInteraction({
+      action: 'gate_viewed',
+      squadId,
+      access,
+      source: 'dashboard_gate',
+    });
+  }, [access, squadId]);
+
+  const handlePreview = React.useCallback(() => {
+    trackDigitalTwin3DInteraction({
+      action: 'cta_clicked',
+      squadId,
+      access,
+      source: 'dashboard_gate',
+    });
+    onPreview();
+  }, [access, onPreview, squadId]);
 
   return (
     <Card className="overflow-hidden border-cyan-500/20 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950/30">
@@ -53,7 +74,7 @@ export const DigitalTwinUpgradeGate: React.FC<DigitalTwinUpgradeGateProps> = ({ 
           </div>
           <Button
             type="button"
-            onClick={onPreview}
+            onClick={handlePreview}
             variant={isUnlocked ? undefined : 'outline'}
             className={isUnlocked ? 'bg-cyan-500 hover:bg-cyan-600 text-slate-950 font-black' : 'border-white/15 text-white font-black'}
           >
