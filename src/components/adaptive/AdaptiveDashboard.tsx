@@ -285,6 +285,7 @@ export const AdaptiveDashboard: React.FC = () => {
           <DigitalTwinUpgradeGate
             access={digitalTwin3DAccess}
             onPreview={handleDigitalTwin3DPreview}
+            squadId={primarySquadId}
           />
         ),
       });

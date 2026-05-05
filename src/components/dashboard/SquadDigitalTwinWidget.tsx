@@ -10,6 +10,7 @@ import {
   DIGITAL_TWIN_3D_UNLOCK_KEY,
   DIGITAL_TWIN_3D_USAGE_KEY,
 } from '@/lib/digital-twin/access';
+import { trackDigitalTwin3DInteraction } from '@/lib/digital-twin/analytics';
 
 interface SquadDigitalTwinWidgetProps {
   squadId: string;
@@ -27,6 +28,12 @@ export const SquadDigitalTwinWidget: React.FC<SquadDigitalTwinWidgetProps> = ({ 
     onSuccess: () => {
       utils.squad.getDigitalTwin.invalidate({ squadId });
       trackFeatureUsage(DIGITAL_TWIN_3D_USAGE_KEY, 15_000);
+      trackDigitalTwin3DInteraction({
+        action: 'ghost_match_simulated',
+        squadId,
+        access: immersive3DAccess,
+        source: 'digital_twin_widget',
+      });
       if ((twin?.seasonPoints ?? 0) >= 12 || (twin?.squadEnergy ?? 0) >= 85 || twin?.digitalTwin3dEnabled) {
         unlockFeature(DIGITAL_TWIN_3D_UNLOCK_KEY);
       }
@@ -36,7 +43,13 @@ export const SquadDigitalTwinWidget: React.FC<SquadDigitalTwinWidgetProps> = ({ 
   const handle3DInterest = React.useCallback(() => {
     unlockFeature(DIGITAL_TWIN_3D_TEASER_KEY);
     trackFeatureUsage(DIGITAL_TWIN_3D_USAGE_KEY, 5_000);
-  }, [trackFeatureUsage, unlockFeature]);
+    trackDigitalTwin3DInteraction({
+      action: 'cta_clicked',
+      squadId,
+      access: immersive3DAccess,
+      source: 'digital_twin_widget',
+    });
+  }, [immersive3DAccess, squadId, trackFeatureUsage, unlockFeature]);
 
   const isSimulating = simulate.status === 'pending';
 
