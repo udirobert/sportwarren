@@ -430,6 +430,41 @@ export const squadRouter = createTRPCRouter({
        }
     }),
 
+  setDigitalTwin3dEntitlement: protectedProcedure
+    .input(z.object({
+      squadId: squadIdSchema,
+      enabled: z.boolean(),
+      tier: z.enum(['premium', 'streak_reward', 'partner', 'internal']).nullable().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+      const leader = membership ? await isSquadLeader(ctx.prisma, input.squadId, ctx.userId!) : false;
+      const adminWallets = (process.env.ADMIN_WALLETS || '').split(',').filter(Boolean);
+      const isAdmin = adminWallets.includes(ctx.walletAddress || '');
+
+      if (!leader && !isAdmin) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Captain, vice-captain, or admin access required.',
+        });
+      }
+
+      const squad = await ctx.prisma.squad.update({
+        where: { id: input.squadId },
+        data: {
+          digitalTwin3dEnabled: input.enabled,
+          digitalTwin3dTier: input.enabled ? (input.tier ?? 'premium') : null,
+        },
+        select: {
+          id: true,
+          digitalTwin3dEnabled: true,
+          digitalTwin3dTier: true,
+        },
+      });
+
+      return squad;
+    }),
+
   // Join a squad
   join: protectedProcedure
     .input(z.object({ squadId: squadIdSchema }))
