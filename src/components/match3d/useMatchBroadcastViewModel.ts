@@ -24,6 +24,8 @@ export interface MatchBroadcastViewModel {
   scoreline: string;
   phaseLabel: string;
   statusTone: 'live' | 'paused' | 'locked';
+  stateLabel: string;
+  stateDetail: string;
   momentumLabel: string;
   intensityLabel: string;
   conditionLabel: string;
@@ -51,6 +53,8 @@ export function useMatchBroadcastViewModel({ squadId, access, snapshot, twin }: 
     const defense = Math.round(twin?.digitalAttributes?.defense ?? 50);
     const teamwork = Math.round(twin?.digitalAttributes?.teamwork ?? 50);
     const statusTone = access.canLaunch ? 'live' : access.canSeeEntryPoint ? 'paused' : 'locked';
+    const hasSnapshot = Boolean(snapshot);
+    const hasTwin = Boolean(twin);
 
     const momentumLabel = squadEnergy >= 80
       ? 'Surging'
@@ -92,25 +96,77 @@ export function useMatchBroadcastViewModel({ squadId, access, snapshot, twin }: 
 
     const keyMetrics = [
       { label: 'Squad', value: squadId || 'No active squad' },
+      { label: 'Access', value: access.state },
       { label: 'Energy', value: `${squadEnergy}%` },
       { label: 'Season points', value: `${twin?.seasonPoints ?? 0}` },
       { label: 'Teamwork', value: `${teamwork}` },
-      { label: 'Defense', value: `${defense}` },
+      { label: 'Feed', value: hasSnapshot ? 'Live simulation' : hasTwin ? 'Twin baseline only' : 'Awaiting twin sync' },
     ];
 
+    const heroTitle = access.canLaunch
+      ? hasSnapshot
+        ? 'Broadcast beta is live for this squad'
+        : 'Broadcast beta is ready for first sessions'
+      : access.canSeeEntryPoint
+        ? access.reason === 'capability_limited'
+          ? 'Broadcast beta is visible but device-limited'
+          : 'Broadcast beta is staged for rollout'
+        : 'Broadcast beta is not available yet';
+
+    const heroSubtitle = twin?.narrative
+      || (access.canLaunch
+        ? hasSnapshot
+          ? 'This beta surface mirrors the shared match simulation and highlights the moments that would drive a future renderer.'
+          : 'Access is unlocked. We are currently showing twin-driven signals while live simulation data catches up.'
+        : access.reason === 'capability_limited'
+          ? 'Your access path is recognized, but this device is currently held on the lighter preview path to keep the experience stable.'
+          : 'The 3D layer remains a guided beta preview until your squad or account qualifies for broader rollout.');
+
+    const stateLabel = access.canLaunch
+      ? hasSnapshot
+        ? 'Live simulation connected'
+        : hasTwin
+          ? 'Renderer-ready preview'
+          : 'Unlocked, waiting on twin sync'
+      : access.canSeeEntryPoint
+        ? access.reason === 'capability_limited'
+          ? 'Capability-limited preview'
+          : 'Rollout preview only'
+        : 'Hidden from rollout';
+
+    const stateDetail = access.canLaunch
+      ? hasSnapshot
+        ? 'Event highlights, commentary, and camera semantics are being derived from the active match snapshot.'
+        : hasTwin
+          ? 'The beta shell is active, but no live snapshot is attached yet. Signals are currently inferred from twin state only.'
+          : 'Access is unlocked, but twin data has not loaded yet. Keep the 2D view as the tactical source of truth.'
+      : access.canSeeEntryPoint
+        ? access.reason === 'capability_limited'
+          ? 'Reduced motion or low-power constraints are keeping this experience on the lightweight placeholder path.'
+          : 'The shell is visible so beta users can understand the offer, provide feedback, and track unlock progress.'
+        : 'This account is outside the current rollout cohort.';
+
     return {
-      heroTitle: access.canLaunch ? 'Broadcast mode unlocked' : 'Broadcast mode staged for rollout',
-      heroSubtitle: twin?.narrative || 'The 3D layer will mirror the shared match simulation and explain how real-world inputs affect the squad’s digital twin.',
+      heroTitle,
+      heroSubtitle,
       scoreline: `${score.home} - ${score.away}`,
       phaseLabel,
       statusTone,
+      stateLabel,
+      stateDetail,
       momentumLabel,
       intensityLabel,
       conditionLabel,
       cameraLabel,
       highlightLabel,
       highlightTone,
-      commentary: commentary.length > 0 ? commentary : ['No live events yet — 2D preview remains the primary simulation surface.'],
+      commentary: commentary.length > 0
+        ? commentary
+        : access.canLaunch
+          ? hasSnapshot
+            ? ['Live simulation is connected, but no commentary events have been emitted yet.']
+            : ['No live snapshot yet — the 2D preview remains the primary simulation surface while beta signals warm up.']
+          : ['This beta surface is currently in preview mode. The 2D match view remains the tactical source of truth.'],
       keyMetrics,
     };
   }, [access, snapshot, squadId, twin]);

@@ -56,8 +56,15 @@ function DigitalTwinBroadcastPageContent() {
     preferences,
     totalMatches: stats?.matches ?? 0,
   });
+  const hasTrackedOpenRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
+    const trackingKey = `${squadId ?? 'no-squad'}:${access.state}`;
+    if (hasTrackedOpenRef.current === trackingKey) {
+      return;
+    }
+
+    hasTrackedOpenRef.current = trackingKey;
     trackDigitalTwin3DInteraction({
       action: 'broadcast_opened',
       squadId,
