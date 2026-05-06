@@ -47,7 +47,7 @@ export const Scene: React.FC<SceneProps> = ({ viewModel }) => {
       </div>
 
       <div className="absolute bottom-4 left-4 rounded-full border border-white/10 bg-black/35 px-3 py-1.5 text-[11px] font-semibold text-slate-200 backdrop-blur-md">
-        {viewModel.statusTone === 'live' ? 'Live-ready renderer boundary' : viewModel.statusTone === 'paused' ? 'Gated preview mode' : 'Access hidden'}
+        {viewModel.stateLabel}
       </div>
 
       <div className="absolute bottom-4 right-4 rounded-2xl border border-white/10 bg-black/35 px-3 py-2 backdrop-blur-md text-right">

@@ -14,6 +14,9 @@ export const BroadcastHud: React.FC<BroadcastHudProps> = ({ viewModel }) => {
           <div className="text-[10px] font-black uppercase tracking-[0.24em] text-cyan-300">Broadcast HUD</div>
           <h2 className="mt-2 text-xl md:text-2xl font-black text-white tracking-tight">{viewModel.heroTitle}</h2>
           <p className="mt-2 text-xs md:text-sm text-slate-300 leading-relaxed">{viewModel.heroSubtitle}</p>
+          <div className="mt-3 inline-flex items-center rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-semibold text-slate-200">
+            {viewModel.stateLabel}
+          </div>
         </div>
 
         <div className="flex flex-col items-end gap-3">
@@ -41,6 +44,7 @@ export const BroadcastHud: React.FC<BroadcastHudProps> = ({ viewModel }) => {
         <div className="rounded-2xl border border-white/10 bg-black/40 backdrop-blur-md p-4">
           <div className="text-[10px] font-black uppercase tracking-[0.24em] text-slate-400 mb-3">Signals</div>
           <div className="space-y-3">
+            <Signal label="State" value={viewModel.stateDetail} />
             <Signal label="Momentum" value={viewModel.momentumLabel} />
             <Signal label="Intensity" value={viewModel.intensityLabel} />
             <Signal label="Condition" value={viewModel.conditionLabel} />
