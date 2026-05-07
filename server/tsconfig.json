@@ -9,7 +9,7 @@
     "noEmit": false,
     "outDir": "../dist/server",
     "rootDir": "..",
-    "baseUrl": "..",
+    "ignoreDeprecations": "6.0",
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
@@ -20,8 +20,7 @@
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "@/*": ["./src/*"]
-    },
-    "baseUrl": ".."
+    }
   },
   "include": ["./**/*"],
   "exclude": ["node_modules", "dist", "*.config.js", "*.config.ts"]
