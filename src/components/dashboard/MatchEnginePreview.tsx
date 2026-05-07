@@ -992,9 +992,3 @@ export const MatchEnginePreview: React.FC<{
         </Card>
     );
 };
-</div>
-                </div>
-            </div>
-        </Card>
-    );
-};
