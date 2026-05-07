@@ -438,7 +438,7 @@ export const squadRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
-      const leader = membership ? await isSquadLeader(ctx.prisma, input.squadId, ctx.userId!) : false;
+      const leader = membership ? isSquadLeader(membership.role) : false;
       const adminWallets = (process.env.ADMIN_WALLETS || '').split(',').filter(Boolean);
       const isAdmin = adminWallets.includes(ctx.walletAddress || '');
 
