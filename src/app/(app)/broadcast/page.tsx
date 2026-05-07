@@ -38,6 +38,23 @@ export default function DigitalTwinBroadcastPage() {
   );
 }
 
+function extractDigitalAttributes(attrs: unknown): any {
+  if (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) {
+    return attrs as any;
+  }
+  return undefined;
+}
+
+interface SimpleBroadcastTwinData {
+  level?: number;
+  squadEnergy?: number;
+  seasonPoints?: number;
+  nextLevelXp?: number;
+  xp?: number;
+  digitalAttributes?: any;
+  narrative?: string | null;
+}
+
 function DigitalTwinBroadcastPageContent() {
   const searchParams = useSearchParams();
   const { preferences } = useUserPreferences();
@@ -73,17 +90,15 @@ function DigitalTwinBroadcastPageContent() {
     });
   }, [access, squadId]);
 
-  const broadcastTwin: MatchBroadcastTwinData | null = twin ? {
+  const broadcastTwin: SimpleBroadcastTwinData | null = twin ? {
     level: twin.level,
     squadEnergy: twin.squadEnergy,
     seasonPoints: twin.seasonPoints,
     nextLevelXp: twin.nextLevelXp,
     xp: twin.xp,
-    digitalAttributes: typeof twin.digitalAttributes === 'object' && twin.digitalAttributes !== null
-      ? twin.digitalAttributes as MatchBroadcastTwinData['digitalAttributes']
-      : undefined,
+    digitalAttributes: extractDigitalAttributes((twin as any).digitalAttributes),
     narrative: twin.narrative,
   } : null;
 
-  return <MatchBroadcast3DView squadId={squadId} access={access} twin={broadcastTwin} />;
+  return <MatchBroadcast3DView squadId={squadId} access={access} twin={broadcastTwin as any} />;
 }
