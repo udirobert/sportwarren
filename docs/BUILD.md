@@ -229,6 +229,23 @@ npm run build
 vercel --prod
 ```
 
+### Hetzner Runtime Deployment
+For the long-term Hetzner setup, build a lean runtime artifact and deploy timestamped releases instead of keeping a full repository checkout with `node_modules` on the server.
+
+```bash
+npm run deploy:runtime:build
+```
+
+This creates a release tarball under `artifacts/` containing only the runtime files required by the PM2 standalone server.
+
+On the server, deploy the artifact with:
+
+```bash
+bash scripts/deploy-runtime-release.sh /path/to/sportwarren-runtime-*.tar.gz
+```
+
+See [`DEPLOY_HETZNER_RUNTIME.md`](./DEPLOY_HETZNER_RUNTIME.md) for the full release layout and server bootstrap steps.
+
 ### Environment Variables (Production)
 ```env
 # Required
