@@ -48,6 +48,7 @@ npm run dev
 |----------|---------|
 | **[CORE.md](docs/CORE.md)** | Architecture, database schema, tech stack, features |
 | **[BUILD.md](docs/BUILD.md)** | Development guide, deployment, testing, troubleshooting |
+| **[DEPLOY_HETZNER_RUNTIME.md](docs/DEPLOY_HETZNER_RUNTIME.md)** | Lean artifact-based deployment flow for the Hetzner runtime |
 | **[CONTRACTS.md](docs/CONTRACTS.md)** | Deployed contracts, chain responsibilities, and integration inventory |
 | **[UX_REFOCUS.md](docs/UX_REFOCUS.md)** | Strategy for prioritizing tactical experience over match logging |
 | **[PEER_RATINGS.md](docs/PEER_RATINGS.md)** | Peer consensus engine, MOTM voting, and Scout reputation progression |

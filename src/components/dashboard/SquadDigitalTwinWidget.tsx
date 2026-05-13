@@ -65,7 +65,17 @@ export const SquadDigitalTwinWidget: React.FC<SquadDigitalTwinWidgetProps> = ({ 
     );
   }
 
-  const attrs = (twin.digitalAttributes as any) || { attack: 50, defense: 50, midfield: 50, teamwork: 50, prestige: 10 };
+  type DigitalTwinAttributes = Partial<{
+    attack: number;
+    defense: number;
+    midfield: number;
+    teamwork: number;
+    prestige: number;
+  }>;
+
+  const attrs: DigitalTwinAttributes =
+    (twin.digitalAttributes as DigitalTwinAttributes | null | undefined) ??
+    { attack: 50, defense: 50, midfield: 50, teamwork: 50, prestige: 10 };
   const xpPercentage = Math.min(100, (twin.xp / twin.nextLevelXp) * 100);
 
   return (
@@ -136,10 +146,10 @@ export const SquadDigitalTwinWidget: React.FC<SquadDigitalTwinWidgetProps> = ({ 
       </div>
 
       <div className="grid grid-cols-2 gap-3 mb-6">
-        <AttributeItem icon={<Target className="w-3 h-3 text-rose-400" />} label="Attack" value={attrs.attack} />
-        <AttributeItem icon={<Shield className="w-3 h-3 text-sky-400" />} label="Defense" value={attrs.defense} />
-        <AttributeItem icon={<Users className="w-3 h-3 text-amber-400" />} label="Teamwork" value={attrs.teamwork} />
-        <AttributeItem icon={<TrendingUp className="w-3 h-3 text-purple-400" />} label="Prestige" value={attrs.prestige} />
+        <AttributeItem icon={<Target className="w-3 h-3 text-rose-400" />} label="Attack" value={attrs.attack ?? 50} />
+        <AttributeItem icon={<Shield className="w-3 h-3 text-sky-400" />} label="Defense" value={attrs.defense ?? 50} />
+        <AttributeItem icon={<Users className="w-3 h-3 text-amber-400" />} label="Teamwork" value={attrs.teamwork ?? 50} />
+        <AttributeItem icon={<TrendingUp className="w-3 h-3 text-purple-400" />} label="Prestige" value={attrs.prestige ?? 10} />
       </div>
 
       <div className="mb-4 rounded-xl border border-cyan-500/20 bg-cyan-500/5 p-3">
