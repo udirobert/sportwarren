@@ -48,70 +48,62 @@ export class WhatsAppService implements MessagingProvider {
     });
   }
 
-  /**
-   * Sends an interactive button message.
-   * Top-tier feature for quick actions (Verify/Dispute).
-   */
-  async sendButtons(to: string, text: string, buttons: MessagingButton[], footer?: string): Promise<void> {
-    if (!this.phoneNumberId) throw new Error("WHATSAPP_PHONE_NUMBER_ID is required");
+   /**
+    * Sends an interactive button message.
+    * Top-tier feature for quick actions (Verify/Dispute).
+    */
+   async sendButtons(to: string, text: string, buttons: MessagingButton[], footer?: string): Promise<void> {
+     if (!this.phoneNumberId) throw new Error("WHATSAPP_PHONE_NUMBER_ID is required");
 
-    await this.client.messages.sendButtons({
-      phoneNumberId: this.phoneNumberId,
-      to,
-      body: text,
-      footer: footer || this.DEFAULT_FOOTER,
-      buttons: buttons.map(b => ({
-        id: b.id,
-        title: b.title,
-      })),
-    });
-  }
+     await this.client.messages.sendInteractiveButtons({
+       phoneNumberId: this.phoneNumberId,
+       to,
+       bodyText: text,
+       footerText: footer || this.DEFAULT_FOOTER,
+       buttons: buttons.map(b => ({
+         id: b.id,
+         title: b.title,
+       })),
+     });
+   }
 
-  /**
-   * Sends an interactive list message.
-   * Top-tier feature for squad/match selection.
-   */
-  async sendList(
-    to: string, 
-    text: string, 
-    buttonText: string, 
-    sections: MessagingListSection[], 
-    title?: string, 
-    footer?: string
-  ): Promise<void> {
-    if (!this.phoneNumberId) throw new Error("WHATSAPP_PHONE_NUMBER_ID is required");
+   async sendList(
+     to: string, 
+     text: string, 
+     buttonText: string, 
+     sections: MessagingListSection[], 
+     title?: string, 
+     footer?: string
+   ): Promise<void> {
+     if (!this.phoneNumberId) throw new Error("WHATSAPP_PHONE_NUMBER_ID is required");
 
-    await this.client.messages.sendList({
-      phoneNumberId: this.phoneNumberId,
-      to,
-      button: buttonText,
-      body: text,
-      title: title || "SportWarren Tactical",
-      footer: footer || this.DEFAULT_FOOTER,
-      sections: sections.map(s => ({
-        title: s.title,
-        rows: s.rows.map(r => ({
-          id: r.id,
-          title: r.title,
-          description: r.description,
-        })),
-      })),
-    });
-  }
+     await this.client.messages.sendInteractiveList({
+       phoneNumberId: this.phoneNumberId,
+       to,
+       bodyText: text,
+       buttonText,
+       sections: sections.map(s => ({
+         title: s.title,
+         rows: s.rows.map(r => ({
+           id: r.id,
+           title: r.title,
+           description: r.description,
+         }))
+       })),
+       header: title ? { type: 'text', text: title } : undefined,
+       footerText: footer || this.DEFAULT_FOOTER,
+     });
+   }
 
-  /**
-   * Sends an image with an optional caption.
-   */
-  async sendImage(to: string, url: string, caption?: string): Promise<void> {
-    if (!this.phoneNumberId) throw new Error("WHATSAPP_PHONE_NUMBER_ID is required");
+   async sendImage(to: string, url: string, caption?: string): Promise<void> {
+     if (!this.phoneNumberId) throw new Error("WHATSAPP_PHONE_NUMBER_ID is required");
 
-    await this.client.messages.sendImage({
-      phoneNumberId: this.phoneNumberId,
-      to,
-      url,
-      caption,
-    });
-  }
+     await this.client.messages.sendImage({
+       phoneNumberId: this.phoneNumberId,
+       to,
+       image: { link: url, caption },
+     });
+   }
 
   /**
    * Sends a match availability template to a player.

@@ -446,7 +446,7 @@ export async function distributeMatchRewards({
   hasKeeper?: boolean;
 }) {
   const prizePool = isWinner ? 500 : isDraw ? 200 : 50;
-  let finalPrizePool = prizePool;
+  const finalPrizePool = prizePool;
 
   // Squad Clean Sheet Bonus: 100 extra if rotating keeper (hasKeeper = false)
   // We'll calculate if it's a clean sheet by checking opponentScore later in the workflow,

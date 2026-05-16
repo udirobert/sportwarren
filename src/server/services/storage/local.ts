@@ -7,8 +7,10 @@ export interface StoredObject {
   absolutePath: string;
 }
 
+const DEFAULT_STORAGE_ROOT = path.join(process.cwd(), 'storage');
+
 function storageRoot() {
-  return process.env.STORAGE_ROOT?.trim() || path.join(process.cwd(), 'storage');
+  return process.env.STORAGE_ROOT?.trim() || DEFAULT_STORAGE_ROOT;
 }
 
 export async function ensureDir(dirPath: string) {

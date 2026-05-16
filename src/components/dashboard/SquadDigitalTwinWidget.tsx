@@ -73,9 +73,13 @@ export const SquadDigitalTwinWidget: React.FC<SquadDigitalTwinWidgetProps> = ({ 
     prestige: number;
   }>;
 
-  const attrs: DigitalTwinAttributes =
-    (twin.digitalAttributes as DigitalTwinAttributes | null | undefined) ??
-    { attack: 50, defense: 50, midfield: 50, teamwork: 50, prestige: 10 };
+   const attrs: DigitalTwinAttributes = {
+     attack: (twin.digitalAttributes as any)?.attack ?? 50,
+     defense: (twin.digitalAttributes as any)?.defense ?? 50,
+     midfield: (twin.digitalAttributes as any)?.midfield ?? 50,
+     teamwork: (twin.digitalAttributes as any)?.teamwork ?? 50,
+     prestige: (twin.digitalAttributes as any)?.prestige ?? 10,
+   };
   const xpPercentage = Math.min(100, (twin.xp / twin.nextLevelXp) * 100);
 
   return (

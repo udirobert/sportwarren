@@ -27,7 +27,7 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
   attributes,
   loading = false,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'achievements' | 'endorsements' | 'scouts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'skills' | 'achievements' | 'twin' | 'endorsements' | 'scouts'>('overview');
   const [isAdvanced, setIsAdvanced] = useState(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem(ADVANCED_PREF_KEY) === 'true';

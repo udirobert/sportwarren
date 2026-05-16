@@ -119,7 +119,7 @@ export class PlayerTwinService {
       const identity = await this.db.platformIdentity.findFirst({
         where: { 
           platform: 'whatsapp',
-          user: { profiles: { some: { id: input.profileId } } }
+          user: { id: input.profileId }
         },
       });
 
@@ -339,7 +339,7 @@ export class PlayerTwinService {
   }
 
   private poissonSample(lambda: number): number {
-    let L = Math.exp(-lambda);
+    const L = Math.exp(-lambda);
     let k = 0;
     let p = 1;
     do {
