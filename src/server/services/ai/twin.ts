@@ -14,9 +14,14 @@ import type { PrismaClient } from '@prisma/client';
 import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { kiteAIService } from './kite';
+import { WhatsAppService } from '../communication/whatsapp';
 
 export class PlayerTwinService {
-  constructor(private db: PrismaClient = prisma) {}
+  private whatsapp: WhatsAppService;
+
+  constructor(private db: PrismaClient = prisma) {
+    this.whatsapp = new WhatsAppService();
+  }
 
   /**
    * Get or create a twin for a player profile.
@@ -107,6 +112,31 @@ export class PlayerTwinService {
       where: { id: twin.id },
       data: { lastAttestationAt: new Date() },
     });
+
+    // --- KITE-WHATSAPP BRIDGE ---
+    // Notify player via WhatsApp if they have a linked identity
+    try {
+      const identity = await this.db.platformIdentity.findFirst({
+        where: { 
+          platform: 'whatsapp',
+          user: { profiles: { some: { id: input.profileId } } }
+        },
+      });
+
+      if (identity?.platformUserId && this.whatsapp.isConfigured()) {
+        let message = `Kite Chain Attestation Verified: Your digital twin just recorded a new '${input.kind.replace('_', ' ')}' event.`;
+        if (input.xpGain) message += ` \n\n📈 +${input.xpGain} XP Earned.`;
+        if (input.attributeDeltas) {
+          const attrs = Object.keys(input.attributeDeltas).join(', ');
+          message += ` \n⚽ Skills improved: ${attrs}.`;
+        }
+        message += `\n\nYour legend is growing on the Kite Agentic Economy. - Marcus`;
+
+        await this.whatsapp.sendText(identity.platformUserId, message);
+      }
+    } catch (notifyErr) {
+      console.warn('[Kite Bridge] Failed to send WhatsApp notification:', notifyErr);
+    }
   }
 
   /**
