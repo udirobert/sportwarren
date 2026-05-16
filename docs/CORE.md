@@ -73,7 +73,18 @@ SportWarren keeps all supported networks because each one maps to a different pa
 |---------|------------------------|---------------|
 | **Algorand** | Match verification, reputation state, and proof-backed player progression | Fast, low-cost verification and durable football records |
 | **Avalanche** | Squad governance, treasury policy, digital assets, and escrow contracts | Strong EVM tooling for programmable squad coordination |
-| **Kite AI** | Agent identity, paid agent actions, attestations, and autonomous economy | Purpose-built infrastructure for agent passports and agent commerce |
+| **Kite AI** | Agent identity, paid agent actions, attestations, and autonomous economy | Purpose-built infrastructure for agent passports and agent commerce, featuring on-chain liveness and reputation-aware delegation |
+
+...
+
+### Kite AI Agentic Economy
+SportWarren is a first-class participant in the Kite Agentic Economy, utilizing the following primitives:
+
+- **Kite Agent Passport:** Every `PlayerTwin` is an autonomous agent with a unique Kite Passport ID.
+- **x402 Autonomous Payments:** Players delegate USDC budgets to their twins for autonomous scouting and coaching, managed via the **Tactical Spend** UI.
+- **On-Chain Attestations:** All agent actions (match results, XP gains, hires) are cryptographically signed and verifiable via the **Attestation Timeline**.
+- **Proof of Liveness:** Real-time liveness checks ("Pings") verify agent activity on the Kite Chain.
+- **Reputation-Aware Delegation:** Autonomous hiring is gated by an agent's reputation score (min 400/1000), ensuring capital flows to reputable agents.
 | **Yellow** | Instant settlement rail for treasury movement and match-fee coordination | Operational liquidity without forcing every action into a slower on-chain path |
 | **TON** | Telegram-native wallet UX, top-ups, rewards, and Mini App payments | Native fit for Telegram distribution and user treasury actions |
 | **Lens** | Social identity, highlights, and community distribution | Portable social graph for player and squad visibility |
