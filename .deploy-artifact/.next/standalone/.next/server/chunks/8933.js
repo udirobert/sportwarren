@@ -1,6 +1,0 @@
-"use strict";exports.id=8933,exports.ids=[8933],exports.modules={28933:(e,a,t)=>{t.a(e,async(e,r)=>{try{t.d(a,{notifyMatchVerified:()=>i});var o=t(46307),n=t(72329),s=e([o]);async function i(e,a,r){let{getTelegramService:s}=await Promise.resolve().then(t.bind(t,73022)),i=s();if(!i){console.warn("Telegram service not available");return}let l=i.getBot();if(!l){console.warn("Telegram bot not available");return}for(let t of(await o.prisma.squad.findMany({where:{OR:[{name:a},{name:r}]},include:{groups:{where:{platform:"telegram"}}}}))){let a=t.groups[0];if(!a?.chatId)continue;let r=(0,n.PN)({mode:`match_${e}_rate`});r&&await l.sendMessage(a.chatId,`⭐ *Post-Match Scout Report*
-
-The match for *${t.name}* is verified!
-It's time to rate your teammates' performance and vote for Man of the Match.
-
-Your feedback earns you Scout XP and helps your teammates level up.`,{parse_mode:"Markdown",reply_markup:{inline_keyboard:[[{text:"⭐ Rate Teammates",web_app:{url:r}}]]}})}}o=(s.then?(await s)():s)[0],r()}catch(e){r(e)}})}};

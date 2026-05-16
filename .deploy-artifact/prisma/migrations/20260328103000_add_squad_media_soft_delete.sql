@@ -1,4 +1,0 @@
-ALTER TABLE squad_media
-  ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ,
-  ADD COLUMN IF NOT EXISTS deleted_by TEXT;
-

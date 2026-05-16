@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://sportwarren.com/sitemap.xml
