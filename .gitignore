@@ -46,3 +46,24 @@ dev.log
 # Environment files with secrets
 **/.env
 !.env.example
+
+# Deploy artifacts (build output staged for deploys)
+/.deploy-artifact/
+
+# Runtime state / local databases / session credentials
+/.wwebjs_auth/
+/.xmtp_db/
+/dump.rdb
+
+# Editor / IDE local config
+/.vscode/
+/.idea/
+
+# AI / agent tooling local state
+/.kilo/
+/.zencoder/
+/.zenflow/
+/.cline/
+/.bolt/
+/.blackboxcli/
+/.junie/
