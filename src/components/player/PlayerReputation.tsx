@@ -14,6 +14,7 @@ import { buildAvatarPresentationFromPlayerAttributes } from '@/lib/avatar/adapte
 import { KiteVerificationBadge } from '@/components/ui/KiteVerificationBadge';
 import { AttestationTimeline } from '@/components/ui/AttestationTimeline';
 import { SoccerLoader } from '@/components/ui/SoccerLoader';
+import { TacticalSpend } from './TacticalSpend';
 
 interface PlayerReputationProps {
   attributes: PlayerReputationData | null;
@@ -85,6 +86,16 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
   const scoutXPToNext = attributesToUse.scoutTier === 'rookie' ? 100 : attributesToUse.scoutTier === 'trusted' ? 500 : null;
   const scoutProgress = scoutXPToNext ? Math.min((attributesToUse.scoutXP / scoutXPToNext) * 100, 100) : 100;
 
+  const handlePingTwin = async () => {
+    // Mocking the on-chain liveness check for the UI demo
+    return new Promise<void>(resolve => setTimeout(resolve, 1500));
+  };
+
+  const handleUpdateBudget = async (newBudget: number) => {
+    // Mocking the x402 budget update for the UI demo
+    return new Promise<void>(resolve => setTimeout(resolve, 2000));
+  };
+
   const tabsToDisplay = [
     { key: 'overview', label: 'Overview', icon: User },
     { key: 'skills', label: 'Skills', icon: TrendingUp },
@@ -130,6 +141,7 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
                     <KiteVerificationBadge 
                       passportId={attributesToUse.kitePassport.passportId} 
                       verified={attributesToUse.kitePassport.verified}
+                      onPing={handlePingTwin}
                     />
                   )}
                 </div>
@@ -288,65 +300,21 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
 
               <AttestationTimeline 
                 attestations={attributesToUse.kitePassport?.attestations || []} 
+                marcusCommentary={attributesToUse.reputationScore > 500 ? 
+                  "Your twin's on-chain data is impeccable. I've authorized higher x402 limits for your autonomous scouting sessions." : 
+                  "We're seeing solid baseline data, but I want to see more consistent performance verification before we scale your agent's budget."
+                }
               />
             </Card>
           </div>
 
           <div className="space-y-6">
-            {/* Twin Status Card */}
-            <Card className="bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 text-white">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                  <Cpu className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black uppercase tracking-widest text-emerald-400">Autonomous Twin</h3>
-                  <p className="text-[10px] text-gray-400">Kite AI Global Agent ID</p>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="p-3 rounded-xl bg-white/5 border border-white/10">
-                  <div className="flex justify-between items-center mb-1">
-                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Agent Reputation</span>
-                    <span className="text-xs font-black text-emerald-400">{attributesToUse.kitePassport?.reputation || 100}/1000</span>
-                  </div>
-                  <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
-                    <div 
-                      className="bg-emerald-500 h-full" 
-                      style={{ width: `${(attributesToUse.kitePassport?.reputation || 100) / 10}%` }}
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-                    <div className="text-[9px] font-bold text-gray-400 uppercase mb-1">Weekly Budget</div>
-                    <div className="text-sm font-black text-white">${attributesToUse.kitePassport?.weeklyBudgetUsdc || '5.00'} <span className="text-[8px] text-gray-400">USDC</span></div>
-                  </div>
-                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
-                    <div className="text-[9px] font-bold text-gray-400 uppercase mb-1">Spent (7d)</div>
-                    <div className="text-sm font-black text-emerald-400">${attributesToUse.kitePassport?.spentUsdc || '0.00'} <span className="text-[8px] text-gray-400">USDC</span></div>
-                  </div>
-                </div>
-
-                <div className="pt-2">
-                  <button className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2">
-                    <Settings className="w-3 h-3" />
-                    Configure Twin Skills
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-6 pt-4 border-t border-white/10">
-                <div className="flex items-center gap-2 opacity-60 grayscale hover:grayscale-0 transition-all">
-                  <div className="w-6 h-6 rounded bg-white/10 flex items-center justify-center">
-                    <Zap className="w-3 h-3 text-white" />
-                  </div>
-                  <span className="text-[8px] font-bold uppercase tracking-widest">Powered by Kite AI</span>
-                </div>
-              </div>
-            </Card>
+            {/* Tactical Spend (x402 Budget Management) */}
+            <TacticalSpend 
+              currentBudget={attributesToUse.kitePassport?.weeklyBudgetUsdc || 5}
+              spentThisWeek={attributesToUse.kitePassport?.spentUsdc || 0}
+              onUpdateBudget={handleUpdateBudget}
+            />
 
             {/* Tactical Intelligence Card */}
             <Card className="bg-emerald-600 border-emerald-500 text-white overflow-hidden relative">

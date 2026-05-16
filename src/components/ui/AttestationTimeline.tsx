@@ -13,6 +13,7 @@ export interface Attestation {
 interface AttestationTimelineProps {
   attestations: Attestation[];
   loading?: boolean;
+  marcusCommentary?: string;
 }
 
 /**
@@ -22,6 +23,7 @@ interface AttestationTimelineProps {
 export const AttestationTimeline: React.FC<AttestationTimelineProps> = ({
   attestations,
   loading = false,
+  marcusCommentary,
 }) => {
   if (loading) {
     return (
@@ -33,7 +35,37 @@ export const AttestationTimeline: React.FC<AttestationTimelineProps> = ({
     );
   }
 
-  if (attestations.length === 0) {
+  return (
+    <div className="space-y-6">
+      {/* Marcus AI Commentary */}
+      {(marcusCommentary || attestations.length > 0) && (
+        <div className="relative p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-800/50 overflow-hidden group">
+          <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-colors"></div>
+          <div className="relative z-10 flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border-2 border-emerald-500/20 shadow-sm">
+              <img 
+                src="https://api.dicebear.com/7.x/avataaars/svg?seed=Marcus&backgroundColor=b6e3f4" 
+                alt="Marcus" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">Academy Director Marcus</span>
+                <div className="flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-[8px] font-black text-emerald-500">
+                  <Brain className="w-2 h-2" />
+                  LIVE INSIGHT
+                </div>
+              </div>
+              <p className="text-xs font-medium text-gray-700 dark:text-gray-300 leading-relaxed italic">
+                "{marcusCommentary || `I've been monitoring your Digital Twin's activity on the Kite Chain. The data shows clear progression in your tactical awareness and consistency. Keep this momentum.`}"
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {attestations.length === 0 ? (
     return (
       <div className="text-center py-10 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800">
         <History className="w-10 h-10 text-gray-300 mx-auto mb-3" />
