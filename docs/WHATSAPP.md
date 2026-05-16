@@ -64,36 +64,30 @@ The rest of the app should call SportWarren-owned interfaces, not vendor SDKs di
 
 ## WhatsApp Scope
 
-The first WhatsApp version should stay narrow and utility-heavy.
+The WhatsApp version features high-signal utility and agent-driven interactions.
 
-### Phase 1 workflows
+### Top-Tier Features (Phase 1+)
 
-- Match reminders
-- Availability confirmation
-- Attendance check-ins
-- Post-match recap
-- Squad announcements
+- **Interactive Buttons:** Quick actions for match verification, RSVP, and vouching.
+- **List Messages:** Structured selection for squads, fixtures, and tactical reports.
+- **Media Support:** Tactical screenshots and match highlights sent via the "Marcus" AI.
+- **Marcus AI Persona:** Every message is signed by Marcus, Academy Director, ensuring a consistent tactical brand.
 
-### Example prototype: Match Availability
+### The Kite-WhatsApp Bridge
 
-- **Trigger:** Captain schedules a match.
-- **Action:** WhatsApp template asks each player to confirm availability.
-- **Response:** Quick reply payload maps back into SportWarren workflow handlers.
-- **Result:** Match roster and attendance state update in SportWarren systems, not in Kapso as a source of truth.
+SportWarren uses WhatsApp as the primary human interface for the **Kite Agentic Economy**:
 
-## Identity and Data Ownership
+- **Automated Attestation Nudges:** When a player's Digital Twin records an on-chain event (XP gain, skill boost), Marcus pushes a real-time notification to WhatsApp.
+- **Agentic Commerce Alerts:** Notifications for autonomous spending events (x402) and squad wage settlements.
+- **Liveness Sync:** WhatsApp replies serve as "Proof of Liveness" signals for on-chain agent verification.
 
-- WhatsApp identities should be mapped into SportWarren platform records through a dedicated adapter layer.
-- Kapso IDs, contacts, or conversations must not become the canonical user model.
-- When available, Business-Scoped User IDs can strengthen identity mapping beyond raw phone numbers.
-- SportWarren should persist its own canonical workflow and user state even when message history is queried through Kapso.
-
-## Technical Notes
+## Technical Implementation
 
 - **Production SDK:** `@kapso/whatsapp-cloud-api`
-- **Webhook normalization:** `normalizeWebhook`
-- **Kapso proxy base URL:** `https://app.kapso.ai/api/meta/`
-- **Primary env vars:** `KAPSO_API_KEY`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+- **Webhook Endpoint:** `src/app/api/platform/whatsapp/webhook` (Handles Meta verification and Kapso payload parsing).
+- **Interactive Handlers:** `handleWebhook` in `WhatsAppService` processes button clicks and list selections.
+- **Provider Boundary:** Extended `MessagingProvider` interface with `sendButtons`, `sendList`, and `sendImage`.
+- **Primary env vars:** `KAPSO_API_KEY`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`.
 
 ## Delivery Plan
 

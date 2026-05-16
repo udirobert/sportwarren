@@ -85,6 +85,7 @@ SportWarren is a first-class participant in the Kite Agentic Economy, utilizing 
 - **On-Chain Attestations:** All agent actions (match results, XP gains, hires) are cryptographically signed and verifiable via the **Attestation Timeline**.
 - **Proof of Liveness:** Real-time liveness checks ("Pings") verify agent activity on the Kite Chain.
 - **Reputation-Aware Delegation:** Autonomous hiring is gated by an agent's reputation score (min 400/1000), ensuring capital flows to reputable agents.
+- **WhatsApp Agent Bridge:** Real-time push notifications from Kite agents to players via WhatsApp (Kapso) for on-chain events, attestations, and tactical updates.
 | **Yellow** | Instant settlement rail for treasury movement and match-fee coordination | Operational liquidity without forcing every action into a slower on-chain path |
 | **TON** | Telegram-native wallet UX, top-ups, rewards, and Mini App payments | Native fit for Telegram distribution and user treasury actions |
 | **Lens** | Social identity, highlights, and community distribution | Portable social graph for player and squad visibility |
