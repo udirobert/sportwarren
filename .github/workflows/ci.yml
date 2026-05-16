@@ -202,3 +202,40 @@ jobs:
         run: |
           test -f .next/standalone/server.js || (echo "standalone/server.js not found" && exit 1)
           echo "Standalone build verified"
+
+  runtime-artifact:
+    name: Runtime Artifact
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build runtime artifact
+        run: pnpm run deploy:runtime:build
+        env:
+          DISABLE_SENTRY_BUILD: 'true'
+
+      - name: Verify runtime artifact exists
+        run: |
+          ls -1 artifacts/sportwarren-runtime-*.tar.gz >/dev/null
+
+      - name: Upload runtime artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: sportwarren-runtime
+          path: artifacts/sportwarren-runtime-*.tar.gz
+          retention-days: 7

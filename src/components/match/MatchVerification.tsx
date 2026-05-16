@@ -19,6 +19,8 @@ import { usePlatformConnections } from '@/hooks/usePlatformConnections';
 import { trpc } from '@/lib/trpc-client';
 import { getMatchStatusLabel } from '@/lib/match/summary';
 import { buildTelegramDeepLink, buildTelegramShareUrl } from '@/lib/telegram/deep-links';
+import { SoccerLoader } from '@/components/ui/SoccerLoader';
+import { Zap } from 'lucide-react';
 
 interface MatchVerificationProps {
   squadId?: string;
@@ -250,7 +252,19 @@ export const MatchVerification: React.FC<MatchVerificationProps> = ({ squadId })
                       </div>
                     </div>
 
-                    <div className="flex flex-col space-y-2 lg:w-48">
+                    <div className="flex flex-col space-y-2 lg:w-48 relative">
+                      {isBusy && (
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-white/80 dark:bg-gray-950/80 rounded-lg backdrop-blur-[2px]">
+                          <SoccerLoader size={32} />
+                          <div className="mt-2 flex items-center gap-1.5 animate-pulse">
+                            <Zap className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
+                            <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+                              Settling on Kite Chain
+                            </span>
+                          </div>
+                        </div>
+                      )}
+                      
                       {canVerify(match) ? (
                         <>
                           <button

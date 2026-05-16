@@ -32,6 +32,7 @@ import { useDigitalTwinBroadcastAccess } from '@/hooks/useDigitalTwinBroadcastAc
 import { Avatar } from '@/components/ui/Avatar';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
+import { SoccerLoader } from '@/components/ui/SoccerLoader';
 import { summarizeAvatarUpgrade } from '@/lib/avatar/diff';
 
 import { QuickLogWidget } from '@/components/dashboard/QuickLogWidget';
@@ -525,7 +526,12 @@ export const AdaptiveDashboard: React.FC = () => {
             </div>
           </div>
           {loading ? (
-            <div className="text-center py-8 text-gray-600 dark:text-gray-400">Loading matches...</div>
+            <div className="flex flex-col items-center justify-center py-12 gap-4">
+              <SoccerLoader size={48} />
+              <p className="text-xs font-black uppercase tracking-widest text-emerald-600/60 dark:text-emerald-400/60 animate-pulse">
+                Syncing Match Intelligence
+              </p>
+            </div>
           ) : stats?.recentMatches && stats.recentMatches.length > 0 ? (
             <div className="space-y-3">
               {stats.recentMatches.map((match, index) => {
