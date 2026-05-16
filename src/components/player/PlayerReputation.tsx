@@ -4,13 +4,16 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { User, Shield, Trophy, Star, CheckCircle, TrendingUp, Award, Search } from 'lucide-react';
+import { User, Shield, Trophy, Star, CheckCircle, TrendingUp, Award, Search, History, Zap, Brain, Cpu, Settings } from 'lucide-react';
 import { usePlayerForm } from '@/hooks/player/usePlayerForm';
 import { AttributeProgress, AttributesSummary } from './AttributeProgress';
 import { FormIndicator, FormBadge } from './FormIndicator';
 import type { PlayerAttributes as PlayerReputationData } from '@/types';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { buildAvatarPresentationFromPlayerAttributes } from '@/lib/avatar/adapters';
+import { KiteVerificationBadge } from '@/components/ui/KiteVerificationBadge';
+import { AttestationTimeline } from '@/components/ui/AttestationTimeline';
+import { SoccerLoader } from '@/components/ui/SoccerLoader';
 
 interface PlayerReputationProps {
   attributes: PlayerReputationData | null;
@@ -86,6 +89,7 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
     { key: 'overview', label: 'Overview', icon: User },
     { key: 'skills', label: 'Skills', icon: TrendingUp },
     { key: 'achievements', label: 'Achievements', icon: Trophy },
+    { key: 'twin', label: 'Digital Twin', icon: Brain },
     ...(isAdvanced ? [
       { key: 'endorsements', label: 'Endorsements', icon: Star },
       { key: 'scouts', label: 'Scout Interest', icon: Shield },
@@ -116,11 +120,19 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
               showBadge={false}
             />
             <div>
-              <div className="flex items-center space-x-3 mb-1">
+              <div className="flex flex-wrap items-center gap-3 mb-1">
                 <h1 className="text-2xl font-bold text-gray-900">{attributesToUse.playerName}</h1>
-                {attributesToUse.verifiedStats && (
-                  <CheckCircle className="w-6 h-6 text-green-600" />
-                )}
+                <div className="flex items-center gap-2">
+                  {attributesToUse.verifiedStats && (
+                    <CheckCircle className="w-5 h-5 text-green-600" />
+                  )}
+                  {attributesToUse.kitePassport && (
+                    <KiteVerificationBadge 
+                      passportId={attributesToUse.kitePassport.passportId} 
+                      verified={attributesToUse.kitePassport.verified}
+                    />
+                  )}
+                </div>
               </div>
               <p className="text-gray-600 text-sm mb-2 font-mono truncate max-w-[150px]">{attributesToUse.address}</p>
               <div className="flex items-center space-x-2 flex-wrap gap-2">
@@ -254,6 +266,109 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
       </div>
 
       {/* Tab Content */}
+      {activeTab === 'twin' && (
+        <div className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                    <History className="w-5 h-5 text-emerald-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">Agentic History</h3>
+                    <p className="text-xs text-gray-500">Cryptographically verifiable on-chain attestations</p>
+                  </div>
+                </div>
+                <button className="text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1">
+                  <Zap className="w-3 h-3" />
+                  Scan Kite Chain
+                </button>
+              </div>
+
+              <AttestationTimeline 
+                attestations={attributesToUse.kitePassport?.attestations || []} 
+              />
+            </Card>
+          </div>
+
+          <div className="space-y-6">
+            {/* Twin Status Card */}
+            <Card className="bg-gradient-to-br from-gray-900 to-gray-950 border-gray-800 text-white">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                  <Cpu className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase tracking-widest text-emerald-400">Autonomous Twin</h3>
+                  <p className="text-[10px] text-gray-400">Kite AI Global Agent ID</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="p-3 rounded-xl bg-white/5 border border-white/10">
+                  <div className="flex justify-between items-center mb-1">
+                    <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Agent Reputation</span>
+                    <span className="text-xs font-black text-emerald-400">{attributesToUse.kitePassport?.reputation || 100}/1000</span>
+                  </div>
+                  <div className="w-full bg-white/10 rounded-full h-1.5 overflow-hidden">
+                    <div 
+                      className="bg-emerald-500 h-full" 
+                      style={{ width: `${(attributesToUse.kitePassport?.reputation || 100) / 10}%` }}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
+                    <div className="text-[9px] font-bold text-gray-400 uppercase mb-1">Weekly Budget</div>
+                    <div className="text-sm font-black text-white">${attributesToUse.kitePassport?.weeklyBudgetUsdc || '5.00'} <span className="text-[8px] text-gray-400">USDC</span></div>
+                  </div>
+                  <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
+                    <div className="text-[9px] font-bold text-gray-400 uppercase mb-1">Spent (7d)</div>
+                    <div className="text-sm font-black text-emerald-400">${attributesToUse.kitePassport?.spentUsdc || '0.00'} <span className="text-[8px] text-gray-400">USDC</span></div>
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-emerald-900/20 flex items-center justify-center gap-2">
+                    <Settings className="w-3 h-3" />
+                    Configure Twin Skills
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-white/10">
+                <div className="flex items-center gap-2 opacity-60 grayscale hover:grayscale-0 transition-all">
+                  <div className="w-6 h-6 rounded bg-white/10 flex items-center justify-center">
+                    <Zap className="w-3 h-3 text-white" />
+                  </div>
+                  <span className="text-[8px] font-bold uppercase tracking-widest">Powered by Kite AI</span>
+                </div>
+              </div>
+            </Card>
+
+            {/* Tactical Intelligence Card */}
+            <Card className="bg-emerald-600 border-emerald-500 text-white overflow-hidden relative">
+               <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
+               <div className="relative z-10">
+                <div className="flex items-center gap-2 mb-3">
+                  <Brain className="w-4 h-4" />
+                  <h3 className="text-xs font-black uppercase tracking-widest">Tactical Intelligence</h3>
+                </div>
+                <p className="text-[11px] leading-relaxed opacity-90 mb-4 font-medium">
+                  Your digital twin uses <span className="font-bold">x402 protocol</span> to autonomously hire scouts and analysts while you sleep.
+                </p>
+                <div className="flex items-center gap-2">
+                  <SoccerLoader size={20} color1="white" color2="rgba(255,255,255,0.3)" color3="rgba(255,255,255,0.6)" />
+                  <span className="text-[9px] font-black uppercase tracking-tighter animate-pulse">Analyzing Season Data...</span>
+                </div>
+               </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'overview' && (
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Form Card */}

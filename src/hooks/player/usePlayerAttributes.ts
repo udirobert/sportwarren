@@ -89,6 +89,23 @@ function transformProfile(profile: any): PlayerAttributes {
     professionalInterest,
     scoutXP: profile.scoutXP || 0,
     scoutTier: profile.scoutTier || 'rookie',
+    // Kite AI Passport
+    kitePassport: profile.twin?.agent ? {
+      agentId: profile.twin.agent.agentId,
+      passportId: profile.twin.agent.passportId,
+      reputation: profile.twin.agent.reputation,
+      verified: true,
+      attestations: profile.twin.agent.attestations.map((a: any) => ({
+        id: a.id,
+        kind: a.kind,
+        payload: a.payload,
+        timestamp: a.createdAt.toISOString(),
+        txHash: a.txHash || undefined,
+        amountUsdc: a.amountUsdc || undefined,
+      })),
+      weeklyBudgetUsdc: profile.twin.weeklyBudgetUsdc,
+      spentUsdc: profile.twin.agent.sessions?.[0]?.spent || 0,
+    } : undefined,
   };
 }
 

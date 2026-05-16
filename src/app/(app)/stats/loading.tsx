@@ -1,9 +1,18 @@
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SoccerLoader } from "@/components/ui/SoccerLoader";
 
 export default function StatsLoading() {
   return (
     <main className="max-w-4xl mx-auto px-4 py-8 nav-spacer-top nav-spacer-bottom space-y-6 text-gray-900 dark:text-gray-100">
+      {/* Tactical Loading Indicator */}
+      <div className="flex items-center gap-3 px-2 mb-2">
+        <SoccerLoader size={20} />
+        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+          Aggregating Performance Data
+        </span>
+      </div>
+
       {/* Season header */}
       <Card className="border-gray-100 bg-gray-50">
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">

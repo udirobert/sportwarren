@@ -1,63 +1,79 @@
 'use client';
 
 import React from 'react';
-import { Target } from 'lucide-react';
+import { SoccerLoader } from '@/components/ui/SoccerLoader';
 
 interface LoadingScreenProps {
   message?: string;
 }
 
 export const LoadingScreen: React.FC<LoadingScreenProps> = ({ 
-  message = 'Loading SportWarren...' 
+  message = 'Initializing Tactical Command Center...' 
 }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-green-50 to-blue-50 flex items-center justify-center">
-      <div className="text-center animate-fade-in-up">
-        {/* Animated Logo */}
-        <div className="relative mb-8">
-          {/* Glow effect */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-24 h-24 bg-green-400 rounded-2xl animate-glow opacity-50 blur-xl"></div>
-          </div>
-          
-          {/* Main logo */}
-          <div className="relative w-20 h-20 bg-gradient-to-br from-green-600 to-green-700 rounded-2xl flex items-center justify-center mx-auto shadow-2xl animate-scale-in-bounce">
-            <Target className="w-12 h-12 text-white animate-spin-slow" />
-          </div>
-          
-          {/* Pulse rings */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-20 h-20 border-4 border-green-400 rounded-2xl animate-ping opacity-30"></div>
+    <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center overflow-hidden">
+      {/* Background Decorative Elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] bg-emerald-500/5 rounded-full blur-[120px]"></div>
+        <div className="absolute -bottom-[10%] -right-[10%] w-[40%] h-[40%] bg-amber-500/5 rounded-full blur-[120px]"></div>
+      </div>
+
+      <div className="relative z-10 text-center px-4">
+        {/* Animated Soccer Ball Loader */}
+        <div className="flex justify-center mb-10">
+          <div className="relative">
+            <div className="absolute inset-0 bg-emerald-500/20 blur-2xl rounded-full scale-150 animate-pulse-slow"></div>
+            <SoccerLoader size={80} />
           </div>
         </div>
 
         {/* Brand name */}
-        <h1 className="text-3xl font-bold text-gray-900 mb-2 animate-slide-up">
-          Sport<span className="text-green-600">Warren</span>
+        <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-2 tracking-tight">
+          Sport<span className="text-emerald-600">Warren</span>
         </h1>
         
-        {/* Tagline */}
-        <p className="text-gray-600 mb-6 animate-fade-in">
-          Track Your Legend
-        </p>
-
-        {/* Loading message */}
-        <p className="text-sm text-gray-600 dark:text-gray-300 animate-pulse">{message}</p>
-
-        {/* Loading bar */}
-        <div className="w-64 h-1 bg-gray-200 rounded-full mx-auto mt-4 overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-green-500 to-blue-500 rounded-full animate-shimmer"
-               style={{
-                 backgroundSize: '200% 100%',
-                 width: '50%'
-               }}></div>
+        {/* Tactical Kicker */}
+        <div className="flex justify-center mb-6">
+          <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 dark:bg-emerald-950/30 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-800/50">
+            Tactically Elevated
+          </span>
         </div>
 
-        {/* Feature hints */}
-        <div className="mt-8 space-y-2 text-xs text-gray-600 dark:text-gray-300 animate-fade-in">
-          <p>✨ Smart match tracking with AI</p>
-          <p>🏆 Community-powered achievements</p>
-          <p>⚡ Blockchain-verified reputation</p>
+        {/* Loading message */}
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-8 max-w-[240px] mx-auto leading-relaxed">
+          {message}
+        </p>
+
+        {/* Progress Bar (Visual only for now) */}
+        <div className="w-48 h-1 bg-gray-100 dark:bg-gray-800 rounded-full mx-auto overflow-hidden">
+          <div 
+            className="h-full bg-emerald-600 rounded-full animate-pulse-slow"
+            style={{ width: '65%' }}
+          ></div>
+        </div>
+
+        {/* Kite AI Infrastructure Hint */}
+        <div className="mt-6 flex items-center justify-center gap-1.5 opacity-40">
+          <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+          <span className="text-[8px] font-black uppercase tracking-widest text-gray-900 dark:text-white">
+            Agentic Infrastructure via <span className="text-emerald-500">Kite AI</span>
+          </span>
+        </div>
+
+        {/* Tech Stack Hints */}
+        <div className="mt-12 grid grid-cols-3 gap-8 opacity-40 grayscale transition-all hover:grayscale-0 hover:opacity-100">
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-1 h-1 rounded-full bg-emerald-500"></div>
+            <span className="text-[8px] font-bold uppercase tracking-tighter dark:text-gray-400">Match AI</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-1 h-1 rounded-full bg-amber-500"></div>
+            <span className="text-[8px] font-bold uppercase tracking-tighter dark:text-gray-400">XP Engine</span>
+          </div>
+          <div className="flex flex-col items-center gap-1">
+            <div className="w-1 h-1 rounded-full bg-blue-500"></div>
+            <span className="text-[8px] font-bold uppercase tracking-tighter dark:text-gray-400">Protocol</span>
+          </div>
         </div>
       </div>
     </div>

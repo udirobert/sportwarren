@@ -539,13 +539,25 @@ export class KiteAIService {
   /**
    * Hire an agent: creates an active KiteSession on our side that authorises
    * `durationDays` worth of paid calls to that agent's service.
+   *
+   * Includes a reputation-aware delegation check as required by the
+   * Kites Hackathon (Agentic Commerce track).
    */
   async hireAgent(targetAgentId: string, squadId: string, durationDays = 7): Promise<boolean> {
     const target = await this.db.aiAgent.findFirst({
       where: { OR: [{ id: targetAgentId }, { agentId: targetAgentId }, { passportId: targetAgentId }] },
     });
+    
     if (!target?.serviceUrl) {
       console.warn('[Kite] hireAgent: target has no service URL');
+      return false;
+    }
+
+    // --- REPUTATION-AWARE DELEGATION CHECK ---
+    // Minimum reputation threshold for autonomous hiring (e.g., 400/1000)
+    const MIN_HIRE_REPUTATION = 400;
+    if (target.reputation < MIN_HIRE_REPUTATION) {
+      console.warn(`[Kite] hireAgent blocked: target reputation ${target.reputation} < ${MIN_HIRE_REPUTATION}`);
       return false;
     }
 

@@ -1,8 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { redisService } from '@/server/services/redis';
 import { yellowService } from '@/server/services/blockchain/yellow';
-import { getKiteServiceStatus } from '@/server/services/ai/kite';
 
 interface HealthCheckResult {
   status: 'ok' | 'degraded' | 'unhealthy';
@@ -19,28 +18,58 @@ interface HealthCheckResult {
     nodeEnv: string;
     region?: string;
   };
-  checks: Record<string, 'ok' | 'missing' | 'error'>;
+  checks?: Record<string, 'ok' | 'missing' | 'error'>;
 }
 
-export async function GET(): Promise<NextResponse> {
-  const startTime = Date.now();
+const REQUIRED_ENV_VARS = [
+  'DATABASE_URL',
+] as const;
+
+const OPTIONAL_ENV_VARS = [
+  'NEXT_PUBLIC_ALGORAND_NODE_URL',
+  'NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID',
+  'VENICE_API_KEY',
+  'OPENAI_API_KEY',
+  'YELLOW_APP_ID',
+  'NEXT_PUBLIC_YELLOW_PLATFORM_WALLET',
+  'TELEGRAM_BOT_USERNAME',
+  'TON_TREASURY_WALLET_ADDRESS',
+  'TONCENTER_API_KEY',
+  'KITE_API_KEY',
+] as const;
+
+function isConfigured(value: string | undefined): boolean {
+  if (!value) return false;
+  return !value.includes('your-') && value !== 'your-walletconnect-project-id';
+}
+
+function shouldExposeDetailedChecks(request: NextRequest): boolean {
+  if (process.env.HEALTH_DETAILS_ENABLED === 'true') return true;
+
+  const headerName = process.env.HEALTH_DETAILS_HEADER_NAME?.trim() || 'x-health-details-token';
+  const expectedToken = process.env.HEALTH_DETAILS_TOKEN?.trim();
+  const providedToken = request.headers.get(headerName)?.trim();
+
+  return Boolean(expectedToken && providedToken && providedToken === expectedToken);
+}
+
+export async function GET(request: NextRequest): Promise<NextResponse> {
   const checks: Record<string, 'ok' | 'missing' | 'error'> = {};
+  const exposeDetailedChecks = shouldExposeDetailedChecks(request);
   let overallStatus: 'ok' | 'degraded' | 'unhealthy' = 'ok';
   let httpStatus = 200;
 
-  // ── Database connectivity ────────────────────────────────
   const dbStart = Date.now();
   try {
     await prisma.$queryRaw`SELECT 1`;
     checks.database = 'ok';
   } catch {
     checks.database = 'error';
-    httpStatus = 503;
     overallStatus = 'unhealthy';
+    httpStatus = 503;
   }
   const dbLatency = Date.now() - dbStart;
 
-  // ── Redis connectivity ────────────────────────────────────
   let redisStatus: 'ok' | 'unavailable' | 'error' = 'unavailable';
   let redisLatency: number | undefined;
   try {
@@ -49,52 +78,34 @@ export async function GET(): Promise<NextResponse> {
     redisLatency = Date.now() - pingStart;
     redisStatus = 'ok';
   } catch {
-    // Redis is optional but should be monitored
     redisStatus = 'unavailable';
     if (overallStatus === 'ok') overallStatus = 'degraded';
   }
 
-  // ── Required env vars ─────────────────────────────────────
-  const required = [
-    'DATABASE_URL',
-    'NEXT_PUBLIC_ALGORAND_NODE_URL',
-    'NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID',
-  ];
-  const optional = [
-    'VENICE_API_KEY',      // AI staff chat (Marcus / StaffRoom) — app works without it but AI responses will be fallback strings
-    'OPENAI_API_KEY',      // AI fallback if Venice is unavailable
-    'YELLOW_APP_ID',       // Match fee payment rail
-    'NEXT_PUBLIC_YELLOW_PLATFORM_WALLET', // Match fee payment rail
-    'TELEGRAM_BOT_USERNAME', // Telegram deep links + Mini App launch
-    'TON_TREASURY_WALLET_ADDRESS', // TON treasury top-ups
-    'TONCENTER_API_KEY', // TON on-chain verification for Mini App top-ups
-    'KITE_API_KEY',
-  ];
+  const missingRequiredConfig = REQUIRED_ENV_VARS.some((key) => !isConfigured(process.env[key]));
 
-  required.forEach(key => {
-    const val = process.env[key];
-    if (!val || val.includes('your-') || val === 'your-walletconnect-project-id') {
-      checks[key] = 'missing';
-      httpStatus = 503;
-    } else {
-      checks[key] = 'ok';
-    }
-  });
-  optional.forEach(key => {
-    checks[key] = process.env[key] ? 'ok' : 'missing';
-  });
+  if (missingRequiredConfig && overallStatus !== 'unhealthy') {
+    overallStatus = 'degraded';
+  }
 
-  // ── AI provider summary ───────────────────────────────────
+  // Missing optional config does not degrade overall status — these are non-critical integrations
+
+  if (exposeDetailedChecks) {
+    REQUIRED_ENV_VARS.forEach((key) => {
+      checks[key] = isConfigured(process.env[key]) ? 'ok' : 'missing';
+    });
+    OPTIONAL_ENV_VARS.forEach((key) => {
+      checks[key] = process.env[key] ? 'ok' : 'missing';
+    });
+  }
+
   const aiProvider = process.env.VENICE_API_KEY
     ? 'venice'
     : process.env.OPENAI_API_KEY
-    ? 'openai-fallback'
-    : 'none';
+      ? 'openai-fallback'
+      : 'none';
 
-  // ── Payment rail summary ──────────────────────────────────
   const yellowRail = yellowService.getRailStatus();
-  const kiteStatus = getKiteServiceStatus();
-  const paymentRail = yellowRail.enabled ? 'yellow-configured' : 'yellow-missing';
 
   const result: HealthCheckResult = {
     status: overallStatus,
@@ -111,8 +122,9 @@ export async function GET(): Promise<NextResponse> {
       nodeEnv: process.env.NODE_ENV || 'development',
       region: process.env.VERCEL_REGION || undefined,
     },
-    checks,
+    ...(exposeDetailedChecks ? { checks } : {}),
   };
 
+  // Only return non-200 if database (critical dependency) is down
   return NextResponse.json(result, { status: httpStatus });
 }

@@ -21,6 +21,23 @@ const playerProfileInclude = {
     take: 5,
   },
   user: { select: { name: true, avatar: true, position: true, walletAddress: true } },
+  twin: {
+    include: {
+      agent: {
+        include: {
+          attestations: {
+            orderBy: { createdAt: 'desc' },
+            take: 10,
+          },
+          sessions: {
+            where: { status: 'active' },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+          }
+        }
+      }
+    }
+  }
 } as const;
 
 async function ensurePlayerProfile(prisma: PrismaClient, userId: string) {

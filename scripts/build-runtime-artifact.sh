@@ -42,6 +42,11 @@ fi
 
 find "$BUILD_DIR" -name '.DS_Store' -delete
 
-tar -C "$BUILD_DIR" -czf "$ARTIFACT_PATH" .
+export COPYFILE_DISABLE=1
+if tar --help 2>/dev/null | grep -q -- '--no-xattrs'; then
+  tar --no-xattrs -C "$BUILD_DIR" -czf "$ARTIFACT_PATH" .
+else
+  tar -C "$BUILD_DIR" -czf "$ARTIFACT_PATH" .
+fi
 
 echo "$ARTIFACT_PATH"

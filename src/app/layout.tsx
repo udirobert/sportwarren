@@ -3,7 +3,10 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { CookieConsent } from "@/components/legal/CookieConsent";
 
+const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://sportwarren.com";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(appBaseUrl),
   title: "SportWarren — Rec Football, Tactically Elevated",
   description: "Design your squad DNA. Simulate tactics. Dominate the pitch. The ultimate tactical command center for your real-world squad.",
   icons: {

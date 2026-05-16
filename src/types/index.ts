@@ -148,6 +148,16 @@ export interface PlayerAttributes {
   // Scout fields
   scoutXP: number;
   scoutTier: 'rookie' | 'trusted' | 'elite';
+  // Kite AI Integration
+  kitePassport?: {
+    agentId: string;
+    passportId: string;
+    reputation: number;
+    verified: boolean;
+    attestations: any[];
+    weeklyBudgetUsdc?: number;
+    spentUsdc?: number;
+  };
    // Avatar
    avatar?: string;
    // Fitness / match readiness (optional, used in simulation)
