@@ -11,8 +11,9 @@ interface HealthCheckResult {
   services: {
     database: { status: 'ok' | 'error'; latencyMs?: number };
     redis: { status: 'ok' | 'unavailable' | 'error'; latencyMs?: number };
-    ai: { provider: string; available: boolean };
+    ai: { provider: string; available: boolean; agenticEconomy?: 'ready' | 'limited' };
     paymentRail: { enabled: boolean; provider: string };
+    communication: { whatsapp: 'ready' | 'limited'; telegram: 'ready' | 'limited' };
   };
   environment: {
     nodeEnv: string;
@@ -106,6 +107,9 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       : 'none';
 
   const yellowRail = yellowService.getRailStatus();
+  const kiteEnabled = Boolean(process.env.KITE_API_KEY && process.env.WEB3_PRIVATE_KEY);
+  const whatsappEnabled = Boolean(process.env.KAPSO_API_KEY && process.env.WHATSAPP_PHONE_NUMBER_ID);
+  const telegramEnabled = Boolean(process.env.TELEGRAM_BOT_TOKEN);
 
   const result: HealthCheckResult = {
     status: overallStatus,
@@ -115,8 +119,16 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
     services: {
       database: { status: checks.database as 'ok' | 'error', latencyMs: dbLatency },
       redis: { status: redisStatus, latencyMs: redisLatency },
-      ai: { provider: aiProvider, available: aiProvider !== 'none' },
+      ai: { 
+        provider: aiProvider, 
+        available: aiProvider !== 'none',
+        agenticEconomy: kiteEnabled ? 'ready' : 'limited'
+      },
       paymentRail: { enabled: yellowRail.enabled, provider: 'yellow' },
+      communication: {
+        whatsapp: whatsappEnabled ? 'ready' : 'limited',
+        telegram: telegramEnabled ? 'ready' : 'limited'
+      }
     },
     environment: {
       nodeEnv: process.env.NODE_ENV || 'development',
