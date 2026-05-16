@@ -121,11 +121,12 @@ No chain is redundant in the SportWarren architecture. Each one owns a bounded r
 
 ### AI Staff Layer
 - Multi-persona staff assistants (Agent, Scout, Coach, Physio, Analyst, Commercial)
-- **Kite AI Passports** - Verified on-chain identities for all AI staff with reputation-based trust signals
-- **Agentic Commerce** - Native USDC wage payments and agent-to-player financial flows via Kite AI
-- **Staff Marketplace** - Search and "hire" specialized AI agents from the global Kite network
-- Context-aware responses using squad data, treasury signals, and recent decisions
-- Provider abstraction with Venice AI primary + OpenAI fallback
+- **Kite AI Passports** - Every `PlayerTwin` is an autonomous agent with a unique Kite Passport ID on the Kite Testnet.
+- **Agentic Commerce (x402)** - Native USDC wage payments and autonomous agent-to-agent financial flows using the Kite `kpass` x402 standard.
+- **Tactical Spend UI** - Interactive dashboard for delegating and managing autonomous spending budgets for your Digital Twin.
+- **Verifiable Attestations** - All agent actions and match results are cryptographically signed and pushed to the Kite Chain for a permanent, verifiable history.
+- **Reputation-Aware Delegation** - Hiring is gated by on-chain reputation checks (min 400/1000) to ensure high-quality tactical support.
+- **Proof of Liveness** - Real-time "Ping" checks to verify agent activity on-chain.
 
 ---
 

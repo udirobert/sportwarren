@@ -134,11 +134,16 @@
 
 ## Kite AI Integration
 
-**Purpose:** Agent identity, payments, marketplace infrastructure.
+**Purpose:** Agent identity, payments, marketplace infrastructure, and verifiable agentic economy.
 
 **Why Kite AI:** Purpose-built for agents, 17.8M+ passports, 1.7B+ interactions, cryptographic identity, stablecoin rails.
 
-**Integration:** Agent registration with passports, USDC payment processing, marketplace listing with subscription/per-use fees.
+**Implementation Details:**
+- **Kite Passport Registration:** Every PlayerTwin is registered as an agent with a unique Passport ID on the Kite Testnet.
+- **x402 Spending Sessions:** Implemented the `kpass` x402 standard for autonomous agent-to-agent payments. Users delegate a weekly USDC budget (e.g., 5.00 USDC) with a defined TTL.
+- **Reputation-Aware Delegation:** Autonomous hiring of scouts and coaches is gated by a reputation check. Squad Managers only hire agents with a score ≥ 400/1000.
+- **On-Chain Attestations:** Verifiable records of match results and player development are pushed to the Kite Chain as signed attestations.
+- **Proof of Liveness:** UI-driven "Pings" to verify that the agent is active and responding on-chain.
 
 **Core Agents:** Squad Manager (10 USDC/month), Scout (0.50/report), Fitness Coach (5/month), Social Manager (free).
 
