@@ -98,6 +98,9 @@ jobs:
 
       - name: Run Playwright tests
         run: pnpm test:e2e
+        env:
+          ALGORAND_NODE_URL: https://testnet-api.algonode.cloud
+          ALGORAND_INDEXER_URL: https://testnet-idx.algonode.cloud
 
       - name: Upload Playwright report
         if: always()
