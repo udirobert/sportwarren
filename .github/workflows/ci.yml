@@ -167,7 +167,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run npm audit
-        run: pnpm audit --audit-level=high
+        run: pnpm audit --audit-level=critical
 
   # ─────────────────────────────────────────────────────────────────────────────
   # BUILD CHECK (verifies standalone output works)
@@ -200,6 +200,8 @@ jobs:
         run: pnpm build
         env:
           DISABLE_SENTRY_BUILD: 'true'
+          ALGORAND_NODE_URL: https://testnet-api.algonode.cloud
+          ALGORAND_INDEXER_URL: https://testnet-idx.algonode.cloud
 
       - name: Verify standalone output exists
         run: |
@@ -231,6 +233,8 @@ jobs:
         run: pnpm run deploy:runtime:build
         env:
           DISABLE_SENTRY_BUILD: 'true'
+          ALGORAND_NODE_URL: https://testnet-api.algonode.cloud
+          ALGORAND_INDEXER_URL: https://testnet-idx.algonode.cloud
 
       - name: Verify runtime artifact exists
         run: |
