@@ -24,6 +24,7 @@ import {
   readX402Config,
   type SettlementResult,
 } from '../blockchain/x402-client';
+import { autonomyPolicy } from './autonomy-policy';
 
 const execFileAsync = promisify(execFile);
 
@@ -457,6 +458,12 @@ export class KiteAIService {
     amount: number,
     agentId: string = 'squad_manager',
   ) {
+    const payDecision = await autonomyPolicy.evaluateAndRecord(squadId, 'pay', 'kite:processSquadWagePayment');
+    if (!payDecision.allowed) {
+      console.warn(`[Kite] wage payment blocked by autonomy policy: ${payDecision.reason}`);
+      return null;
+    }
+
     if (!(await this.checkRequestLimit())) return null;
     if (!(await this.checkPayoutBudget(amount))) return null;
 
@@ -594,6 +601,12 @@ export class KiteAIService {
    * Kites Hackathon (Agentic Commerce track).
    */
   async hireAgent(targetAgentId: string, squadId: string, durationDays = 7): Promise<boolean> {
+    const decision = await autonomyPolicy.evaluateAndRecord(squadId, 'hire', 'kite:hireAgent');
+    if (!decision.allowed) {
+      console.warn(`[Kite] hireAgent blocked by autonomy policy: ${decision.reason}`);
+      return false;
+    }
+
     const target = await this.db.aiAgent.findFirst({
       where: { OR: [{ id: targetAgentId }, { agentId: targetAgentId }, { passportId: targetAgentId }] },
     });

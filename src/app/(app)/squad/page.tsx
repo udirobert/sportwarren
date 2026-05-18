@@ -12,7 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
   Users, Target, ArrowRightLeft, Wallet,
-  Shield, Vote, Activity, Info, UserPlus, CheckCircle2, MessageCircle, Diamond
+  Shield, Vote, Activity, Info, UserPlus, CheckCircle2, MessageCircle, Diamond, Settings
 } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { CreateSquadFlow } from "@/components/squad/CreateSquadFlow";
@@ -22,6 +22,7 @@ import { trpc } from "@/lib/trpc-client";
 import { useTreasury } from "@/hooks/squad/useTreasury";
 import { useTransfers } from "@/hooks/squad/useTransfers";
 import { PendingActionsPanel } from "@/components/operations/PendingActionsPanel";
+import { SquadAutonomySettings } from "@/components/squad/SquadAutonomySettings";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useSquadDetails } from "@/hooks/squad/useSquad";
 import { useWallet } from "@/contexts/WalletContext";
@@ -36,7 +37,7 @@ import { PlayerAvatar } from "@/components/ui/PlayerAvatar";
 import { buildAvatarPresentationFromSummary } from "@/lib/avatar/adapters";
 import type { AvatarPresentation } from "@/lib/avatar/types";
 
-type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance";
+type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance" | "settings";
 
 const PLAY_STYLE_LABELS: Record<PlayStyle, string> = {
   balanced: "Balanced",
@@ -364,7 +365,7 @@ export default function SquadPage() {
     }
     const params = new URLSearchParams(window.location.search);
     const tab = params.get("tab");
-    if (tab === "overview" || tab === "tactics" || tab === "transfers" || tab === "treasury" || tab === "governance") {
+    if (tab === "overview" || tab === "tactics" || tab === "transfers" || tab === "treasury" || tab === "governance" || tab === "settings") {
       setActiveTab(tab);
     }
     if (params.get("new") === "1") {
@@ -563,6 +564,7 @@ export default function SquadPage() {
           { key: 'transfers', label: 'Transfers', icon: ArrowRightLeft },
           { key: 'treasury', label: 'Treasury', icon: Wallet },
           { key: 'governance', label: 'Governance', icon: Vote },
+          { key: 'settings', label: 'Settings', icon: Settings },
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -859,6 +861,10 @@ export default function SquadPage() {
         ) : (
           <SquadDAO />
         )
+      )}
+
+      {activeTab === 'settings' && (
+        <SquadAutonomySettings squadId={activeSquadId} />
       )}
     </div>
   );
