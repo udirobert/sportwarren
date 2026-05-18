@@ -15,13 +15,27 @@ SportWarren transforms amateur football with:
 - **Squad Management** - Team organization, tactical DNA, brand kit personalization, and treasury management
 - **Championship Manager UX** - Experience-first gameplay focused on "How do we win?" before "What happened?"
 
-**⚡ Kites Hackathon Participants:** See [docs/CORE.md](docs/CORE.md#kite-ai-agentic-economy) for our full Agentic Economy implementation and live demo guide.
+**⚡ Kites Hackathon Participants:** See [docs/CORE.md](docs/CORE.md#kite-ai-agentic-economy) for our full Agentic Economy implementation and the **[60-Second WhatsApp Demo](#-60-second-whatsapp-demo)** below.
 
 **The Flywheel:** Tactical Prep → Real Performance → Peer Rating → Attribute Growth → Strategy Refinement
 
 ---
 
-## ⚡ Quick Start
+## 🛰️ 60-Second WhatsApp Demo
+
+Experience the **Kite Agentic Economy** live from your phone. No wallet, no app, just one message.
+
+1. **Message Marcus:** Text `hi` to **+1 (201) 534-5384** (SportWarren Director).
+2. **Link (Optional):** If you want to use your squad context, link your number with `link WA-XXXXXX` (get code from our Telegram bot via `/linkwhatsapp`).
+3. **Run a Paid Scout:** Text `scout Liverpool`.
+4. **Observe:**
+   - **AI Brief:** You'll receive a tactical scouting report.
+   - **x402 Settlement:** The platform's squad agent autonomously pays $0.50 USDC on the **Kite Testnet**.
+   - **On-Chain Receipt:** You'll get a [KiteScan](https://testnet.kitescan.ai) link to verify the settlement and attestation.
+
+---
+
+## 🎯 Vision
 
 ```bash
 git clone https://github.com/udirobert/sportwarren.git
@@ -52,6 +66,10 @@ npm run dev
 | **[BUILD.md](docs/BUILD.md)** | Development guide, deployment, testing, troubleshooting |
 | **[DEPLOY_HETZNER_RUNTIME.md](docs/DEPLOY_HETZNER_RUNTIME.md)** | Lean artifact-based deployment flow for the Hetzner runtime |
 | **[CONTRACTS.md](docs/CONTRACTS.md)** | Deployed contracts, chain responsibilities, and integration inventory |
+| **[HACKATHON.md](docs/HACKATHON.md)** | Kite AI Hackathon story: agent autonomy, x402, and attestations |
+| **[x402-services.md](docs/x402-services.md)** | Public x402 API: Scout and Match Verifier agents |
+| **[WHATSAPP.md](docs/WHATSAPP.md)** | WhatsApp agent commander and Kite bridge |
+| **[linking.md](docs/linking.md)** | How to link WhatsApp to your SportWarren account |
 | **[UX_REFOCUS.md](docs/UX_REFOCUS.md)** | Strategy for prioritizing tactical experience over match logging |
 | **[PEER_RATINGS.md](docs/PEER_RATINGS.md)** | Peer consensus engine, MOTM voting, and Scout reputation progression |
 | **[TELEGRAM.md](docs/TELEGRAM.md)** | Telegram bot + Mini App architecture, tactical notifications, and TON integration |
