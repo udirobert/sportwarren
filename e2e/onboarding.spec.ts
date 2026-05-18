@@ -36,12 +36,13 @@ test.describe('Onboarding & Landing', () => {
   });
 
   test('cookie consent banner shows on first visit', async ({ page, context }) => {
-    // Clear any existing consent
+    // Clear any existing consent (stored in localStorage, not cookies)
     await context.clearCookies();
+    await page.evaluate(() => localStorage.removeItem('sw_cookie_consent'));
     await page.goto('/');
 
     // Cookie consent should appear
-    const consent = page.locator('[role="dialog"][aria-label="cookie consent"]');
+    const consent = page.locator('[role="dialog"][aria-label="Cookie consent"]');
     await expect(consent).toBeVisible({ timeout: 5000 });
   });
 
