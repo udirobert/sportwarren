@@ -17,6 +17,7 @@ import {
 } from '../services/economy/treasury-ledger';
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
 import { kiteAIService } from '../services/ai/kite';
+import { autonomyPolicy } from '../services/ai/autonomy-policy';
 import { algorandService } from '../services/blockchain/algorand';
 import {
   squadIdSchema,
@@ -2216,5 +2217,67 @@ export const squadRouter = createTRPCRouter({
       }
 
       return byDay;
+    }),
+
+  // -----------------------------------------------------------------------
+  // Autonomy settings
+  // -----------------------------------------------------------------------
+
+  getAutonomyConfig: protectedProcedure
+    .input(z.object({ squadId: squadIdSchema }))
+    .query(async ({ ctx, input }) => {
+      const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+      if (!membership) throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a squad member' });
+      return autonomyPolicy.getSquadConfig(input.squadId);
+    }),
+
+  setAutonomyLevel: protectedProcedure
+    .input(z.object({
+      squadId: z.string(),
+      level: z.enum(['observe', 'integrate', 'automate']),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+      if (!membership) throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a squad member' });
+      await autonomyPolicy.setSquadLevel(input.squadId, input.level);
+      return { success: true, level: input.level };
+    }),
+
+  setAutonomyConfirmation: protectedProcedure
+    .input(z.object({
+      squadId: z.string(),
+      required: z.boolean(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+      if (!membership) throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a squad member' });
+      await autonomyPolicy.setSquadConfirmation(input.squadId, input.required);
+      return { success: true, required: input.required };
+    }),
+
+  setActionMinLevel: protectedProcedure
+    .input(z.object({
+      squadId: z.string(),
+      action: z.enum(['scout', 'hire', 'pay', 'search', 'status', 'budget', 'chat']),
+      level: z.enum(['observe', 'integrate', 'automate']).nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+      if (!membership) throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a squad member' });
+      if (input.level) {
+        await autonomyPolicy.setActionMinLevel(input.squadId, input.action, input.level);
+      } else {
+        await autonomyPolicy.clearActionMinLevel(input.squadId, input.action);
+      }
+      return { success: true };
+    }),
+
+  resetAutonomyConfig: protectedProcedure
+    .input(z.object({ squadId: squadIdSchema }))
+    .mutation(async ({ ctx, input }) => {
+      const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+      if (!membership) throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a squad member' });
+      await autonomyPolicy.resetSquadConfig(input.squadId);
+      return { success: true };
     }),
 });

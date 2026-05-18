@@ -15,6 +15,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { kiteAIService } from '@/server/services/ai/kite';
+import { tinyfishService, tinyfishConfigured } from '@/server/services/ai/tinyfish';
 import { WhatsAppService } from '@/server/services/communication/whatsapp';
 
 const EXPLORER_BASE = process.env.KITE_EXPLORER_URL || 'https://testnet.kitescan.ai';
@@ -146,6 +147,30 @@ export async function GET(request: Request) {
             ? match.matchDate.toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
             : "TBC";
 
+          // ── TinyFish web scout (best-effort, free) ──────────────
+          let webScoutSnippets: string[] = [];
+          if (tinyfishConfigured()) {
+            try {
+              const report = await tinyfishService.scout(opponentName);
+              if (report.sources.length > 0) {
+                const topPages = report.snippets.slice(0, 3)
+                  .map((s) => `• ${s.snippet.slice(0, 150)}`)
+                  .filter(Boolean);
+                if (topPages.length > 0) {
+                  webScoutSnippets = [
+                    '',
+                    `\u{1f41f} *Web data* (via TinyFish)`,
+                    ...topPages,
+                    '',
+                    `Sources: ${report.sources.slice(0, 2).map((s) => s.url).join(' · ')}`,
+                  ];
+                }
+              }
+            } catch (err) {
+              console.warn(`[Cron:auto-scout] TinyFish web scout failed for ${opponentName}:`, err);
+            }
+          }
+
           // Collect WhatsApp numbers from squad members
           const squadData = squadId === match.homeSquadId ? match.homeSquad : match.awaySquad;
           const whatsappNumbers = new Set<string>();
@@ -165,12 +190,13 @@ export async function GET(request: Request) {
               `Match: *${opponentName}* (${matchTime})`,
               '',
               summary,
+              ...webScoutSnippets,
               '',
               `\u{2705} *Settled on Kite*`,
               `Receipt: ${txUrl}`,
               `Price: ${SCOUT_AUTO_PRICE_USDC.toFixed(2)} USDC`,
               '',
-              `Reply \`scout ${opponentName}\` for a fresh report.`,
+              `Reply \`scout ${opponentName}\` for an AI report or \`tinyfish scout ${opponentName}\` for web data.`,
             ].join('\n');
 
             for (const number of whatsappNumbers) {
@@ -195,6 +221,10 @@ export async function GET(request: Request) {
                   if (tgService) {
                     const bot = tgService.getBot();
                     if (bot) {
+                      const webSection = webScoutSnippets.length > 0
+                        ? ["", "_Web data (TinyFish):_", ...webScoutSnippets.slice(1).map((l) => l.startsWith("\u{1f41f}") ? l : l)]
+                        : [];
+
                       const tgMsg = [
                         "\u{1f6f0}\u{fe0f} *Auto-Scout Report",
                         "",
@@ -204,6 +234,7 @@ export async function GET(request: Request) {
                         "*Kickoff:* " + matchTime,
                         "",
                         summary,
+                        ...webSection,
                         "",
                         "*Settled on Kite*: " + txUrl,
                       ].join("\n");
