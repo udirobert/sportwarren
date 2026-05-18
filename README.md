@@ -38,6 +38,7 @@ Experience the **Kite Agentic Economy** live from your phone. No wallet, no app,
 | **[ARCHITECT.md](docs/ARCHITECT.md)** | Technical blueprint: multi-chain strategy, database schema, and system design. |
 | **[PLATFORMS.md](docs/PLATFORMS.md)** | Channel guides for Telegram, WhatsApp, and Lens Protocol. |
 | **[BUILD.md](docs/BUILD.md)** | Development guide, deployment flow, and testing instructions. |
+| **[DEPLOY_HETZNER_RUNTIME.md](docs/DEPLOY_HETZNER_RUNTIME.md)** | Deep dive into standalone PM2 runtime operations. |
 
 ---
 
