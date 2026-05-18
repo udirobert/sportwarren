@@ -32,10 +32,9 @@ function getPayToAddress(): string {
   return new ethers.Wallet(pk).address;
 }
 
-export async function GET() {
-  const payTo = getPayToAddress();
-  const requirements = buildPaymentRequirements({
-    payTo,
+function buildVerifyRequirements() {
+  return buildPaymentRequirements({
+    payTo: getPayToAddress(),
     amountUsdc: VERIFY_PRICE_USDC,
     description: 'SportWarren Match Verification — attested consensus result on Kite',
     merchantName: 'SportWarren',
@@ -50,8 +49,10 @@ export async function GET() {
       },
     },
   });
+}
 
-  return NextResponse.json({ requirements }, { status: 402 });
+export async function GET() {
+  return NextResponse.json({ requirements: buildVerifyRequirements() }, { status: 402 });
 }
 
 export async function POST(request: NextRequest) {
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid X-Payment header' }, { status: 400 });
   }
 
-  const settlement = await settleWithFacilitator(envelope);
+  const settlement = await settleWithFacilitator(envelope, buildVerifyRequirements());
   if (!settlement.success && !settlement.simulated) {
     return NextResponse.json({ error: 'Payment settlement failed', details: settlement.error }, { status: 402 });
   }

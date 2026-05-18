@@ -376,19 +376,43 @@ export function buildPaymentRequirements(input: {
 /**
  * Submit a received envelope to Pieverse `/v2/settle` to execute on chain.
  * Returns null txHash + simulated flag if facilitator is unreachable.
+ *
+ * Pieverse expects the x402 canonical body shape:
+ *   { x402Version, paymentPayload, paymentRequirements }
+ * where `paymentPayload` wraps the signed envelope and `paymentRequirements`
+ * is the same 402 challenge the service issued.
  */
-export async function settleWithFacilitator(envelope: PaymentEnvelope): Promise<SettlementResult> {
+export async function settleWithFacilitator(
+  envelope: PaymentEnvelope,
+  requirements?: PaymentRequirements,
+): Promise<SettlementResult> {
   const cfg = readX402Config();
-  try {
-    const res = await axios.post(
-      `${cfg.facilitatorUrl}/v2/settle`,
-      {
-        network: envelope.network,
-        scheme: envelope.scheme,
+  const reqs: PaymentRequirements = requirements ?? {
+    scheme: envelope.scheme,
+    network: envelope.network,
+    maxAmountRequired: envelope.authorization.value,
+    asset: envelope.asset,
+    payTo: envelope.authorization.to,
+    maxTimeoutSeconds: 300,
+  };
+  const body = {
+    x402Version: 1,
+    paymentPayload: {
+      x402Version: 1,
+      scheme: envelope.scheme,
+      network: envelope.network,
+      payload: {
         authorization: envelope.authorization,
         signature: envelope.signature,
         asset: envelope.asset,
       },
+    },
+    paymentRequirements: reqs,
+  };
+  try {
+    const res = await axios.post(
+      `${cfg.facilitatorUrl}/v2/settle`,
+      body,
       { timeout: 10_000, validateStatus: () => true },
     );
     if (res.status >= 200 && res.status < 300 && res.data?.success !== false) {
