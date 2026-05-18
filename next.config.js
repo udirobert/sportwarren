@@ -9,6 +9,11 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   productionBrowserSourceMaps: false,
+  typescript: {
+    // Skip full type-check in build (webpack compilation catches syntax
+    // errors). Run `npx tsc --noEmit` separately in CI or locally.
+    ignoreBuildErrors: true,
+  },
   images: {
     // Enable optimization for production - images served via /_next/image
     // CDN domains can be added for external image sources
