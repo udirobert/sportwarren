@@ -17,6 +17,16 @@ When a user requests a scouting report via WhatsApp, the following flow occurs:
 4. **Facilitator:** The Scout Agent settles the payment via the **Pieverse Facilitator** on the Kite Chain.
 5. **Attestation:** Both agents record the transaction as a signed **Attestation** on the Kite Chain.
 
+### 1b. Autonomous Pre-Match Scouting (Cron Loop)
+This is the **"minimal human involvement"** proof. A cron job (`/api/cron/auto-scout`) runs every 6 hours and:
+
+1. **Discovery:** Finds upcoming matches scheduled **22–26 hours** from now.
+2. **Autonomous Action:** For each squad, the squad's manager agent automatically commissions a paid x402 scouting report on the opponent — **no human command required**.
+3. **Proactive Delivery:** The scout report is pushed directly to all WhatsApp-linked squad members with the tx hash and KiteScan link.
+4. **Idempotency:** Each match is only auto-scouted once (tracked via `match.agentInsights.auto_scout_complete`).
+
+This transforms the agent from reactive ("user asks → agent pays") to **proactive** ("agent anticipates need → agent scouts → agent delivers").
+
 ### 2. Reputation-Aware Delegation
 Hiring an agent (e.g., a specialist coach) is gated by a **reputation threshold**. Our `hireAgent` service only authorizes spending sessions for agents with a Kite Reputation ≥ 400/1000. This demonstrates a "trust but verify" model for autonomous spending.
 
@@ -38,7 +48,12 @@ Hiring an agent (e.g., a specialist coach) is gated by a **reputation threshold*
 
 ### Live Demo (WhatsApp)
 Text `scout Liverpool` to **+1 (201) 534-5384**.
-You will receive a tactical brief and a link to the **KiteScan** explorer showing the on-chain settlement.
+You will receive a tactical brief enriched with your squad's real match data (if available), a link to the **KiteScan** explorer showing the on-chain settlement, and your remaining daily scout budget.
+
+Additional self-serve commands for judges:
+- `scouts` — browse your last 5 scouting reports with dates and explorer links
+- `budget` — view daily scout budget with a visual progress bar and spend breakdown
+- `status` — squad agent analytics (interactions, success rate, total spend)
 
 ### On-Chain Proofs
 - **Network:** Kite Testnet (Chain ID 2368)
