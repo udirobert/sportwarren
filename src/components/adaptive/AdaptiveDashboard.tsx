@@ -39,6 +39,7 @@ import { QuickLogWidget } from '@/components/dashboard/QuickLogWidget';
 import { MatchCoordinationWidget } from '@/components/dashboard/MatchCoordinationWidget';
 import { SquadDigitalTwinWidget } from '@/components/dashboard/SquadDigitalTwinWidget';
 import { DigitalTwinUpgradeGate } from '@/components/dashboard/DigitalTwinUpgradeGate';
+import { CoachKiteWidget } from '@/components/dashboard/CoachKiteWidget';
 import dynamic from 'next/dynamic';
 import {
   DIGITAL_TWIN_3D_TEASER_KEY,
@@ -294,6 +295,14 @@ export const AdaptiveDashboard: React.FC = () => {
             squadId={primarySquadId}
           />
         ),
+      });
+
+      widgets.push({
+        id: 'coach-kite',
+        priority: 451,
+        requiredLevel: 'basic',
+        category: 'matches',
+        component: <CoachKiteWidget squadId={primarySquadId} />,
       });
 
       widgets.push({
@@ -1370,7 +1379,7 @@ export const AdaptiveDashboard: React.FC = () => {
       </AnimatePresence>
 
       {(() => {
-        const todayIds = ['quick-log', 'onboarding-checklist', 'pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine', 'quick-stats', 'achievements', 'upcoming-fixtures'];
+        const todayIds = ['quick-log', 'onboarding-checklist', 'pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine', 'quick-stats', 'achievements', 'upcoming-fixtures', 'coach-kite'];
         const squadIds = ['governance', 'squad-dynamics', 'captains-log', 'communication-hub', 'squad-digital-twin', 'digital-twin-3d-gate'];
         const progressIds = ['training', 'scouting-report', 'lens-social', 'nearby-squads', 'territory'];
 

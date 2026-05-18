@@ -539,6 +539,9 @@ export class TelegramService {
 
       if (aiResponse) {
         await this.bot.sendMessage(chatId, aiResponse.content);
+        await this.bot.sendMessage(chatId,
+          "💬 Want answers like this on WhatsApp too? Send /linkwhatsapp to connect your number."
+        );
         return;
       }
 
