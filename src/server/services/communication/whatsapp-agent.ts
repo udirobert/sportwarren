@@ -9,6 +9,8 @@
  *   find <query>                  – kiteAIService.searchMarketplace
  *   hire <agentId> [days]         – kiteAIService.hireAgent (needs squad link)
  *   scout <opponent>              – paid x402 call to KITE_SCOUT_SERVICE_URL
+ *   scouts                        – list recent scouting reports
+ *   budget                        – show remaining daily scout budget
  *   pay <wallet> <usdc>           – kiteAIService.processSquadWagePayment
  *   status                        – analytics for the user's squad-manager agent
  *
@@ -24,6 +26,7 @@ import { generateInference } from "@/lib/ai/inference";
 const EXPLORER_BASE = process.env.KITE_EXPLORER_URL || "https://testnet.kitescan.ai";
 const SCOUT_SERVICE_URL = process.env.KITE_SCOUT_SERVICE_URL || "";
 const SCOUT_MAX_USDC = Number(process.env.KITE_SCOUT_MAX_USDC || "0.50");
+const SCOUT_MAX_USDC_SQUAD = Number(process.env.KITE_SCOUT_MAX_USDC_SQUAD || "2.50");
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "sportwarrenbot";
 
 const NLU_SYSTEM_PROMPT = `You are Marcus, Academy Director at SportWarren. You talk to amateur football squads on WhatsApp.
@@ -35,6 +38,8 @@ COMMANDS (case-insensitive)
 - help — show this list
 - find <query> — discover paid services on Kite (e.g. find scout, find coach)
 - scout <opponent> — your agent buys an AI scouting report on an opponent; settles on Kite, ~$0.50
+- scouts — list your recent scouting reports with explorer links
+- budget — show how much scouting budget you have left today
 - hire <agentId> [days] — delegate work to another agent for N days; gated by reputation
 - pay <0xwallet> <usdc> — pay a player wages directly on Kite chain in USDC
 - status — show your squad agent's interactions, spend and success rate
@@ -51,6 +56,8 @@ OUTPUT MODE — pick exactly one, never mix:
     RUN:<command with args>
   Examples:
     "scout Arsenal" → RUN:scout Arsenal
+    "show me my scouts" → RUN:scouts
+    "what's my budget" → RUN:budget
     "pay 0xabc 5" → RUN:pay 0xabc 5
     "show me my stats" → RUN:status
 
@@ -72,16 +79,27 @@ export interface ResolvedActor {
 const HELP = [
   "🛰️ *SportWarren · Kite Agent*",
   "",
-  "Commands:",
-  "• `find <query>`  – discover paid x402 services",
-  "• `hire <id> [days]`  – delegate to an agent",
-  "• `scout <opponent>`  – paid scouting via Kite",
-  "• `pay <wallet> <usdc>`  – pay wages on Kite",
-  "• `status`  – your agent analytics",
-  "• `link <WA-XXXXXX>`  – link this number to a SportWarren account",
-  "• `help`  – this message",
+  "*Scouting*",
+  "• `scout <opponent>`  – paid AI scouting report ($0.50 USDC)",
+  "• `scouts`           – show your recent reports with explorer links",
+  "• `budget`           – how much scout budget remains today",
+  "• `trigger-auto-scout` – demo: auto-scout your next opponent now",
   "",
-  "Or just describe what you want — I'll figure it out.",
+  "*Actions*",
+  "• `find <query>`     – discover paid x402 services",
+  "• `hire <id> [days]` – delegate to an agent",
+  "• `pay <wallet> <usdc>` – pay wages on Kite",
+  "• `status`           – your agent analytics",
+  "• `cost`             – pricing for all services",
+  "• `attestations`     – view recent on-chain attestations",
+  "",
+  "*Account*",
+  "• `whoami`           – show your linked identity and squad",
+  "• `link <WA-XXXXXX>` – link this number to your SportWarren account",
+  "• `unlink`           – unlink this WhatsApp number",
+  "• `help`             – this message",
+  "",
+  "Just describe what you want — I'll figure it out.",
 ].join("\n");
 
 const UNLINKED_REPLY = [
@@ -144,7 +162,8 @@ async function consumeLinkCode(code: string, whatsappNumber: string): Promise<Re
 
 /** Allow-list of commands the AI can actually trigger via RUN: */
 const RUN_ALLOWED = new Set([
-  "help", "find", "search", "hire", "scout", "pay", "status", "link",
+  "help", "find", "search", "hire", "scout", "scouts", "budget", "pay", "status", "link",
+  "whoami", "unlink", "cost", "attestations", "trigger-auto-scout",
 ]);
 
 async function aiFallback(
@@ -266,10 +285,16 @@ export async function dispatchWhatsAppCommand(
       if (!opponent) return "Usage: `scout <opponent name>`";
       if (!actor.squadId) return "❌ You need to belong to a squad to commission scouting.";
 
-      // --- SPENDING GUARD ---
-      const spending = await kiteAIService.checkUserSpending(actor.userId, SCOUT_MAX_USDC, SCOUT_MAX_USDC);
-      if (!spending.ok) {
-        return `❌ Daily scout limit reached. You can spend up to ${SCOUT_MAX_USDC} USDC per day on scouting.`;
+      // --- SPENDING GUARDS (dual cap: per-user + per-squad) ---
+      const userSpending = await kiteAIService.checkUserSpending(actor.userId, SCOUT_MAX_USDC, SCOUT_MAX_USDC);
+      if (!userSpending.ok) {
+        return `❌ Your daily scout limit reached (${SCOUT_MAX_USDC} USDC/person).`;
+      }
+      if (actor.squadId) {
+        const squadSpending = await kiteAIService.checkSquadSpending(actor.squadId, SCOUT_MAX_USDC, SCOUT_MAX_USDC_SQUAD);
+        if (!squadSpending.ok) {
+          return `❌ Squad daily scout limit reached (${SCOUT_MAX_USDC_SQUAD} USDC/squad).`;
+        }
       }
 
       const manager = await kiteAIService.upsertSquadManagerAgent(actor.squadId);
@@ -286,7 +311,7 @@ export async function dispatchWhatsAppCommand(
         });
       } catch {/* session exists or budget caps it later */}
 
-      const res = await kiteAIService.executePaidRequest<{ summary?: string }>({
+      const res = await kiteAIService.executePaidRequest<{ summary?: string; dataSources?: string[] }>({
         agentId: manager.id,
         url: SCOUT_SERVICE_URL,
         method: "POST",
@@ -297,15 +322,100 @@ export async function dispatchWhatsAppCommand(
       });
       if (!res.ok) return `❌ Scout failed: ${res.error}`;
 
+      // Read remaining budget to include in the reply
+      const remaining = await kiteAIService.getUserSpending(actor.userId, SCOUT_MAX_USDC);
+
       const txUrl = fmtTx(res.payment?.txHash);
+      const dataSources = (res.data as any)?.dataSources as string[] | undefined;
+      const dataSourceLine = dataSources?.length
+        ? `📊 Data: ${dataSources.join(" · ")}`
+        : "📊 Data: AI-generated (no stored match data)";
       const lines = [
         `🛰️ *Scouting Report · ${opponent}*`,
         res.data?.summary ? `\n${res.data.summary}` : "\n(Report data is available on-chain via the attestation.)",
         "",
         `✅ *Settled on Kite*`,
         `Receipt: ${txUrl}`,
+        dataSourceLine,
+        `Budget: ${remaining.remaining.toFixed(2)} left today. \`scouts\` → all reports.`,
       ];
       return lines.join("\n");
+    }
+
+    case "trigger-auto-scout":
+    case "autoscout":
+    case "auto-scout": {
+      if (!actor.squadId) return "❌ No squad linked — join or create a squad first.";
+      // Find the next upcoming match for the user's squad
+      const upcoming = await prisma.match.findFirst({
+        where: {
+          OR: [{ homeSquadId: actor.squadId }, { awaySquadId: actor.squadId }],
+          matchDate: { gt: new Date() },
+          status: 'pending',
+        },
+        select: {
+          id: true,
+          matchDate: true,
+          homeSquadId: true,
+          awaySquadId: true,
+          homeSquad: { select: { name: true } },
+          awaySquad: { select: { name: true } },
+        },
+        orderBy: { matchDate: 'asc' },
+      });
+      if (!upcoming) return "❌ No upcoming matches found for your squad.";
+      const isHome = upcoming.homeSquadId === actor.squadId
+      const opponent = isHome ? upcoming.awaySquad.name : upcoming.homeSquad.name;
+      const matchTime = upcoming.matchDate.toLocaleString('en-GB', {
+        weekday: 'short', day: 'numeric', month: 'short',
+        hour: '2-digit', minute: '2-digit',
+      });
+
+      // Execute the auto-scout inline
+      const manager = await kiteAIService.upsertSquadManagerAgent(actor.squadId);
+      try {
+        await kiteAIService.createSession({
+          agentId: manager.id,
+          taskSummary: `Demo trigger: auto-scout ${opponent}`,
+          maxPerTxUsdc: SCOUT_MAX_USDC,
+          maxTotalUsdc: SCOUT_MAX_USDC * 5,
+          ttlSeconds: 600,
+          scope: { source: 'whatsapp-trigger', opponent },
+          approvedBy: actor.userId,
+        });
+      } catch { /* skip */ }
+
+      const res = await kiteAIService.executePaidRequest<{ summary?: string; dataSources?: string[] }>({
+        agentId: manager.id,
+        url: SCOUT_SERVICE_URL,
+        method: 'POST',
+        body: { opponent, requestedBy: actor.userId },
+        maxAmountUsdc: SCOUT_MAX_USDC,
+        subject: { type: 'squad', id: actor.squadId },
+        kind: 'scout_report',
+      });
+      if (!res.ok) return `❌ Auto-scout failed: ${res.error}`;
+
+      const txUrl = fmtTx(res.payment?.txHash);
+      const summary = res.data?.summary || 'No summary available.';
+      const dataSources = (res.data as any)?.dataSources as string[] | undefined;
+      const dataSourceLine = dataSources?.length
+        ? `📊 Data: ${dataSources.join(' · ')}`
+        : '📊 Data: AI-generated (no stored match data)';
+
+      return [
+        `🛰️ *Auto-Scout Demo*`,
+        `Match: vs *${opponent}* (${matchTime})`,
+        '',
+        summary,
+        '',
+        `✅ *Settled on Kite*`,
+        `Receipt: ${txUrl}`,
+        dataSourceLine,
+        `Price: ${SCOUT_MAX_USDC.toFixed(2)} USDC`,
+        '',
+        'This is what the autonomous cron does 24h before every match. Try `help` to see all commands.',
+      ].join('\n');
     }
 
     case "pay": {
@@ -322,6 +432,83 @@ export async function dispatchWhatsAppCommand(
       ].join("\n");
     }
 
+    case "scouts": {
+      const reports = await prisma.attestation.findMany({
+        where: {
+          kind: "scout_report",
+          OR: [
+            ...(actor.squadId
+              ? [{ subjectType: "squad", subjectId: actor.squadId }]
+              : []),
+            { subjectType: "player", subjectId: actor.userId },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+        take: 15,
+      });
+      if (!reports.length) {
+        return "No scouting reports yet. Try `scout <opponent>` to commission one.";
+      }
+
+      // Deduplicate by opponent name — x402-client writes an audit attestation
+      // AND the scout route writes a content attestation for each scout
+      const seen = new Set<string>();
+      const uniq: typeof reports = [];
+      for (const r of reports) {
+        const payload = r.payload as Record<string, string> | null;
+        const name = payload?.opponent ?? "";
+        if (!name || seen.has(name)) continue;
+        seen.add(name);
+        uniq.push(r);
+        if (uniq.length >= 5) break;
+      }
+
+      if (!uniq.length) {
+        return "No scouting reports yet. Try `scout <opponent>` to commission one.";
+      }
+
+      const lines = [`📋 *Recent Scouts (${uniq.length})*`, ""];
+      for (const r of uniq) {
+        const payload = r.payload as Record<string, string> | null;
+        const name = payload?.opponent ?? "unknown";
+        const date = r.createdAt.toLocaleDateString("en-GB", {
+          day: "numeric", month: "short",
+        });
+        const link = fmtTx(r.txHash);
+        lines.push(`• ${date} — *${name}*`);
+        lines.push(`  ${link}`);
+      }
+      lines.push("", "`scout <opponent>` → new report · `budget` → check limit");
+      return lines.join("\n");
+    }
+
+    case "budget": {
+      if (!actor.squadId) return "❌ No squad linked to this WhatsApp number.";
+      const spending = await kiteAIService.getUserSpending(actor.userId, SCOUT_MAX_USDC);
+      const pct = SCOUT_MAX_USDC > 0 ? (spending.spent / SCOUT_MAX_USDC) * 100 : 0;
+      const barLen = 12;
+      const filled = Math.round((pct / 100) * barLen);
+      const bar = "█".repeat(filled) + "░".repeat(Math.max(0, barLen - filled));
+
+      const tips: string[] = [];
+      if (spending.remaining >= SCOUT_MAX_USDC) {
+        tips.push("You have a full daily budget — try `scout <opponent>` to start.");
+      } else if (spending.remaining > 0) {
+        tips.push(`You can still scout \`${Math.floor(spending.remaining / SCOUT_MAX_USDC)}\` more opponent(s) today.`);
+      } else {
+        tips.push("Limit resets tomorrow. Check `scouts` to review what you've got.");
+      }
+
+      return [
+        `💳 *Scout Budget · Today*`,
+        `Daily limit: $${SCOUT_MAX_USDC.toFixed(2)} USDC`,
+        `Spent: $${spending.spent.toFixed(2)} · Remaining: $${spending.remaining.toFixed(2)}`,
+        `${bar}`,  // Uses WhatsApp monospace
+        "",
+        tips[0],
+      ].join("\n");
+    }
+
     case "status": {
       if (!actor.squadId) return "❌ No squad linked to this WhatsApp number.";
       const manager = await kiteAIService.upsertSquadManagerAgent(actor.squadId);
@@ -334,7 +521,76 @@ export async function dispatchWhatsAppCommand(
         `Interactions: ${analytics.totalInteractions}`,
         `Success rate: ${(analytics.successRate * 100).toFixed(0)}%`,
         `Revenue / spend: ${analytics.revenue} USDC`,
+        `Try \`scouts\` to see your reports or \`budget\` to check limit.`,
       ].join("\n");
+    }
+
+    case "whoami": {
+      const squadInfo = actor.squadId
+        ? "Squad: " + actor.squadId.slice(0, 8) + ".."
+        : "No active squad.";
+      const identities = await prisma.platformIdentity.findMany({
+        where: { userId: actor.userId },
+        select: { platform: true },
+      });
+      const platforms = identities.map((i) => i.platform).join(", ") || "none";
+      return [
+        "*" + actor.displayName + "*",
+        "ID: " + actor.userId.slice(0, 8) + "..",
+        squadInfo,
+        `Linked platforms: ${platforms}`,
+        "",
+        "Try `status` for agent analytics or `scout <opponent>` for a report.",
+      ].join("\n");
+    }
+
+    case "unlink": {
+      await prisma.platformIdentity.deleteMany({
+        where: { platform: "whatsapp", platformUserId: from },
+      });
+      return "✅ WhatsApp unlinked from your SportWarren account.\n\nTo re-link, get a fresh code from `/linkwhatsapp` in Telegram and reply with `link WA-XXXXXX`.";
+    }
+
+    case "cost": {
+      return [
+        "💳 *Service Pricing*",
+        "",
+        "• `scout <opponent>` — $0.50 USDC (AI scouting report + Kite attestation)",
+        "• `hire <id> [days]` — varies by agent (reputation-gated)",
+        "• `pay <wallet> <usdc>` — direct USDC transfer on Kite",
+        "",
+        "All prices in USDC on Kite Testnet. Daily budget limits apply per user and per squad.",
+        "Check `budget` for your remaining scout budget.",
+      ].join("\n");
+    }
+
+    case "attestations": {
+      const atts = await prisma.attestation.findMany({
+        where: {
+          OR: [
+            ...(actor.squadId
+              ? [{ subjectType: "squad", subjectId: actor.squadId }]
+              : []),
+            { subjectType: "player", subjectId: actor.userId },
+            { subjectType: "agent" as const, subjectId: actor.userId },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      });
+      if (!atts.length) {
+        return "No on-chain attestations yet. Try `scout <opponent>` or `pay <wallet> <usdc>` to create one.";
+      }
+      const lines = [`📜 *Recent Attestations (${atts.length})*`, ""];
+      for (const a of atts) {
+        const date = a.createdAt.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+        const link = fmtTx(a.txHash);
+        const amount = a.amountUsdc ? ` ${a.amountUsdc.toFixed(2)}` : "";
+        lines.push(`• ${date} — *${a.kind}*${amount}`);
+        lines.push(`  ${link}`);
+      }
+      lines.push("", "`attestations` refreshes · `scouts` for scout reports only.");
+      return lines.join("\n");
     }
 
     default: {

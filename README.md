@@ -29,9 +29,24 @@ Experience the **Kite Agentic Economy** live from your phone. No wallet, no app,
 2. **Link (Optional):** If you want to use your squad context, link your number with `link WA-XXXXXX` (get code from our Telegram bot via `/linkwhatsapp`).
 3. **Run a Paid Scout:** Text `scout Liverpool`.
 4. **Observe:**
-   - **AI Brief:** You'll receive a tactical scouting report.
+   - **AI Brief:** You'll receive a tactical scouting report enriched with your squad's real match data and head-to-head history if available.
    - **x402 Settlement:** The platform's squad agent autonomously pays $0.50 USDC on the **Kite Testnet**.
    - **On-Chain Receipt:** You'll get a [KiteScan](https://testnet.kitescan.ai) link to verify the settlement and attestation.
+   - **Budget Feedback:** The reply shows your remaining daily scout budget.
+
+### Self-Serve Commands
+
+| Command | What it does |
+|---------|-------------|
+| `whoami` | Show your linked identity, squad, and connected platforms |
+| `scouts` | Lists your last 5 scouting reports with dates and explorer links |
+| `budget` | Shows your remaining daily scout budget with a visual bar |
+| `cost` | Pricing for all services (scout, verify, hire, pay) |
+| `attestations` | Browse recent on-chain attestations with tx hashes |
+| `status` | Agent analytics: interactions, success rate, spend |
+| `find <query>` | Discover paid x402 services on Kite marketplace |
+| `unlink` | Unlink this WhatsApp number from your account |
+| `link WA-XXXXXX` | Link this number to your SportWarren account |
 
 ---
 
@@ -154,7 +169,7 @@ No chain is redundant in the SportWarren architecture. Each one owns a bounded r
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 14.2.3, Tailwind CSS, shadcn/ui |
+| Frontend | Next.js 16.2, Tailwind CSS, shadcn/ui |
 | API | tRPC (type-safe RPC) |
 | Database | PostgreSQL 15+ |
 | ORM | Prisma 7.4.1 |
