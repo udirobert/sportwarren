@@ -7,6 +7,7 @@ import type {
   MessagingListSection 
 } from './provider-types.js';
 import { dispatchWhatsAppCommand } from './whatsapp-agent';
+import { redisService } from '../redis.js';
 
 export interface WhatsAppConfig {
   apiKey?: string;
@@ -160,39 +161,57 @@ export class WhatsAppService implements MessagingProvider {
 
     const from = message.from;
     const type = message.type;
+    const messageId: string | undefined = message.id;
 
-    console.log(`[WHATSAPP WEBHOOK] Received ${type} from ${from}`);
+    // Idempotency: Kapso/Meta retries on slow webhooks. Skip if we've already
+    // accepted this message in the last 5 minutes.
+    if (messageId) {
+      try {
+        const seenKey = `wa:msg:${messageId}`;
+        const seen = await redisService.get(seenKey);
+        if (seen) {
+          console.log(`[WHATSAPP WEBHOOK] dedup skip ${messageId}`);
+          return;
+        }
+        await redisService.set(seenKey, '1', 300);
+      } catch {/* redis optional; fall through */}
+    }
+
+    console.log(`[WHATSAPP WEBHOOK] Received ${type} from ${from} (${messageId ?? 'noid'})`);
 
     if (type === 'interactive') {
       const interactive = message.interactive;
-      
       // Button click
-      if (interactive.type === 'button_reply') {
+      if (interactive?.type === 'button_reply') {
         const id = interactive.button_reply.id;
-        if (id.startsWith('avail_')) {
+        if (typeof id === 'string' && id.startsWith('avail_')) {
           const parts = id.split('_');
           const status = parts[1] === 'yes' ? 'available' : 'unavailable';
           const matchId = parts[2];
-          await this.handleRsvp(from, matchId, status);
+          // Fire-and-forget so the webhook responds fast.
+          void this.handleRsvp(from, matchId, status).catch((err) => {
+            console.error('[WHATSAPP] RSVP handler failed', err);
+          });
         }
       }
-      
-      // List selection
-      if (interactive.type === 'list_reply') {
-        const id = interactive.list_reply.id;
-        // Handle list logic...
-      }
+      // list_reply intentionally unhandled for now
+      return;
     }
 
     if (type === 'text') {
       const text: string = message.text?.body ?? '';
-      try {
-        const reply = await dispatchWhatsAppCommand(text, from);
-        if (reply) await this.sendText(from, reply);
-      } catch (err) {
-        console.error('[WHATSAPP] agent dispatch failed', err);
-        await this.sendText(from, '⚠️ Agent error — try `help`.');
-      }
+      // Fire-and-forget so we return 200 immediately and Kapso doesn't retry.
+      void (async () => {
+        try {
+          const reply = await dispatchWhatsAppCommand(text, from);
+          if (reply) await this.sendText(from, reply);
+        } catch (err) {
+          console.error('[WHATSAPP] agent dispatch failed', err);
+          try {
+            await this.sendText(from, '⚠️ Agent error — try `help`.');
+          } catch {/* swallow secondary send error */}
+        }
+      })();
     }
   }
 
