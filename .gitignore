@@ -46,6 +46,8 @@ dev.log
 # Environment files with secrets
 **/.env
 !.env.example
+.env.bak
+.env.bak.*
 
 # Deploy artifacts (build output staged for deploys)
 /.deploy-artifact/

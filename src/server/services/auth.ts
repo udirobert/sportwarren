@@ -5,7 +5,11 @@ export class AuthService {
   private jwtSecret: string;
 
   constructor() {
-    this.jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key';
+    const secret = process.env.JWT_SECRET;
+    if (!secret) {
+      throw new Error('JWT_SECRET environment variable is required');
+    }
+    this.jwtSecret = secret;
   }
 
   async hashPassword(password: string): Promise<string> {
