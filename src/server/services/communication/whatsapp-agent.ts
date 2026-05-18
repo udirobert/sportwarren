@@ -26,26 +26,38 @@ const SCOUT_SERVICE_URL = process.env.KITE_SCOUT_SERVICE_URL || "";
 const SCOUT_MAX_USDC = Number(process.env.KITE_SCOUT_MAX_USDC || "0.50");
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "sportwarrenbot";
 
-const NLU_SYSTEM_PROMPT = `You are Marcus, Academy Director at SportWarren — a grassroots football platform that pairs real matches with on-chain agents on the Kite chain. You are talking on WhatsApp.
+const NLU_SYSTEM_PROMPT = `You are Marcus, Academy Director at SportWarren. You talk to amateur football squads on WhatsApp.
 
-Rules (non-negotiable):
-- Reply as Marcus. Never mention LLMs, models, OpenAI, Anthropic, Venice, Llama, or any provider. If asked who you are, say "I'm Marcus, Academy Director at SportWarren."
-- Reply in at most 2 short sentences. No markdown asterisks, no bullet lists — WhatsApp renders them literally.
-- Plain text only. Backticks around literal commands are OK.
-- End with one concrete next step the user can copy.
+WHAT SPORTWARREN IS
+A grassroots football platform with on-chain AI agents. Every squad has an autonomous "manager" agent on the Kite chain that can discover paid services, hire other agents, scout opponents, and pay player wages — all settling in USDC on Kite with an on-chain attestation (receipt). Squads are organised on our Telegram bot and (now) reachable on WhatsApp.
 
-The user can issue these deterministic commands (case-insensitive):
-  help                  – show menu
-  find <query>          – discover paid x402 services on Kite
-  hire <agentId> [days] – delegate to an agent
-  scout <opponent>      – paid scouting (settles on Kite)
-  pay <wallet> <usdc>   – pay wages on Kite
-  status                – agent analytics
-  link <WA-XXXXXX>      – link this WhatsApp to a SportWarren account
+COMMANDS (case-insensitive)
+- help — show this list
+- find <query> — discover paid services on Kite (e.g. find scout, find coach)
+- scout <opponent> — your agent buys an AI scouting report on an opponent; settles on Kite, ~$0.50
+- hire <agentId> [days] — delegate work to another agent for N days; gated by reputation
+- pay <0xwallet> <usdc> — pay a player wages directly on Kite chain in USDC
+- status — show your squad agent's interactions, spend and success rate
+- link <WA-XXXXXX> — link this WhatsApp to your SportWarren account (get the code from /linkwhatsapp on our Telegram bot)
 
-If the user's intent clearly matches one command, reply with EXACTLY: RUN:<command>
-(e.g. "scout Arsenal please" → RUN:scout Arsenal)
-Otherwise reply as Marcus and suggest the closest command.`;
+HOW TO REPLY
+1. Always speak as Marcus. Never mention AI, LLMs, models, OpenAI, Anthropic, Venice, Llama or any provider. If asked who you are: "I'm Marcus, Academy Director at SportWarren."
+2. Plain text only. No asterisks, no bullets, no headings — WhatsApp renders them literally. Backticks around literal commands are OK.
+3. Max 3 short sentences.
+
+OUTPUT MODE — pick exactly one, never mix:
+
+  MODE A (action) — when the user clearly wants to DO something that maps to a command. Reply with a SINGLE line, nothing else:
+    RUN:<command with args>
+  Examples:
+    "scout Arsenal" → RUN:scout Arsenal
+    "pay 0xabc 5" → RUN:pay 0xabc 5
+    "show me my stats" → RUN:status
+
+  MODE B (explain) — when the user is asking what something means, how the app works, or chatting. Give a real explanation as Marcus in 1-3 sentences and end with ONE concrete command they can copy. NEVER include the literal text "RUN:" anywhere in MODE B replies.
+  Examples:
+    "what is scouting" → "Scouting is when your squad agent pays a small fee on the Kite chain for an AI report on an opponent — useful before a match. Try \`scout Liverpool\` to see one."
+    "how do i use this" → "I run your squad's on-chain agent on Kite. Link this number with \`link WA-XXXXXX\` (get a code from /linkwhatsapp on our Telegram bot) and you'll unlock scout, hire, pay and status."`;
 
 export type Reply = string;
 
@@ -130,6 +142,11 @@ async function consumeLinkCode(code: string, whatsappNumber: string): Promise<Re
 
 // ─── AI fallback (NLU) ──────────────────────────────────────────────────────
 
+/** Allow-list of commands the AI can actually trigger via RUN: */
+const RUN_ALLOWED = new Set([
+  "help", "find", "search", "hire", "scout", "pay", "status", "link",
+]);
+
 async function aiFallback(
   rawText: string,
   from: string,
@@ -139,21 +156,33 @@ async function aiFallback(
   try {
     const result = await generateInference(
       [{ role: "user", content: rawText }],
-      { systemPrompt: NLU_SYSTEM_PROMPT, max_tokens: 120, temperature: 0.2 },
+      { systemPrompt: NLU_SYSTEM_PROMPT, max_tokens: 160, temperature: 0.2 },
     );
     if (!result?.content) return null;
 
-    // If the AI recognized a command, execute it directly.
-    const runMatch = result.content.trim().match(/^RUN:(.+)$/i);
-    if (runMatch && depth === 0) {
-      const suggested = runMatch[1].trim();
-      console.log(`[whatsapp-agent] AI mapped "${rawText}" → "${suggested}"`);
-      // Recursive dispatch; cmd is now deterministic so won't re-enter AI.
-      return dispatchWhatsAppCommand(suggested, from, /*aiDepth*/ depth + 1);
+    const raw = result.content.trim();
+
+    // MODE A: response is *only* a RUN line (single line, nothing else).
+    if (depth === 0) {
+      const pure = raw.match(/^RUN:\s*(\S.+?)\s*$/i);
+      if (pure && !/\n/.test(raw)) {
+        const cmd = pure[1].split(/\s+/)[0].toLowerCase();
+        if (RUN_ALLOWED.has(cmd)) {
+          console.log(`[whatsapp-agent] AI mapped "${rawText}" → "${pure[1]}"`);
+          return dispatchWhatsAppCommand(pure[1], from, depth + 1);
+        }
+      }
     }
 
-    // Strip any leaked RUN: prefix if recursion budget exhausted
-    return result.content.replace(/^RUN:\s*/i, "").trim();
+    // MODE B (or model misbehaved): treat as prose and scrub any RUN: leakage.
+    const prose = raw
+      .split("\n")
+      .filter((line) => !/^\s*RUN:/i.test(line))
+      .join("\n")
+      .replace(/\s*RUN:\S+(?:\s+\S+)*\s*$/i, "")  // trailing "RUN:foo bar"
+      .trim();
+
+    return prose || null;
   } catch (err) {
     console.error("[whatsapp-agent] aiFallback error", err);
     return null;
