@@ -35,11 +35,12 @@ fi
 
 ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
 
+# pm2 caches `cwd` on first start; a reload won't move it to the new release.
+# Delete + start guarantees the new release's path is picked up.
 if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
-  pm2 startOrReload "$APP_ROOT/current/ecosystem.config.cjs" --only "$APP_NAME" --update-env
-else
-  pm2 start "$APP_ROOT/current/ecosystem.config.cjs" --only "$APP_NAME" --update-env
+  pm2 delete "$APP_NAME" >/dev/null
 fi
+pm2 start "$APP_ROOT/current/ecosystem.config.cjs" --only "$APP_NAME" --update-env
 
 pm2 save
 
