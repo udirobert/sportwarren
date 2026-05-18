@@ -7,18 +7,17 @@ import { useWallet } from '@/contexts/WalletContext';
 import { getJourneyContent } from '@/lib/journey/content';
 import { getJourneyStage } from '@/lib/journey/stage';
 import { AccountStatusControl } from '@/components/common/AccountStatusControl';
-import { WaitlistForm } from '@/components/common/WaitlistForm';
 import { InteractiveMatchPreview } from '@/components/landing/InteractiveMatchPreview';
 import { ProblemSection } from '@/components/landing/ProblemSection';
 import { SolutionSection } from '@/components/landing/SolutionSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
+import { AppPreviewSection } from '@/components/landing/AppPreviewSection';
 import { InlineWaitlistSection } from '@/components/landing/InlineWaitlistSection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 
 interface HeroSectionProps {
   onGetStarted?: () => void;
   onGuestStart?: () => void;
-  autoFocusWaitlist?: boolean;
 }
 
 interface PlatformStats {
@@ -28,7 +27,7 @@ interface PlatformStats {
   waitlistTotal?: number;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestStart, autoFocusWaitlist }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestStart }) => {
   const [stats, setStats] = useState<PlatformStats>({ totalPlayers: 0, totalMatches: 0, totalAgents: 0, waitlistTotal: 0 });
   const { address, chain, loginAsGuest, hasAccount, hasWallet, isGuest, authStatus } = useWallet();
   const parallaxRef = useRef<HTMLDivElement>(null);
@@ -126,15 +125,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
 
         <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-12 sm:py-20 text-center">
           <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black mb-3 sm:mb-4 leading-tight">
-            <span className="block text-white">Your Squad,</span>
+            <span className="block text-white">Your Sunday League,</span>
             <span className="block bg-gradient-to-r from-green-400 via-emerald-500 to-green-600 bg-clip-text text-transparent">
-              Tactically Elevated
+              Now a Championship Manager Season
             </span>
           </h1>
 
           <p className="text-sm sm:text-base text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto">
-            Design your DNA. Simulate tactics. Dominate the pitch. 
-            <span className="hidden md:inline"> The ultimate tactical command center for your real-world squad.</span>
+            Log real match results, earn XP, level up your attributes, and outthink opponents with AI-powered tactics.
+            <span className="hidden md:inline"> Your rec football stats finally matter.</span>
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
@@ -193,11 +192,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             <React.Suspense fallback={<div className="h-[400px] w-full animate-pulse rounded-2xl bg-white/5" />}>
               <InteractiveMatchPreview />
             </React.Suspense>
-          </div>
-
-          <div className="mb-6">
-            <div className="text-center text-sm text-gray-400 mb-2">No wallet needed — join the early access list</div>
-            <WaitlistForm variant="hero" source="hero" autoFocus={autoFocusWaitlist} />
           </div>
 
           {!hasAccount && journeyContent.hero.previewLinkLabel && (
@@ -282,6 +276,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
       <ProblemSection />
       <SolutionSection />
       <HowItWorksSection />
+      <AppPreviewSection />
       <InlineWaitlistSection />
       <LandingFooter />
     </div>

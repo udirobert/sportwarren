@@ -7,7 +7,7 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2, CheckCircle2, ArrowRight, Smartphone, ExternalLink, ChevronDown, Check, Activity } from 'lucide-react';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2, CheckCircle2, ArrowRight, Smartphone, ExternalLink, ChevronDown, ChevronRight, Check, Activity } from 'lucide-react';
 import { TrpcErrorBoundary } from '@/components/ui/TrpcErrorBoundary';
 import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
 import { AnimatePresence } from 'framer-motion';
@@ -86,6 +86,11 @@ export const AdaptiveDashboard: React.FC = () => {
   const [showCreateSquadFlow, setShowCreateSquadFlow] = React.useState(false);
   const [showJoinSquadFlow, setShowJoinSquadFlow] = React.useState(false);
   const [isSquadPickerOpen, setIsSquadPickerOpen] = React.useState(false);
+  const [expandedSections, setExpandedSections] = React.useState<Record<string, boolean>>({
+    Today: true,
+    Squad: false,
+    Progress: false,
+  });
   const [avatarCelebration, setAvatarCelebration] = React.useState<{
     visible: boolean;
     title: string;
@@ -1330,6 +1335,29 @@ export const AdaptiveDashboard: React.FC = () => {
       <GuestTour onVisibilityChange={setIsTourActive} />
       {!isTourActive && <AgenticConcierge journeyStage={entryState.id} />}
 
+      {/* Next-action focus strip — shows the single most important thing to do */}
+      <div className="flex items-center gap-2 flex-wrap mb-4">
+        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500 mr-1">Focus:</span>
+        {entryState.primaryAction.href ? (
+          <Link href={entryState.primaryAction.href}>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-green-500/15 to-emerald-500/15 border border-green-500/25 px-3 py-1.5 text-xs font-bold text-green-400 hover:bg-green-500/25 transition-colors">
+              <Zap className="w-3 h-3" />
+              {entryState.primaryAction.label}
+              <ArrowRight className="w-3 h-3" />
+            </span>
+          </Link>
+        ) : entryState.primaryAction.intent && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-green-500/10 border border-green-500/20 px-3 py-1.5 text-xs font-bold text-green-400">
+            {entryState.primaryAction.label}
+          </span>
+        )}
+        {entryState.secondaryAction && (
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/5 border border-white/10 px-3 py-1.5 text-xs font-bold text-gray-400">
+            {entryState.secondaryAction.label}
+          </span>
+        )}
+      </div>
+
       <AnimatePresence>
         {isStaffRoomOpen && (
           <AgentProvider>
@@ -1391,14 +1419,27 @@ export const AdaptiveDashboard: React.FC = () => {
 
         const Section = ({ title, widgets }: { title: string; widgets: typeof visibleWidgets }) => {
           if (widgets.length === 0) return null;
+          const isExpanded = expandedSections[title] ?? (title === 'Today' ? true : false);
           const featuredIds = new Set(featuredBySection[title] ?? []);
           const featured = widgets.filter(w => featuredIds.has(w.id));
           const rest = widgets.filter(w => !featuredIds.has(w.id));
+          const maxRest = isExpanded ? rest.length : 2;
+          const totalHidden = widgets.length - (featured.length + maxRest);
 
           return (
             <div>
               <div className="flex items-center justify-between mb-2">
                 <h2 className="section-title">{title}</h2>
+                <button
+                  onClick={() => setExpandedSections(prev => ({ ...prev, [title]: !prev[title] }))}
+                  className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-gray-200 transition-colors"
+                >
+                  {isExpanded ? (
+                    <>Show Less <ChevronDown className="w-3 h-3" /></>
+                  ) : (
+                    <>Show {totalHidden > 0 ? `${totalHidden + maxRest}` : 'All'} <ChevronRight className="w-3 h-3" /></>
+                  )}
+                </button>
               </div>
 
               {/* Mobile: feature stack + horizontal snap scroll */}
@@ -1409,6 +1450,14 @@ export const AdaptiveDashboard: React.FC = () => {
                       {w.component}
                     </div>
                   ))}
+                  {!isExpanded && totalHidden > 0 && (
+                    <button
+                      onClick={() => setExpandedSections(prev => ({ ...prev, [title]: true }))}
+                      className="w-full py-3 text-xs font-bold uppercase tracking-widest text-green-400 border border-dashed border-white/10 rounded-xl hover:bg-white/5 transition-colors"
+                    >
+                      +{totalHidden} more
+                    </button>
+                  )}
                 </div>
               )}
               {rest.length > 0 && (
@@ -1417,7 +1466,7 @@ export const AdaptiveDashboard: React.FC = () => {
                     className={`flex gap-3 overflow-x-auto pb-2 snap-x snap-proximity scrollbar-hide scroll-lock-x ${rest.length > 1 ? 'carousel-fade-right' : ''}`}
                     style={{ scrollbarWidth: 'none' }}
                   >
-                    {rest.slice(0, 5).map(w => (
+                    {rest.slice(0, isExpanded ? rest.length : maxRest).map(w => (
                       <div key={w.id} id={w.id} className="snap-start shrink-0 w-[85vw] max-w-sm">
                         {w.component}
                       </div>
@@ -1433,14 +1482,22 @@ export const AdaptiveDashboard: React.FC = () => {
                     {w.component}
                   </div>
                 ))}
-                {rest.length > 0 && (
+                {rest.slice(0, isExpanded ? rest.length : maxRest).length > 0 && (
                   <div className="grid grid-cols-12 gap-3 grid-flow-row-dense">
-                    {rest.map(w => (
+                    {rest.slice(0, isExpanded ? rest.length : maxRest).map(w => (
                       <div key={w.id} id={w.id} className={`${getSpan(title, w.id)} min-w-0`}>
                         {w.component}
                       </div>
                     ))}
                   </div>
+                )}
+                {!isExpanded && totalHidden > 0 && (
+                  <button
+                    onClick={() => setExpandedSections(prev => ({ ...prev, [title]: true }))}
+                    className="w-full py-3 text-xs font-bold uppercase tracking-widest text-green-400 border border-dashed border-white/10 rounded-xl hover:bg-white/5 transition-colors"
+                  >
+                    +{totalHidden} more widgets
+                  </button>
                 )}
               </div>
             </div>
