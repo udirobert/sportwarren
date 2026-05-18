@@ -70,6 +70,28 @@ The provided `ecosystem.config.cjs` runs:
 - cwd: `current`
 - port: `5200`
 
+> **pm2 cwd gotcha.** `pm2 reload` and `pm2 startOrReload` update env vars but
+> **do not** change a process's working directory — pm2 caches `cwd` from the
+> first `pm2 start`. After a symlink swap, a reload keeps serving the previous
+> release. `scripts/deploy-runtime-release.sh` therefore does
+> `pm2 delete && pm2 start` on every deploy so the new release directory is
+> picked up.
+
+> **Next standalone `.env` gotcha.** `next build` snapshots the current
+> `.env` into `.next/standalone/.env`, and the standalone server reads
+> from that file (not from `process.cwd`). The deploy script replaces it
+> with a symlink to `shared/.env` so runtime-only secrets such as
+> `KAPSO_API_KEY` and `WHATSAPP_PHONE_NUMBER_ID` are live without
+> rebuilding the artifact.
+
+## Build notes
+- Next 16 enables Turbopack by default but our `next.config.js` keeps a
+  custom `webpack` block (path aliases + minimization). The build script
+  passes `--webpack` explicitly to avoid the
+  "build is using Turbopack with a webpack config" worker error.
+- `DISABLE_SENTRY_BUILD=true` is required in non-prod environments to skip
+  the Sentry source-map upload.
+
 ## Notes
 - Keep `MEDIA_STORAGE=local` only if you intentionally want local disk persistence.
 - If WhatsApp Web is no longer used, old `.wwebjs_auth` cache on the server can be removed after verification.

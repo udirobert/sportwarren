@@ -31,6 +31,14 @@ ln -sfn "$SHARED_DIR/storage" "$RELEASE_DIR/storage"
 
 if [ -f "$SHARED_DIR/.env" ]; then
   ln -sfn "$SHARED_DIR/.env" "$RELEASE_DIR/.env"
+  # Next.js standalone loads .env from the directory containing server.js, not
+  # from process.cwd. Replace the baked-in build-time snapshot with a symlink
+  # so runtime-only secrets (KAPSO_API_KEY, WHATSAPP_PHONE_NUMBER_ID, etc.)
+  # come from shared/.env on every release.
+  if [ -f "$RELEASE_DIR/.next/standalone/.env" ]; then
+    mv "$RELEASE_DIR/.next/standalone/.env" "$RELEASE_DIR/.next/standalone/.env.bak.baked"
+  fi
+  ln -sfn "$SHARED_DIR/.env" "$RELEASE_DIR/.next/standalone/.env"
 fi
 
 ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
