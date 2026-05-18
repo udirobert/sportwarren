@@ -401,6 +401,26 @@ export async function joinTelegramMiniAppSquad(
   };
 }
 
+/**
+ * Generate a unique shortName for a casual opponent squad
+ */
+/**
+ * Generate a unique shortName for a casual opponent squad.
+ * Uses timestamp + random suffix to avoid collisions.
+ */
+function generateCasualShortName(name: string): string {
+  const cleaned = name
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .substring(0, 3)
+    .toUpperCase();
+  
+  const prefix = cleaned.length >= 2 ? cleaned : 'CA';
+  const suffix = Date.now().toString(36).slice(-3).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+  
+  return `${prefix}${suffix}${random}`.substring(0, 8);
+}
+
 async function resolveOpponentSquad(prisma: PrismaClient, squadId: string, opponentName: string) {
   const exactMatch = await prisma.squad.findFirst({
     where: {
@@ -413,7 +433,7 @@ async function resolveOpponentSquad(prisma: PrismaClient, squadId: string, oppon
   });
 
   if (exactMatch) {
-    return exactMatch;
+    return { squad: exactMatch, isCasual: false };
   }
 
   const closeMatches = await prisma.squad.findMany({
@@ -429,10 +449,22 @@ async function resolveOpponentSquad(prisma: PrismaClient, squadId: string, oppon
   });
 
   if (closeMatches.length === 1) {
-    return closeMatches[0];
+    return { squad: closeMatches[0], isCasual: false };
   }
 
-  return null;
+  // No registered squad found — create a casual opponent placeholder squad
+  const shortName = generateCasualShortName(opponentName);
+  const casualSquad = await prisma.squad.create({
+    data: {
+      name: `${opponentName} (Casual)`,
+      shortName,
+      founded: new Date(),
+      isDigitalTwinActive: false,
+    },
+  });
+
+  console.log(`[OPPONENT] Created casual squad for "${opponentName}": ${casualSquad.id}`);
+  return { squad: casualSquad, isCasual: true };
 }
 
 export async function searchTelegramOpponentSquads(
@@ -763,12 +795,9 @@ export async function submitTelegramMiniAppMatch(
   const connection = await requireTelegramMiniAppLeader(prisma, input.token);
   const squadId = connection.squadId!;
 
-  const opponent = await resolveOpponentSquad(prisma, squadId, input.opponentName.trim());
-  if (!opponent) {
-    throw new Error(
-      `We could not find a squad named "${input.opponentName}". Use the exact SportWarren squad name and try again.`,
-    );
-  }
+  const opponentResult = await resolveOpponentSquad(prisma, squadId, input.opponentName.trim());
+  const opponent = opponentResult.squad;
+  const isCasual = opponentResult.isCasual;
 
   const homeSquadId = input.isHome ? squadId : opponent.id;
   const awaySquadId = input.isHome ? opponent.id : squadId;
@@ -788,6 +817,7 @@ export async function submitTelegramMiniAppMatch(
     id: match.id,
     shareSlug: match.shareSlug ?? null,
     opponentName: opponent.name,
+    isCasual,
     requiredVerifications: getRequiredMatchVerifications(match),
   };
 }

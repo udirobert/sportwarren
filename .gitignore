@@ -67,3 +67,5 @@ dev.log
 /.bolt/
 /.blackboxcli/
 /.junie/
+# Locally installed agent skills (re-installable via `npx skills install`)
+.agents/

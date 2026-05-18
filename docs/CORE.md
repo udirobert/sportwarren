@@ -86,6 +86,44 @@ SportWarren is a first-class participant in the Kite Agentic Economy, utilizing 
 - **Proof of Liveness:** Real-time liveness checks ("Pings") verify agent activity on the Kite Chain.
 - **Reputation-Aware Delegation:** Autonomous hiring is gated by an agent's reputation score (min 400/1000), ensuring capital flows to reputable agents.
 - **WhatsApp Agent Bridge:** Real-time push notifications from Kite agents to players via WhatsApp (Kapso) for on-chain events, attestations, and tactical updates.
+
+#### 🏁 Hackathon Quick-Demo Guide
+Judges can experience the full agentic flow live on Kite Testnet:
+
+1. **Access the Staff Room:** Navigate to the `Staff Room` in the dashboard to meet your AI agents.
+2. **Set Twin Budget:** In the **Tactical Spend** UI, allocate a USDC budget to your `PlayerTwin` agent.
+3. **Trigger an Agentic Action:** Use the **Scout Agent** to perform a match analysis (this triggers an x402-paid API call).
+4. **Observe Settlement:** The agent will autonomously verify the request and settle via the Pieverse facilitator on the Kite chain.
+5. **Audit the Attestation:** Navigate to your **Reputation/Attestation Timeline** to see the signed cryptographic proof of the agent's action.
+
+#### 💬 WhatsApp → Kite Agent (Hackathon Demo)
+The same agent is reachable from WhatsApp via Kapso. Users text natural-language commands; the server parses them, runs a paid x402 call on Kite, and replies with the on-chain receipt.
+
+**Setup**
+```bash
+npm install -g @kapso/cli
+kapso login                       # uses your KAPSO_API_KEY
+kapso setup                       # onboards a WhatsApp number, returns phoneNumberId
+# Point the Kapso webhook at:  https://<your-vercel-host>/api/platform/whatsapp/webhook
+```
+
+Required env (see `.env.example`):
+- `KAPSO_API_KEY`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`
+- `WEB3_PRIVATE_KEY` (treasury wallet that signs x402 settlements on Kite testnet)
+- Optional: `KITE_SCOUT_SERVICE_URL` (any x402-charging endpoint, e.g. your own scouting service)
+
+**Supported intents** — parsed in [`src/server/services/communication/whatsapp-agent.ts`](../src/server/services/communication/whatsapp-agent.ts):
+
+| Message | Action |
+|---|---|
+| `help` | Show usage |
+| `find <query>` | `kiteAIService.searchMarketplace` (ksearch CLI + local catalogue) |
+| `hire <agentId> [days]` | Reputation-gated `hireAgent` → creates a `KiteSession` |
+| `scout <opponent>` | `executePaidRequest` → x402 settlement on Kite + on-chain `Attestation` |
+| `pay <wallet> <usdc>` | `processSquadWagePayment` → direct USDC transfer on Kite |
+| `status` | `getAgentAnalytics` for the squad-manager twin |
+
+Every successful action replies with a KiteScan tx link, e.g. `https://testnet.kitescan.ai/tx/0x…`, so judges can verify settlement in one tap.
 | **Yellow** | Instant settlement rail for treasury movement and match-fee coordination | Operational liquidity without forcing every action into a slower on-chain path |
 | **TON** | Telegram-native wallet UX, top-ups, rewards, and Mini App payments | Native fit for Telegram distribution and user treasury actions |
 | **Lens** | Social identity, highlights, and community distribution | Portable social graph for player and squad visibility |

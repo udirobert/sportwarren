@@ -14,6 +14,10 @@ import {
   Target,
   Sparkles,
   Share2,
+  Search,
+  UserPlus,
+  ExternalLink,
+  Send,
 } from 'lucide-react';
 import { useTelegram } from '@/hooks/useTelegram';
 import type { MiniAppContext, PendingMatch, RecentMatch } from './TelegramMiniAppShell';
@@ -32,6 +36,8 @@ interface MatchSubmissionForm {
   awayScore: string;
   isHome: boolean;
   matchDate?: string;
+  isCasualOpponent: boolean;
+  inviteSent: boolean;
 }
 
 interface VerificationXPSummary {
@@ -179,12 +185,16 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
     homeScore: '0',
     awayScore: '0',
     isHome: true,
+    isCasualOpponent: false,
+    inviteSent: false,
   });
   const [opponentSuggestions, setOpponentSuggestions] = useState<Array<{ id: string; name: string; shortName: string | null }>>([]);
   const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [submitResult, setSubmitResult] = useState<{ matchId: string; opponentName: string; isCasual: boolean } | null>(null);
 
   useEffect(() => {
-    if (viewMode !== 'submit') {
+    if (viewMode !== 'submit' || form.isCasualOpponent) {
+      setOpponentSuggestions([]);
       return;
     }
 
@@ -227,11 +237,22 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
       window.clearTimeout(timeout);
       controller.abort();
     };
-  }, [form.opponentName, viewMode]);
+  }, [form.opponentName, viewMode, form.isCasualOpponent]);
 
   const selectOpponent = (name: string) => {
-    setForm((prev) => ({ ...prev, opponentName: name }));
+    setForm((prev) => ({ ...prev, opponentName: name, isCasualOpponent: false }));
     setOpponentSuggestions([]);
+    hapticSelection();
+  };
+
+  const switchToCasualMode = () => {
+    setForm((prev) => ({ ...prev, isCasualOpponent: true }));
+    setOpponentSuggestions([]);
+    hapticImpact('medium');
+  };
+
+  const switchToSearchMode = () => {
+    setForm((prev) => ({ ...prev, isCasualOpponent: false, opponentName: '' }));
     hapticSelection();
   };
 
@@ -273,17 +294,33 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
         throw new Error(data.error || 'Failed to submit match');
       }
 
-      setSuccess('Match submitted for verification!');
+      const isCasual = data.isCasual === true;
+      
+      if (isCasual) {
+        // Show invite flow for casual opponents
+        setSubmitResult({
+          matchId: data.id,
+          opponentName: form.opponentName.trim(),
+          isCasual: true,
+        });
+        setSuccess(`${form.opponentName.trim()} was registered in SportWarren. Invite them to claim their squad!`);
+      } else {
+        setSuccess('Match submitted for verification!');
+      }
+      
       setLastXPSummary(null);
       hapticNotification('success');
 
-      // Reset form and go back to overview
-      setForm({ opponentName: '', homeScore: '0', awayScore: '0', isHome: true });
-      setTimeout(() => {
-        setViewMode('overview');
-        setSuccess(null);
-        onRefresh?.();
-      }, 1500);
+      // Reset form
+      setForm({ opponentName: '', homeScore: '0', awayScore: '0', isHome: true, isCasualOpponent: false, inviteSent: false });
+      
+      if (!isCasual) {
+        setTimeout(() => {
+          setViewMode('overview');
+          setSuccess(null);
+          onRefresh?.();
+        }, 1500);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit match');
       hapticNotification('error');
@@ -574,23 +611,107 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
         </div>
 
         <div className="space-y-6">
+          {/* Opponent Input */}
           <div>
-            <label className="mb-2 block text-xs font-bold uppercase tracking-wider text-slate-500">Opponent Squad</label>
-            <input
-              type="text"
-              value={form.opponentName}
-              onChange={(e) => setForm({ ...form, opponentName: e.target.value })}
-              placeholder="Enter squad name..."
-              className="w-full rounded-2xl border border-white/10 bg-slate-800/50 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none"
-            />
-            {loadingSuggestions && <p className="mt-2 text-[11px] text-slate-500">Searching...</p>}
-            {!loadingSuggestions && opponentSuggestions.length > 0 && (
-              <div className="mt-2 space-y-1 rounded-xl border border-white/10 bg-slate-900/80 p-2">
-                {opponentSuggestions.map((opponent) => (
-                  <button key={opponent.id} type="button" onClick={() => selectOpponent(opponent.name)} className="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-xs text-slate-200 hover:bg-white/5">
-                    <span>{opponent.name}</span>
-                  </button>
-                ))}
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                {form.isCasualOpponent ? 'Casual Opponent' : 'Opponent Squad'}
+              </label>
+              {form.isCasualOpponent ? (
+                <button
+                  type="button"
+                  onClick={switchToSearchMode}
+                  className="flex items-center gap-1 text-[10px] font-bold text-blue-400"
+                >
+                  <Search className="h-3 w-3" /> Search registered
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={switchToCasualMode}
+                  className="flex items-center gap-1 text-[10px] font-bold text-amber-400"
+                >
+                  <UserPlus className="h-3 w-3" /> Not on SportWarren?
+                </button>
+              )}
+            </div>
+
+            {form.isCasualOpponent ? (
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4">
+                <div className="flex items-start gap-2 mb-3">
+                  <UserPlus className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+                  <p className="text-[11px] text-amber-200/70 leading-relaxed">
+                    Enter the name of a team that isn't on SportWarren yet.
+                    They'll be automatically registered so you can log this match.
+                  </p>
+                </div>
+                <input
+                  type="text"
+                  value={form.opponentName}
+                  onChange={(e) => setForm({ ...form, opponentName: e.target.value })}
+                  placeholder="Enter casual team name..."
+                  className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500/30"
+                  autoFocus
+                />
+              </div>
+            ) : (
+              <div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                  <input
+                    type="text"
+                    value={form.opponentName}
+                    onChange={(e) => setForm({ ...form, opponentName: e.target.value })}
+                    placeholder="Search registered squads..."
+                    className="w-full rounded-2xl border border-white/10 bg-slate-800/50 pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500/30"
+                    autoFocus
+                  />
+                </div>
+                {loadingSuggestions && (
+                  <div className="mt-2 flex items-center gap-2 rounded-xl border border-white/5 bg-slate-900/60 p-3">
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-slate-500 border-t-transparent" />
+                    <span className="text-[11px] text-slate-500">Searching...</span>
+                  </div>
+                )}
+                {!loadingSuggestions && opponentSuggestions.length > 0 && (
+                  <div className="mt-2 space-y-0.5 rounded-xl border border-white/10 bg-slate-900/80 p-1.5">
+                    <p className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-600">Registered Squads</p>
+                    {opponentSuggestions.map((opponent) => (
+                      <button
+                        key={opponent.id}
+                        type="button"
+                        onClick={() => selectOpponent(opponent.name)}
+                        className="flex w-full items-center justify-between rounded-lg px-3 py-2.5 text-left text-xs text-slate-200 hover:bg-white/5 transition active:scale-[0.98]"
+                      >
+                        <span className="font-medium">{opponent.name}</span>
+                        <span className="text-[10px] text-slate-600 font-mono">{opponent.shortName}</span>
+                      </button>
+                    ))}
+                    <div className="border-t border-white/5 mt-1 pt-1">
+                      <button
+                        type="button"
+                        onClick={switchToCasualMode}
+                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-xs text-amber-400 hover:bg-amber-500/5 transition"
+                      >
+                        <UserPlus className="h-3.5 w-3.5" />
+                        <span>Can't find them? Register as casual team</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {!loadingSuggestions && form.opponentName.trim().length >= 2 && opponentSuggestions.length === 0 && (
+                  <div className="mt-2 rounded-xl border border-dashed border-white/10 bg-slate-900/40 p-4 text-center">
+                    <p className="text-xs text-slate-500 mb-2">No registered squads found matching "{form.opponentName.trim()}"</p>
+                    <button
+                      type="button"
+                      onClick={switchToCasualMode}
+                      className="inline-flex items-center gap-2 rounded-xl bg-amber-500/10 border border-amber-500/20 px-4 py-2 text-xs font-bold text-amber-400 transition active:scale-95"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Register as casual team
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -739,7 +860,55 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
         <ChevronRight className="h-5 w-5 text-slate-700" />
       </button>
 
-      {(success || error) && (
+      {/* Casual Opponent Invite Flow */}
+      {submitResult && (
+        <div className="rounded-2xl border border-amber-500/20 bg-gradient-to-br from-amber-500/10 to-amber-500/5 p-5 space-y-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/20 text-amber-400">
+              <Send className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-white">Invite {submitResult.opponentName}</h3>
+              <p className="text-[10px] text-slate-400">They were auto-registered. Let them know!</p>
+            </div>
+          </div>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            {submitResult.opponentName} has been registered on SportWarren so you could
+            log this match. Share the invite link so they can claim their squad, view
+            results, and verify the score.
+          </p>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                const shareUrl = `https://t.me/SportWarrenBot/app?startapp=claim_${submitResult.matchId}`;
+                shareToStory(
+                  'https://sportwarren.xyz/og-image.png',
+                  `⚽ We just played a match! ${squad.name} vs ${submitResult.opponentName}. Join SportWarren to see the result and manage your team!`,
+                  shareUrl,
+                );
+                hapticNotification('success');
+              }}
+              className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-amber-500 py-3 text-xs font-bold text-white shadow-lg shadow-amber-500/25 transition active:scale-95"
+            >
+              <Send className="h-4 w-4" />
+              Share Invite
+            </button>
+            <button
+              onClick={() => {
+                setSubmitResult(null);
+                setSuccess(null);
+                setViewMode('overview');
+                onRefresh?.();
+              }}
+              className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs font-bold text-slate-300 transition active:scale-95"
+            >
+              Skip
+            </button>
+          </div>
+        </div>
+      )}
+
+      {(success || error) && !submitResult && (
         <div className={`flex items-center gap-2 rounded-xl border p-4 text-sm ${error ? 'border-rose-500/30 bg-rose-500/10 text-rose-300' : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'}`}>
           <AlertCircle className="h-4 w-4 shrink-0" />
           {error || success}

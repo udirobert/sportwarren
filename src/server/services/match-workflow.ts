@@ -328,8 +328,8 @@ export async function submitMatchResult({
       verificationDetails = verificationResult.details;
 
       try {
-        const { agenticService } = await import('@/server/services/ai/agentic');
-        agentInsights = await agenticService.generateMatchReport(
+        const { generateMatchReport } = await import('@/server/services/ai/staff-chat');
+        agentInsights = await generateMatchReport(
           { homeSquad, awaySquad, homeScore, awayScore },
           verificationResult.details,
         );

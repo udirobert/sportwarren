@@ -15,6 +15,8 @@ SportWarren transforms amateur football with:
 - **Squad Management** - Team organization, tactical DNA, brand kit personalization, and treasury management
 - **Championship Manager UX** - Experience-first gameplay focused on "How do we win?" before "What happened?"
 
+**⚡ Kites Hackathon Participants:** See [docs/CORE.md](docs/CORE.md#kite-ai-agentic-economy) for our full Agentic Economy implementation and live demo guide.
+
 **The Flywheel:** Tactical Prep → Real Performance → Peer Rating → Attribute Growth → Strategy Refinement
 
 ---

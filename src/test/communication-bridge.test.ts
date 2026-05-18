@@ -73,15 +73,15 @@ describe('CommunicationBridge', () => {
 
     expect(telegramProvider.sendText).toHaveBeenCalledWith(
       '123',
-      '🔄 SportWarren\n\n📅 Match Reminder: Red Lions on Saturday 3pm',
+      '📅 Match Reminder: Red Lions on Saturday 3pm',
     );
     expect(whatsappProvider.sendText).toHaveBeenCalledWith(
       '+254700000001',
-      'SportWarren: 📅 Match Reminder: Red Lions on Saturday 3pm',
+      '📅 Match Reminder: Red Lions on Saturday 3pm',
     );
     expect(spectrumProvider.sendText).toHaveBeenCalledWith(
       'pilot-room',
-      '[SportWarren pilot] 📅 Match Reminder: Red Lions on Saturday 3pm',
+      '📅 Match Reminder: Red Lions on Saturday 3pm',
     );
   });
 

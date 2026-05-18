@@ -6,6 +6,7 @@ import type {
   MessagingButton, 
   MessagingListSection 
 } from './provider-types.js';
+import { dispatchWhatsAppCommand } from './whatsapp-agent';
 
 export interface WhatsAppConfig {
   apiKey?: string;
@@ -184,10 +185,13 @@ export class WhatsAppService implements MessagingProvider {
     }
 
     if (type === 'text') {
-      const text = message.text.body.toLowerCase();
-      // Basic command parsing
-      if (text === 'stats') {
-        // Send stats summary...
+      const text: string = message.text?.body ?? '';
+      try {
+        const reply = await dispatchWhatsAppCommand(text, from);
+        if (reply) await this.sendText(from, reply);
+      } catch (err) {
+        console.error('[WHATSAPP] agent dispatch failed', err);
+        await this.sendText(from, '⚠️ Agent error — try `help`.');
       }
     }
   }
