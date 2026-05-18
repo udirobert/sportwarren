@@ -18,6 +18,15 @@ When a user requests a scouting report, the following flow occurs:
 3. **Facilitator:** The Scout Agent settles the payment via the **Pieverse Facilitator** on the Kite Chain.
 4. **Attestation:** Both agents record a signed **Attestation** on the Kite Chain.
 
+### 3. **Economic Hardening** (Spending Guards)
+The scout economy enforces a **dual spending cap** at every entry point:
+
+1. **Per-user daily limit** (`KITE_SCOUT_MAX_USDC`, default 0.50 USDC/player/day) — prevents a single player from draining budget.
+2. **Per-squad daily limit** (`KITE_SCOUT_MAX_USDC_SQUAD`, default 2.50 USDC/squad/day) — 5 players on the same squad share one pool. Both guards are checked in the WhatsApp agent **and** the direct `/api/x402/scout` route — no bypass path.
+3. **Platform payout budget** (`KITE_DAILY_PAYOUT_BUDGET_USDC`, default 200 USDC/day) — caps total agent-initiated payouts.
+
+Use the `budget` WhatsApp command to see your current consumption and remaining allowance.
+
 ### 2. **Proactive Autonomy** (The Cron Loop)
 This is our proof of **"minimal human involvement."** A cron job (`/api/cron/auto-scout`) runs every 6 hours:
 1. **Discovery:** Finds matches scheduled **22–26 hours** from now.

@@ -43,7 +43,7 @@ SportWarren uses a role-specific multi-chain system. Fallback **Simulation Mode*
 ### Chain Responsibility Matrix
 | Network | Responsibility | Key Variables |
 |---------|----------------|---------------|
-| **Kite AI** | Agents & Commerce | `KITE_API_KEY`, `WEB3_PRIVATE_KEY` |
+| **Kite AI** | Agents & Commerce | `KITE_API_KEY`, `WEB3_PRIVATE_KEY`, `KITE_SCOUT_PRICE_USDC`, `KITE_SCOUT_MAX_USDC`, `KITE_SCOUT_MAX_USDC_SQUAD` |
 | **Algorand** | Verification | `DEPLOYER_MNEMONIC`, `ALGORAND_APP_ID` |
 | **Avalanche** | Governance | `AVALANCHE_PRIVATE_KEY` |
 | **TON** | Telegram Wallet | `TONCENTER_API_KEY` |
