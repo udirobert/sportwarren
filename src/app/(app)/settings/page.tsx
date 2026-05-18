@@ -13,6 +13,7 @@ import { WalletConnectModal } from '@/components/common/WalletConnectModal';
 import { PlatformType, NotificationPreferences, PLATFORM_CONFIG } from '@/types';
 import type { PlayerPosition } from '@/types';
 import { trackFeatureUsed } from '@/lib/analytics';
+import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
 
 const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
@@ -766,6 +767,36 @@ export default function SettingsPage() {
               <strong>How it works:</strong> Once connected, match results and achievements will automatically be shared to your squad's chat. Only verified match data is shared — your personal messages stay private.
             </p>
           </div>
+
+          {/* WhatsApp Connection */}
+          <Card>
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">WhatsApp</h2>
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center text-2xl shadow-sm">
+                    💬
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-900 dark:text-white">WhatsApp</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300">
+                      Chat with Coach Kite and manage your squad by text
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700">
+                <ol className="space-y-2 text-sm text-gray-600 dark:text-gray-300 list-decimal list-inside">
+                  <li>Open the <a href={buildTelegramDeepLink()} target="_blank" rel="noopener noreferrer" className="text-blue-600 dark:text-blue-400 font-medium hover:underline">Telegram bot</a></li>
+                  <li>Send <code className="px-1 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-xs font-mono">/linkwhatsapp</code></li>
+                  <li>Reply to the code you receive on WhatsApp</li>
+                </ol>
+                <p className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                  Once linked, you can scout opponents, check stats, and get match analysis by texting our number.
+                </p>
+              </div>
+            </div>
+          </Card>
         </div>
       )}
 

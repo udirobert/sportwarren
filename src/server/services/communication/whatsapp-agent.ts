@@ -182,6 +182,14 @@ async function aiFallback(
       .replace(/\s*RUN:\S+(?:\s+\S+)*\s*$/i, "")  // trailing "RUN:foo bar"
       .trim();
 
+    if (prose && depth === 0) {
+      return [
+        prose,
+        "",
+        `⚡ To unlock full commands, link via Telegram: https://t.me/${TELEGRAM_BOT_USERNAME} then /linkwhatsapp`,
+      ].join("\n");
+    }
+
     return prose || null;
   } catch (err) {
     console.error("[whatsapp-agent] aiFallback error", err);
