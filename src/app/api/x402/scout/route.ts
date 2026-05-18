@@ -106,12 +106,27 @@ export async function POST(request: NextRequest) {
     console.warn('[scout] AI inference failed, using deterministic summary', err);
   }
 
+  // Resolve subject for attestation: try to find the user's squad
+  let subjectType = 'user';
+  let subjectId = body.requestedBy ?? 'anonymous';
+
+  if (body.requestedBy) {
+    const user = await prisma.user.findUnique({
+      where: { id: body.requestedBy },
+      include: { squads: { take: 1, where: { status: 'active' } } },
+    });
+    if (user?.squads[0]) {
+      subjectType = 'squad';
+      subjectId = user.squads[0].squadId;
+    }
+  }
+
   // Persist attestation on Kite chain record
   const cfg = readX402Config();
   const attestation = await prisma.attestation.create({
     data: {
-      subjectType: 'squad',
-      subjectId: body.requestedBy ?? 'external',
+      subjectType,
+      subjectId,
       kind: 'scout_report',
       payload: { opponent, summary, requestedBy: body.requestedBy ?? null },
       network: cfg.network,

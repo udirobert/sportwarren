@@ -53,12 +53,23 @@ AVALANCHE_RPC_URL=https://api.avax-test.network/ext/bc/C/rpc
 AVALANCHE_PRIVATE_KEY=your_private_key
 AVALANCHE_CHAIN_ID=43113
 
-# Kite AI
-KITE_API_URL=https://api.gokite.ai
-KITE_API_KEY=your_kite_api_key
+# Kite AI & WhatsApp (Agentic Economy)
+KITE_RPC_URL=https://rpc-testnet.gokite.ai
+KITE_CHAIN_ID=2368
+KITE_FACILITATOR_URL=https://facilitator.pieverse.io
+KITE_USDC_ADDRESS=0x0fF5393387ad2f9f691FD6Fd28e07E3969e27e63
+KITE_EXPLORER_URL=https://testnet.kitescan.ai
+WEB3_PRIVATE_KEY=your_platform_wallet_private_key # Treasury for x402 settlements
 
-# WalletConnect
-NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your-project-id
+# WhatsApp via Kapso
+KAPSO_API_KEY=your_kapso_api_key
+WHATSAPP_PHONE_NUMBER_ID=your_whatsapp_number_id
+KAPSO_WEBHOOK_VERIFY_TOKEN=your_verify_token
+
+# Scout Service
+KITE_SCOUT_SERVICE_URL=https://api.sportwarren.com/api/x402/scout
+KITE_SCOUT_PRICE_USDC=0.50
+KITE_SCOUT_MAX_USDC=0.50 # Daily limit per user
 
 # Optional: Sentry for error monitoring
 SENTRY_DSN=https://your-sentry-dsn

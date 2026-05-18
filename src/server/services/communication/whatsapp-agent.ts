@@ -265,6 +265,13 @@ export async function dispatchWhatsAppCommand(
       const opponent = args.join(" ").trim();
       if (!opponent) return "Usage: `scout <opponent name>`";
       if (!actor.squadId) return "❌ You need to belong to a squad to commission scouting.";
+
+      // --- SPENDING GUARD ---
+      const spending = await kiteAIService.checkUserSpending(actor.userId, SCOUT_MAX_USDC, SCOUT_MAX_USDC);
+      if (!spending.ok) {
+        return `❌ Daily scout limit reached. You can spend up to ${SCOUT_MAX_USDC} USDC per day on scouting.`;
+      }
+
       const manager = await kiteAIService.upsertSquadManagerAgent(actor.squadId);
       // Best-effort: top up a session if none exists
       try {
@@ -272,7 +279,7 @@ export async function dispatchWhatsAppCommand(
           agentId: manager.id,
           taskSummary: `WhatsApp scout: ${opponent}`,
           maxPerTxUsdc: SCOUT_MAX_USDC,
-          maxTotalUsdc: SCOUT_MAX_USDC * 3,
+          maxTotalUsdc: SCOUT_MAX_USDC * 5, // Allow a few reports per session
           ttlSeconds: 3600,
           scope: { source: "whatsapp", opponent },
           approvedBy: actor.userId,
@@ -289,11 +296,14 @@ export async function dispatchWhatsAppCommand(
         kind: "scout_report",
       });
       if (!res.ok) return `❌ Scout failed: ${res.error}`;
+
+      const txUrl = fmtTx(res.payment?.txHash);
       const lines = [
-        `🛰️ *Scouting · ${opponent}*`,
-        res.data?.summary ? `\n${res.data.summary}` : "Report attached to attestation.",
+        `🛰️ *Scouting Report · ${opponent}*`,
+        res.data?.summary ? `\n${res.data.summary}` : "\n(Report data is available on-chain via the attestation.)",
         "",
-        `Settled on Kite → ${fmtTx(res.payment?.txHash)}`,
+        `✅ *Settled on Kite*`,
+        `Receipt: ${txUrl}`,
       ];
       return lines.join("\n");
     }

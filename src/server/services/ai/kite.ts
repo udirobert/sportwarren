@@ -159,6 +159,24 @@ export class KiteAIService {
     return true;
   }
 
+  /** Enforce a daily spending cap for a specific user. */
+  async checkUserSpending(userId: string, amount: number, limit: number): Promise<{ ok: boolean; remaining?: number }> {
+    if (limit <= 0) return { ok: true };
+    const today = new Date().toISOString().split('T')[0];
+    const key = `kite:user-spend:${userId}:${today}`;
+    try {
+      const spent = parseFloat((await redisService.get(key)) || '0');
+      if (spent + amount > limit) {
+        return { ok: false, remaining: Math.max(0, limit - spent) };
+      }
+      await redisService.incrbyfloat(key, amount, 86400);
+    } catch {
+      /* redis failure — allow small amounts */
+      if (amount > 1.0) return { ok: false, remaining: 0 };
+    }
+    return { ok: true };
+  }
+
   private async trackRequest() {
     const today = new Date().toISOString().split('T')[0];
     try {
