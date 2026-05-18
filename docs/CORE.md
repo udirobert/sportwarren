@@ -118,12 +118,19 @@ Required env (see `.env.example`):
 |---|---|
 | `help` | Show usage |
 | `find <query>` | `kiteAIService.searchMarketplace` (ksearch CLI + local catalogue) |
+| `link <WA-XXXXXX>` | Consume a one-time code from Telegram `/linkwhatsapp` to bind this number |
 | `hire <agentId> [days]` | Reputation-gated `hireAgent` → creates a `KiteSession` |
 | `scout <opponent>` | `executePaidRequest` → x402 settlement on Kite + on-chain `Attestation` |
 | `pay <wallet> <usdc>` | `processSquadWagePayment` → direct USDC transfer on Kite |
 | `status` | `getAgentAnalytics` for the squad-manager twin |
+| _(free text)_ | AI NLU fallback via Coach Kite persona — suggests the right command or replies conversationally |
 
 Every successful action replies with a KiteScan tx link, e.g. `https://testnet.kitescan.ai/tx/0x…`, so judges can verify settlement in one tap.
+
+**Linking WhatsApp (no dedicated app needed):**
+1. User runs `/linkwhatsapp` in the Telegram bot → receives a `WA-XXXXXX` code (valid 10 min).
+2. User taps the provided `wa.me/...` link or texts `link WA-XXXXXX` to the WhatsApp number.
+3. The agent consumes the code and creates a `PlatformIdentity`, unlocking all authenticated commands.
 | **Yellow** | Instant settlement rail for treasury movement and match-fee coordination | Operational liquidity without forcing every action into a slower on-chain path |
 | **TON** | Telegram-native wallet UX, top-ups, rewards, and Mini App payments | Native fit for Telegram distribution and user treasury actions |
 | **Lens** | Social identity, highlights, and community distribution | Portable social graph for player and squad visibility |

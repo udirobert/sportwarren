@@ -120,8 +120,9 @@ interface TelegramMiniAppContext {
 
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Bot Commands | ✅ Working | `/log`, `/stats`, `/fixtures`, `/fee`, `/treasury`, `/help` |
+| Bot Commands | ✅ Working | `/log`, `/stats`, `/fixtures`, `/fee`, `/treasury`, `/linkwhatsapp`, `/help` |
 | Squad Linking | ✅ Working | Deep link from web Settings → Telegram chat |
+| WhatsApp Linking | ✅ Working | `/linkwhatsapp` → code → `link WA-XXXXXX` in WhatsApp |
 | Match Logging | ✅ Working | Natural language parsing: "4-2 win vs Red Lions" |
 | Treasury Mini App | ✅ Working | TON Connect, top-up flow, pending reconciliation |
 | Stats Queries | ✅ Working | Player + squad stats from linked chat |
@@ -410,6 +411,7 @@ Existing `agent.ts` router already handles AI queries. Wire to:
 | `/fixtures` | Upcoming matches | ✅ Built |
 | `/fee <matchId> [amount]` | Propose match fee | ✅ Built |
 | `/treasury` | Open Mini App treasury | ✅ Built |
+| `/linkwhatsapp` | Mint a code to link WhatsApp number | ✅ Built |
 | `/tactics` | Open Mini App tactics | 🔨 New |
 | `/profile` | Open Mini App profile | 🔨 New |
 | `/ask <agent> <query>` | AI staff query | 🔨 New |
