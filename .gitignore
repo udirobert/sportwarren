@@ -69,3 +69,6 @@ dev.log
 /.junie/
 # Locally installed agent skills (re-installable via `npx skills install`)
 .agents/
+
+# Runtime build artifacts (large tarballs)
+/artifacts/

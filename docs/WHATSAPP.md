@@ -87,7 +87,46 @@ SportWarren uses WhatsApp as the primary human interface for the **Kite Agentic 
 - **Webhook Endpoint:** `src/app/api/platform/whatsapp/webhook` (Handles Meta verification and Kapso payload parsing).
 - **Interactive Handlers:** `handleWebhook` in `WhatsAppService` processes button clicks and list selections.
 - **Provider Boundary:** Extended `MessagingProvider` interface with `sendButtons`, `sendList`, and `sendImage`.
-- **Primary env vars:** `KAPSO_API_KEY`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`.
+- **Primary env vars:** `KAPSO_API_KEY`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_VERIFY_TOKEN`, `KAPSO_WEBHOOK_SECRET`.
+
+### WhatsApp → Kite Agent Commander (`whatsapp-agent.ts`)
+
+Inbound text messages are dispatched through `dispatchWhatsAppCommand` in `src/server/services/communication/whatsapp-agent.ts`, which maps natural-language intents onto `kiteAIService` operations and replies with the on-chain attestation tx (KiteScan link).
+
+| Inbound message | Action |
+|---|---|
+| `help` | Usage menu |
+| `find <query>` | `searchMarketplace` (ksearch CLI + local catalogue) |
+| `hire <agentId> [days]` | Reputation-gated `hireAgent` → opens a `KiteSession` |
+| `scout <opponent>` | `executePaidRequest` → x402 settlement on Kite + `Attestation` |
+| `pay <wallet> <usdc>` | `processSquadWagePayment` → direct USDC transfer |
+| `status` | `getAgentAnalytics` for the squad-manager twin |
+
+The RSVP button flow (interactive `button_reply` with `avail_*` payload) is unchanged and still resolved by `handleRsvp`.
+
+### Live deployment (Kapso CLI flow)
+
+1. Install + authenticate (any machine):
+   ```bash
+   npm install -g @kapso/cli
+   export KAPSO_API_KEY=<your key>
+   kapso status                    # confirms project access
+   kapso whatsapp numbers list     # list onboarded numbers
+   ```
+2. Register the webhook against the production number, in raw-Meta mode so our Meta-shape handler can parse it:
+   ```bash
+   kapso whatsapp webhooks new \
+     --phone-number-id <PHONE_NUMBER_ID> \
+     --url https://api.sportwarren.com/api/platform/whatsapp/webhook \
+     --kind meta --active --output json
+   ```
+3. Persist server-side env (in `/opt/sportwarren-api/shared/.env` on Hetzner):
+   - `WHATSAPP_PHONE_NUMBER_ID=<from numbers list>`
+   - `KAPSO_WEBHOOK_SECRET=<from webhooks new response>` (used for signature validation)
+   - `KAPSO_API_KEY`, `WHATSAPP_VERIFY_TOKEN` (already set during initial bootstrap)
+4. Reload: `pm2 restart sportwarren-api --update-env`
+
+The verify token round-trips through the webhook GET (`?hub.mode=subscribe&hub.verify_token=…&hub.challenge=…`), useful as a smoke test.
 
 ## Delivery Plan
 
