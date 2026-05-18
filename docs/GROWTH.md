@@ -6,7 +6,7 @@
 
 ## Roadmap Overview
 
-**Progress:** 99% Complete (March 2026)
+**Progress:** 99% Complete (May 2026)
 
 ---
 
@@ -282,7 +282,7 @@ npx tsx scripts/demo-cre-workflow.ts
 
 **March 2026 - Agentic Platform:** Cross-staff Context (AgentContext), On-chain Approval Gates, Notification Feed, Performance (12 components code-split), Test Coverage (20 tests).
 
-**March 2026 - Governance & Training:** Squad DAO, Fitness Agent, Territory Control, Lens Social, Matchmaking, Staff Office, Draft Engine, Onboarding wizard, Production hardening.
+**May 2026 - Governance & Training:** Squad DAO, Fitness Agent, Territory Control, Lens Social, Matchmaking, Staff Office, Draft Engine, Onboarding wizard, Production hardening. Peer rating backend complete, KITE_SCOUT_MAX_USDC per-user-per-day guard enforced, attestation subjectType schema fix.
 
 ---
 

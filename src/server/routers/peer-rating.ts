@@ -278,4 +278,52 @@ export const peerRatingRouter = createTRPCRouter({
         progress: nextXP ? (profile.scoutXP / nextXP) * 100 : 100,
       };
     }),
+
+  /**
+   * Count how many matches have open rating windows the user hasn't completed.
+   * Used by the dashboard to show a pending-ratings badge.
+   */
+  getPendingCount: protectedProcedure
+    .query(async ({ ctx }) => {
+      // Get the player's profile and their squad memberships via the User model
+      const user = await ctx.prisma.user.findUnique({
+        where: { id: ctx.userId! },
+        include: {
+          playerProfile: { select: { id: true } },
+          squads: { where: { status: 'active' }, select: { squadId: true } },
+        },
+      });
+      if (!user?.playerProfile) return { count: 0 };
+
+      const profile = user.playerProfile;
+      const squadIds = user.squads.map(s => s.squadId);
+      if (squadIds.length === 0) return { count: 0 };
+
+      const pendingMatches = await ctx.prisma.match.findMany({
+        where: {
+          OR: [{ homeSquadId: { in: squadIds } }, { awaySquadId: { in: squadIds } }],
+          peerRatingsClosed: false,
+          peerRatingsCloseAt: { gt: new Date() },
+          status: { in: ['verified', 'finalized'] },
+        },
+        select: { id: true },
+      });
+
+      if (pendingMatches.length === 0) return { count: 0 };
+
+      // Check which matches the user has already submitted ratings for
+      const submissionCounts = await ctx.prisma.peerRating.groupBy({
+        by: ['matchId'],
+        where: {
+          matchId: { in: pendingMatches.map(m => m.id) },
+          raterId: profile.id,
+        },
+        _count: true,
+      });
+
+      const submittedMatchIds = new Set(submissionCounts.map(s => s.matchId));
+      const unrated = pendingMatches.filter(m => !submittedMatchIds.has(m.id));
+
+      return { count: unrated.length };
+    }),
 });

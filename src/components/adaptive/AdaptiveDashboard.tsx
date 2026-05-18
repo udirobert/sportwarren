@@ -37,6 +37,7 @@ import { summarizeAvatarUpgrade } from '@/lib/avatar/diff';
 
 import { QuickLogWidget } from '@/components/dashboard/QuickLogWidget';
 import { MatchCoordinationWidget } from '@/components/dashboard/MatchCoordinationWidget';
+import { PeerRatingTaskCard } from '@/components/dashboard/PeerRatingTaskCard';
 import { SquadDigitalTwinWidget } from '@/components/dashboard/SquadDigitalTwinWidget';
 import { DigitalTwinUpgradeGate } from '@/components/dashboard/DigitalTwinUpgradeGate';
 import { CoachKiteWidget } from '@/components/dashboard/CoachKiteWidget';
@@ -749,6 +750,17 @@ export const AdaptiveDashboard: React.FC = () => {
           <ScoutingReport squadId={primarySquadId} />
         </TrpcErrorBoundary>
       ),
+      },
+      {
+        id: 'peer-rating-tasks',
+        priority: 460,
+        requiredLevel: 'basic',
+        category: 'matches',
+        component: (
+          <TrpcErrorBoundary>
+            <PeerRatingTaskCard />
+          </TrpcErrorBoundary>
+        ),
       },
       {
         id: 'upcoming-fixtures',
