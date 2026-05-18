@@ -34,6 +34,7 @@ const execFileAsync = promisify(execFile);
 const KITE_DAILY_REQUEST_LIMIT = Number(process.env.KITE_DAILY_REQUEST_LIMIT || '1000');
 const MAX_SINGLE_PAYMENT_USDC = Number(process.env.KITE_MAX_SINGLE_PAYMENT_USDC || '50');
 const DAILY_PAYOUT_BUDGET_USDC = Number(process.env.KITE_DAILY_PAYOUT_BUDGET_USDC || '200');
+const SCOUT_MAX_USDC_SQUAD = Number(process.env.KITE_SCOUT_MAX_USDC_SQUAD || '2.50');
 
 export type KiteServiceStatus = {
   enabled: boolean;
@@ -175,6 +176,37 @@ export class KiteAIService {
       if (amount > 1.0) return { ok: false, remaining: 0 };
     }
     return { ok: true };
+  }
+
+  /** Enforce a daily spending cap for a squad (shared across all members). */
+  async checkSquadSpending(squadId: string, amount: number, limit: number): Promise<{ ok: boolean; remaining?: number }> {
+    if (limit <= 0) return { ok: true };
+    const today = new Date().toISOString().split('T')[0];
+    const key = `kite:squad-spend:${squadId}:${today}`;
+    try {
+      const spent = parseFloat((await redisService.get(key)) || '0');
+      if (spent + amount > limit) {
+        return { ok: false, remaining: Math.max(0, limit - spent) };
+      }
+      await redisService.incrbyfloat(key, amount, 86400);
+    } catch {
+      /* redis failure — allow small amounts */
+      if (amount > 1.0) return { ok: false, remaining: 0 };
+    }
+    return { ok: true };
+  }
+
+  /** Read-only check of daily spending for a user — does not increment the counter. */
+  async getUserSpending(userId: string, limit: number): Promise<{ spent: number; remaining: number }> {
+    if (limit <= 0) return { spent: 0, remaining: 0 };
+    const today = new Date().toISOString().split('T')[0];
+    const key = `kite:user-spend:${userId}:${today}`;
+    try {
+      const spent = parseFloat((await redisService.get(key)) || '0');
+      return { spent, remaining: Math.max(0, limit - spent) };
+    } catch {
+      return { spent: 0, remaining: limit };
+    }
   }
 
   private async trackRequest() {
