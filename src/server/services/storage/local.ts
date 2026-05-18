@@ -7,7 +7,7 @@ export interface StoredObject {
   absolutePath: string;
 }
 
-const DEFAULT_STORAGE_ROOT = path.join(process.cwd(), 'storage');
+const DEFAULT_STORAGE_ROOT = path.join(/* turbopackIgnore: true */ process.cwd(), 'storage');
 
 function storageRoot() {
   return process.env.STORAGE_ROOT?.trim() || DEFAULT_STORAGE_ROOT;

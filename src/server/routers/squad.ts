@@ -1957,35 +1957,34 @@ export const squadRouter = createTRPCRouter({
       }
     }),
 
-  // Get active proposals for a squad (LEGACY - Migration to On-Chain)
+  // Get active proposals from the on-chain SquadGovernor indexer
   getProposals: publicProcedure
     .input(z.object({ squadId: z.string().min(1) }))
     .query(async () => {
-      // Returning empty for now until on-chain indexer/governor bridge is active
-      return [];
+      const { governanceIndexer } = await import('../services/blockchain/governance-indexer');
+      const proposals = await governanceIndexer.getProposals();
+      return proposals;
     }),
 
-  // Vote on a proposal (LEGACY - DEPRECATED)
-  voteOnProposal: protectedProcedure
+  // Get voting power for a member address in the governance context
+  getGovernancePower: publicProcedure
+    .input(z.object({
+      walletAddress: z.string().min(1),
+    }))
+    .query(async ({ input }) => {
+      const { governanceIndexer } = await import('../services/blockchain/governance-indexer');
+      return governanceIndexer.getVotingPower(input.walletAddress);
+    }),
+
+  // Cast a governance vote via relayer
+  castVote: protectedProcedure
     .input(z.object({
       proposalId: z.string().min(1),
-      vote: z.enum(['yes', 'no', 'abstain']),
+      support: z.number().int().min(0).max(2),
     }))
-    .mutation(async () => {
-      throw new TRPCError({
-        code: 'NOT_IMPLEMENTED',
-        message: 'Legacy voting deprecated. Use On-Chain Governor.'
-      });
-    }),
-
-  // Finalize/Execute a proposal (LEGACY - DEPRECATED)
-  executeProposal: protectedProcedure
-    .input(z.object({ proposalId: z.string().min(1) }))
-    .mutation(async () => {
-      throw new TRPCError({
-        code: 'NOT_IMPLEMENTED',
-        message: 'Legacy execution deprecated. Use On-Chain Timelock.'
-      });
+    .mutation(async ({ ctx, input }) => {
+      const { governanceIndexer } = await import('../services/blockchain/governance-indexer');
+      return governanceIndexer.castVoteAsRelayer(input.proposalId, input.support as 0 | 1 | 2);
     }),
 
   // Get territory control data

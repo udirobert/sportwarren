@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import React from 'react';
 import { AgentProvider, useAgentContext } from '@/context/AgentContext';
@@ -121,6 +121,8 @@ describe('AgentContext reducer', () => {
     });
 
     it('throws when used outside AgentProvider', () => {
+        const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
         expect(() => renderHook(() => useAgentContext())).toThrow('useAgentContext must be used within AgentProvider');
+        spy.mockRestore();
     });
 });

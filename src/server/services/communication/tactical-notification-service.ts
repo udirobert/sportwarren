@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { TelegramService } from "./telegram";
 import { INTEL_LEVELS, getIntelLevel } from "@/lib/match/intel-disclosure";
 import { managerInsightService } from "../ai/manager-insights";
+import { shouldSendNudge } from "@/lib/telegram/verification-nudge";
+import { buildTelegramMiniAppUrl } from "./platform-connections";
+import { getRequiredMatchVerifications } from "../match-workflow";
 
 export class TacticalNotificationService {
   private telegramService: TelegramService;
@@ -24,12 +27,18 @@ export class TacticalNotificationService {
     console.log("[TACTICAL-NOTIF] Starting poller...");
     
     // Initial run
-    this.processUpcomingMatches().catch(err => {
+    Promise.all([
+      this.processUpcomingMatches(),
+      this.processStaleMatches(),
+    ]).catch(err => {
       console.error("[TACTICAL-NOTIF] Error in initial run:", err);
     });
 
     this.intervalId = setInterval(() => {
-      this.processUpcomingMatches().catch(err => {
+      Promise.all([
+        this.processUpcomingMatches(),
+        this.processStaleMatches(),
+      ]).catch(err => {
         console.error("[TACTICAL-NOTIF] Error in poller run:", err);
       });
     }, intervalMs);
@@ -42,6 +51,104 @@ export class TacticalNotificationService {
     }
     this.isRunning = false;
     console.log("[TACTICAL-NOTIF] Poller stopped.");
+  }
+
+  /**
+   * Process stale matches (pending for >1h) and send verification nudges.
+   */
+  async processStaleMatches() {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+
+    // Find unverified matches older than 1 hour
+    const staleMatches = await prisma.match.findMany({
+      where: {
+        status: 'pending',
+        createdAt: { lte: oneHourAgo },
+      },
+      include: {
+        homeSquad: {
+          include: {
+            groups: {
+              where: { platform: 'telegram', chatId: { not: null } },
+            },
+          },
+        },
+        awaySquad: {
+          include: {
+            groups: {
+              where: { platform: 'telegram', chatId: { not: null } },
+            },
+          },
+        },
+        verifications: true,
+      },
+    });
+
+    console.log(`[TACTICAL-NOTIF] Found ${staleMatches.length} stale matches awaiting verification.`);
+
+    for (const match of staleMatches) {
+      try {
+        // Extract last nudge timestamp from verificationDetails JSON
+        const verificationDetails = (match.verificationDetails as Record<string, unknown>) || {};
+        const lastNudgeAt = verificationDetails.lastNudgeAt
+          ? new Date(verificationDetails.lastNudgeAt as string)
+          : null;
+
+        if (!shouldSendNudge(match.createdAt, lastNudgeAt)) continue;
+
+        const isHome = match.homeSquadId === match.homeSquad.id;
+        const scoreDisplay = match.homeScore !== null && match.awayScore !== null
+          ? `${match.homeScore}-${match.awayScore}`
+          : '? - ?';
+        const opponentName = isHome
+          ? match.awaySquad.name
+          : match.homeSquad.name;
+
+        const miniAppUrl = buildTelegramMiniAppUrl({
+          mode: `match_${match.id}_verify`,
+        });
+
+        // Send nudge to both squads' Telegram groups
+        const squads = [match.homeSquad, match.awaySquad];
+        for (const squad of squads) {
+          const tgGroup = squad.groups[0];
+          if (!tgGroup?.chatId) continue;
+
+          const verificationCount = match.verifications.filter((v) => v.verified).length;
+          const requiredVerifications = getRequiredMatchVerifications(match);
+          const remaining = requiredVerifications - verificationCount;
+
+          const message = [
+            `⚽ *Verification Needed*`,
+            '',
+            `Match vs *${opponentName}* (${scoreDisplay}) still needs *${remaining} more verification${remaining > 1 ? 's' : ''}*.`,
+            '',
+            miniAppUrl
+              ? `[Verify in Mini App](${miniAppUrl})`
+              : 'Open the Mini App to verify.',
+          ].join('\n');
+
+          await this.telegramService.sendMatchNotification(tgGroup.chatId, message, {
+            parse_mode: 'Markdown',
+          });
+        }
+
+        // Update last nudge timestamp in verificationDetails
+        await prisma.match.update({
+          where: { id: match.id },
+          data: {
+            verificationDetails: {
+              ...verificationDetails,
+              lastNudgeAt: new Date().toISOString(),
+            },
+          },
+        });
+
+        console.log(`[TACTICAL-NOTIF] Verification nudge sent for match ${match.id}`);
+      } catch (err) {
+        console.error(`[TACTICAL-NOTIF] Failed to nudge for match ${match.id}:`, err);
+      }
+    }
   }
 
   /**

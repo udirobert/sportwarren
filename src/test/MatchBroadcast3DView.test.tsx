@@ -84,7 +84,7 @@ describe('MatchBroadcast3DView', () => {
     );
 
     expect(screen.getAllByText('Rollout preview only').length).toBeGreaterThan(0);
-    expect(screen.getByText(/The shell is visible so beta users can understand the offer/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/The shell is visible so beta users can understand the offer/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/Context included: locked, Pre-match/i)).toBeInTheDocument();
   });
 });
