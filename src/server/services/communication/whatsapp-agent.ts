@@ -18,10 +18,28 @@
 import { prisma } from "@/lib/db";
 import { kiteAIService } from "../ai/kite";
 import { readX402Config } from "../blockchain/x402-client";
+import { redisService } from "../redis";
+import { generateInference } from "@/lib/ai/inference";
+import { AGENT_PERSONAS } from "../ai/prompts";
 
 const EXPLORER_BASE = process.env.KITE_EXPLORER_URL || "https://testnet.kitescan.ai";
 const SCOUT_SERVICE_URL = process.env.KITE_SCOUT_SERVICE_URL || "";
 const SCOUT_MAX_USDC = Number(process.env.KITE_SCOUT_MAX_USDC || "0.50");
+const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "sportwarrenbot";
+
+const NLU_SYSTEM_PROMPT = `${AGENT_PERSONAS.COACH_KITE.systemPrompt}
+
+You are running over WhatsApp. The user can issue these deterministic commands:
+  help                  – show menu
+  find <query>          – discover paid x402 services on Kite
+  hire <agentId> [days] – delegate to an agent
+  scout <opponent>      – paid scouting (settles on Kite)
+  pay <wallet> <usdc>   – pay wages on Kite
+  status                – agent analytics
+  link <WA-XXXXXX>      – link this WhatsApp to a SportWarren account
+
+If the user's message clearly matches one, reply ONLY with: "RUN:<command>".
+Otherwise reply in <=2 short sentences as Coach Kite, suggesting the right command.`;
 
 export type Reply = string;
 
@@ -42,7 +60,23 @@ const HELP = [
   "• `scout <opponent>`  – paid scouting via Kite",
   "• `pay <wallet> <usdc>`  – pay wages on Kite",
   "• `status`  – your agent analytics",
+  "• `link <WA-XXXXXX>`  – link this number to a SportWarren account",
   "• `help`  – this message",
+  "",
+  "Or just describe what you want — I'll figure it out.",
+].join("\n");
+
+const UNLINKED_REPLY = [
+  "👋 This number isn't linked to a SportWarren account yet.",
+  "",
+  "Public commands you can use right now:",
+  "• `help` – menu",
+  "• `find <query>` – browse paid x402 services on Kite",
+  "",
+  "To unlock `hire`, `scout`, `pay`, `status`:",
+  `1. Open our Telegram bot: https://t.me/${TELEGRAM_BOT_USERNAME}`,
+  "2. Send `/linkwhatsapp` — you'll get a code like `WA-3F9A1C`.",
+  "3. Reply to me with `link WA-3F9A1C`.",
 ].join("\n");
 
 export async function resolveActor(whatsappNumber: string): Promise<ResolvedActor | null> {
@@ -68,6 +102,51 @@ function fmtTx(txHash: string | undefined | null): string {
   return `${EXPLORER_BASE}/tx/${txHash}`;
 }
 
+// ─── Link code consumption ───────────────────────────────────────────────────
+
+async function consumeLinkCode(code: string, whatsappNumber: string): Promise<Reply> {
+  const userId = await redisService.get(`kite:link:${code}`);
+  if (!userId) {
+    return "❌ Code expired or invalid. Run `/linkwhatsapp` in Telegram to get a fresh one.";
+  }
+  // Consume the code
+  await redisService.del(`kite:link:${code}`);
+
+  // Upsert PlatformIdentity
+  await prisma.platformIdentity.upsert({
+    where: { platform_platformUserId: { platform: "whatsapp", platformUserId: whatsappNumber } },
+    update: { userId },
+    create: { platform: "whatsapp", platformUserId: whatsappNumber, userId },
+  });
+
+  return "✅ Linked! This WhatsApp number is now connected to your SportWarren account.\n\nTry `status` or `scout <opponent>` to get started.";
+}
+
+// ─── AI fallback (NLU) ──────────────────────────────────────────────────────
+
+async function aiFallback(rawText: string, linked: boolean): Promise<Reply | null> {
+  try {
+    const result = await generateInference(
+      [{ role: "user", content: rawText }],
+      { systemPrompt: NLU_SYSTEM_PROMPT, max_tokens: 120, temperature: 0.3 },
+    );
+    if (!result?.content) return null;
+
+    // If the AI recognized a command, tell the user to run it explicitly
+    const runMatch = result.content.match(/^RUN:(.+)$/i);
+    if (runMatch) {
+      const suggested = runMatch[1].trim();
+      return `💡 Did you mean: \`${suggested}\`\n\nSend that command and I'll execute it.`;
+    }
+
+    // Otherwise return the Coach Kite conversational reply
+    return result.content;
+  } catch (err) {
+    console.error("[whatsapp-agent] aiFallback error", err);
+    return null;
+  }
+}
+
 /**
  * Dispatch a single text message to the appropriate Kite-agent action.
  * Returns a reply string the caller should send back via WhatsApp.
@@ -82,26 +161,34 @@ export async function dispatchWhatsAppCommand(rawText: string, from: string): Pr
     return HELP;
   }
 
+  // Public commands — usable by anyone, no identity needed.
+  if (cmd === "find" || cmd === "search") {
+    const query = args.join(" ").trim() || "scout";
+    const results = await kiteAIService.searchMarketplace(query);
+    if (!results.length) return `🔎 No services found for "${query}".`;
+    const lines = results.slice(0, 5).map((r, i) =>
+      `${i + 1}. *${r.name}* — ${r.price} USDC\n   id: \`${r.id}\``,
+    );
+    return [`🔎 *Marketplace · ${query}*`, "", ...lines].join("\n");
+  }
+
+  if (cmd === "link") {
+    const code = (args[0] || "").trim().toUpperCase();
+    if (!/^WA-[A-F0-9]{6}$/.test(code)) {
+      return "Usage: `link WA-XXXXXX`\nGet a code from our Telegram bot: `/linkwhatsapp`.";
+    }
+    return await consumeLinkCode(code, from);
+  }
+
   const actor = await resolveActor(from);
   if (!actor) {
-    return [
-      "👋 I don't recognise this number yet.",
-      "Link your WhatsApp from the SportWarren app → Settings → Platforms,",
-      "then try `help` again.",
-    ].join("\n");
+    // Try AI fallback first — maybe the user said "I want to link my account"
+    const fallback = await aiFallback(rawText, /*linked*/ false);
+    if (fallback) return fallback;
+    return UNLINKED_REPLY;
   }
 
   switch (cmd) {
-    case "find":
-    case "search": {
-      const query = args.join(" ").trim() || "scout";
-      const results = await kiteAIService.searchMarketplace(query);
-      if (!results.length) return `🔎 No services found for "${query}".`;
-      const lines = results.slice(0, 5).map((r, i) =>
-        `${i + 1}. *${r.name}* — ${r.price} USDC\n   id: \`${r.id}\``,
-      );
-      return [`🔎 *Marketplace · ${query}*`, "", ...lines].join("\n");
-    }
 
     case "hire": {
       const targetId = args[0];
@@ -186,7 +273,10 @@ export async function dispatchWhatsAppCommand(rawText: string, from: string): Pr
       ].join("\n");
     }
 
-    default:
+    default: {
+      const fallback = await aiFallback(rawText, /*linked*/ true);
+      if (fallback) return fallback;
       return `🤖 Didn't catch "${cmd}". Try \`help\`.`;
+    }
   }
 }

@@ -14,6 +14,7 @@ import { RsvpCommand } from './rsvp';
 import { PaidCommand } from './paid';
 import { RosterCommand } from './roster';
 import { HelpCommand } from './help';
+import { LinkWhatsAppCommand } from './linkwhatsapp';
 
 // Grouped commands (complex routing)
 import { SquadCommand } from './squad';
@@ -39,6 +40,7 @@ export const COMMANDS: TelegramCommand[] = [
   new PaidCommand(),
   new RosterCommand(),
   new HelpCommand(),
+  new LinkWhatsAppCommand(),
 
   // Grouped commands (route to subcommands, handlers wired via wireCommandHandlers)
   squadCommand,
