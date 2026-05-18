@@ -15,8 +15,6 @@ export default function Home() {
   const router = useRouter();
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState(false);
-  const [focusWaitlist, setFocusWaitlist] = useState(false);
-
   const hasRealSession = hasAccount || authenticated;
 
   useEffect(() => {
@@ -29,7 +27,6 @@ export default function Home() {
       window.history.replaceState({}, '', nextUrl);
     }
     if (params.get('wl') === '1') {
-      setFocusWaitlist(true);
       const nextUrl = window.location.pathname;
       window.history.replaceState({}, '', nextUrl);
     }
@@ -57,7 +54,6 @@ export default function Home() {
       <HeroSection
         onGetStarted={handleEnterApp}
         onGuestStart={() => router.push('/dashboard')}
-        autoFocusWaitlist={focusWaitlist}
       />
       
       {/* Floating Feedback Button */}

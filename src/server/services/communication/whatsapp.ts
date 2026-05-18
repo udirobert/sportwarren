@@ -7,7 +7,7 @@ import type {
   MessagingListSection 
 } from './provider-types.js';
 import { dispatchWhatsAppCommand } from './whatsapp-agent';
-import { redisService } from '../redis.js';
+import { redisService } from '../redis';
 
 export interface WhatsAppConfig {
   apiKey?: string;
