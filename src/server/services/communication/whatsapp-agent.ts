@@ -20,16 +20,21 @@ import { kiteAIService } from "../ai/kite";
 import { readX402Config } from "../blockchain/x402-client";
 import { redisService } from "../redis";
 import { generateInference } from "@/lib/ai/inference";
-import { AGENT_PERSONAS } from "../ai/prompts";
 
 const EXPLORER_BASE = process.env.KITE_EXPLORER_URL || "https://testnet.kitescan.ai";
 const SCOUT_SERVICE_URL = process.env.KITE_SCOUT_SERVICE_URL || "";
 const SCOUT_MAX_USDC = Number(process.env.KITE_SCOUT_MAX_USDC || "0.50");
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "sportwarrenbot";
 
-const NLU_SYSTEM_PROMPT = `${AGENT_PERSONAS.COACH_KITE.systemPrompt}
+const NLU_SYSTEM_PROMPT = `You are Marcus, Academy Director at SportWarren — a grassroots football platform that pairs real matches with on-chain agents on the Kite chain. You are talking on WhatsApp.
 
-You are running over WhatsApp. The user can issue these deterministic commands:
+Rules (non-negotiable):
+- Reply as Marcus. Never mention LLMs, models, OpenAI, Anthropic, Venice, Llama, or any provider. If asked who you are, say "I'm Marcus, Academy Director at SportWarren."
+- Reply in at most 2 short sentences. No markdown asterisks, no bullet lists — WhatsApp renders them literally.
+- Plain text only. Backticks around literal commands are OK.
+- End with one concrete next step the user can copy.
+
+The user can issue these deterministic commands (case-insensitive):
   help                  – show menu
   find <query>          – discover paid x402 services on Kite
   hire <agentId> [days] – delegate to an agent
@@ -38,8 +43,9 @@ You are running over WhatsApp. The user can issue these deterministic commands:
   status                – agent analytics
   link <WA-XXXXXX>      – link this WhatsApp to a SportWarren account
 
-If the user's message clearly matches one, reply ONLY with: "RUN:<command>".
-Otherwise reply in <=2 short sentences as Coach Kite, suggesting the right command.`;
+If the user's intent clearly matches one command, reply with EXACTLY: RUN:<command>
+(e.g. "scout Arsenal please" → RUN:scout Arsenal)
+Otherwise reply as Marcus and suggest the closest command.`;
 
 export type Reply = string;
 
@@ -124,23 +130,30 @@ async function consumeLinkCode(code: string, whatsappNumber: string): Promise<Re
 
 // ─── AI fallback (NLU) ──────────────────────────────────────────────────────
 
-async function aiFallback(rawText: string, linked: boolean): Promise<Reply | null> {
+async function aiFallback(
+  rawText: string,
+  from: string,
+  /** Prevent infinite recursion if AI keeps returning RUN: */
+  depth = 0,
+): Promise<Reply | null> {
   try {
     const result = await generateInference(
       [{ role: "user", content: rawText }],
-      { systemPrompt: NLU_SYSTEM_PROMPT, max_tokens: 120, temperature: 0.3 },
+      { systemPrompt: NLU_SYSTEM_PROMPT, max_tokens: 120, temperature: 0.2 },
     );
     if (!result?.content) return null;
 
-    // If the AI recognized a command, tell the user to run it explicitly
-    const runMatch = result.content.match(/^RUN:(.+)$/i);
-    if (runMatch) {
+    // If the AI recognized a command, execute it directly.
+    const runMatch = result.content.trim().match(/^RUN:(.+)$/i);
+    if (runMatch && depth === 0) {
       const suggested = runMatch[1].trim();
-      return `💡 Did you mean: \`${suggested}\`\n\nSend that command and I'll execute it.`;
+      console.log(`[whatsapp-agent] AI mapped "${rawText}" → "${suggested}"`);
+      // Recursive dispatch; cmd is now deterministic so won't re-enter AI.
+      return dispatchWhatsAppCommand(suggested, from, /*aiDepth*/ depth + 1);
     }
 
-    // Otherwise return the Coach Kite conversational reply
-    return result.content;
+    // Strip any leaked RUN: prefix if recursion budget exhausted
+    return result.content.replace(/^RUN:\s*/i, "").trim();
   } catch (err) {
     console.error("[whatsapp-agent] aiFallback error", err);
     return null;
@@ -151,7 +164,11 @@ async function aiFallback(rawText: string, linked: boolean): Promise<Reply | nul
  * Dispatch a single text message to the appropriate Kite-agent action.
  * Returns a reply string the caller should send back via WhatsApp.
  */
-export async function dispatchWhatsAppCommand(rawText: string, from: string): Promise<Reply> {
+export async function dispatchWhatsAppCommand(
+  rawText: string,
+  from: string,
+  aiDepth = 0,
+): Promise<Reply> {
   const text = rawText.trim().replace(/^kite\s+/i, "");
   const [head, ...rest] = text.split(/\s+/);
   const cmd = head?.toLowerCase() ?? "";
@@ -183,7 +200,7 @@ export async function dispatchWhatsAppCommand(rawText: string, from: string): Pr
   const actor = await resolveActor(from);
   if (!actor) {
     // Try AI fallback first — maybe the user said "I want to link my account"
-    const fallback = await aiFallback(rawText, /*linked*/ false);
+    const fallback = aiDepth === 0 ? await aiFallback(rawText, from, aiDepth) : null;
     if (fallback) return fallback;
     return UNLINKED_REPLY;
   }
@@ -274,9 +291,9 @@ export async function dispatchWhatsAppCommand(rawText: string, from: string): Pr
     }
 
     default: {
-      const fallback = await aiFallback(rawText, /*linked*/ true);
+      const fallback = aiDepth === 0 ? await aiFallback(rawText, from, aiDepth) : null;
       if (fallback) return fallback;
-      return `🤖 Didn't catch "${cmd}". Try \`help\`.`;
+      return `Didn't quite catch that. Try \`help\` to see what I can do. — Marcus`;
     }
   }
 }
