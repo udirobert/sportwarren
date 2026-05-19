@@ -272,7 +272,7 @@ export async function findSquadGroupByChatId(
 ) {
   return prisma.squadGroup.findFirst({
     where: { platform: TELEGRAM_PLATFORM, chatId },
-    include: { squad: true },
+    include: { squad: { select: { id: true, name: true } } },
   });
 }
 
@@ -294,7 +294,7 @@ export async function findOrCreatePlatformIdentity(
     include: {
       user: {
         include: {
-          squads: { include: { squad: true } },
+          squads: { include: { squad: { select: { id: true, name: true } } } },
         },
       },
     },
@@ -332,8 +332,8 @@ export async function ensureTelegramIdentityForMiniApp(
     },
     include: {
       user: {
-        include: {
-          squads: { include: { squad: true } },
+        select: {
+          name: true,
         },
       },
     },
@@ -453,7 +453,7 @@ export async function findPlatformIdentityByUserId(
     include: {
       user: {
         include: {
-          squads: { include: { squad: true } },
+          squads: { include: { squad: { select: { id: true, name: true } } } },
         },
       },
     },
@@ -469,7 +469,7 @@ export async function findPlatformIdentityByChatId(
     include: {
       user: {
         include: {
-          squads: { include: { squad: true } },
+          squads: { include: { squad: { select: { id: true, name: true } } } },
         },
       },
     },
@@ -492,10 +492,16 @@ export async function findPlatformIdentityByMiniAppToken(
           squads: {
             include: {
               squad: {
-                include: {
+                select: {
+                  id: true,
+                  name: true,
+                  shortName: true,
+                  homeGround: true,
                   treasury: {
-                    include: {
-                      transactions: { orderBy: { createdAt: 'desc' }, take: 10 },
+                    select: {
+                      id: true,
+                      balance: true,
+                      tonWalletAddress: true,
                     },
                   },
                 },

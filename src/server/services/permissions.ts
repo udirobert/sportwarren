@@ -48,7 +48,7 @@ export async function getUserActiveMemberships(prisma: PlatformStore, userId: st
       status: 'active',
     },
     include: {
-      squad: true,
+      squad: { select: { id: true, name: true, shortName: true } },
     },
   });
 }
