@@ -38,11 +38,13 @@ cp scripts/deploy-runtime-release.sh "$BUILD_DIR/scripts/deploy-runtime-release.
 cp package.json "$BUILD_DIR/package.json"
 cp ecosystem.config.cjs "$BUILD_DIR/ecosystem.config.cjs"
 
-if [ -f .env.production.example ]; then
-  cp .env.production.example "$BUILD_DIR/.env.production.example"
-fi
-
 find "$BUILD_DIR" -name '.DS_Store' -delete
+find "$BUILD_DIR" -type f \( \
+  -name '.env' -o \
+  -name '.env.*' -o \
+  -name '*.env' -o \
+  -name '*.env.*' \
+\) -delete
 
 export COPYFILE_DISABLE=1
 if tar --help 2>/dev/null | grep -q -- '--no-xattrs'; then
