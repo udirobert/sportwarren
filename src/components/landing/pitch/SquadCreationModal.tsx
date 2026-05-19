@@ -58,6 +58,7 @@ export const SquadCreationModal: React.FC<SquadCreationModalProps> = ({
               value={squadName}
               onChange={(e) => { setSquadName(e.target.value); setSquadError(null); }}
               placeholder="Squad name (e.g., Sunday FC)"
+              aria-label="Squad name"
             />
             {squadError && <p className="text-xs text-red-400 mb-3">{squadError}</p>}
             <Button

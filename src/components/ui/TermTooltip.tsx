@@ -44,12 +44,13 @@ export function TermTooltip({ termId, children, showPlainFirst = true }: TermToo
               </button>
             </div>
             <p className="text-gray-600">{entry.description}</p>
-            <button
-              onClick={() => setIsOpen(false)}
-              className="mt-4 w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
-            >
-              Got it
-            </button>
+              <button
+                onClick={() => setIsOpen(false)}
+                className="rounded-full p-1 hover:bg-gray-100"
+                aria-label="Close tooltip"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
           </div>
         </div>
       )}
@@ -116,9 +117,10 @@ export function GlossaryButton({ className = "" }: GlossaryButtonProps) {
             <div className="border-t p-4">
               <button
                 onClick={() => setIsOpen(false)}
-                className="w-full rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
+                className="rounded-full p-1 hover:bg-gray-100"
+                aria-label="Close glossary"
               >
-                Close
+                <X className="h-5 w-5 text-gray-500" />
               </button>
             </div>
           </div>

@@ -307,6 +307,7 @@ function TourOverlay({ steps, currentStep, venue, onNext, onBack, onSkip }: Tour
               onClick={onBack}
               disabled={currentStep === 0}
               className={`p-2 rounded-full ${currentStep === 0 ? 'text-gray-200 cursor-not-allowed' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}
+              aria-label="Previous step"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
@@ -398,8 +399,9 @@ function PersonalizationCard({
               </div>
               
               <div className="mb-8">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Your Name</label>
+                <label htmlFor="your-name" className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Your Name</label>
                 <input
+                  id="your-name"
                   type="text"
                   value={playerName}
                   onChange={(e) => setPlayerName(e.target.value)}
@@ -463,8 +465,9 @@ function PersonalizationCard({
               <p className="text-sm text-gray-400 mb-8">This identity will be shared with your teammates.</p>
               
               <div className="mb-6">
-                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Squad Nickname</label>
+                <label htmlFor="squad-nickname" className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Squad Nickname</label>
                 <input
+                  id="squad-nickname"
                   type="text"
                   value={nickname}
                   onChange={(e) => setNickname(e.target.value)}

@@ -625,6 +625,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                 <button
                     onClick={onClose}
                     className="absolute top-4 right-4 z-20 p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400"
+                    aria-label="Close modal"
                 >
                     <X className="w-5 h-5" />
                 </button>
@@ -711,6 +712,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                         value={marketQuery}
                                         onChange={(e) => setMarketQuery(e.target.value)}
                                         placeholder="Search for 'striker coach', 'scout', 'analyst'..."
+                                        aria-label="Search marketplace"
                                         className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 px-6 text-lg text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all shadow-2xl"
                                     />
                                     {marketSearch.isLoading && (
@@ -1008,6 +1010,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                 onChange={(e) => setInputText(e.target.value)}
                                 placeholder="Ask your staff anything..."
                                 disabled={isTyping}
+                                aria-label="Ask your staff"
                                 className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 disabled:opacity-50"
                             />
                             <button

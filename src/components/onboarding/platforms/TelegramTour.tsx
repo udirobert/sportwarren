@@ -88,7 +88,7 @@ const TelegramTourCard: React.FC<{
                             ))}
                         </div>
                     </div>
-                    <button onClick={onClose} className="p-1 text-gray-500 hover:text-white">
+                    <button onClick={onClose} className="p-1 text-gray-500 hover:text-white" aria-label="Close tour">
                         <CheckCircle className="w-5 h-5" />
                     </button>
                 </div>

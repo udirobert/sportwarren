@@ -62,6 +62,7 @@ export const JoinSquadFlow: React.FC<JoinSquadFlowProps> = ({ onJoined, onCancel
                         value={search}
                         onChange={e => { setSearch(e.target.value); setError(''); }}
                         placeholder="Search squads by name..."
+                        aria-label="Search squads"
                         className="w-full bg-white/5 border border-white/10 rounded-2xl pl-12 pr-5 py-4 text-white text-lg font-bold placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
                     />
                 </div>

@@ -135,6 +135,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                   type="text"
                   placeholder="Search the scouting feed..."
                   value={searchQuery}
+                  aria-label="Search scouting feed"
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
                 />
@@ -269,12 +270,13 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label htmlFor="offer-amount" className="block text-sm font-medium text-gray-700 mb-2">
                     Offer Amount ({currencyLabel})
                   </label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-500 dark:text-gray-400" />
                     <input
+                      id="offer-amount"
                       type="number"
                       value={offerAmount}
                       onChange={(e) => setOfferAmount(e.target.value)}

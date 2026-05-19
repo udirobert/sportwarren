@@ -346,9 +346,9 @@ export function TelegramMiniAppShell({
 
           {onboarding.onboardingMode === 'create' && (
             <div className="mt-5 space-y-3">
-              <input value={onboarding.createSquadName} onChange={(e) => onboarding.setCreateSquadName(e.target.value)} placeholder="Squad name" className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none" />
-              <input value={onboarding.createShortName} onChange={(e) => onboarding.setCreateShortName(e.target.value.toUpperCase())} placeholder="Short name (2-5 chars)" maxLength={5} className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none" />
-              <input value={onboarding.createHomeGround} onChange={(e) => onboarding.setCreateHomeGround(e.target.value)} placeholder="Home ground (optional)" className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none" />
+              <input value={onboarding.createSquadName} onChange={(e) => onboarding.setCreateSquadName(e.target.value)} placeholder="Squad name" aria-label="Squad name" className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none" />
+              <input value={onboarding.createShortName} onChange={(e) => onboarding.setCreateShortName(e.target.value.toUpperCase())} placeholder="Short name (2-5 chars)" maxLength={5} aria-label="Short name" className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none" />
+              <input value={onboarding.createHomeGround} onChange={(e) => onboarding.setCreateHomeGround(e.target.value)} placeholder="Home ground (optional)" aria-label="Home ground" className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none" />
               <button onClick={() => void onboarding.handleCreateSquad()} disabled={onboarding.onboardingBusy || Boolean(onboarding.createValidationError)} className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-slate-950 transition hover:bg-emerald-300 disabled:opacity-60">
                 {onboarding.onboardingBusy ? (<><Loader2 className="h-4 w-4 animate-spin" />Creating Squad...</>) : ('Create Squad')}
               </button>
@@ -359,7 +359,7 @@ export function TelegramMiniAppShell({
 
           {onboarding.onboardingMode === 'join' && (
             <div className="mt-5 space-y-3">
-              <input value={onboarding.joinQuery} onChange={(e) => onboarding.setJoinQuery(e.target.value)} placeholder="Search squads" className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none" />
+              <input value={onboarding.joinQuery} onChange={(e) => onboarding.setJoinQuery(e.target.value)} placeholder="Search squads" aria-label="Search squads" className="w-full rounded-xl border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-slate-500 focus:border-emerald-400 focus:outline-none" />
               <div className="max-h-60 space-y-2 overflow-y-auto rounded-xl border border-white/10 bg-white/[0.03] p-2">
                 {onboarding.joinLoading && (<div className="flex items-center justify-center gap-2 px-2 py-4 text-xs text-slate-400"><Loader2 className="h-3.5 w-3.5 animate-spin" />Loading squads...</div>)}
                 {!onboarding.joinLoading && onboarding.joinOptions.length === 0 && (<div className="px-2 py-4 text-xs text-slate-500">No squads found. Try another search.</div>)}

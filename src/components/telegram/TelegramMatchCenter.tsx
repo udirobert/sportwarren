@@ -650,6 +650,7 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
                   value={form.opponentName}
                   onChange={(e) => setForm({ ...form, opponentName: e.target.value })}
                   placeholder="Enter casual team name..."
+                  aria-label="Enter casual team name"
                   className="w-full rounded-xl border border-white/10 bg-slate-800/80 px-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500/30"
                   autoFocus
                 />
@@ -663,8 +664,8 @@ export function TelegramMatchCenter({ context, onRefresh }: TelegramMatchCenterP
                     value={form.opponentName}
                     onChange={(e) => setForm({ ...form, opponentName: e.target.value })}
                     placeholder="Search registered squads..."
-                    className="w-full rounded-2xl border border-white/10 bg-slate-800/50 pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-blue-500/30"
-                    autoFocus
+                    aria-label="Search registered squads"
+                    className="w-full rounded-xl border border-white/10 bg-slate-800/80 pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-500 focus:outline-none focus:border-amber-500/30"
                   />
                 </div>
                 {loadingSuggestions && (

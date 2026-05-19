@@ -43,6 +43,7 @@ const MobileTourCard: React.FC<{
                 <button
                     onClick={onClose}
                     className="absolute top-3 right-3 p-1.5 text-gray-500 hover:text-white transition-colors"
+                    aria-label="Close tour"
                 >
                     <X className="w-4 h-4" />
                 </button>
@@ -70,6 +71,7 @@ const MobileTourCard: React.FC<{
                         onClick={onBack}
                         disabled={!canGoBack}
                         className={`p-3 rounded-full transition-all ${!canGoBack ? 'text-gray-700 cursor-not-allowed' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                        aria-label="Previous step"
                     >
                         <ChevronLeft className="w-6 h-6" />
                     </button>
@@ -243,6 +245,7 @@ export const MobileTour: React.FC<MobileTourProps> = ({ onVisibilityChange }) =>
                             <button 
                                 onClick={() => { triggerHaptic('light'); setShowBanner(false); }}
                                 className="p-2 text-gray-500 hover:text-white transition-colors"
+                                aria-label="Dismiss banner"
                             >
                                 <X className="w-5 h-5" />
                             </button>

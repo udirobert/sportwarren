@@ -83,6 +83,7 @@ export const CreateSquadFlow: React.FC<CreateSquadFlowProps> = ({ onCreated, onC
                                 value={squadName}
                                 onChange={e => { setSquadName(e.target.value); setError(''); }}
                                 placeholder="e.g. Marshside Wolves FC"
+                                aria-label="Squad name"
                                 maxLength={40}
                                 className="w-full bg-white/5 border border-white/10 rounded-2xl px-5 py-4 text-white text-lg font-bold placeholder-gray-600 focus:outline-none focus:border-blue-500 transition-colors"
                             />

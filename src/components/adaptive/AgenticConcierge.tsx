@@ -226,6 +226,7 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
                             <button
                                 onClick={() => setIsOpen(false)}
                                 className="p-2 hover:bg-white/5 rounded-full transition-colors text-gray-500 hover:text-white"
+                                aria-label="Close panel"
                             >
                                 <X className="w-4 h-4" />
                             </button>
@@ -281,12 +282,14 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
                                     onChange={(e) => setInputValue(e.target.value)}
                                     onKeyPress={(e) => e.key === 'Enter' && handleSend()}
                                     placeholder={journeyContent.assistant.placeholder}
+                                    aria-label={journeyContent.assistant.placeholder}
                                     className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
                                 />
                                 <button
                                     onClick={handleSend}
                                     disabled={!inputValue.trim() || isTyping}
                                     className="p-2 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                                    aria-label="Send"
                                 >
                                     <Send className="w-4 h-4" />
                                 </button>

@@ -181,6 +181,7 @@ export const CoachKiteInsight: React.FC<CoachKiteInsightProps> = ({ userId }) =>
               value={chatMessage}
               onChange={(e) => setChatMessage(e.target.value)}
               placeholder="Ask Coach anything..."
+              aria-label="Ask Coach anything"
               className="flex-1 bg-white border border-blue-200 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none"
             />
             <button 
