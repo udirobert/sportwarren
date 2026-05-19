@@ -27,7 +27,7 @@ import { generateInference } from "@/lib/ai/inference";
 
 const EXPLORER_BASE = process.env.KITE_EXPLORER_URL || "https://testnet.kitescan.ai";
 const SCOUT_SERVICE_URL = process.env.KITE_SCOUT_SERVICE_URL || "";
-const SCOUT_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || "0.05");
+const SCOUT_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || "0.005");
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "sportwarrenbot";
 
 // ── Pending confirmations (in-memory, per-conversation) ────────────
