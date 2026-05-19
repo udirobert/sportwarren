@@ -28,13 +28,23 @@ export default defineConfig({
     video: 'on-first-retry',
   },
 
-  /* Configure projects — chromium for smoke tests */
+  /* Configure projects */
   projects: [
     {
       name: 'chromium',
       use: { ...devices['Desktop Chrome'] },
     },
+    {
+      name: 'authenticated',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: 'e2e/auth-state.json',
+      },
+    },
   ],
+
+  /* Global setup to generate auth state */
+  globalSetup: process.env.CI || process.env.E2E_AUTH ? require.resolve('./e2e/global-setup.ts') : undefined,
 
   /* Web server configuration for CI */
   webServer: process.env.CI

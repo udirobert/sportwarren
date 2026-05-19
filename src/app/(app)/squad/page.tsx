@@ -26,7 +26,6 @@ import { SquadAutonomySettings } from "@/components/squad/SquadAutonomySettings"
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useSquadDetails } from "@/hooks/squad/useSquad";
 import { useWallet } from "@/contexts/WalletContext";
-import { VerificationBanner } from "@/components/common/VerificationBanner";
 import { getJourneyActionGate } from "@/lib/journey/action-gates";
 import { describeMatchForSquad } from "@/lib/match/summary";
 import { useJourneyState } from "@/hooks/useJourneyState";
@@ -442,7 +441,6 @@ export default function SquadPage() {
   if (squadWorkspaceGate.status === "blocked" && !showSample) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8 md:py-12 nav-spacer-top nav-spacer-bottom text-gray-900 dark:text-gray-100 space-y-4">
-        <VerificationBanner />
         <SquadPreview
           title={squadWorkspaceGate.title}
           description={squadWorkspaceGate.description}
@@ -464,7 +462,6 @@ export default function SquadPage() {
 
   return (
     <div ref={pullRef as React.RefObject<HTMLDivElement>} className="max-w-6xl mx-auto px-4 py-4 md:py-6 nav-spacer-top nav-spacer-bottom space-y-4 md:space-y-6 text-gray-900 dark:text-gray-100 relative">
-      <VerificationBanner />
       {showSample && (
         <div className="bg-blue-600 text-white px-4 py-2 rounded-xl flex items-center justify-between shadow-lg animate-in slide-in-from-top duration-300">
           <div className="flex items-center gap-2">
@@ -536,7 +533,6 @@ export default function SquadPage() {
           </div>
         </Card>
       )}
-
 
       {/* First-visit hint — shown until the user has opened the office/staff room */}
       {!squadChecklistDone && (

@@ -32,6 +32,9 @@ const DEFAULT_FACILITATOR_ADDRESS = '0x12343e649e6b2b2b77649DFAb88f103c02F3C78b'
 const DEFAULT_USDC = '0x0fF5393387ad2f9f691FD6Fd28e07E3969e27e63';
 const DEFAULT_KITE_RPC = 'https://rpc-testnet.gokite.ai';
 const DEFAULT_KITE_CHAIN_ID = 2368;
+const DEFAULT_X402_VERSION = 2;
+
+type X402Version = 1 | 2;
 
 export type X402Config = {
   facilitatorUrl: string;
@@ -41,9 +44,11 @@ export type X402Config = {
   assetAddress: string;
   rpcUrl: string;
   chainId: number;
+  x402Version: X402Version;
 };
 
 export function readX402Config(): X402Config {
+  const version = Number(process.env.KITE_X402_VERSION || DEFAULT_X402_VERSION);
   return {
     facilitatorUrl: process.env.KITE_FACILITATOR_URL || DEFAULT_FACILITATOR,
     facilitatorAddress: process.env.KITE_FACILITATOR_ADDRESS || DEFAULT_FACILITATOR_ADDRESS,
@@ -52,7 +57,14 @@ export function readX402Config(): X402Config {
     assetAddress: process.env.KITE_USDC_ADDRESS || DEFAULT_USDC,
     rpcUrl: process.env.KITE_RPC_URL || process.env.NEXT_PUBLIC_KITE_RPC_URL || DEFAULT_KITE_RPC,
     chainId: Number(process.env.KITE_CHAIN_ID || DEFAULT_KITE_CHAIN_ID),
+    x402Version: version === 1 ? 1 : 2,
   };
+}
+
+function isX402SimulationEnabled(): boolean {
+  return ['1', 'true', 'yes'].includes(
+    (process.env.KITE_X402_SIMULATE || '').trim().toLowerCase(),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -61,9 +73,11 @@ export function readX402Config(): X402Config {
 
 /** Body returned by a service in its HTTP 402 response. */
 export interface PaymentRequirements {
+  x402Version?: X402Version;
   scheme: string;
   network: string;
   maxAmountRequired: string;     // wei (as decimal string)
+  amount?: string;               // v2 alias for maxAmountRequired
   asset: string;                 // ERC20 contract
   payTo: string;                 // service wallet
   maxTimeoutSeconds: number;
@@ -86,6 +100,7 @@ export interface TransferAuthorization {
 
 /** What goes into the base64 X-Payment header. */
 export interface PaymentEnvelope {
+  x402Version?: X402Version;
   scheme: string;
   network: string;
   authorization: TransferAuthorization;
@@ -115,7 +130,75 @@ export function encodeXPayment(envelope: PaymentEnvelope): string {
 }
 
 export function decodeXPayment(header: string): PaymentEnvelope {
-  return JSON.parse(Buffer.from(header, 'base64').toString('utf-8')) as PaymentEnvelope;
+  const decoded = JSON.parse(Buffer.from(header, 'base64').toString('utf-8'));
+  return normalizePaymentPayload(decoded);
+}
+
+function normalizePaymentPayload(input: any): PaymentEnvelope {
+  if (input?.payload?.authorization && input.payload.signature) {
+    const accepted = input.accepted ?? {};
+    return {
+      x402Version: input.x402Version === 1 ? 1 : 2,
+      scheme: accepted.scheme ?? input.scheme,
+      network: accepted.network ?? input.network,
+      authorization: input.payload.authorization,
+      signature: input.payload.signature,
+      asset: accepted.asset ?? input.payload.asset,
+      facilitator: input.facilitator ?? readX402Config().facilitatorAddress,
+    };
+  }
+
+  return input as PaymentEnvelope;
+}
+
+function getRequirementAmount(requirements: PaymentRequirements): string {
+  return requirements.amount ?? requirements.maxAmountRequired;
+}
+
+function normalizeRequirements(requirements: PaymentRequirements): PaymentRequirements {
+  const amount = getRequirementAmount(requirements);
+  return {
+    ...requirements,
+    maxAmountRequired: amount,
+    amount,
+    x402Version: requirements.x402Version ?? readX402Config().x402Version,
+  };
+}
+
+function buildV2Accepted(requirements: PaymentRequirements) {
+  const normalized = normalizeRequirements(requirements);
+  return {
+    scheme: normalized.scheme,
+    network: normalized.network,
+    asset: normalized.asset,
+    amount: getRequirementAmount(normalized),
+    payTo: normalized.payTo,
+    maxTimeoutSeconds: normalized.maxTimeoutSeconds,
+    extra: normalized.extra,
+  };
+}
+
+function encodePaymentSignature(envelope: PaymentEnvelope, requirements: PaymentRequirements): string {
+  const version = requirements.x402Version ?? envelope.x402Version ?? readX402Config().x402Version;
+  if (version === 2) {
+    return Buffer.from(JSON.stringify({
+      x402Version: 2,
+      accepted: buildV2Accepted(requirements),
+      payload: {
+        signature: envelope.signature,
+        authorization: envelope.authorization,
+      },
+      resource: requirements.resource
+        ? {
+            url: requirements.resource,
+            description: requirements.description,
+            mimeType: 'application/json',
+          }
+        : undefined,
+    }), 'utf-8').toString('base64');
+  }
+
+  return encodeXPayment({ ...envelope, x402Version: 1 });
 }
 
 // ---------------------------------------------------------------------------
@@ -164,27 +247,29 @@ export async function signPayment(
   if (!wallet) return null;
 
   const cfg = readX402Config();
-  const value = amountWei ?? requirements.maxAmountRequired;
+  const normalized = normalizeRequirements(requirements);
+  const value = amountWei ?? getRequirementAmount(normalized);
 
   const now = Math.floor(Date.now() / 1000);
   const auth: TransferAuthorization = {
     from: await wallet.getAddress(),
-    to: requirements.payTo,
+    to: normalized.payTo,
     value,
     validAfter: String(now - 60),
-    validBefore: String(now + Math.max(60, requirements.maxTimeoutSeconds || 300)),
+    validBefore: String(now + Math.max(60, normalized.maxTimeoutSeconds || 300)),
     nonce: ethers.hexlify(ethers.randomBytes(32)),
   };
 
-  const domain = assetDomain(requirements.asset, cfg.chainId);
+  const domain = assetDomain(normalized.asset, cfg.chainId);
   const signature = await wallet.signTypedData(domain, TRANSFER_AUTH_TYPES, auth);
 
   return {
-    scheme: requirements.scheme,
-    network: requirements.network,
+    x402Version: normalized.x402Version,
+    scheme: normalized.scheme,
+    network: normalized.network,
     authorization: auth,
     signature,
-    asset: requirements.asset,
+    asset: normalized.asset,
     facilitator: cfg.facilitatorAddress,
   };
 }
@@ -213,8 +298,8 @@ export interface PaidFetchResult<T = unknown> {
  *   3) sign + encode X-Payment header
  *   4) re-issue, return body + settlement details
  *
- * Falls back to a simulated settlement if no server wallet is configured —
- * the response is clearly flagged with `simulated: true`.
+ * Can return a simulated settlement only when KITE_X402_SIMULATE is explicitly
+ * enabled. Otherwise missing signing configuration is a hard failure.
  */
 export async function paidFetch<T = unknown>(opts: PaidFetchOptions): Promise<PaidFetchResult<T>> {
   const cfg = readX402Config();
@@ -243,14 +328,19 @@ export async function paidFetch<T = unknown>(opts: PaidFetchOptions): Promise<Pa
     return { status: probe.status, data: probe.data as T };
   }
 
-  const requirements = (probe.data?.requirements ?? probe.data) as PaymentRequirements;
+  const headerRequirements = probe.headers?.['payment-required'] as string | undefined;
+  const headerBody = headerRequirements
+    ? JSON.parse(Buffer.from(headerRequirements, 'base64').toString('utf-8'))
+    : null;
+  const rawRequirements = headerBody?.accepts?.[0] ?? headerBody?.requirements ?? probe.data?.accepts?.[0] ?? probe.data?.requirements ?? probe.data;
+  const requirements = normalizeRequirements(rawRequirements as PaymentRequirements);
   if (!requirements?.asset || !requirements.payTo) {
     throw new Error('[x402] 402 response missing payment requirements');
   }
 
   // Optional ceiling check
   if (opts.maxAmountUsdc !== undefined) {
-    const amountUsdc = Number(ethers.formatUnits(requirements.maxAmountRequired || '0', 6));
+    const amountUsdc = Number(ethers.formatUnits(getRequirementAmount(requirements) || '0', 6));
     if (amountUsdc > opts.maxAmountUsdc) {
       throw new Error(
         `[x402] service requested ${amountUsdc} USDC > session per-tx ceiling ${opts.maxAmountUsdc}`,
@@ -261,7 +351,10 @@ export async function paidFetch<T = unknown>(opts: PaidFetchOptions): Promise<Pa
   // Step 2: sign
   const envelope = await signPayment(requirements);
   if (!envelope) {
-    // Graceful demo mode: no wallet → simulated settlement
+    if (!isX402SimulationEnabled()) {
+      throw new Error('[x402] WEB3_PRIVATE_KEY is required to sign paid requests');
+    }
+
     return {
       status: 200,
       data: probe.data as T,
@@ -272,7 +365,7 @@ export async function paidFetch<T = unknown>(opts: PaidFetchOptions): Promise<Pa
         facilitator: cfg.facilitatorAddress,
         payer: '0xSIMULATED',
         payee: requirements.payTo,
-        amount: requirements.maxAmountRequired,
+        amount: getRequirementAmount(requirements),
       },
     };
   }
@@ -283,7 +376,11 @@ export async function paidFetch<T = unknown>(opts: PaidFetchOptions): Promise<Pa
     paid = await axios.request({
       url: opts.url,
       method,
-      headers: { ...baseHeaders, 'X-PAYMENT': encodeXPayment(envelope) },
+      headers: {
+        ...baseHeaders,
+        'PAYMENT-SIGNATURE': encodePaymentSignature(envelope, requirements),
+        'X-PAYMENT': encodeXPayment(envelope),
+      },
       data: opts.body,
       validateStatus: () => true,
     });
@@ -360,9 +457,11 @@ export function buildPaymentRequirements(input: {
   const cfg = readX402Config();
   const value = ethers.parseUnits(input.amountUsdc.toFixed(6), 6).toString();
   return {
+    x402Version: cfg.x402Version,
     scheme: cfg.scheme,
     network: cfg.network,
     maxAmountRequired: value,
+    amount: value,
     asset: cfg.assetAddress,
     payTo: input.payTo,
     maxTimeoutSeconds: 300,
@@ -375,7 +474,8 @@ export function buildPaymentRequirements(input: {
 
 /**
  * Submit a received envelope to Pieverse `/v2/settle` to execute on chain.
- * Returns null txHash + simulated flag if facilitator is unreachable.
+ * Returns a simulated settlement only when KITE_X402_SIMULATE is explicitly
+ * enabled. Otherwise facilitator failures fail the settlement.
  *
  * Pieverse expects the x402 canonical body shape:
  *   { x402Version, paymentPayload, paymentRequirements }
@@ -387,27 +487,46 @@ export async function settleWithFacilitator(
   requirements?: PaymentRequirements,
 ): Promise<SettlementResult> {
   const cfg = readX402Config();
-  const reqs: PaymentRequirements = requirements ?? {
+  const reqs: PaymentRequirements = normalizeRequirements(requirements ?? {
     scheme: envelope.scheme,
     network: envelope.network,
     maxAmountRequired: envelope.authorization.value,
+    amount: envelope.authorization.value,
     asset: envelope.asset,
     payTo: envelope.authorization.to,
     maxTimeoutSeconds: 300,
-  };
+  });
+  const version = reqs.x402Version ?? envelope.x402Version ?? cfg.x402Version;
+  const paymentPayload = version === 2
+    ? {
+        x402Version: 2,
+        accepted: buildV2Accepted(reqs),
+        payload: {
+          authorization: envelope.authorization,
+          signature: envelope.signature,
+        },
+        resource: reqs.resource
+          ? {
+              url: reqs.resource,
+              description: reqs.description,
+              mimeType: 'application/json',
+            }
+          : undefined,
+      }
+    : {
+        x402Version: 1,
+        scheme: envelope.scheme,
+        network: envelope.network,
+        payload: {
+          authorization: envelope.authorization,
+          signature: envelope.signature,
+          asset: envelope.asset,
+        },
+      };
   const body = {
-    x402Version: 1,
-    paymentPayload: {
-      x402Version: 1,
-      scheme: envelope.scheme,
-      network: envelope.network,
-      payload: {
-        authorization: envelope.authorization,
-        signature: envelope.signature,
-        asset: envelope.asset,
-      },
-    },
-    paymentRequirements: reqs,
+    x402Version: version,
+    paymentPayload,
+    paymentRequirements: version === 2 ? buildV2Accepted(reqs) : reqs,
   };
   try {
     const res = await axios.post(
@@ -436,6 +555,18 @@ export async function settleWithFacilitator(
       error: typeof res.data === 'string' ? res.data : JSON.stringify(res.data),
     };
   } catch (err) {
+    if (!isX402SimulationEnabled()) {
+      return {
+        success: false,
+        network: envelope.network,
+        facilitator: cfg.facilitatorAddress,
+        payer: envelope.authorization.from,
+        payee: envelope.authorization.to,
+        amount: envelope.authorization.value,
+        error: `facilitator unreachable: ${(err as Error).message}`,
+      };
+    }
+
     return {
       success: true,
       simulated: true,
