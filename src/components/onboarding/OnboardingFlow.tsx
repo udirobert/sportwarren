@@ -58,6 +58,10 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
   const [tourStep, setTourStep] = useState(-1);
   const [personalizationStep, setPersonalizationStep] = useState<'identity' | 'formation' | 'brand'>('identity');
   const [showConfetti, setShowConfetti] = useState(false);
+  const [hasCompletedTour, setHasCompletedTour] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return localStorage.getItem(ONBOARDING_STORAGE_KEYS.TOUR_COMPLETED) === 'true';
+  });
   
   // Personalization state
   const [playerName, setPlayerName] = useState('');
@@ -70,8 +74,6 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const updateProfile = trpc.player.updateProfile.useMutation();
   
-  // Check completion status
-  const hasCompletedTour = localStorage.getItem(ONBOARDING_STORAGE_KEYS.TOUR_COMPLETED) === 'true';
   const hasCompletedPersonalization = preferences.onboardingCompleted;
   
   // Show banner for guests who haven't seen tour
@@ -104,6 +106,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
     } else {
       // Tour complete
       localStorage.setItem(ONBOARDING_STORAGE_KEYS.TOUR_COMPLETED, 'true');
+      setHasCompletedTour(true);
       setTourStep(-1);
       setPhase('personalize');
       setShowConfetti(true);
@@ -119,6 +122,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
   
   const handleSkipTour = useCallback(() => {
     localStorage.setItem(ONBOARDING_STORAGE_KEYS.TOUR_COMPLETED, 'true');
+    setHasCompletedTour(true);
     setTourStep(-1);
     setPhase('personalize');
   }, []);
