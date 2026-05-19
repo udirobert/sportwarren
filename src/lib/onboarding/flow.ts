@@ -12,6 +12,7 @@ export type OnboardingPhase =
 export type OnboardingStep = 
   | 'welcome'
   | 'match-intro'
+  | 'meet-coach'
   | 'claim-identity'
   | 'identity'
   | 'formation'
@@ -38,6 +39,7 @@ export interface OnboardingCallbacks {
 export const TOUR_STEPS: { id: OnboardingStep; title: string; description: string; emoji: string }[] = [
   { id: 'welcome', title: 'Welcome to SportWarren', description: 'Your tactical command center for grassroots football', emoji: '🏟️' },
   { id: 'match-intro', title: 'Log Your First Game', description: 'Track matches, earn XP, and build your reputation', emoji: '🎮' },
+  { id: 'meet-coach', title: 'Meet Coach Kite', description: 'Your AI squad manager — scouts opponents, suggests lineups, and handles operations. The blockchain works for you, not the other way around.', emoji: '🤖' },
   { id: 'claim-identity', title: 'Save Your Progress', description: 'Connect a wallet to protect your data and unlock features', emoji: '⚡' },
 ];
 

@@ -20,7 +20,7 @@ export const CHECKLIST_ITEMS: ChecklistItemConfig[] = [
     {
         id: 'set_formation',
         label: 'Set your formation',
-        description: 'Pick a formation and play style to define how your squad lines up on match day',
+        description: 'Pick a formation — Coach Kite can auto-select based on your squad strengths',
         emoji: '📋',
         href: '/squad?tab=tactics',
         actionLabel: 'Set tactics',
@@ -29,7 +29,7 @@ export const CHECKLIST_ITEMS: ChecklistItemConfig[] = [
     {
         id: 'log_match',
         label: 'Log your first match',
-        description: 'Submit a real match result to unlock XP, reputation, and peer ratings',
+        description: 'Submit a real match — Coach Kite handles verification, peer ratings, and XP',
         emoji: '⚽',
         href: '/match?mode=capture',
         actionLabel: 'Log match',
