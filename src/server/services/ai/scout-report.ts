@@ -40,7 +40,14 @@ export async function createScoutReport(input: ScoutReportInput): Promise<ScoutR
   if (input.requestedBy) {
     const user = await prisma.user.findUnique({
       where: { id: input.requestedBy },
-      include: { squads: { take: 1, where: { status: 'active' }, include: { squad: true } } },
+      select: {
+        id: true,
+        squads: {
+          take: 1,
+          where: { status: 'active' },
+          select: { squad: { select: { id: true, name: true } } },
+        },
+      },
     });
 
     const squad = user?.squads[0]?.squad;
@@ -78,6 +85,7 @@ export async function createScoutReport(input: ScoutReportInput): Promise<ScoutR
           name: { contains: opponent, mode: 'insensitive' },
           id: { not: squad.id },
         },
+        select: { id: true, name: true },
       });
 
       if (opponentSquad) {
