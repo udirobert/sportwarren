@@ -95,9 +95,11 @@ export interface ResolvedActor {
 }
 
 const HELP = [
-  "🛰️ *SportWarren · Kite Agent*",
+  "🛰️ SportWarren · Kite Agent",
   "",
-  "*Scouting*",
+  "SportWarren gives your squad an on-chain manager agent on Kite Testnet. From WhatsApp you can scout opponents, check budget, review receipts, and trigger simple squad operations; Telegram handles account linking and treasury top-ups.",
+  "",
+  "Scouting",
   "• `scout <opponent>`  – paid AI scouting report ($0.50 USDC)",
   "• `tinyfish scout <opponent>` – free real-web scouting report",
   "• `scouts`           – show your recent reports with explorer links",
@@ -105,7 +107,7 @@ const HELP = [
   "• `topup`            – open Telegram treasury top-up flow",
   "• `trigger-auto-scout` – demo: auto-scout your next opponent now",
   "",
-  "*Actions*",
+  "Actions",
   "• `find <query>`     – discover paid x402 services",
   "• `hire <id> [days]` – delegate to an agent",
   "• `pay <wallet> <usdc>` – pay wages on Kite",
@@ -113,17 +115,17 @@ const HELP = [
   "• `cost`             – pricing for all services",
   "• `attestations`     – view recent on-chain attestations",
   "",
-  "*Web (TinyFish)*",
+  "Web (TinyFish)",
   "• `tinyfish search <query>` – search the web (free)",
   "• `tinyfish fetch <url>` – extract page content (free)",
   "• `tinyfish scout <opponent>` – free real-web scouting",
   "",
-  "*Autonomy*",
+  "Autonomy",
   "• `autonomy`         – view squad agent autonomy level",
   "• `autonomy set <level>` – change level (observe|integrate|automate)",
   "• `autonomy confirm on|off` – toggle spend confirmation",
   "",
-  "*Account*",
+  "Account",
   "• `whoami`           – show your linked identity and squad",
   "• `link <WA-XXXXXX>` – link this number to your SportWarren account",
   "• `unlink`           – unlink this WhatsApp number",
@@ -144,6 +146,37 @@ const UNLINKED_REPLY = [
   "2. Send `/linkwhatsapp` — you'll get a code like `WA-3F9A1C`.",
   "3. Reply to me with `link WA-3F9A1C`.",
 ].join("\n");
+
+function isCapabilityQuestion(rawText: string): boolean {
+  const normalized = rawText.trim().toLowerCase().replace(/[?!.,]+/g, "");
+  return [
+    "what can you do",
+    "what do you do",
+    "how do i use this",
+    "how does this work",
+    "commands",
+    "menu",
+  ].includes(normalized);
+}
+
+function buildLinkedOverview(actor: ResolvedActor): Reply {
+  return [
+    `You're linked as ${actor.displayName}${actor.squadId ? " and connected to a squad" : ""}.`,
+    "SportWarren gives your squad a WhatsApp command line for its on-chain manager agent on Kite Testnet: scout opponents, manage spend limits, review receipts, and coordinate treasury actions through Telegram.",
+    "",
+    "Useful commands:",
+    "• `budget` – today's scout spend and remaining limit",
+    "• `scout <opponent>` – commission a paid Kite scouting report",
+    "• `scouts` – recent scouting reports",
+    "• `tinyfish scout <opponent>` – free real-web scouting",
+    "• `status` – squad agent activity",
+    "• `attestations` – recent on-chain receipts",
+    "• `topup` – open the Telegram treasury flow",
+    "• `whoami` – confirm linked account and squad",
+    "",
+    "Try `budget` or `scout Liverpool`.",
+  ].join("\n");
+}
 
 export async function resolveActor(whatsappNumber: string): Promise<ResolvedActor | null> {
   const identity = await prisma.platformIdentity.findUnique({
@@ -202,6 +235,7 @@ async function aiFallback(
   from: string,
   /** Prevent infinite recursion if AI keeps returning RUN: */
   depth = 0,
+  isLinked = false,
 ): Promise<Reply | null> {
   try {
     const result = await generateInference(
@@ -232,7 +266,7 @@ async function aiFallback(
       .replace(/\s*RUN:\S+(?:\s+\S+)*\s*$/i, "")  // trailing "RUN:foo bar"
       .trim();
 
-    if (prose && depth === 0) {
+    if (prose && depth === 0 && !isLinked) {
       return [
         prose,
         "",
@@ -349,9 +383,13 @@ export async function dispatchWhatsAppCommand(
   const actor = await resolveActor(from);
   if (!actor) {
     // Try AI fallback first — maybe the user said "I want to link my account"
-    const fallback = aiDepth === 0 ? await aiFallback(rawText, from, aiDepth) : null;
+    const fallback = aiDepth === 0 ? await aiFallback(rawText, from, aiDepth, false) : null;
     if (fallback) return fallback;
     return UNLINKED_REPLY;
+  }
+
+  if (isCapabilityQuestion(rawText)) {
+    return buildLinkedOverview(actor);
   }
 
   // ── Check pending confirmation from user ─────────────────────
@@ -920,7 +958,7 @@ export async function dispatchWhatsAppCommand(
     }
 
     default: {
-      const fallback = aiDepth === 0 ? await aiFallback(rawText, from, aiDepth) : null;
+      const fallback = aiDepth === 0 ? await aiFallback(rawText, from, aiDepth, true) : null;
       if (fallback) return fallback;
       return `Didn't quite catch that. Try \`help\` to see what I can do. — Marcus`;
     }
