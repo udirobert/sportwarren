@@ -180,8 +180,9 @@ export const QuickPersonalization: React.FC<{ onComplete: () => void; journeySta
 
                             {/* Name */}
                             <div className="mb-8">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Player Name</label>
+                                <label htmlFor="player-name" className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Player Name</label>
                                 <input
+                                    id="player-name"
                                     type="text"
                                     value={playerName}
                                     onChange={(e) => setPlayerName(e.target.value)}
@@ -304,8 +305,9 @@ export const QuickPersonalization: React.FC<{ onComplete: () => void; journeySta
                             <p className="text-sm text-gray-400 mb-8">This identity will be shared with your teammates in their briefing.</p>
 
                             <div className="mb-6">
-                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Squad Nickname</label>
+                                <label htmlFor="squad-nickname" className="text-[10px] font-black uppercase tracking-widest text-gray-500 mb-2 block">Squad Nickname</label>
                                 <input
+                                    id="squad-nickname"
                                     type="text"
                                     value={nickname}
                                     onChange={(e) => setNickname(e.target.value)}

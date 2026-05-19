@@ -423,6 +423,7 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
                 step={1}
                 value={amountTon}
                 onChange={(e) => setAmountTon(Math.max(1, Math.round(Number(e.target.value) || 1)))}
+                aria-label="TON amount"
                 className="w-full rounded-xl border border-white/10 bg-slate-800/50 px-4 py-3 text-center text-lg font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/50"
               />
               <p className="mt-1 text-center text-[10px] text-slate-500">Enter custom amount in TON</p>
@@ -514,6 +515,7 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
               <button
                 onClick={onRefresh}
                 className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white/5 hover:text-white"
+                aria-label="Refresh"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
               </button>

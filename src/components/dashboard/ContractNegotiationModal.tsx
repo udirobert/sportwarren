@@ -87,6 +87,7 @@ export const ContractNegotiationModal: React.FC<ContractNegotiationModalProps> =
                                         step={50}
                                         value={offer}
                                         onChange={(e) => setOffer(parseInt(e.target.value))}
+                                        aria-label="Proposed wage"
                                         className="w-full h-2 sm:h-1.5 bg-gray-800 rounded-full appearance-none cursor-pointer accent-blue-500"
                                     />
                                     <div className="flex justify-between text-[9px] font-bold text-gray-600 mt-2 uppercase">

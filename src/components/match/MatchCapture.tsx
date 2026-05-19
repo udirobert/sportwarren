@@ -217,6 +217,7 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
                   type="range" min={3} max={15} value={playersPerSide}
                   onChange={e => setPlayersPerSide(Number(e.target.value))}
                   className="flex-1 accent-green-600"
+                  aria-label="Players per side"
                 />
               </div>
             </div>

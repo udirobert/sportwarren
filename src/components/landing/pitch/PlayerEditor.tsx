@@ -54,6 +54,7 @@ export const PlayerEditor: React.FC<PlayerEditorProps> = ({
             value={names[selectedSlotIndex] || ''}
             onChange={(e) => onNameChange(selectedSlotIndex, e.target.value)}
             placeholder="Name"
+            aria-label="Player name"
           />
         </div>
         <div className="flex flex-col gap-1">

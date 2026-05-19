@@ -15,6 +15,7 @@ import { useMatchCenterData } from "@/hooks/match/useMatchCenterData";
 import { useWallet } from "@/contexts/WalletContext";
 import { JourneyGateCard } from "@/components/common/JourneyGateCard";
 import { PageShell } from "@/components/common/PageShell";
+import { ChainLabel } from "@/components/common/ChainLabel";
 import { TelegramContextualTip } from "@/components/common/TelegramContextualTip";
 import {
   Trophy,
@@ -355,7 +356,7 @@ export default function MatchPage() {
         <Card className="border-blue-200 bg-blue-50/70">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-blue-700">Yellow Fee Rail</p>
+              <p className="text-sm text-blue-700"><ChainLabel chain="yellow" showTechnical /> Fee Rail</p>
               <p className="text-3xl font-bold text-gray-900">{railEnabledCount}</p>
             </div>
             <Cpu className="h-8 w-8 text-blue-600" />
@@ -697,7 +698,7 @@ export default function MatchPage() {
                   <div className="text-right text-sm text-gray-500">
                     {match.paymentRail?.enabled && (
                       <div className="mb-2 rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">
-                        Yellow Fee Locked
+                        <ChainLabel chain="yellow" showTechnical /> Fee Locked
                       </div>
                     )}
                     Review

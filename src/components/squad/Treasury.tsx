@@ -241,10 +241,11 @@ export const Treasury: React.FC<TreasuryProps> = ({
 
           <div className="mt-4 space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="ton-vault-address" className="block text-sm font-medium text-gray-700 mb-2">
                 Squad TON vault address
               </label>
               <input
+                id="ton-vault-address"
                 type="text"
                 value={tonWalletAddress}
                 onChange={(event) => setTonWalletAddress(event.target.value)}
@@ -322,9 +323,9 @@ export const Treasury: React.FC<TreasuryProps> = ({
                             value={settlementReference}
                             onChange={(event) => setSettlementReferences((current) => ({
                               ...current,
-                              [transaction.id]: event.target.value,
                             }))}
                             placeholder="Optional recipient transaction hash"
+                            aria-label="Recipient transaction hash"
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg"
                           />
                           <Button
@@ -429,10 +430,11 @@ export const Treasury: React.FC<TreasuryProps> = ({
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Deposit Funds</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="deposit-amount" className="block text-sm font-medium text-gray-700 mb-2">
                 Amount ({treasury.currency})
               </label>
               <input
+                id="deposit-amount"
                 type="number"
                 value={depositAmount}
                 onChange={(e) => setDepositAmount(e.target.value)}
@@ -457,10 +459,11 @@ export const Treasury: React.FC<TreasuryProps> = ({
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Withdraw Funds</h3>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="withdraw-amount" className="block text-sm font-medium text-gray-700 mb-2">
                 Amount ({treasury.currency})
               </label>
               <input
+                id="withdraw-amount"
                 type="number"
                 value={withdrawAmount}
                 onChange={(e) => setWithdrawAmount(e.target.value)}

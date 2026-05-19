@@ -289,6 +289,7 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
                         <button
                             onClick={() => setShowBanner(false)}
                             className="text-gray-400 hover:text-white transition-colors"
+                            aria-label="Dismiss tour banner"
                         >
                             <X className="w-4 h-4" />
                         </button>
@@ -465,6 +466,7 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
                                     <button
                                         onClick={handleComplete}
                                         className="p-1 text-gray-300 hover:text-gray-900 transition-colors"
+                                        aria-label="Close tour"
                                     >
                                         <X className="w-4 h-4" />
                                     </button>
@@ -480,6 +482,7 @@ export const GuestTour: React.FC<GuestTourProps> = ({ onVisibilityChange }) => {
                                         onClick={handleBack}
                                         disabled={activeStep === 0}
                                         className={`p-2 rounded-full transition-all ${activeStep === 0 ? 'text-gray-200 cursor-not-allowed' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}
+                                        aria-label="Previous step"
                                     >
                                         <ChevronLeft className="w-5 h-5" />
                                     </button>

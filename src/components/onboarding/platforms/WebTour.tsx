@@ -94,7 +94,7 @@ const TourPopup: React.FC<{
                                 {step.title}
                             </h3>
                         </div>
-                        <button onClick={onClose} className="p-1 text-gray-300 hover:text-gray-900 transition-colors">
+                        <button onClick={onClose} className="p-1 text-gray-300 hover:text-gray-900 transition-colors" aria-label="Close tour">
                             <X className="w-4 h-4" />
                         </button>
                     </div>
@@ -108,6 +108,7 @@ const TourPopup: React.FC<{
                             onClick={onBack}
                             disabled={!canGoBack}
                             className={`p-2 rounded-full transition-all ${!canGoBack ? 'text-gray-200 cursor-not-allowed' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}
+                            aria-label="Previous step"
                         >
                             <ChevronLeft className="w-5 h-5" />
                         </button>
@@ -320,7 +321,7 @@ export const WebTour: React.FC<WebTourProps> = ({ onVisibilityChange }) => {
                         >
                             Start
                         </button>
-                        <button onClick={() => setShowBanner(false)} className="text-gray-400 hover:text-white transition-colors">
+                        <button onClick={() => setShowBanner(false)} className="text-gray-400 hover:text-white transition-colors" aria-label="Dismiss tour banner">
                             <X className="w-4 h-4" />
                         </button>
                     </div>
