@@ -71,6 +71,7 @@ export const TacticalSpend: React.FC<TacticalSpendProps> = ({
                 <button 
                   onClick={() => setTargetBudget(prev => Math.max(1, prev - 1))}
                   className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
+                  aria-label="Decrease weekly budget"
                 >
                   <Minus className="w-4 h-4" />
                 </button>
@@ -80,6 +81,7 @@ export const TacticalSpend: React.FC<TacticalSpendProps> = ({
                 <button 
                   onClick={() => setTargetBudget(prev => Math.min(50, prev + 1))}
                   className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-white/10 transition-colors"
+                  aria-label="Increase weekly budget"
                 >
                   <Plus className="w-4 h-4" />
                 </button>

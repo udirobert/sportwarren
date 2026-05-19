@@ -114,9 +114,9 @@ export default function PublicMatchPage() {
                             <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center mx-auto mb-2">
                                 <Trophy className="w-6 h-6 text-white" />
                             </div>
-                            <div className="text-sm font-bold text-white">{homeName}</div>
+                            <div className="text-sm font-bold text-white max-w-[7rem] truncate" title={homeName}>{homeName}</div>
                         </div>
-                        <div className="text-center">
+                        <div className="text-center shrink-0">
                             <div className="text-4xl font-black text-white font-mono">
                                 {match.homeScore ?? 0} <span className="text-gray-500">-</span> {match.awayScore ?? 0}
                             </div>
@@ -128,7 +128,7 @@ export default function PublicMatchPage() {
                             <div className="w-12 h-12 bg-red-600 rounded-lg flex items-center justify-center mx-auto mb-2">
                                 <Trophy className="w-6 h-6 text-white" />
                             </div>
-                            <div className="text-sm font-bold text-white">{awayName}</div>
+                            <div className="text-sm font-bold text-white max-w-[7rem] truncate" title={awayName}>{awayName}</div>
                         </div>
                     </div>
 

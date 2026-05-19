@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Sparkles, TrendingUp, ShieldCheck, Briefcase, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { ChainLabel } from '@/components/common/ChainLabel';
 interface ContractNegotiationModalProps {
     playerName: string;
     currentWage: number;
@@ -61,7 +62,7 @@ export const ContractNegotiationModal: React.FC<ContractNegotiationModalProps> =
                                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Negotiating for {playerName}</p>
                             </div>
                         </div>
-                        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors text-gray-500">
+                        <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors text-gray-500" aria-label="Close modal">
                             <X className="w-5 h-5" />
                         </button>
                     </div>
@@ -135,7 +136,7 @@ export const ContractNegotiationModal: React.FC<ContractNegotiationModalProps> =
                                     className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-6"
                                 />
                                 <h3 className="text-xl font-black text-white italic uppercase">The Agent is reviewing...</h3>
-                                <p className="text-gray-500 text-sm mt-2">Checking Lens reputation thresholds and treasury liquidity</p>
+                                <p className="text-gray-500 text-sm mt-2">Checking <ChainLabel chain="lens" /> reputation thresholds and treasury liquidity</p>
                             </div>
                         )}
 

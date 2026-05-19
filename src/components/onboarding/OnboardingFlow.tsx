@@ -244,7 +244,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
             <button onClick={startTour} className="px-3 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-500 transition-colors">
               Start
             </button>
-            <button onClick={() => setShowBanner(false)} className="p-1 text-gray-500 hover:text-white">
+            <button onClick={() => setShowBanner(false)} className="p-1 text-gray-500 hover:text-white" aria-label="Dismiss tour banner">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -295,7 +295,7 @@ function TourOverlay({ steps, currentStep, venue, onNext, onBack, onSkip }: Tour
               </div>
               <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">{step.title}</h3>
             </div>
-            <button onClick={onSkip} className="p-1 text-gray-300 hover:text-gray-900">
+            <button onClick={onSkip} className="p-1 text-gray-300 hover:text-gray-900" aria-label="Close tour">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -383,8 +383,8 @@ function PersonalizationCard({
               <p className="text-sm text-gray-400 mb-8">This is how teammates and opponents will see you on the pitch.</p>
               
               <div className="mb-6 flex items-center gap-4">
-                <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-white/10 border-2 border-white/20 flex items-center justify-center cursor-pointer group shrink-0" onClick={() => fileInputRef.current?.click()}>
-                  {avatarPreview ? <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" /> : <User className="w-10 h-10 text-white/40" />}
+                <div className="relative w-20 h-20 rounded-2xl overflow-hidden bg-white/10 border-2 border-white/20 flex items-center justify-center cursor-pointer group shrink-0" onClick={() => fileInputRef.current?.click()} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}>
+                  {avatarPreview ? <img src={avatarPreview} alt="Your profile photo" className="w-full h-full object-cover" /> : <User className="w-10 h-10 text-white/40" />}
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                     <Camera className="w-6 h-6 text-white" />
                   </div>

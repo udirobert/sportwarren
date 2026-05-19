@@ -67,7 +67,7 @@ export default function TeamBriefingPage() {
                                 <Zap className="w-3 h-3" />
                                 Live Tactical Briefing
                             </div>
-                            <h1 className="text-5xl font-black uppercase tracking-tighter leading-[0.9] mb-4">
+                            <h1 className="text-3xl md:text-5xl font-black uppercase tracking-tighter leading-[0.9] mb-4">
                                 {branding.nickname} <br/>
                                 <span className="text-gray-500">Tactical DNA</span>
                             </h1>

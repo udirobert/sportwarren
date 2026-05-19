@@ -187,6 +187,7 @@ export const CoachKiteInsight: React.FC<CoachKiteInsightProps> = ({ userId }) =>
               type="submit"
               disabled={!chatMessage.trim() || chatMutation.isPending}
               className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              aria-label="Send message"
             >
               <Send className="w-3 h-3" />
             </button>
@@ -194,6 +195,7 @@ export const CoachKiteInsight: React.FC<CoachKiteInsightProps> = ({ userId }) =>
               type="button"
               onClick={() => setIsChatOpen(false)}
               className="text-gray-400 hover:text-gray-600 p-1"
+              aria-label="Close chat"
             >
               <X className="w-4 h-4" />
             </button>

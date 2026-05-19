@@ -23,7 +23,7 @@ function CoachTip({ tip, onClose }: { tip: string; onClose: () => void }) {
         <Brain className="w-4 h-4 text-blue-600 dark:text-blue-300" />
       </div>
       <p className="flex-1 text-blue-800 dark:text-blue-200 italic leading-snug">&ldquo;{tip}&rdquo;</p>
-      <button onClick={onClose} className="shrink-0 text-blue-400 hover:text-blue-600 dark:hover:text-blue-200">
+      <button onClick={onClose} className="shrink-0 text-blue-400 hover:text-blue-600 dark:hover:text-blue-200" aria-label="Dismiss tip">
         <X className="w-4 h-4" />
       </button>
     </div>

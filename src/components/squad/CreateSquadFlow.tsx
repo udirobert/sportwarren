@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Trophy, Zap, ChevronRight, Loader2, X } from 'lucide-react';
+import { ChainLabel } from '@/components/common/ChainLabel';
 import { Button } from '@/components/ui/Button';
 import { useCreateSquad } from '@/hooks/squad/useSquad';
 
@@ -14,7 +15,7 @@ interface CreateSquadFlowProps {
 const SQUAD_ARCHETYPES = [
     { id: 'street', emoji: '🏙️', label: 'Street Kings', description: 'Fast, physical, built for hard weekly matches.' },
     { id: 'technical', emoji: '🎯', label: 'Technical XI', description: 'Possession-based. Outthink the opposition.' },
-    { id: 'community', emoji: '🤝', label: 'Community Club', description: 'Reputation-first. Grow your Lens following.' },
+    { id: 'community', emoji: '🤝', label: 'Community Club', description: 'Reputation-first. Grow your <ChainLabel chain="lens" /> following.' },
 ];
 
 export const CreateSquadFlow: React.FC<CreateSquadFlowProps> = ({ onCreated, onCancel }) => {
@@ -152,7 +153,7 @@ export const CreateSquadFlow: React.FC<CreateSquadFlowProps> = ({ onCreated, onC
                                     <span className="text-blue-400 font-black">5,000 Credits</span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Lens Reputation</span>
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest"><ChainLabel chain="lens" showTechnical /> Reputation</span>
                                     <span className="text-white font-black">0 (Building)</span>
                                 </div>
                             </div>

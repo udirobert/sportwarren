@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Shield, RotateCcw, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ChainLabel } from "@/components/common/ChainLabel";
 import { trpc } from "@/lib/trpc-client";
 
 interface Props {
@@ -107,7 +108,7 @@ export function SquadAutonomySettings({ squadId }: Props) {
           <h2 className="text-lg font-bold text-gray-900">Agent Autonomy</h2>
         </div>
         <p className="text-sm text-gray-600 mb-4">
-          Controls what your squad&apos;s autonomous Kite agent can do without human approval.
+          Controls what your squad&apos;s autonomous <ChainLabel chain="kite" /> agent can do without human approval.
           Configured via WhatsApp (<code>autonomy</code> command) or here.
         </p>
 
