@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { PaymentRailNotice } from '@/components/payments/PaymentRailNotice';
+import { ChainLabel } from '@/components/common/ChainLabel';
 import {
   ArrowRightLeft, DollarSign, Clock, Check, X,
   Search, TrendingUp, User
@@ -82,7 +83,7 @@ export const TransferMarket: React.FC<TransferMarketProps> = ({
               <div className="text-sm text-gray-600">Squad Balance</div>
               <div className="text-xl font-bold text-green-600">{squadBalance.toLocaleString()} {currencyLabel}</div>
               {paymentRailEnabled && (
-                <div className="text-xs text-gray-600 dark:text-gray-300">Shared off-chain escrow via Yellow</div>
+                <div className="text-xs text-gray-600 dark:text-gray-300">Shared off-chain escrow via <ChainLabel chain="yellow" /></div>
               )}
             </div>
           </div>

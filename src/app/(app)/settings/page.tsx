@@ -8,6 +8,7 @@ import { useMySquads } from '@/hooks/squad/useSquad';
 import { usePlatformConnections } from '@/hooks/usePlatformConnections';
 import { Card } from '@/components/ui/Card';
 import { PageShell } from '@/components/common/PageShell';
+import { ChainLabel } from '@/components/common/ChainLabel';
 import { Button } from '@/components/ui/Button';
 import { trpc } from '@/lib/trpc-client';
 import { WalletConnectModal } from '@/components/common/WalletConnectModal';
@@ -879,7 +880,7 @@ export default function SettingsPage() {
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Wallet Access</h2>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Wallets are optional until you need protected actions. Yellow settlement requires a verified Avalanche or Lens wallet.
+                  Wallets are optional until you need protected actions. Yellow settlement requires a verified <ChainLabel chain="avalanche" /> or <ChainLabel chain="lens" /> wallet.
                 </p>
               </div>
               {hasWallet && !needsVerification ? (
@@ -938,7 +939,7 @@ export default function SettingsPage() {
           {hasWallet && !hasYellowEligibleWallet && (
             <Card className="border-blue-300 bg-blue-100">
               <p className="text-sm text-blue-900">
-                Algorand wallets can still unlock SportWarren identity and protected data, but Yellow settlement currently requires Avalanche or Lens because the rail is EVM-based.
+                <ChainLabel chain="algorand" showTechnical /> wallets can still unlock SportWarren identity and protected data, but Yellow settlement currently requires <ChainLabel chain="avalanche" /> or <ChainLabel chain="lens" /> because the rail is EVM-based.
               </p>
             </Card>
           )}

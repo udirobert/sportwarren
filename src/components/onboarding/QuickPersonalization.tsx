@@ -136,7 +136,7 @@ export const QuickPersonalization: React.FC<{ onComplete: () => void; journeySta
                                     onClick={() => fileInputRef.current?.click()}
                                 >
                                     {avatarPreview ? (
-                                        <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                                        <img src={avatarPreview} alt="Your profile photo" className="w-full h-full object-cover" />
                                     ) : (
                                         <User className="w-10 h-10 text-white/40" />
                                     )}

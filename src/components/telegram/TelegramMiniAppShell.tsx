@@ -428,7 +428,7 @@ export function TelegramMiniAppShell({
               <p className="text-[10px] text-slate-400">{context.squad.memberCount} members</p>
             </div>
           </div>
-          <button onClick={handleRefresh} disabled={refreshing} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white disabled:opacity-50">
+          <button onClick={handleRefresh} disabled={refreshing} className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/5 text-slate-400 transition hover:bg-white/10 hover:text-white disabled:opacity-50" aria-label="Refresh">
             <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
           </button>
         </div>

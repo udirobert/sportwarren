@@ -385,14 +385,14 @@ export const SmartNavigation: React.FC = () => {
       {/* ── More Sheet ───────────────────────────────────────────── */}
       {isMoreOpen && (
         <>
-          <div className="md:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-50" onClick={() => setIsMoreOpen(false)} />
+          <div className="md:hidden fixed inset-0 bg-black/30 backdrop-blur-sm z-50" onClick={() => setIsMoreOpen(false)} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { setIsMoreOpen(false); } }} aria-label="Close menu" />
           <div
             className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 rounded-t-2xl shadow-2xl"
             style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           >
             <div className="flex items-center justify-between px-5 pt-4 pb-2 border-b border-gray-100 dark:border-gray-700">
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">More</span>
-              <button onClick={() => setIsMoreOpen(false)} className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800 touch-manipulation">
+              <button onClick={() => setIsMoreOpen(false)} className="p-1.5 rounded-lg text-gray-500 dark:text-gray-400 active:bg-gray-100 dark:active:bg-gray-800 touch-manipulation" aria-label="Close menu">
                 <X className="w-5 h-5" />
               </button>
             </div>

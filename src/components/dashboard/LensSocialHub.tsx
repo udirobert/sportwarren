@@ -7,6 +7,7 @@ import { useLens } from '@/contexts/LensContext';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { Share2, Users, CheckCircle2, Globe, MessageSquare, Zap, ShieldCheck, Trophy } from 'lucide-react';
+import { ChainLabel } from '@/components/common/ChainLabel';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSeasonSnapshot } from '@/hooks/useSeasonSnapshot';
 import { describeMatchForSquad } from '@/lib/match/summary';
@@ -99,7 +100,7 @@ export const LensSocialHub: React.FC = () => {
         <div className="space-y-4">
           <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
             <p className="text-xs text-gray-600 leading-relaxed font-semibold">
-              Lens sharing becomes useful once you are running a real season. Claim an account first, then bring verified results into the social layer.
+              <ChainLabel chain="lens" /> sharing becomes useful once you are running a real season. Claim an account first, then bring verified results into the social layer.
             </p>
           </div>
         </div>
@@ -107,12 +108,12 @@ export const LensSocialHub: React.FC = () => {
         <div className="space-y-4">
           <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
             <p className="text-xs text-amber-900 leading-relaxed font-semibold">
-              {error || 'Lens publishing is not enabled on this deployment.'}
+              {error || <><ChainLabel chain="lens" /> publishing is not enabled on this deployment.</>}
             </p>
           </div>
           <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
             <p className="text-xs text-gray-600 leading-relaxed font-semibold">
-              Keep verified results inside SportWarren for now. The social layer will reopen once Lens is wired end-to-end instead of simulating posts.
+              Keep verified results inside SportWarren for now. The social layer will reopen once <ChainLabel chain="lens" /> is wired end-to-end instead of simulating posts.
             </p>
           </div>
         </div>
@@ -120,7 +121,7 @@ export const LensSocialHub: React.FC = () => {
         <div className="space-y-4">
           <div className="p-3 bg-gray-50 rounded-xl border border-gray-100">
             <p className="text-xs text-gray-600 leading-relaxed font-semibold">
-              Add a wallet-backed identity first. Lens only works once SportWarren can sign as your account.
+              Add a wallet-backed identity first. <ChainLabel chain="lens" /> only works once SportWarren can sign as your account.
             </p>
           </div>
         </div>
@@ -130,7 +131,7 @@ export const LensSocialHub: React.FC = () => {
             <p className="text-xs text-gray-600 leading-relaxed font-semibold">
               {isSocialUser
                 ? 'You already have a social account. Link Lens to turn verified match history into a public grassroots feed.'
-                : 'Connect Lens to publish real match proof and squad momentum into the broader football graph.'}
+                : 'Connect <ChainLabel chain="lens" /> to publish real match proof and squad momentum into the broader football graph.'}
             </p>
           </div>
 

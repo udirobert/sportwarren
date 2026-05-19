@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { Vote, Shield, Clock, ExternalLink, Check, X, AlertCircle, Info, ArrowUpRight } from 'lucide-react';
+import { ChainLabel } from '@/components/common/ChainLabel';
 import { trpc } from '@/lib/trpc-client';
 import type { MiniAppContext } from './TelegramMiniAppShell';
 
@@ -178,7 +179,7 @@ export function TelegramGovernanceTab({ context, onRefresh: _onRefresh }: Telegr
             <div className="mb-4 rounded-xl bg-blue-500/5 border border-blue-500/10 p-3 flex items-start gap-2">
               <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-[11px] text-blue-200/70 leading-relaxed">
-                Your vote is cast via the platform relayer on Avalanche Fuji. The transaction will be signed and submitted on-chain.
+                Your vote is cast via the platform relayer on <ChainLabel chain="avalanche" /> Fuji. The transaction will be signed and submitted on-chain.
               </p>
             </div>
             <div className="flex gap-3">
@@ -352,7 +353,7 @@ export function TelegramGovernanceTab({ context, onRefresh: _onRefresh }: Telegr
       <div className="rounded-2xl bg-blue-500/5 border border-blue-500/10 p-4 flex gap-3">
         <Shield className="h-5 w-5 text-blue-400 shrink-0" />
         <p className="text-[11px] leading-relaxed text-blue-200/70">
-          Proposals are fetched directly from the SquadGovernor contract on Avalanche Fuji. 
+          Proposals are fetched directly from the SquadGovernor contract on <ChainLabel chain="avalanche" /> Fuji. 
           Votes are submitted on-chain via the platform relayer.
         </p>
       </div>

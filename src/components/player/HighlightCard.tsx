@@ -3,6 +3,7 @@
 import React, { useRef, useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Share2, Zap, ShieldCheck, Trophy, Download, Check, Loader2 } from 'lucide-react';
+import { ChainLabel } from '@/components/common/ChainLabel';
 import { 
   getOverallColor, 
   getAttributeTextColor, 
@@ -104,7 +105,7 @@ export const HighlightCard: React.FC<HighlightCardProps> = ({
               </div>
               <div className="flex items-center space-x-1.5 bg-green-500/20 px-3 py-1 rounded-full border border-green-500/30">
                 <ShieldCheck className="w-3.5 h-3.5 text-green-400" />
-                <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest">Verified on Algorand</span>
+                <span className="text-[10px] font-bold text-green-400 uppercase tracking-widest">Verified on <ChainLabel chain="algorand" /></span>
               </div>
             </div>
 

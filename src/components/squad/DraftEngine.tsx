@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, Sparkles, Star, Trophy, UserCheck } from 'lucide-react';
+import { ChainLabel } from '@/components/common/ChainLabel';
 import { useWallet } from '@/contexts/WalletContext';
 import { trpc } from '@/lib/trpc-client';
 import type { TransferMarketPlayer } from '@/types';
@@ -128,7 +129,7 @@ export const DraftEngine: React.FC<DraftEngineProps> = ({
                   <Search className="mx-auto mb-6 h-16 w-16 animate-pulse text-blue-400" />
                   <h4 className="text-xl font-bold italic uppercase">Connecting to Peer-to-Peer Scouting Network...</h4>
                   <p className="mt-2 font-mono text-xs uppercase tracking-widest text-gray-500">
-                    Scanning Pitch ID signatures on Base & Algorand
+                    Scanning Pitch ID signatures on Base & <ChainLabel chain="algorand" />
                   </p>
                 </motion.div>
               )}

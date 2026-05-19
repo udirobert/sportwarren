@@ -530,7 +530,7 @@ export default function SquadPage() {
                 </p>
               )}
             </div>
-            <button onClick={() => setIsNewSquad(false)} className="shrink-0 text-green-600 hover:text-green-800 text-lg leading-none">×</button>
+            <button onClick={() => setIsNewSquad(false)} className="shrink-0 text-green-600 hover:text-green-800 text-lg leading-none" aria-label="Dismiss banner">×</button>
           </div>
         </Card>
       )}
