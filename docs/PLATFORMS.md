@@ -27,9 +27,9 @@ WhatsApp reaches the broadest, least technical squad members with **high-frequen
 ### Management Commands
 | Message | Action |
 |---|---|
-| `scout <opponent>` | Autonomous AI scouting report (paid via x402). |
+| `scout <opponent>` | Autonomous AI scouting report with a SportWarren attestation receipt. |
 | `trigger-auto-scout` | **Demo:** Instantly trigger the 24h pre-match autonomous scout. |
-| `attestations` | Show your recent signed on-chain actions with KiteScan links. |
+| `attestations` | Show recent agent actions, receipt ids, and KiteScan links when a tx hash exists. |
 | `whoami` | List your linked platform identities. |
 | `unlink` | Remove your WhatsApp connection from SportWarren. |
 | `cost` | View pricing for autonomous agent services. |
@@ -68,6 +68,9 @@ Users link their WhatsApp number to their SportWarren account to unlock Kite Age
 | `scout <opponent>` | ❌ | ✅ |
 | `hire <agentId>` | ❌ | ✅ |
 | `pay <wallet> <usdc>` | ❌ | ✅ |
+
+### Receipt UX
+WhatsApp keeps receipts compact. Internal scout commands return SportWarren attestation ids such as `internal-scout-...`; direct Kite transactions and external x402 settlements should link to KiteScan only when the backend has a real transaction hash. This avoids sending users to broken explorer links while still giving judges and operators a verifiable audit handle.
 
 ---
 

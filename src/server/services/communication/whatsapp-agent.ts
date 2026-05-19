@@ -53,7 +53,7 @@ A grassroots football platform with on-chain AI agents. Every squad has an auton
 COMMANDS (case-insensitive)
 - help — show this list
 - find <query> — discover paid services on Kite (e.g. find scout, find coach)
-- scout <opponent> — your agent buys an AI scouting report on an opponent; settles on Kite, ~${SCOUT_PRICE_USDC.toFixed(2)}
+- scout <opponent> — your agent creates an AI scouting report and records a SportWarren Kite receipt, ~${SCOUT_PRICE_USDC.toFixed(3)}
 - scouts — list your recent scouting reports with explorer links
 - budget — show how much scouting budget you have left today
 - hire <agentId> [days] — delegate work to another agent for N days; gated by reputation
@@ -100,7 +100,7 @@ const HELP = [
   "SportWarren gives your squad an on-chain manager agent on Kite Testnet. From WhatsApp you can scout opponents, check budget, review receipts, and trigger simple squad operations; Telegram handles account linking and treasury top-ups.",
   "",
   "Scouting",
-  `• \`scout <opponent>\`  – paid AI scouting report (${SCOUT_PRICE_USDC.toFixed(2)} testnet token)`,
+  `• \`scout <opponent>\`  – AI scouting report + SportWarren receipt (${SCOUT_PRICE_USDC.toFixed(3)} testnet token)`,
   "• `tinyfish scout <opponent>` – free real-web scouting report",
   "• `scouts`           – show your recent reports with explorer links",
   "• `budget`           – how much scout budget remains today",
@@ -457,8 +457,8 @@ export async function dispatchWhatsAppCommand(
       }
 
       // --- SPENDING GUARDS (dual cap: per-user + per-squad) ---
-      // Read-only here: the x402 scout route records spend only after payment
-      // settlement, so failed calls do not burn budget.
+      // Read-only here: createScoutReport records spend only after it starts
+      // producing a report, so blocked calls do not burn budget.
       const userLimit = kiteAIService.getScoutUserDailyLimit(actor.userId);
       const userSpending = await kiteAIService.getUserSpending(actor.userId, userLimit);
       if (userLimit > 0 && userSpending.remaining < SCOUT_PRICE_USDC) {
@@ -765,7 +765,7 @@ export async function dispatchWhatsAppCommand(
       return [
         "💳 *Service Pricing*",
         "",
-        `• \`scout <opponent>\` — ${SCOUT_PRICE_USDC.toFixed(2)} testnet token (AI scouting report + Kite attestation)`,
+        `• \`scout <opponent>\` — ${SCOUT_PRICE_USDC.toFixed(3)} testnet token (AI scouting report + SportWarren receipt)`,
         "• `hire <id> [days]` — varies by agent (reputation-gated)",
         "• `pay <wallet> <usdc>` — direct USDC transfer on Kite",
         "",

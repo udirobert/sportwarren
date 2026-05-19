@@ -29,9 +29,18 @@ SportWarren is a first-class participant in the Kite Agentic Economy. Every **Sq
 ### x402 Protocol Implementation
 We use the **x402 (Payment Required)** protocol for autonomous agent-to-agent commerce.
 
-- **Autonomous Spending:** Squad manager agents are authorized via `KiteSession` budgets to procure services (e.g., scouting).
-- **Settlement:** Payments are signed via EIP-3009 and settled via the **Pieverse Facilitator** on Kite Testnet.
+- **Autonomous Spending:** Squad manager agents are authorized via `KiteSession` budgets to procure external services.
+- **Settlement:** External paid services use Kite Passport/x402 execution and facilitator settlement on Kite Testnet when the merchant host is supported by Passport discovery.
 - **Attestations:** Every action (match result, scout report, wage payment) is recorded as a cryptographically signed attestation with a valid schema type (`player` | `squad` | `match` | `agent`).
+- **Internal Scout Path:** WhatsApp and cron scout commands call the shared `createScoutReport` service directly, enforce budgets, and persist a SportWarren attestation receipt. The public `/api/x402/scout` route remains the external paid x402 surface.
+
+### Receipt Model
+SportWarren distinguishes two receipt types:
+
+1. **SportWarren attestation receipts** — compact ids such as `internal-scout-...`, used for internal autonomous actions where no external payment transaction is created.
+2. **Kite transaction receipts** — real tx hashes from direct Kite transfers or supported x402 settlements, safe to link to KiteScan.
+
+The product should not label internal attestation ids as KiteScan transactions.
 
 ### Economic Guards
 The x402 scout economy enforces a **dual spending cap** to prevent abuse:
@@ -40,7 +49,7 @@ The x402 scout economy enforces a **dual spending cap** to prevent abuse:
 2. **Per-squad daily limit** — `KITE_SCOUT_MAX_USDC_SQUAD` (default 2.50 USDC/squad/day). Shared across all squad members — 5 players on the same squad share one pool.
 3. **Platform payout budget** — `KITE_DAILY_PAYOUT_BUDGET_USDC` (default 200 USDC/day). Cap on total agent-initiated payouts.
 
-All three guards are checked in the WhatsApp agent scout handler **and** the direct `/api/x402/scout` route, so no path bypasses the economy.
+The user and squad guards are checked in the WhatsApp agent scout handler and the direct `/api/x402/scout` route, so no scout path bypasses the budget model.
 
 ---
 

@@ -23,8 +23,11 @@ SportWarren transforms amateur football with:
 Experience the **Kite Agentic Economy** live from your phone. No wallet, no app, just one message.
 
 1. **Message Marcus:** Text `hi` to **+1 (201) 534-5384**.
-2. **Run a Paid Scout:** Text `scout Liverpool`.
-3. **Observe:** The platform's squad agent autonomously pays $0.50 USDC on the **Kite Testnet** and provides an on-chain receipt.
+2. **Run a Scout:** Text `scout Liverpool`.
+3. **Observe:** The platform's squad agent generates a scouting report, records a SportWarren Kite attestation receipt, and updates the daily scout budget.
+4. **Inspect Receipts:** Run `scouts` or `attestations` to review prior reports and settlement records.
+
+For hackathon review: WhatsApp scout receipts are internal SportWarren attestation ids. External x402 services still use the paid `/api/x402/scout` surface and Kite Passport settlement path when the merchant host is supported by Passport discovery.
 
 **Commands:** `whoami`, `budget`, `attestations`, `cost`, `trigger-auto-scout`, `help`.
 
