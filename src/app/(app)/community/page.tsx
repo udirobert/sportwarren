@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { Target, Users, Trophy, Star, Shield, Swords, Clock, Brain, X } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
+import { PageShell } from "@/components/common/PageShell";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getJourneyZeroState } from "@/lib/journey/content";
 import { getMatchStatusLabel, isSettledMatchStatus } from "@/lib/match/summary";
@@ -56,7 +57,7 @@ function CommunityPageInner() {
         : `${primarySquad?.name || 'Your squad'} is live but not ranked yet. One verified result puts it into the community graph.`;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom space-y-4 text-gray-900 dark:text-gray-100">
+    <PageShell className="space-y-4">
       {/* Contextual nav */}
       <Card className="border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -269,7 +270,7 @@ function CommunityPageInner() {
           </>
         )}
       </Card>
-    </div>
+    </PageShell>
   );
 }
 

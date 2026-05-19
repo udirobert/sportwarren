@@ -7,6 +7,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { useMySquads } from '@/hooks/squad/useSquad';
 import { usePlatformConnections } from '@/hooks/usePlatformConnections';
 import { Card } from '@/components/ui/Card';
+import { PageShell } from '@/components/common/PageShell';
 import { Button } from '@/components/ui/Button';
 import { trpc } from '@/lib/trpc-client';
 import { WalletConnectModal } from '@/components/common/WalletConnectModal';
@@ -282,7 +283,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 nav-spacer-top nav-spacer-bottom space-y-6">
+    <PageShell maxWidth="4xl" className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 bg-gray-900 dark:bg-gray-700 rounded-xl flex items-center justify-center">
@@ -949,6 +950,6 @@ export default function SettingsPage() {
         onClose={() => setShowWalletModal(false)}
         onConnected={() => setShowWalletModal(false)}
       />
-    </div>
+    </PageShell>
   );
 }

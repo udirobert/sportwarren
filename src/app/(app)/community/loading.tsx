@@ -1,9 +1,17 @@
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SoccerLoader } from "@/components/ui/SoccerLoader";
 
 export default function CommunityLoading() {
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom space-y-4 text-gray-900 dark:text-gray-100">
+      {/* Tactical Loading Indicator */}
+      <div className="flex items-center gap-3 px-2 mb-2">
+        <SoccerLoader size={20} />
+        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+          Loading Community
+        </span>
+      </div>
       {/* Context bar */}
       <Card className="border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">

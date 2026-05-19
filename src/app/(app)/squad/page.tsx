@@ -8,6 +8,7 @@ import { TacticsBoard } from "@/components/squad/TacticsBoard";
 import { TransferMarket } from "@/components/squad/TransferMarket";
 import { Treasury } from "@/components/squad/Treasury";
 import { JourneyGateCard } from "@/components/common/JourneyGateCard";
+import { PageShell } from "@/components/common/PageShell";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
@@ -440,7 +441,7 @@ export default function SquadPage() {
 
   if (squadWorkspaceGate.status === "blocked" && !showSample) {
     return (
-      <div className="max-w-4xl mx-auto px-4 py-8 md:py-12 nav-spacer-top nav-spacer-bottom text-gray-900 dark:text-gray-100 space-y-4">
+      <PageShell maxWidth="4xl">
         <SquadPreview
           title={squadWorkspaceGate.title}
           description={squadWorkspaceGate.description}
@@ -456,12 +457,12 @@ export default function SquadPage() {
           onCreateSquad={squadWorkspaceGate.reason === 'missing_squad' ? () => setShowCreateSquadFlow(true) : undefined}
           onJoinSquad={squadWorkspaceGate.reason === 'missing_squad' ? () => setShowJoinSquadFlow(true) : undefined}
         />
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="max-w-6xl mx-auto px-4 py-4 md:py-6 nav-spacer-top nav-spacer-bottom space-y-4 md:space-y-6 text-gray-900 dark:text-gray-100 relative">
+    <PageShell ref={pullRef as React.RefObject<HTMLDivElement>} className="space-y-4 md:space-y-6 relative">
       {showSample && (
         <div className="bg-blue-600 text-white px-4 py-2 rounded-xl flex items-center justify-between shadow-lg animate-in slide-in-from-top duration-300">
           <div className="flex items-center gap-2">
@@ -862,6 +863,6 @@ export default function SquadPage() {
       {activeTab === 'settings' && (
         <SquadAutonomySettings squadId={activeSquadId} />
       )}
-    </div>
+    </PageShell>
   );
 }

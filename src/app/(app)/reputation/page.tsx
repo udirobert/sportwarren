@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { Target, History, CheckCircle, Clock, Trophy, Shield, Star } from "lucide-react";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
 import { ContextualNavCard } from "@/components/common/ContextualNavCard";
+import { PageShell } from "@/components/common/PageShell";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getJourneyZeroState } from "@/lib/journey/content";
 import { describeMatchForSquad, isSettledMatchStatus } from "@/lib/match/summary";
@@ -43,7 +44,7 @@ function ReputationPageInner() {
         : `${primarySquad?.name || 'Your squad'} is ready for its first proof-backed result. One verified match starts the reputation curve.`;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom space-y-4 text-gray-900 dark:text-gray-100">
+    <PageShell className="space-y-4">
       <ContextualNavCard
         contextMessage={reputationContext}
         actions={[
@@ -189,7 +190,7 @@ function ReputationPageInner() {
           <AchievementGallery />
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
 

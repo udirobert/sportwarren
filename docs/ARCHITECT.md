@@ -90,7 +90,7 @@ Avalanche Fuji serves as the settlement layer for squad governance and high-valu
 | Layer | Technology |
 |-------|-----------|
 | **Frontend** | Next.js 16, Tailwind CSS, shadcn/ui |
-| **State** | Zustand, TanStack Query |
+| **State** | TanStack Query, React Context |
 | **API** | tRPC (type-safe RPC) |
 | **Database** | PostgreSQL 15, Prisma 7 |
 | **Auth** | Multi-chain wallet signatures |

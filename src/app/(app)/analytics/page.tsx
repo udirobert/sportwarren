@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { PageShell } from "@/components/common/PageShell";
 import { Card } from "@/components/ui/Card";
 import { Target, BarChart3, TrendingUp, TrendingDown, Minus, Star, RefreshCcw, Trash2 } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
@@ -121,7 +122,7 @@ function AnalyticsPageInner() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom space-y-4 text-gray-900 dark:text-gray-100">
+    <PageShell className="space-y-4">
       {/* Contextual nav */}
       <Card className="border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -336,7 +337,7 @@ function AnalyticsPageInner() {
           </Card>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { Trophy, Star, Shield, ArrowLeft, TrendingUp } from "lucide-react";
 import { trpc } from "@/lib/trpc-client";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
+import { PageShell } from "@/components/common/PageShell";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useJourneyState } from "@/hooks/useJourneyState";
 import { PlayerAvatar } from "@/components/ui/PlayerAvatar";
@@ -45,7 +46,7 @@ function LeaderboardPageInner() {
   useJourneyState();
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom space-y-6 text-gray-900 dark:text-gray-100">
+    <PageShell maxWidth="4xl" className="space-y-6">
       <div className="flex items-center gap-4">
         <Link href="/community">
           <Button variant="outline" size="sm" className="rounded-full w-8 h-8 p-0">
@@ -188,7 +189,7 @@ function LeaderboardPageInner() {
           </Link>
         </div>
       </Card>
-    </div>
+    </PageShell>
   );
 }
 
