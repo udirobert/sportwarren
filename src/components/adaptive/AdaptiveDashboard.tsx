@@ -22,8 +22,7 @@ import { getJourneyZeroState } from '@/lib/journey/content';
 import { useActiveSquad } from '@/contexts/ActiveSquadContext';
 import { useOnboarding } from '@/hooks/useOnboarding';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
-import { QuickPersonalization } from '@/components/onboarding/QuickPersonalization';
-import { GuestTour } from '@/components/onboarding/GuestTour';
+import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import { trpc } from '@/lib/trpc-client';
 import { getDashboardEntryState, type DashboardEntryAction } from '@/lib/dashboard/entry-state';
 import { useTactics } from '@/hooks/squad/useTactics';
@@ -238,12 +237,12 @@ export const AdaptiveDashboard: React.FC = () => {
     if (!allChecklistDone && !personalizationDone) {
       if (!isGuest) {
         widgets.push({
-          id: 'quick-personalization',
+          id: 'onboarding-flow',
           priority: 1000,
           requiredLevel: 'basic',
           category: 'stats',
           component: (
-            <QuickPersonalization onComplete={() => setPersonalizationDone(true)} journeyStage={entryState.id} />
+            <OnboardingFlow journeyStage={entryState.id} onComplete={() => setPersonalizationDone(true)} />
           ),
         });
       }
@@ -1147,7 +1146,7 @@ export const AdaptiveDashboard: React.FC = () => {
           </div>
         </div>
 
-        <GuestTour onVisibilityChange={setIsTourActive} />
+        <OnboardingFlow onVisibilityChange={setIsTourActive} journeyStage={entryState.id} />
         {!isTourActive && <AgenticConcierge journeyStage={entryState.id} />}
 
         {/* Floating Action Button — pulsing for new users */}
@@ -1169,7 +1168,7 @@ export const AdaptiveDashboard: React.FC = () => {
       {showOnboardingOverlay && (
         <div className="fixed inset-0 z-[200] bg-gray-950/95 backdrop-blur-sm flex items-center justify-center p-4 nav-spacer-top">
           <div className="w-full max-w-lg">
-            <QuickPersonalization
+            <OnboardingFlow
               onComplete={() => setPersonalizationDone(true)}
               journeyStage={entryState.id}
             />
@@ -1353,7 +1352,7 @@ export const AdaptiveDashboard: React.FC = () => {
         </Card>
       </div>
 
-      <GuestTour onVisibilityChange={setIsTourActive} />
+      <OnboardingFlow onVisibilityChange={setIsTourActive} journeyStage={entryState.id} />
       {!isTourActive && <AgenticConcierge journeyStage={entryState.id} />}
 
       {/* Next-action focus strip — shows the single most important thing to do */}
