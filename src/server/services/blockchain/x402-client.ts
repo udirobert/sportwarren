@@ -349,6 +349,18 @@ export async function settleWithFacilitator(
       body,
       { timeout: 10_000, validateStatus: () => true },
     );
+    const hadError = res.data?.error ? typeof res.data.error === 'string' ? res.data.error : JSON.stringify(res.data.error) : undefined;
+    if (hadError) {
+      return {
+        success: false,
+        network: reqs.network,
+        facilitator: cfg.facilitatorAddress,
+        payer: getPayer(envelope),
+        payee: reqs.payTo,
+        amount: getPaymentPayloadAmount(envelope, reqs),
+        error: hadError,
+      };
+    }
     if (res.status >= 200 && res.status < 300 && res.data?.success !== false) {
       return {
         success: true,
