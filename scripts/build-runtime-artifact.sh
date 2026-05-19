@@ -33,6 +33,8 @@ cp -R .next/standalone "$BUILD_DIR/.next/standalone"
 cp -R .next/static "$BUILD_DIR/.next/static"
 cp -R public "$BUILD_DIR/public"
 cp -R prisma "$BUILD_DIR/prisma"
+mkdir -p "$BUILD_DIR/scripts"
+cp scripts/deploy-runtime-release.sh "$BUILD_DIR/scripts/deploy-runtime-release.sh"
 cp package.json "$BUILD_DIR/package.json"
 cp ecosystem.config.cjs "$BUILD_DIR/ecosystem.config.cjs"
 
