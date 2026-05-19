@@ -8,7 +8,7 @@
  *     `Attestation` on the Kite chain record, returns the report
  *     and settlement tx.
  *
- * Default price: KITE_SCOUT_PRICE_USDC (env, default 0.05 testnet token).
+ * Default price: KITE_SCOUT_PRICE_USDC (env, default 0.005 testnet token).
  * Used by the WhatsApp `scout <opponent>` command via
  * KITE_SCOUT_SERVICE_URL, but any agent can call it directly.
  */
@@ -27,9 +27,12 @@ import { generateInference } from '@/lib/ai/inference';
 import { AGENT_PERSONAS } from '@/server/services/ai/prompts';
 import { kiteAIService } from '@/server/services/ai/kite';
 
-const SCOUT_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || '0.05');
+const SCOUT_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || '0.005');
 
 function getPayToAddress(): string {
+  const configuredPayTo = process.env.KITE_X402_PAY_TO_ADDRESS?.trim();
+  if (configuredPayTo) return ethers.getAddress(configuredPayTo);
+
   const pk = process.env.WEB3_PRIVATE_KEY?.trim();
   if (!pk) throw new Error('WEB3_PRIVATE_KEY not configured');
   return new ethers.Wallet(pk).address;

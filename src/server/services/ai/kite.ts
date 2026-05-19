@@ -366,7 +366,7 @@ export class KiteAIService {
   }
 
   // -----------------------------------------------------------------------
-  // Spending sessions (mirrors `kpass agent:session create/...`)
+  // Spending sessions (local budget guard for Kite Passport paid calls)
   // -----------------------------------------------------------------------
 
   async createSession(input: {
@@ -424,8 +424,7 @@ export class KiteAIService {
   // -----------------------------------------------------------------------
 
   /**
-   * Execute a paid x402 request on behalf of an agent. Mirrors:
-   *   `kpass agent:session execute --url ... --method ...`
+   * Execute a paid x402 request on behalf of an agent through Kite Passport.
    *
    * Persists an `Attestation` row for every successful settlement.
    */
@@ -496,9 +495,9 @@ export class KiteAIService {
           payload: {
             url: input.url,
             method: input.method ?? 'GET',
-            body: input.body ?? null,
-            response: result.data ?? null,
-          },
+            body: input.body ?? Prisma.JsonNull,
+            response: result.data ?? Prisma.JsonNull,
+          } as Prisma.InputJsonValue,
           signerAgentId: agent.id,
           network: result.payment.network,
           txHash: result.payment.txHash,
@@ -593,7 +592,7 @@ export class KiteAIService {
       ['function transfer(address to, uint256 value) returns (bool)'],
       wallet,
     );
-    const value = ethers.parseUnits(amountUsdc.toFixed(6), 6);
+    const value = ethers.parseUnits(amountUsdc.toFixed(6), cfg.assetDecimals);
     const tx = await erc20.transfer(to, value);
     const receipt = await tx.wait();
     return receipt?.hash ?? tx.hash;

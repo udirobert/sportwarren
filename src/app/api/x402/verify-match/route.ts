@@ -27,6 +27,9 @@ const VERIFY_PRICE_USDC = 0.10;
 
 // Platform wallet that receives payments
 function getPayToAddress(): string {
+  const configuredPayTo = process.env.KITE_X402_PAY_TO_ADDRESS?.trim();
+  if (configuredPayTo) return ethers.getAddress(configuredPayTo);
+
   const pk = process.env.WEB3_PRIVATE_KEY?.trim();
   if (!pk) throw new Error('WEB3_PRIVATE_KEY not configured');
   return new ethers.Wallet(pk).address;

@@ -279,7 +279,7 @@ describe('x402 scout route', () => {
       expect(body.error).toMatch(/daily scout limit/i);
       expect(body.limitUsdc).toBe(5);
       expect(body.remaining).toBe(0);
-      expect(mockCheckUserSpending).toHaveBeenCalledWith('user_over', 0.05, 5);
+      expect(mockCheckUserSpending).toHaveBeenCalledWith('user_over', 0.005, 5);
       expect(mockPrismaAttestationCreate).not.toHaveBeenCalled();
     });
 
