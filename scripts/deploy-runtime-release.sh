@@ -29,6 +29,10 @@ mkdir -p "$SHARED_DIR/storage"
 tar -C "$RELEASE_DIR" -xzf "$ARTIFACT_PATH"
 ln -sfn "$SHARED_DIR/storage" "$RELEASE_DIR/storage"
 
+if [ -d "$SHARED_DIR/.kite-passport" ]; then
+  ln -sfn "$SHARED_DIR/.kite-passport" "$RELEASE_DIR/.kite-passport"
+fi
+
 if [ -f "$SHARED_DIR/.env" ]; then
   ln -sfn "$SHARED_DIR/.env" "$RELEASE_DIR/.env"
   # Next.js standalone loads .env from the directory containing server.js, not
