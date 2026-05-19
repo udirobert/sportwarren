@@ -27,7 +27,7 @@ import { generateInference } from "@/lib/ai/inference";
 
 const EXPLORER_BASE = process.env.KITE_EXPLORER_URL || "https://testnet.kitescan.ai";
 const SCOUT_SERVICE_URL = process.env.KITE_SCOUT_SERVICE_URL || "";
-const SCOUT_MAX_USDC = Number(process.env.KITE_SCOUT_MAX_USDC || "0.50");
+const SCOUT_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || "0.05");
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "sportwarrenbot";
 
 // ── Pending confirmations (in-memory, per-conversation) ────────────
@@ -53,7 +53,7 @@ A grassroots football platform with on-chain AI agents. Every squad has an auton
 COMMANDS (case-insensitive)
 - help — show this list
 - find <query> — discover paid services on Kite (e.g. find scout, find coach)
-- scout <opponent> — your agent buys an AI scouting report on an opponent; settles on Kite, ~$0.50
+- scout <opponent> — your agent buys an AI scouting report on an opponent; settles on Kite, ~${SCOUT_PRICE_USDC.toFixed(2)}
 - scouts — list your recent scouting reports with explorer links
 - budget — show how much scouting budget you have left today
 - hire <agentId> [days] — delegate work to another agent for N days; gated by reputation
@@ -100,7 +100,7 @@ const HELP = [
   "SportWarren gives your squad an on-chain manager agent on Kite Testnet. From WhatsApp you can scout opponents, check budget, review receipts, and trigger simple squad operations; Telegram handles account linking and treasury top-ups.",
   "",
   "Scouting",
-  "• `scout <opponent>`  – paid AI scouting report ($0.50 USDC)",
+  `• \`scout <opponent>\`  – paid AI scouting report (${SCOUT_PRICE_USDC.toFixed(2)} testnet token)`,
   "• `tinyfish scout <opponent>` – free real-web scouting report",
   "• `scouts`           – show your recent reports with explorer links",
   "• `budget`           – how much scout budget remains today",
@@ -454,7 +454,7 @@ export async function dispatchWhatsAppCommand(
           pendingConfirmations.set(from, {
             cmd: 'scout', args, from, createdAt: Date.now(),
           });
-          return `🛑 This will cost ~${SCOUT_MAX_USDC.toFixed(2)} USDC. Reply \`yes\` to confirm and proceed.`;
+          return `🛑 This will cost ~${SCOUT_PRICE_USDC.toFixed(2)} testnet token. Reply \`yes\` to confirm and proceed.`;
         }
       }
 
@@ -463,7 +463,7 @@ export async function dispatchWhatsAppCommand(
       // settlement, so failed calls do not burn budget.
       const userLimit = kiteAIService.getScoutUserDailyLimit(actor.userId);
       const userSpending = await kiteAIService.getUserSpending(actor.userId, userLimit);
-      if (userLimit > 0 && userSpending.remaining < SCOUT_MAX_USDC) {
+      if (userLimit > 0 && userSpending.remaining < SCOUT_PRICE_USDC) {
         return [
           `❌ Your daily scout limit is reached (${userLimit.toFixed(2)} USDC/person).`,
           `Spent: $${userSpending.spent.toFixed(2)} · Remaining: $${userSpending.remaining.toFixed(2)}`,
@@ -474,7 +474,7 @@ export async function dispatchWhatsAppCommand(
       if (actor.squadId) {
         const squadLimit = kiteAIService.getScoutSquadDailyLimit(actor.squadId);
         const squadSpending = await kiteAIService.getSquadSpending(actor.squadId, squadLimit);
-        if (squadLimit > 0 && squadSpending.remaining < SCOUT_MAX_USDC) {
+        if (squadLimit > 0 && squadSpending.remaining < SCOUT_PRICE_USDC) {
           return [
             `❌ Squad daily scout limit is reached (${squadLimit.toFixed(2)} USDC/squad).`,
             `Spent: $${squadSpending.spent.toFixed(2)} · Remaining: $${squadSpending.remaining.toFixed(2)}`,
@@ -490,8 +490,8 @@ export async function dispatchWhatsAppCommand(
         await kiteAIService.createSession({
           agentId: manager.id,
           taskSummary: `WhatsApp scout: ${opponent}`,
-          maxPerTxUsdc: SCOUT_MAX_USDC,
-          maxTotalUsdc: SCOUT_MAX_USDC * 5, // Allow a few reports per session
+          maxPerTxUsdc: SCOUT_PRICE_USDC,
+          maxTotalUsdc: SCOUT_PRICE_USDC * 20, // Allow repeated testnet scouting in one session.
           ttlSeconds: 3600,
           scope: { source: "whatsapp", opponent },
           approvedBy: actor.userId,
@@ -503,7 +503,7 @@ export async function dispatchWhatsAppCommand(
         url: SCOUT_SERVICE_URL,
         method: "POST",
         body: { opponent, requestedBy: actor.userId },
-        maxAmountUsdc: SCOUT_MAX_USDC,
+        maxAmountUsdc: SCOUT_PRICE_USDC,
         subject: { type: "squad", id: actor.squadId },
         kind: "scout_report",
       });
@@ -566,8 +566,8 @@ export async function dispatchWhatsAppCommand(
         await kiteAIService.createSession({
           agentId: manager.id,
           taskSummary: `Demo trigger: auto-scout ${opponent}`,
-          maxPerTxUsdc: SCOUT_MAX_USDC,
-          maxTotalUsdc: SCOUT_MAX_USDC * 5,
+          maxPerTxUsdc: SCOUT_PRICE_USDC,
+          maxTotalUsdc: SCOUT_PRICE_USDC * 20,
           ttlSeconds: 600,
           scope: { source: 'whatsapp-trigger', opponent },
           approvedBy: actor.userId,
@@ -579,7 +579,7 @@ export async function dispatchWhatsAppCommand(
         url: SCOUT_SERVICE_URL,
         method: 'POST',
         body: { opponent, requestedBy: actor.userId },
-        maxAmountUsdc: SCOUT_MAX_USDC,
+        maxAmountUsdc: SCOUT_PRICE_USDC,
         subject: { type: 'squad', id: actor.squadId },
         kind: 'scout_report',
       });
@@ -601,7 +601,7 @@ export async function dispatchWhatsAppCommand(
         `✅ *Settled on Kite*`,
         `Receipt: ${txUrl}`,
         dataSourceLine,
-        `Price: ${SCOUT_MAX_USDC.toFixed(2)} USDC`,
+        `Price: ${SCOUT_PRICE_USDC.toFixed(2)} testnet token`,
         '',
         'This is what the autonomous cron does 24h before every match. Try `help` to see all commands.',
       ].join('\n');
@@ -702,10 +702,10 @@ export async function dispatchWhatsAppCommand(
       const tips: string[] = [];
       if (userLimit <= 0) {
         tips.push("Dev override active: no daily per-user scout cap.");
-      } else if (spending.remaining >= SCOUT_MAX_USDC) {
+      } else if (spending.remaining >= SCOUT_PRICE_USDC) {
         tips.push("You have a full daily budget — try `scout <opponent>` to start.");
       } else if (spending.remaining > 0) {
-        tips.push(`You can still scout \`${Math.floor(spending.remaining / SCOUT_MAX_USDC)}\` more opponent(s) today.`);
+        tips.push(`You can still scout \`${Math.floor(spending.remaining / SCOUT_PRICE_USDC)}\` more opponent(s) today.`);
       } else {
         tips.push("Limit resets tomorrow. `tinyfish scout <opponent>` is free while you wait.");
       }
@@ -783,7 +783,7 @@ export async function dispatchWhatsAppCommand(
       return [
         "💳 *Service Pricing*",
         "",
-        "• `scout <opponent>` — $0.50 USDC (AI scouting report + Kite attestation)",
+        `• \`scout <opponent>\` — ${SCOUT_PRICE_USDC.toFixed(2)} testnet token (AI scouting report + Kite attestation)`,
         "• `hire <id> [days]` — varies by agent (reputation-gated)",
         "• `pay <wallet> <usdc>` — direct USDC transfer on Kite",
         "",

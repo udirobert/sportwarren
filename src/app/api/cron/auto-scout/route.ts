@@ -19,7 +19,7 @@ import { tinyfishService, tinyfishConfigured } from '@/server/services/ai/tinyfi
 import { WhatsAppService } from '@/server/services/communication/whatsapp';
 
 const EXPLORER_BASE = process.env.KITE_EXPLORER_URL || 'https://testnet.kitescan.ai';
-const SCOUT_AUTO_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || '0.50');
+const SCOUT_AUTO_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || '0.05');
 const SCOUT_AUTO_MAX_USDC = Number(process.env.KITE_SCOUT_MAX_USDC || '0.50');
 
 function fmtTx(txHash: string | undefined | null): string {
