@@ -61,8 +61,6 @@ vercel --prod
 ### Hetzner (Standalone Runtime)
 For the long-term production API, we use a lean **runtime-only artifact** on Hetzner via PM2. This avoids keeping the full source code on the server.
 
-For detailed server bootstrap, PM2 gotchas, and release management, see **[DEPLOY_HETZNER_RUNTIME.md](./DEPLOY_HETZNER_RUNTIME.md)**.
-
 #### 1. Build Artifact
 ```bash
 npm run deploy:runtime:build
@@ -92,6 +90,16 @@ npm run build
 ```
 
 **Known Warnings:** Deprecated `punycode` and missing Redis are non-fatal; the system handles them gracefully.
+
+---
+
+## 🎨 UX Principle
+
+**"Tactics before Tasks"**: Every user flow should answer "How do we win?" before asking "What happened?".
+
+- Landing page leads with Tactical Simulation and Match Preview, not match logging
+- Onboarding guides users toward tactical setup before operational tasks
+- Match Center defaults to preview mode, with capture secondary
 
 ---
 
