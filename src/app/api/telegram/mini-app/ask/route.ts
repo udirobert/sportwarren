@@ -63,7 +63,13 @@ export async function POST(request: NextRequest) {
   });
 
   const treasury = activeSquad.treasury;
-  const recentTransactions = treasury?.transactions ?? [];
+  const recentTransactions = treasury
+    ? await prisma.treasuryTransaction.findMany({
+        where: { treasuryId: treasury.id },
+        orderBy: { createdAt: 'desc' },
+        take: 10,
+      })
+    : [];
 
   const contextLines = [
     `Club: ${activeSquad.name}`,
