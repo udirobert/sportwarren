@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { PageShell } from '@/components/common/PageShell';
 import { MatchPreviewCard } from '@/components/match/MatchPreviewCard';
 import { MatchEnginePreview } from '@/components/dashboard/MatchEnginePreview';
 import { trpc } from '@/lib/trpc-client';
@@ -175,7 +176,7 @@ function getRolePosition(role: string): string {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 nav-spacer-top">
       {/* Header */}
       <div className="bg-gradient-to-r from-green-900 to-emerald-900 px-4 py-6">
         <div className="max-w-4xl mx-auto">

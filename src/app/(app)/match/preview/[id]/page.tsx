@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { PageShell } from '@/components/common/PageShell';
 import { MatchPreviewCard } from '@/components/match/MatchPreviewCard';
 import { useActiveSquad } from '@/contexts/ActiveSquadContext';
 import { useTactics } from '@/hooks/squad/useTactics';
@@ -38,15 +39,15 @@ export default function MatchPreviewPage() {
 
   if (isLoading) {
     return (
-      <div className="max-w-4xl mx-auto p-4 space-y-6 nav-spacer-top">
+      <PageShell maxWidth="4xl">
         <Skeleton className="h-10 w-32" />
         <Skeleton className="h-96 w-full" />
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 nav-spacer-top nav-spacer-bottom space-y-8">
+    <PageShell maxWidth="4xl" className="space-y-8">
       <div className="flex items-center justify-between">
         <Button variant="ghost" onClick={() => router.back()} className="flex items-center gap-2">
           <ChevronLeft className="w-4 h-4" />
@@ -131,6 +132,6 @@ export default function MatchPreviewPage() {
           <Button variant="secondary">Log Result</Button>
         </Link>
       </Card>
-    </div>
+    </PageShell>
   );
 }

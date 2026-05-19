@@ -1339,3 +1339,37 @@ model WaitlistSignup {
   @@unique([email])
   @@map("waitlist_signups")
 }
+
+// ============================================================================
+// EVENTS & NOTIFICATIONS
+// ============================================================================
+
+model ActivityEvent {
+  id        String   @id @default(cuid())
+  type      String   @map("type")
+  squadId   String?  @map("squad_id")
+  matchId   String?  @map("match_id")
+  playerId  String?  @map("player_id")
+  source    String   @default("app") @map("source")
+  data      Json?    @map("data")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([squadId, createdAt])
+  @@index([playerId, createdAt])
+  @@index([type, createdAt])
+  @@map("activity_events")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  type      String   @map("type")
+  title     String   @map("title")
+  message   String?  @map("message")
+  data      Json?    @map("data")
+  read      Boolean  @default(false) @map("read")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, read, createdAt])
+  @@map("notifications")
+}
