@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockPlatformIdentityFindUnique = vi.hoisted(() => vi.fn());
 const mockGenerateInference = vi.hoisted(() => vi.fn());
+const mockCreateScoutReport = vi.hoisted(() => vi.fn());
 
 vi.mock('@/lib/db', () => ({
   prisma: {
@@ -51,6 +52,10 @@ vi.mock('@/server/services/ai/tinyfish', () => ({
     fetch: vi.fn(),
     scout: vi.fn(),
   },
+}));
+
+vi.mock('@/server/services/ai/scout-report', () => ({
+  createScoutReport: mockCreateScoutReport,
 }));
 
 vi.mock('@/server/services/blockchain/x402-client', () => ({
@@ -121,5 +126,40 @@ describe('WhatsApp agent command discovery', () => {
     expect(reply).toContain('I can help once this WhatsApp is linked.');
     expect(reply).toContain('To unlock full commands');
     expect(reply).toContain('https://t.me/sportwarrenbot');
+  });
+
+  it('runs linked WhatsApp scouts through the internal scout service', async () => {
+    mockPlatformIdentityFindUnique.mockResolvedValue({
+      userId: 'user_1',
+      user: {
+        name: 'Papa',
+        email: null,
+        squads: [{ squadId: 'squad_1' }],
+      },
+    });
+    mockCreateScoutReport.mockResolvedValue({
+      opponent: 'Liverpool',
+      summary: 'Liverpool press high, leave space behind fullbacks, and can be attacked early.',
+      attestationId: 'att_1',
+      txHash: 'internal-scout-1',
+      simulated: true,
+      network: 'kite-testnet',
+      priceUsdc: 0.005,
+      dataSources: ['no stored match data - report is AI-generated from general knowledge only'],
+      subjectType: 'squad',
+      subjectId: 'squad_1',
+    });
+
+    const reply = await dispatchWhatsAppCommand('scout Liverpool', '447852705196');
+
+    expect(mockCreateScoutReport).toHaveBeenCalledWith(expect.objectContaining({
+      opponent: 'Liverpool',
+      requestedBy: 'user_1',
+      enforceUserLimit: true,
+      enforceSquadLimit: true,
+    }));
+    expect(reply).toContain('Scouting Report');
+    expect(reply).toContain('Recorded on Kite');
+    expect(reply).toContain('internal-scout-1');
   });
 });
