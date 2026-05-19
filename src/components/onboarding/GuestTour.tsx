@@ -10,6 +10,7 @@ import {
     Cpu,
     Zap,
     MousePointer2,
+    Brain,
 } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
@@ -53,6 +54,15 @@ const TOUR_STEPS: TourStep[] = [
         icon: Cpu,
         position: 'left',
         checklistId: 'set_formation',
+    },
+    {
+        id: 'meet-coach',
+        targetId: 'match-engine',
+        title: "Meet Coach Kite",
+        content: "Your AI squad manager scouts opponents, suggests lineups, and handles operations automatically. The blockchain works for you — no crypto knowledge needed.",
+        emoji: '🤖',
+        icon: Brain,
+        position: 'right',
     },
     {
         id: 'claim-identity',
