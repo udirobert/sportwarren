@@ -32,7 +32,10 @@ const DEFAULT_FACILITATOR_ADDRESS = '0x12343e649e6b2b2b77649DFAb88f103c02F3C78b'
 const DEFAULT_USDC = '0x0fF5393387ad2f9f691FD6Fd28e07E3969e27e63';
 const DEFAULT_KITE_RPC = 'https://rpc-testnet.gokite.ai';
 const DEFAULT_KITE_CHAIN_ID = 2368;
-const DEFAULT_X402_VERSION = 2;
+// Kite/Pieverse currently documents `gokite-aa` on `kite-testnet` with an
+// x402 v1 payment payload, even though the facilitator endpoint is `/v2/settle`.
+// Keep v2 parsing support for compatibility, but default Kite settlement to v1.
+const DEFAULT_X402_VERSION = 1;
 
 type X402Version = 1 | 2;
 

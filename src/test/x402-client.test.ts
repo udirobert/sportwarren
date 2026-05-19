@@ -49,10 +49,49 @@ describe('x402 client settlement', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     delete process.env.KITE_X402_SIMULATE;
-    process.env.KITE_X402_VERSION = '2';
+    delete process.env.KITE_X402_VERSION;
   });
 
-  it('posts the v2 canonical settlement body to the facilitator', async () => {
+  it('defaults Kite/Pieverse settlement to the v1 gokite-aa body', async () => {
+    mockAxiosPost.mockResolvedValue({
+      status: 200,
+      data: { success: true, txHash: '0xTxHash' },
+    });
+
+    const result = await settleWithFacilitator(
+      { ...envelope, x402Version: undefined },
+      { ...requirements, x402Version: undefined },
+    );
+
+    expect(result.success).toBe(true);
+    expect(result.txHash).toBe('0xTxHash');
+    expect(mockAxiosPost).toHaveBeenCalledWith(
+      expect.stringMatching(/\/v2\/settle$/),
+      expect.objectContaining({
+        x402Version: 1,
+        paymentPayload: expect.objectContaining({
+          x402Version: 1,
+          scheme: 'gokite-aa',
+          network: 'kite-testnet',
+          payload: {
+            authorization: envelope.authorization,
+            signature: '0xSig',
+            asset: '0xUSDC',
+          },
+        }),
+        paymentRequirements: expect.objectContaining({
+          scheme: 'gokite-aa',
+          network: 'kite-testnet',
+          maxAmountRequired: '500000',
+          asset: '0xUSDC',
+        }),
+      }),
+      expect.objectContaining({ timeout: 10_000 }),
+    );
+  });
+
+  it('posts the v2 canonical settlement body to the facilitator when requested', async () => {
+    process.env.KITE_X402_VERSION = '2';
     mockAxiosPost.mockResolvedValue({
       status: 200,
       data: { success: true, txHash: '0xTxHash' },
