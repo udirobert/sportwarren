@@ -46,6 +46,31 @@ Lens Protocol provides a portable social graph and a distribution surface for "P
 
 ---
 
+## 🔗 Cross-Platform Linking
+
+Users link their WhatsApp number to their SportWarren account to unlock Kite Agentic Economy features (Scout, Hire, Pay, Status).
+
+### Linking Flow
+1. **Start on Telegram** — Open the SportWarren Telegram Bot and send `/linkwhatsapp`. The bot replies with a unique 6-character code.
+2. **Verify on WhatsApp** — Message **+1 (201) 534-5384** with `link <code>`. Marcus confirms the account is linked.
+
+### Security
+- Codes expire after **15 minutes**
+- Only one WhatsApp number per account
+- Phone numbers stored as platform identity hashes (never shared)
+
+### Command Access
+| Command | Unlinked | Linked |
+|---------|----------|--------|
+| `help` | ✅ | ✅ |
+| `find <query>` | ✅ | ✅ |
+| `status` | ❌ | ✅ |
+| `scout <opponent>` | ❌ | ✅ |
+| `hire <agentId>` | ❌ | ✅ |
+| `pay <wallet> <usdc>` | ❌ | ✅ |
+
+---
+
 ## ⛓️ Integration Strategy: The Adapter Pattern
 To prevent platform lock-in, SportWarren uses a provider boundary:
 
