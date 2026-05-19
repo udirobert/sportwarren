@@ -36,7 +36,7 @@ if [ -f "$SHARED_DIR/.env" ]; then
   # so runtime-only secrets (KAPSO_API_KEY, WHATSAPP_PHONE_NUMBER_ID, etc.)
   # come from shared/.env on every release.
   if [ -f "$RELEASE_DIR/.next/standalone/.env" ]; then
-    mv "$RELEASE_DIR/.next/standalone/.env" "$RELEASE_DIR/.next/standalone/.env.bak.baked"
+    rm -f "$RELEASE_DIR/.next/standalone/.env"
   fi
   ln -sfn "$SHARED_DIR/.env" "$RELEASE_DIR/.next/standalone/.env"
 fi
