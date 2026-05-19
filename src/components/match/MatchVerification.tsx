@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from 'react';
+import { ChainLabel } from '@/components/common/ChainLabel';
 import { Card } from '@/components/ui/Card';
 import { EmptyState } from '@/components/common/EmptyState';
 import {
@@ -259,7 +260,7 @@ export const MatchVerification: React.FC<MatchVerificationProps> = ({ squadId })
                           <div className="mt-2 flex items-center gap-1.5 animate-pulse">
                             <Zap className="w-2.5 h-2.5 text-emerald-500 fill-emerald-500" />
                             <span className="text-[9px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-                              Settling on Kite Chain
+                              Settling on <ChainLabel chain="kite" />
                             </span>
                           </div>
                         </div>

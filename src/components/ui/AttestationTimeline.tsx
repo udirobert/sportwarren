@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { ChainLabel } from '@/components/common/ChainLabel';
 import {
   AlertCircle,
   Brain,
@@ -69,7 +70,7 @@ export const AttestationTimeline: React.FC<AttestationTimelineProps> = ({
               <p className="text-xs font-medium italic leading-relaxed text-gray-700 dark:text-gray-300">
                 "
                 {marcusCommentary ||
-                  `I've been monitoring your Digital Twin's activity on the Kite Chain. The data shows clear progression in your tactical awareness and consistency. Keep this momentum.`}
+                  `I've been monitoring your Digital Twin's activity on the <ChainLabel chain="kite" />. The data shows clear progression in your tactical awareness and consistency. Keep this momentum.`}
                 "
               </p>
             </div>

@@ -19,6 +19,7 @@ import { useYellowSession } from '@/hooks/useYellowSession';
 import { useWallet } from '@/contexts/WalletContext';
 import { ContractNegotiationModal } from './ContractNegotiationModal';
 import { StaffAdvisor } from './StaffAdvisor';
+import { ChainLabel } from '@/components/common/ChainLabel';
 
 // Derive reputation tier from reputation score
 function reputationTierLabel(score: number): string {
@@ -699,7 +700,7 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                                     </div>
                                     <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter">Hire Experts</h2>
                                     <p className="text-gray-400 max-w-lg mx-auto">
-                                        Expand your backroom staff with specialized AI agents from the global Kite network. 
+                                        Expand your backroom staff with specialized AI agents from the global <ChainLabel chain="kite" />. 
                                         Each agent is a verified on-chain identity with unique tactical models.
                                     </p>
                                 </div>

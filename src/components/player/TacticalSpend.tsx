@@ -1,6 +1,7 @@
 'use client';
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
+import { ChainLabel } from '@/components/common/ChainLabel';
 import { SoccerLoader } from '@/components/ui/SoccerLoader';
 import { Wallet, Zap, ShieldCheck, ChevronRight, Minus, Plus } from 'lucide-react';
 
@@ -117,7 +118,7 @@ export const TacticalSpend: React.FC<TacticalSpendProps> = ({
                     <Zap className="w-3 h-3 animate-pulse" />
                     <span className="text-[10px] font-black uppercase tracking-widest">Signing x402 Auth</span>
                   </div>
-                  <p className="text-[9px] text-gray-400 px-4">Updating your Digital Twin's autonomous spending policy on the Kite Chain.</p>
+                  <p className="text-[9px] text-gray-400 px-4">Updating your Digital Twin's autonomous spending policy on the <ChainLabel chain="kite" />.</p>
                 </div>
               </>
             ) : (
