@@ -22,13 +22,81 @@ import { kiteAIService } from "../ai/kite";
 import { autonomyPolicy, type AutonomyLevel } from "../ai/autonomy-policy";
 import { tinyfishService, tinyfishConfigured } from "../ai/tinyfish";
 import { createScoutReport } from "../ai/scout-report";
-import { readX402Config } from "../blockchain/x402-client";
+import {
+  readX402Config,
+  settleWithFacilitator,
+  buildPaymentRequirements,
+  getPlatformWallet,
+  type SettlementResult,
+} from "../blockchain/x402-client";
 import { redisService } from "../redis";
 import { generateInference } from "@/lib/ai/inference";
 
 const EXPLORER_BASE = process.env.KITE_EXPLORER_URL || "https://testnet.kitescan.ai";
 const SCOUT_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || "0.005");
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "sportwarrenbot";
+
+/**
+ * Create a platform-attested settlement for internal WhatsApp scout requests.
+ *
+ * Uses the platform wallet to construct a self-payment envelope and submits
+ * it to the x402 facilitator. If the facilitator is unreachable or rejects,
+ * falls back to a simulated settlement so the user flow is never blocked.
+ */
+async function createPlatformSettlement(amountUsdc: number): Promise<SettlementResult> {
+  const cfg = readX402Config();
+  const platformWallet = getPlatformWallet();
+
+  if (!platformWallet) {
+    return {
+      success: true,
+      simulated: true,
+      network: cfg.network,
+      facilitator: 'sportwarren-internal',
+      payer: 'unknown',
+      payee: 'unknown',
+      amount: '0',
+    };
+  }
+
+  const requirements = buildPaymentRequirements({
+    payTo: platformWallet,
+    amountUsdc,
+    description: `SportWarren WhatsApp scout (${amountUsdc.toFixed(3)} USDC)`,
+    merchantName: 'SportWarren',
+  });
+
+  // Construct a self-payment envelope
+  const envelope = {
+    payload: {
+      authorization: {
+        from: platformWallet,
+        to: platformWallet,
+        value: requirements.amount,
+      },
+    },
+    scheme: cfg.scheme,
+    network: cfg.network,
+  };
+
+  try {
+    const result = await settleWithFacilitator(envelope, requirements);
+    if (result.success) return result;
+    if (result.error) console.warn('[scout] Facilitator rejected settlement, falling back to simulated:', result.error);
+  } catch (err) {
+    console.warn('[scout] Facilitator unreachable, falling back to simulated:', err);
+  }
+
+  return {
+    success: true,
+    simulated: true,
+    network: cfg.network,
+    facilitator: 'sportwarren-internal',
+    payer: platformWallet ?? 'unknown',
+    payee: platformWallet ?? 'unknown',
+    amount: requirements.amount ?? '0',
+  };
+}
 
 // ── Pending confirmations (in-memory, per-conversation) ────────────
 interface PendingAction {
@@ -482,16 +550,16 @@ export async function dispatchWhatsAppCommand(
         }
       }
 
+      // Settle through Kite Passport facilitator (real on-chain when available)
+      const settlement = await createPlatformSettlement(SCOUT_PRICE_USDC);
+
       let report: Awaited<ReturnType<typeof createScoutReport>>;
       try {
         report = await createScoutReport({
           opponent,
           requestedBy: actor.userId,
           priceUsdc: SCOUT_PRICE_USDC,
-          settlement: {
-            facilitator: "sportwarren-internal",
-            simulated: true,
-          },
+          settlement,
           enforceUserLimit: true,
           enforceSquadLimit: true,
         });
@@ -550,16 +618,15 @@ export async function dispatchWhatsAppCommand(
         hour: '2-digit', minute: '2-digit',
       });
 
+      const settlement = await createPlatformSettlement(SCOUT_PRICE_USDC);
+
       let report: Awaited<ReturnType<typeof createScoutReport>>;
       try {
         report = await createScoutReport({
           opponent,
           requestedBy: actor.userId,
           priceUsdc: SCOUT_PRICE_USDC,
-          settlement: {
-            facilitator: 'sportwarren-internal',
-            simulated: true,
-          },
+          settlement,
           enforceUserLimit: true,
           enforceSquadLimit: true,
         });
