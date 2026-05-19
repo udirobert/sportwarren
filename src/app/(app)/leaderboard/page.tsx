@@ -93,7 +93,7 @@ function LeaderboardPageInner() {
         </div>
 
         <div className="p-0">
-          <div className="grid grid-cols-12 gap-4 px-6 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 text-[10px] font-black uppercase tracking-widest text-gray-500">
+          <div className="grid grid-cols-12 gap-2 md:gap-4 px-6 py-3 bg-gray-50 dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 text-[10px] font-black uppercase tracking-widest text-gray-500">
             <div className="col-span-1">Pos</div>
             <div className="col-span-6 md:col-span-7">Player</div>
             <div className="col-span-3 md:col-span-2 text-right">Reputation</div>
@@ -119,7 +119,7 @@ function LeaderboardPageInner() {
                 return (
                 <div 
                   key={player.userId} 
-                  className={`grid grid-cols-12 gap-4 px-6 py-4 items-center transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+                  className={`grid grid-cols-12 gap-2 md:gap-4 px-6 py-4 items-center transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
                     i === 0 ? 'bg-yellow-500/5' : ''
                   }`}
                 >

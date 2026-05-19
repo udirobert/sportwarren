@@ -38,7 +38,7 @@ export function TermTooltip({ termId, children, showPlainFirst = true }: TermToo
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="rounded-full p-1 hover:bg-gray-100"
+                className="rounded-full p-2 hover:bg-gray-100"
               >
                 <X className="h-5 w-5 text-gray-500" />
               </button>
@@ -46,7 +46,7 @@ export function TermTooltip({ termId, children, showPlainFirst = true }: TermToo
             <p className="text-gray-600">{entry.description}</p>
               <button
                 onClick={() => setIsOpen(false)}
-                className="rounded-full p-1 hover:bg-gray-100"
+                className="rounded-full p-2 hover:bg-gray-100"
                 aria-label="Close tooltip"
               >
                 <X className="h-5 w-5 text-gray-500" />
@@ -83,7 +83,7 @@ export function GlossaryButton({ className = "" }: GlossaryButtonProps) {
               <h2 className="text-lg font-bold text-gray-900">Glossary</h2>
               <button
                 onClick={() => setIsOpen(false)}
-                className="rounded-full p-1 hover:bg-gray-100"
+                className="rounded-full p-2 hover:bg-gray-100"
               >
                 <X className="h-5 w-5 text-gray-500" />
               </button>
@@ -117,7 +117,7 @@ export function GlossaryButton({ className = "" }: GlossaryButtonProps) {
             <div className="border-t p-4">
               <button
                 onClick={() => setIsOpen(false)}
-                className="rounded-full p-1 hover:bg-gray-100"
+                className="rounded-full p-2 hover:bg-gray-100"
                 aria-label="Close glossary"
               >
                 <X className="h-5 w-5 text-gray-500" />

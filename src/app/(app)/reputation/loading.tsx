@@ -4,7 +4,7 @@ import { SoccerLoader } from "@/components/ui/SoccerLoader";
 
 export default function ReputationLoading() {
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom space-y-4 text-gray-900 dark:text-gray-100">
+    <main id="main-content" className="max-w-6xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom space-y-4 text-gray-900 dark:text-gray-100">
       {/* Tactical Loading Indicator */}
       <div className="flex items-center gap-3 px-1 mb-2">
         <SoccerLoader size={20} />
@@ -97,6 +97,6 @@ export default function ReputationLoading() {
           </Card>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

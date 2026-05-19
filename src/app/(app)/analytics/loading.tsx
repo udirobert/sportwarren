@@ -4,7 +4,7 @@ import { SoccerLoader } from "@/components/ui/SoccerLoader";
 
 export default function AnalyticsLoading() {
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom space-y-4 text-gray-900 dark:text-gray-100">
+    <main id="main-content" className="max-w-6xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom space-y-4 text-gray-900 dark:text-gray-100">
       {/* Tactical Loading Indicator */}
       <div className="flex items-center justify-between px-2 mb-2">
         <div className="flex items-center gap-3">
@@ -102,6 +102,6 @@ export default function AnalyticsLoading() {
           </div>
         </Card>
       </div>
-    </div>
+    </main>
   );
 }

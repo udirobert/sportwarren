@@ -410,7 +410,7 @@ export default function SettingsPage() {
                   onChange={(event) => setProfileName(event.target.value)}
                   placeholder={currentProfileLoading ? 'Loading...' : 'Your name on the pitch'}
                   disabled={!isVerified || updateProfileMutation.isPending}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base sm:text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                 />
               </label>
 
@@ -422,7 +422,7 @@ export default function SettingsPage() {
                   value={profilePosition}
                   onChange={(event) => setProfilePosition(event.target.value as PlayerPosition)}
                   disabled={!isVerified || updateProfileMutation.isPending}
-                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                  className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-base sm:text-sm text-gray-900 outline-none transition focus:border-green-500 focus:ring-2 focus:ring-green-500/20 disabled:cursor-not-allowed disabled:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                 >
                   {POSITION_OPTIONS.map((position) => (
                     <option key={position} value={position}>
@@ -494,7 +494,7 @@ export default function SettingsPage() {
               </div>
 
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-xs text-gray-600 dark:text-gray-300 uppercase tracking-wide">Yellow Rail</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 uppercase tracking-wide"><ChainLabel chain="yellow" showTechnical /> Rail</p>
                 <p className={`font-medium ${hasYellowEligibleWallet && !needsVerification ? 'text-green-600' : 'text-gray-900 dark:text-white'}`}>
                   {yellowRailLabel}
                 </p>
@@ -557,7 +557,7 @@ export default function SettingsPage() {
           {/* Player Stats Summary */}
           <Card>
             <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Your Stats</h2>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="text-center p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                 <Trophy className="w-5 h-5 mx-auto mb-1 text-yellow-500" />
                 <p className="text-xl font-bold text-gray-900 dark:text-white">{currentProfile?.totalMatches ?? 0}</p>
@@ -912,7 +912,7 @@ export default function SettingsPage() {
               </div>
 
               <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
-                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-600 dark:text-gray-300">Yellow Rail</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-600 dark:text-gray-300"><ChainLabel chain="yellow" showTechnical /> Rail</div>
                 <div className="mt-2 text-sm font-bold text-gray-900 dark:text-white">{yellowRailLabel}</div>
                 <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">
                   Treasury settlements, match fee locks, and transfer escrow only activate when the connected wallet can authorize Yellow on a supported EVM chain.

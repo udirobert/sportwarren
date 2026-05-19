@@ -364,7 +364,7 @@ export default function MatchPage() {
         </Card>
       </div>
 
-      <div className="sticky top-0 z-10 -mx-4 px-4 py-2 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-700 md:static md:mx-0 md:px-0 md:py-0 md:bg-transparent md:backdrop-blur-none md:border-0">
+      <div className="sticky top-14 md:top-0 z-10 -mx-4 px-4 py-2 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-700 md:static md:mx-0 md:px-0 md:py-0 md:bg-transparent md:backdrop-blur-none md:border-0">
         <div className="flex flex-wrap gap-2 rounded-2xl bg-gray-100 p-1">
         {[
           { key: "preview", label: "Match Preview", icon: Cpu },

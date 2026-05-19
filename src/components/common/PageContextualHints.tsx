@@ -179,7 +179,7 @@ export function PageContextualHints() {
         </div>
         <button
           onClick={handleDismiss}
-          className="shrink-0 rounded-full p-0.5 text-blue-400 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-800"
+          className="shrink-0 rounded-full p-2 text-blue-400 hover:bg-blue-100 hover:text-blue-600 dark:hover:bg-blue-800"
           aria-label="Dismiss hint"
         >
           <X className="h-4 w-4" />

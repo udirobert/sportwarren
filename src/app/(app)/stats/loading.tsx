@@ -4,7 +4,7 @@ import { SoccerLoader } from "@/components/ui/SoccerLoader";
 
 export default function StatsLoading() {
   return (
-    <main className="max-w-4xl mx-auto px-4 py-8 nav-spacer-top nav-spacer-bottom space-y-6 text-gray-900 dark:text-gray-100">
+    <main id="main-content" className="max-w-4xl mx-auto px-4 py-8 nav-spacer-top nav-spacer-bottom space-y-6 text-gray-900 dark:text-gray-100">
       {/* Tactical Loading Indicator */}
       <div className="flex items-center gap-3 px-2 mb-2">
         <SoccerLoader size={20} />

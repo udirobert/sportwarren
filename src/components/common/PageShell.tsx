@@ -18,6 +18,7 @@ export function PageShell({ children, className, maxWidth = "6xl", ref }: PageSh
   const maxWidthClass = maxWidthClasses[maxWidth] || "max-w-6xl";
   return (
     <main
+      id="main-content"
       ref={ref as React.Ref<HTMLElement>}
       className={`${maxWidthClass} mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom text-gray-900 dark:text-gray-100 ${className || ""}`}
     >

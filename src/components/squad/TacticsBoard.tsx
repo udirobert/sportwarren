@@ -246,7 +246,7 @@ export const TacticsBoard: React.FC<TacticsBoardProps> = ({
             <select
               value={selectedFormation}
               onChange={(e) => handleFormationChange(e.target.value as Formation)}
-              className="px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-lg text-base sm:text-sm"
             >
               {Object.keys(FORMATIONS).map((f) => (
                 <option key={f} value={f}>{f}</option>
@@ -534,7 +534,7 @@ export const TacticsBoard: React.FC<TacticsBoardProps> = ({
               value={tactics.setPieces.corners}
               onChange={(e) => !readOnly && handleSetPieceChange('corners', e.target.value)}
               disabled={readOnly}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base sm:text-sm"
             >
               {SET_PIECE_OPTIONS.corners.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -547,7 +547,7 @@ export const TacticsBoard: React.FC<TacticsBoardProps> = ({
               value={tactics.setPieces.freeKicks}
               onChange={(e) => !readOnly && handleSetPieceChange('freeKicks', e.target.value)}
               disabled={readOnly}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base sm:text-sm"
             >
               {SET_PIECE_OPTIONS.freeKicks.map((opt) => (
                 <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -560,7 +560,7 @@ export const TacticsBoard: React.FC<TacticsBoardProps> = ({
               value={tactics.setPieces.penalties}
               onChange={(e) => !readOnly && handleSetPieceChange('penalties', e.target.value)}
               disabled={readOnly || players.length === 0}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg text-base sm:text-sm"
             >
               {players.length === 0 && <option value="">No players available</option>}
               {players.map((player) => (

@@ -123,7 +123,7 @@ export function TelegramContextualTip({
     >
       <button
         onClick={handleDismiss}
-        className="absolute top-2 right-2 p-1 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors"
+        className="absolute top-2 right-2 p-2 rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors"
         aria-label="Dismiss tip"
       >
         <X className="w-4 h-4 text-blue-400" />

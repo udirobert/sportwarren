@@ -122,7 +122,7 @@ const XPGainCard: React.FC<{ notification: XPGainNotification; onDismiss: () => 
               </p>
             </div>
           </div>
-          <button onClick={onDismiss} className="text-gray-300 hover:text-gray-500 transition-colors" aria-label="Dismiss">
+          <button onClick={onDismiss} className="p-2 text-gray-300 hover:text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg" aria-label="Dismiss">
             <X className="w-4 h-4" />
           </button>
         </div>
