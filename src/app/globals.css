@@ -168,7 +168,7 @@
   
   .btn-mobile-sm {
     @apply px-3 py-2 text-xs font-medium rounded-md transition-colors touch-manipulation;
-    min-height: 36px;
+    min-height: 40px;
   }
   
   /* Card hover states optimized for mobile */

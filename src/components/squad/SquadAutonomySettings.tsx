@@ -185,7 +185,7 @@ export function SquadAutonomySettings({ squadId }: Props) {
                 <select
                   value={currentOverride || ''}
                   onChange={(e) => handleActionOverride(action, e.target.value || null)}
-                  className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-gray-900"
+                  className="text-base sm:text-sm border border-gray-300 rounded-lg px-3 py-1.5 bg-white text-gray-900"
                 >
                   <option value="">Default</option>
                   <option value="observe">Observe</option>

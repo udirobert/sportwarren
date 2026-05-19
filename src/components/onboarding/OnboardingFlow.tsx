@@ -244,7 +244,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
             <button onClick={startTour} className="px-3 py-1.5 bg-green-600 text-white text-xs font-bold rounded-lg hover:bg-green-500 transition-colors">
               Start
             </button>
-            <button onClick={() => setShowBanner(false)} className="p-1 text-gray-500 hover:text-white" aria-label="Dismiss tour banner">
+            <button onClick={() => setShowBanner(false)} className="p-2 text-gray-500 hover:text-white hover:bg-white/10 rounded-lg" aria-label="Dismiss tour banner">
               <X className="w-4 h-4" />
             </button>
           </div>
@@ -295,7 +295,7 @@ function TourOverlay({ steps, currentStep, venue, onNext, onBack, onSkip }: Tour
               </div>
               <h3 className="text-sm font-black text-gray-900 uppercase tracking-tight">{step.title}</h3>
             </div>
-            <button onClick={onSkip} className="p-1 text-gray-300 hover:text-gray-900" aria-label="Close tour">
+            <button onClick={onSkip} className="p-2 text-gray-300 hover:text-gray-900 hover:bg-gray-200/50 rounded-lg" aria-label="Close tour">
               <X className="w-4 h-4" />
             </button>
           </div>

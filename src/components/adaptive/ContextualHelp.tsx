@@ -117,7 +117,7 @@ export const ContextualHelp: React.FC<ContextualHelpProps> = ({
               {activeTip.dismissible !== false && (
                 <button
                   onClick={handleDismiss}
-                  className="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 rounded"
+                  className="p-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-green-500 rounded-lg"
                   aria-label="Dismiss tip"
                 >
                   <X className="w-4 h-4" aria-hidden="true" />

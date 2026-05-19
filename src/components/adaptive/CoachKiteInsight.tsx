@@ -195,7 +195,7 @@ export const CoachKiteInsight: React.FC<CoachKiteInsightProps> = ({ userId }) =>
             <button 
               type="button"
               onClick={() => setIsChatOpen(false)}
-              className="text-gray-400 hover:text-gray-600 p-1"
+              className="text-gray-400 hover:text-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-lg"
               aria-label="Close chat"
             >
               <X className="w-4 h-4" />
