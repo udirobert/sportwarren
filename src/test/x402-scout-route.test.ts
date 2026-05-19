@@ -10,6 +10,7 @@ const mockBuildPaymentRequirements = vi.hoisted(() => vi.fn());
 const mockSettleWithFacilitator = vi.hoisted(() => vi.fn());
 const mockReadX402Config = vi.hoisted(() => vi.fn());
 const mockCheckUserSpending = vi.hoisted(() => vi.fn());
+const mockGetScoutUserDailyLimit = vi.hoisted(() => vi.fn());
 const mockGenerateInference = vi.hoisted(() => vi.fn());
 const mockPrismaUserFindUnique = vi.hoisted(() => vi.fn());
 const mockPrismaSquadFindFirst = vi.hoisted(() => vi.fn());
@@ -44,6 +45,7 @@ vi.mock('@/server/services/blockchain/x402-client', () => ({
 vi.mock('@/server/services/ai/kite', () => ({
   kiteAIService: {
     checkUserSpending: mockCheckUserSpending,
+    getScoutUserDailyLimit: mockGetScoutUserDailyLimit,
   },
 }));
 
@@ -164,6 +166,7 @@ describe('x402 scout route', () => {
     });
 
     mockPrismaAttestationCreate.mockResolvedValue({ id: 'att_789' });
+    mockGetScoutUserDailyLimit.mockReturnValue(0.5);
   });
 
   // ── 402 payment gate ──────────────────────────────────────────────────
@@ -262,6 +265,7 @@ describe('x402 scout route', () => {
   describe('per-user spending guard', () => {
     it('returns 429 when daily scout limit is exceeded', async () => {
       mockCheckUserSpending.mockResolvedValue({ ok: false, remaining: 0 });
+      mockGetScoutUserDailyLimit.mockReturnValue(5);
 
       const res = await POST(
         fakeRequest(
@@ -273,8 +277,9 @@ describe('x402 scout route', () => {
       expect(res.status).toBe(429);
       const body = await res.json();
       expect(body.error).toMatch(/daily scout limit/i);
-      expect(body.limitUsdc).toBe(0.5);
+      expect(body.limitUsdc).toBe(5);
       expect(body.remaining).toBe(0);
+      expect(mockCheckUserSpending).toHaveBeenCalledWith('user_over', 0.5, 5);
       expect(mockPrismaAttestationCreate).not.toHaveBeenCalled();
     });
 

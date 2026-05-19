@@ -28,7 +28,6 @@ import { generateInference } from "@/lib/ai/inference";
 const EXPLORER_BASE = process.env.KITE_EXPLORER_URL || "https://testnet.kitescan.ai";
 const SCOUT_SERVICE_URL = process.env.KITE_SCOUT_SERVICE_URL || "";
 const SCOUT_MAX_USDC = Number(process.env.KITE_SCOUT_MAX_USDC || "0.50");
-const SCOUT_MAX_USDC_SQUAD = Number(process.env.KITE_SCOUT_MAX_USDC_SQUAD || "2.50");
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "sportwarrenbot";
 
 // ── Pending confirmations (in-memory, per-conversation) ────────────
@@ -61,6 +60,7 @@ COMMANDS (case-insensitive)
 - pay <0xwallet> <usdc> — pay a player wages directly on Kite chain in USDC
 - status — show your squad agent's interactions, spend and success rate
 - link <WA-XXXXXX> — link this WhatsApp to your SportWarren account (get the code from /linkwhatsapp on our Telegram bot)
+- top up / treasury — squad funds are managed in Telegram. Tell linked users to open Telegram and run /treasury view; unlinked users should first run /linkwhatsapp in Telegram and paste the code here.
 
 HOW TO REPLY
 1. Always speak as Marcus. Never mention AI, LLMs, models, OpenAI, Anthropic, Venice, Llama or any provider. If asked who you are: "I'm Marcus, Academy Director at SportWarren."
@@ -81,7 +81,8 @@ OUTPUT MODE — pick exactly one, never mix:
   MODE B (explain) — when the user is asking what something means, how the app works, or chatting. Give a real explanation as Marcus in 1-3 sentences and end with ONE concrete command they can copy. NEVER include the literal text "RUN:" anywhere in MODE B replies.
   Examples:
     "what is scouting" → "Scouting is when your squad agent pays a small fee on the Kite chain for an AI report on an opponent — useful before a match. Try \`scout Liverpool\` to see one."
-    "how do i use this" → "I run your squad's on-chain agent on Kite. Link this number with \`link WA-XXXXXX\` (get a code from /linkwhatsapp on our Telegram bot) and you'll unlock scout, hire, pay and status."`;
+    "how do i use this" → "I run your squad's on-chain agent on Kite. Link this number with \`link WA-XXXXXX\` (get a code from /linkwhatsapp on our Telegram bot) and you'll unlock scout, hire, pay and status."
+    "how do i top up" → "Open Telegram and run \`/treasury view\` to top up or manage squad funds in the Mini App. Then come back here and run \`budget\`."`;
 
 export type Reply = string;
 
@@ -101,6 +102,7 @@ const HELP = [
   "• `tinyfish scout <opponent>` – free real-web scouting report",
   "• `scouts`           – show your recent reports with explorer links",
   "• `budget`           – how much scout budget remains today",
+  "• `topup`            – open Telegram treasury top-up flow",
   "• `trigger-auto-scout` – demo: auto-scout your next opponent now",
   "",
   "*Actions*",
@@ -192,7 +194,7 @@ async function consumeLinkCode(code: string, whatsappNumber: string): Promise<Re
 const RUN_ALLOWED = new Set([
   "help", "find", "search", "hire", "scout", "scouts", "budget", "pay", "status", "link",
   "whoami", "unlink", "cost", "attestations", "trigger-auto-scout", "autonomy",
-  "tinyfish",
+  "tinyfish", "topup", "top-up", "treasury",
 ]);
 
 async function aiFallback(
@@ -419,14 +421,28 @@ export async function dispatchWhatsAppCommand(
       }
 
       // --- SPENDING GUARDS (dual cap: per-user + per-squad) ---
-      const userSpending = await kiteAIService.checkUserSpending(actor.userId, SCOUT_MAX_USDC, SCOUT_MAX_USDC);
-      if (!userSpending.ok) {
-        return `❌ Your daily scout limit reached (${SCOUT_MAX_USDC} USDC/person).`;
+      // Read-only here: the x402 scout route records spend only after payment
+      // settlement, so failed calls do not burn budget.
+      const userLimit = kiteAIService.getScoutUserDailyLimit(actor.userId);
+      const userSpending = await kiteAIService.getUserSpending(actor.userId, userLimit);
+      if (userLimit > 0 && userSpending.remaining < SCOUT_MAX_USDC) {
+        return [
+          `❌ Your daily scout limit is reached (${userLimit.toFixed(2)} USDC/person).`,
+          `Spent: $${userSpending.spent.toFixed(2)} · Remaining: $${userSpending.remaining.toFixed(2)}`,
+          "",
+          "This is a daily spend cap, not a wallet balance. Use `scouts` to review existing reports or `tinyfish scout <opponent>` for a free web scout.",
+        ].join("\n");
       }
       if (actor.squadId) {
-        const squadSpending = await kiteAIService.checkSquadSpending(actor.squadId, SCOUT_MAX_USDC, SCOUT_MAX_USDC_SQUAD);
-        if (!squadSpending.ok) {
-          return `❌ Squad daily scout limit reached (${SCOUT_MAX_USDC_SQUAD} USDC/squad).`;
+        const squadLimit = kiteAIService.getScoutSquadDailyLimit(actor.squadId);
+        const squadSpending = await kiteAIService.getSquadSpending(actor.squadId, squadLimit);
+        if (squadLimit > 0 && squadSpending.remaining < SCOUT_MAX_USDC) {
+          return [
+            `❌ Squad daily scout limit is reached (${squadLimit.toFixed(2)} USDC/squad).`,
+            `Spent: $${squadSpending.spent.toFixed(2)} · Remaining: $${squadSpending.remaining.toFixed(2)}`,
+            "",
+            "Ask a captain to use `/treasury` in Telegram for squad funds, or use `tinyfish scout <opponent>` for a free web scout.",
+          ].join("\n");
         }
       }
 
@@ -456,7 +472,7 @@ export async function dispatchWhatsAppCommand(
       if (!res.ok) return `❌ Scout failed: ${res.error}`;
 
       // Read remaining budget to include in the reply
-      const remaining = await kiteAIService.getUserSpending(actor.userId, SCOUT_MAX_USDC);
+      const remaining = await kiteAIService.getUserSpending(actor.userId, userLimit);
 
       const txUrl = fmtTx(res.payment?.txHash);
       const dataSources = (res.data as any)?.dataSources as string[] | undefined;
@@ -470,7 +486,9 @@ export async function dispatchWhatsAppCommand(
         `✅ *Settled on Kite*`,
         `Receipt: ${txUrl}`,
         dataSourceLine,
-        `Budget: ${remaining.remaining.toFixed(2)} left today. \`scouts\` → all reports.`,
+        userLimit > 0
+          ? `Budget: ${remaining.remaining.toFixed(2)} left today. \`scouts\` → all reports.`
+          : "`scouts` → all reports.",
       ];
       return lines.join("\n");
     }
@@ -632,29 +650,53 @@ export async function dispatchWhatsAppCommand(
 
     case "budget": {
       if (!actor.squadId) return "❌ No squad linked to this WhatsApp number.";
-      const spending = await kiteAIService.getUserSpending(actor.userId, SCOUT_MAX_USDC);
-      const pct = SCOUT_MAX_USDC > 0 ? (spending.spent / SCOUT_MAX_USDC) * 100 : 0;
+      const userLimit = kiteAIService.getScoutUserDailyLimit(actor.userId);
+      const squadLimit = kiteAIService.getScoutSquadDailyLimit(actor.squadId);
+      const [spending, squadSpending] = await Promise.all([
+        kiteAIService.getUserSpending(actor.userId, userLimit),
+        kiteAIService.getSquadSpending(actor.squadId, squadLimit),
+      ]);
+      const pct = userLimit > 0 ? Math.min(100, (spending.spent / userLimit) * 100) : 0;
       const barLen = 12;
-      const filled = Math.round((pct / 100) * barLen);
+      const filled = userLimit > 0 ? Math.round((pct / 100) * barLen) : 0;
       const bar = "█".repeat(filled) + "░".repeat(Math.max(0, barLen - filled));
 
       const tips: string[] = [];
-      if (spending.remaining >= SCOUT_MAX_USDC) {
+      if (userLimit <= 0) {
+        tips.push("Dev override active: no daily per-user scout cap.");
+      } else if (spending.remaining >= SCOUT_MAX_USDC) {
         tips.push("You have a full daily budget — try `scout <opponent>` to start.");
       } else if (spending.remaining > 0) {
         tips.push(`You can still scout \`${Math.floor(spending.remaining / SCOUT_MAX_USDC)}\` more opponent(s) today.`);
       } else {
-        tips.push("Limit resets tomorrow. Check `scouts` to review what you've got.");
+        tips.push("Limit resets tomorrow. `tinyfish scout <opponent>` is free while you wait.");
       }
 
       return [
         `💳 *Scout Budget · Today*`,
-        `Daily limit: $${SCOUT_MAX_USDC.toFixed(2)} USDC`,
-        `Spent: $${spending.spent.toFixed(2)} · Remaining: $${spending.remaining.toFixed(2)}`,
-        `${bar}`,  // Uses WhatsApp monospace
+        `Per-user limit: ${userLimit > 0 ? `$${userLimit.toFixed(2)} USDC` : "unlimited"}`,
+        `Your spend: $${spending.spent.toFixed(2)} · Remaining: ${userLimit > 0 ? `$${spending.remaining.toFixed(2)}` : "unlimited"}`,
+        `Squad limit: ${squadLimit > 0 ? `$${squadLimit.toFixed(2)} USDC` : "unlimited"}`,
+        `Squad spend: $${squadSpending.spent.toFixed(2)} · Remaining: ${squadLimit > 0 ? `$${squadSpending.remaining.toFixed(2)}` : "unlimited"}`,
+        userLimit > 0 ? `${bar}` : "",
         "",
         tips[0],
+        "Top up squad treasury in Telegram: `/treasury view`.",
       ].join("\n");
+    }
+
+    case "topup":
+    case "top-up":
+    case "treasury": {
+      if (!actor.squadId) return "❌ No squad linked to this WhatsApp number.";
+      return [
+        "💰 *Top Up Squad Treasury*",
+        "Open Telegram and run `/treasury view` to connect a TON wallet and manage squad funds in the Mini App.",
+        "",
+        `Telegram: https://t.me/${TELEGRAM_BOT_USERNAME}`,
+        "",
+        "After topping up, run `budget` here to check scout spend limits.",
+      ].filter(Boolean).join("\n");
     }
 
     case "status": {

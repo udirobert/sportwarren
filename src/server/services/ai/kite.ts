@@ -36,6 +36,29 @@ const KITE_DAILY_REQUEST_LIMIT = Number(process.env.KITE_DAILY_REQUEST_LIMIT || 
 const MAX_SINGLE_PAYMENT_USDC = Number(process.env.KITE_MAX_SINGLE_PAYMENT_USDC || '50');
 const DAILY_PAYOUT_BUDGET_USDC = Number(process.env.KITE_DAILY_PAYOUT_BUDGET_USDC || '200');
 const SCOUT_MAX_USDC_SQUAD = Number(process.env.KITE_SCOUT_MAX_USDC_SQUAD || '2.50');
+const SCOUT_MAX_USDC_USER = Number(process.env.KITE_SCOUT_MAX_USDC || '0.50');
+
+function parseCsvSet(value: string | undefined): Set<string> {
+  return new Set(
+    (value || '')
+      .split(',')
+      .map((item) => item.trim())
+      .filter(Boolean),
+  );
+}
+
+function parseLimitOverrides(value: string | undefined): Map<string, number> {
+  const overrides = new Map<string, number>();
+  for (const entry of (value || '').split(',')) {
+    const [id, rawLimit] = entry.split(':').map((part) => part?.trim());
+    if (!id || rawLimit === undefined) continue;
+    const limit = Number(rawLimit);
+    if (Number.isFinite(limit) && limit >= 0) {
+      overrides.set(id, limit);
+    }
+  }
+  return overrides;
+}
 
 export type KiteServiceStatus = {
   enabled: boolean;
@@ -208,6 +231,48 @@ export class KiteAIService {
     } catch {
       return { spent: 0, remaining: limit };
     }
+  }
+
+  /** Read-only check of daily spending for a squad — does not increment the counter. */
+  async getSquadSpending(squadId: string, limit: number): Promise<{ spent: number; remaining: number }> {
+    if (limit <= 0) return { spent: 0, remaining: 0 };
+    const today = new Date().toISOString().split('T')[0];
+    const key = `kite:squad-spend:${squadId}:${today}`;
+    try {
+      const spent = parseFloat((await redisService.get(key)) || '0');
+      return { spent, remaining: Math.max(0, limit - spent) };
+    } catch {
+      return { spent: 0, remaining: limit };
+    }
+  }
+
+  getScoutUserDailyLimit(userId: string): number {
+    if (userId.startsWith('cron:')) return 0;
+
+    const unlimitedUsers = parseCsvSet(process.env.KITE_SCOUT_UNLIMITED_USER_IDS);
+    if (unlimitedUsers.has(userId)) return 0;
+
+    const explicit = parseLimitOverrides(process.env.KITE_SCOUT_USER_LIMIT_OVERRIDES_USDC);
+    const explicitLimit = explicit.get(userId);
+    if (explicitLimit !== undefined) return explicitLimit;
+
+    const devUsers = parseCsvSet(process.env.KITE_SCOUT_DEV_USER_IDS);
+    if (devUsers.has(userId)) {
+      return Number(process.env.KITE_SCOUT_DEV_MAX_USDC || '10');
+    }
+
+    return SCOUT_MAX_USDC_USER;
+  }
+
+  getScoutSquadDailyLimit(squadId: string): number {
+    const unlimitedSquads = parseCsvSet(process.env.KITE_SCOUT_UNLIMITED_SQUAD_IDS);
+    if (unlimitedSquads.has(squadId)) return 0;
+
+    const explicit = parseLimitOverrides(process.env.KITE_SCOUT_SQUAD_LIMIT_OVERRIDES_USDC);
+    const explicitLimit = explicit.get(squadId);
+    if (explicitLimit !== undefined) return explicitLimit;
+
+    return SCOUT_MAX_USDC_SQUAD;
   }
 
   private async trackRequest() {
