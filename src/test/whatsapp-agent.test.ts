@@ -59,7 +59,36 @@ vi.mock('@/server/services/ai/scout-report', () => ({
 }));
 
 vi.mock('@/server/services/blockchain/x402-client', () => ({
-  readX402Config: vi.fn().mockReturnValue({ enabled: true }),
+  readX402Config: vi.fn().mockReturnValue({
+    network: 'kite-testnet',
+    scheme: 'gokite-aa',
+    facilitatorUrl: 'https://facilitator.pieverse.io',
+    assetAddress: '0x0fF5393387ad2f9f691FD6Fd28e07E3969e27e63',
+    assetDecimals: 18,
+    rpcUrl: 'https://rpc-testnet.gokite.ai',
+    chainId: 2368,
+    facilitatorAddress: '0x12343e649e6b2b2b77649DFAb88f103c02F3C78b',
+    x402Version: 1,
+  }),
+  getPlatformWallet: vi.fn().mockReturnValue('0x1234567890123456789012345678901234567890'),
+  buildPaymentRequirements: vi.fn().mockReturnValue({
+    amount: '5000000000000000',
+    scheme: 'gokite-aa',
+    network: 'kite-testnet',
+    asset: '0x0fF5393387ad2f9f691FD6Fd28e07E3969e27e63',
+    payTo: '0x1234567890123456789012345678901234567890',
+    maxTimeoutSeconds: 300,
+    x402Version: 1,
+  }),
+  settleWithFacilitator: vi.fn().mockResolvedValue({
+    success: true,
+    simulated: true,
+    network: 'kite-testnet',
+    facilitator: 'sportwarren-internal',
+    payer: '0x1234567890123456789012345678901234567890',
+    payee: '0x1234567890123456789012345678901234567890',
+    amount: '5000000000000000',
+  }),
 }));
 
 vi.mock('@/server/services/redis', () => ({
