@@ -10,7 +10,7 @@
 
 import axios from 'axios';
 import { ethers } from 'ethers';
-import { executeKitePassportRequest } from './kite-passport.js';
+import { executeKitePassportRequest } from './kite-passport';
 
 const DEFAULT_SCHEME = 'gokite-aa';
 const DEFAULT_NETWORK = 'kite-testnet';
