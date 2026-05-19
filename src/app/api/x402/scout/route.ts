@@ -9,23 +9,19 @@
  *     and settlement tx.
  *
  * Default price: KITE_SCOUT_PRICE_USDC (env, default 0.005 testnet token).
- * Used by the WhatsApp `scout <opponent>` command via
- * KITE_SCOUT_SERVICE_URL, but any agent can call it directly.
+ * External agents can call this route directly. Internal WhatsApp commands use
+ * the shared scout-report service without routing through Passport.
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { ethers } from 'ethers';
-import { prisma } from '@/lib/db';
 import {
   buildPaymentRequirements,
   settleWithFacilitator,
   decodeXPayment,
-  readX402Config,
   type PaymentEnvelope,
 } from '@/server/services/blockchain/x402-client';
-import { generateInference } from '@/lib/ai/inference';
-import { AGENT_PERSONAS } from '@/server/services/ai/prompts';
-import { kiteAIService } from '@/server/services/ai/kite';
+import { createScoutReport } from '@/server/services/ai/scout-report';
 
 const SCOUT_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || '0.005');
 
@@ -106,162 +102,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Missing opponent' }, { status: 400 });
   }
 
-  // ── Per-user-per-day spending guard ──────────────────────────────
-  if (body.requestedBy) {
-    const scoutLimit = kiteAIService.getScoutUserDailyLimit(body.requestedBy);
-    const guard = await kiteAIService.checkUserSpending(
-      body.requestedBy,
-      SCOUT_PRICE_USDC,
-      scoutLimit,
-    );
-    if (!guard.ok) {
-      return NextResponse.json(
-        {
-          error: 'Daily scout limit reached',
-          limitUsdc: scoutLimit,
-          remaining: guard.remaining,
-        },
-        { status: 429 },
-      );
-    }
-  }
-
-  // Gather context + resolve attestation subject.
-  // Schema: subjectType ∈ {'player' | 'squad' | 'match' | 'agent'}
-  // Default fallback ensures TS strict-mode safety — overwritten below when possible.
-  let subjectType: string = 'player';
-  let subjectId: string = body.requestedBy ?? 'anonymous';
-
-  let squadContext = '';
-  if (body.requestedBy) {
-    const user = await prisma.user.findUnique({
-      where: { id: body.requestedBy },
-      include: { squads: { take: 1, where: { status: 'active' }, include: { squad: true } } },
-    });
-    const squad = user?.squads[0]?.squad;
-    if (squad) {
-      subjectType = 'squad';
-      subjectId = squad.id;
-
-      // Enrich the prompt with real match data
-      const recentMatches = await prisma.match.findMany({
-        where: {
-          OR: [{ homeSquadId: squad.id }, { awaySquadId: squad.id }],
-          status: { in: ['verified', 'finalized'] },
-        },
-        include: {
-          homeSquad: { select: { name: true } },
-          awaySquad: { select: { name: true } },
-        },
-        orderBy: { matchDate: 'desc' },
-        take: 3,
-      });
-      if (recentMatches.length > 0) {
-        const form = recentMatches.map(m => {
-          const isHome = m.homeSquadId === squad.id;
-          const us = isHome ? m.homeScore : m.awayScore;
-          const them = isHome ? m.awayScore : m.homeScore;
-          const opponentName = isHome ? m.awaySquad.name : m.homeSquad.name;
-          return `${opponentName} (${us}-${them})`;
-        }).join(', ');
-        squadContext += `\nRequesting squad recent form: ${form}.`;
-      }
-
-      const opponentSquad = await prisma.squad.findFirst({
-        where: {
-          name: { contains: opponent, mode: 'insensitive' },
-          id: { not: squad.id },
-        },
-      });
-      if (opponentSquad) {
-        const headToHead = await prisma.match.findMany({
-          where: {
-            OR: [
-              { homeSquadId: squad.id, awaySquadId: opponentSquad.id },
-              { homeSquadId: opponentSquad.id, awaySquadId: squad.id },
-            ],
-            status: { in: ['verified', 'finalized'] },
-          },
-          take: 3,
-          orderBy: { matchDate: 'desc' },
-        });
-        if (headToHead.length > 0) {
-          const h2h = headToHead.map(m => {
-            const isHome = m.homeSquadId === squad.id;
-            const us = isHome ? m.homeScore : m.awayScore;
-            const them = isHome ? m.awayScore : m.homeScore;
-            return `${m.homeSquadId === squad.id ? 'H' : 'A'} ${us}-${them}`;
-          }).join(', ');
-          squadContext += `\nHead-to-head vs ${opponentSquad.name}: ${h2h}.`;
-        }
-      }
-    } else if (user) {
-      // User exists but has no active squad — attest to the player
-      subjectType = 'player';
-      subjectId = user.id;
-    }
-  }
-
-  // Final fallback when no requestedBy or user not found — attest to the
-  // opponent squad if it exists, otherwise the match-level.
-  if (!subjectType) {
-    const opponentSquad = await prisma.squad.findFirst({
-      where: { name: { contains: opponent, mode: 'insensitive' } },
-    });
-    if (opponentSquad) {
-      subjectType = 'squad';
-      subjectId = opponentSquad.id;
-    } else {
-      subjectType = 'match';
-      subjectId = `scout:${opponent.toLowerCase().replace(/\s+/g, '-')}`;
-    }
-  }
-
-  // Generate the report. Falls back to a deterministic blurb if AI is unavailable.
-  const persona = AGENT_PERSONAS.VISION_SCOUT;
-  let summary = `Scouting report on ${opponent}: no recent telemetry. Treat as unknown threat — keep formation tight, exploit set-pieces.`;
   try {
-    const contextBlock = squadContext
-      ? `\n\nREAL DATA FOR THIS REQUEST:${squadContext}`
-      : '';
-    const ai = await generateInference(
-      [{ role: 'user', content: `Give a tight 3-sentence scouting brief on ${opponent} for an amateur football squad. Mention likely formation, one strength, one weakness, and a tactical recommendation. No markdown.${contextBlock}` }],
-      { systemPrompt: persona.systemPrompt, max_tokens: 200, temperature: 0.4 },
-    );
-    if (ai?.content) summary = ai.content.trim();
+    const report = await createScoutReport({
+      opponent,
+      requestedBy: body.requestedBy,
+      priceUsdc: SCOUT_PRICE_USDC,
+      settlement,
+      enforceUserLimit: true,
+    });
+    return NextResponse.json(report);
   } catch (err) {
-    console.warn('[scout] AI inference failed, using deterministic summary', err);
+    const status = typeof (err as any).status === 'number' ? (err as any).status : 500;
+    return NextResponse.json(
+      {
+        error: (err as Error).message,
+        limitUsdc: (err as any).limitUsdc,
+        remaining: (err as any).remaining,
+      },
+      { status },
+    );
   }
-
-  // Persist attestation on Kite chain record
-  const cfg = readX402Config();
-  const attestation = await prisma.attestation.create({
-    data: {
-      subjectType,
-      subjectId,
-      kind: 'scout_report',
-      payload: { opponent, summary, requestedBy: body.requestedBy ?? null },
-      network: cfg.network,
-      txHash: settlement.txHash ?? `sim-${Date.now()}`,
-      facilitator: settlement.facilitator,
-      amountUsdc: SCOUT_PRICE_USDC,
-    },
-  });
-
-  // Determine data provenance for transparency.
-  const dataSources: string[] = [];
-  if (squadContext.includes('recent form')) dataSources.push('your squad recent match form');
-  if (squadContext.includes('Head-to-head')) dataSources.push('head-to-head history vs opponent');
-  if (!dataSources.length) dataSources.push('no stored match data — report is AI-generated from general knowledge only');
-
-  return NextResponse.json({
-    opponent,
-    summary,
-    attestationId: attestation.id,
-    txHash: settlement.txHash ?? null,
-    simulated: settlement.simulated ?? false,
-    network: cfg.network,
-    priceUsdc: SCOUT_PRICE_USDC,
-    dataSources, // transparently tells the user what real data informed this report
-  });
 }

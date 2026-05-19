@@ -8,7 +8,7 @@
  *   help                          – show usage
  *   find <query>                  – kiteAIService.searchMarketplace
  *   hire <agentId> [days]         – kiteAIService.hireAgent (needs squad link)
- *   scout <opponent>              – paid x402 call to KITE_SCOUT_SERVICE_URL
+ *   scout <opponent>              – internal Kite scout report + attestation
  *   scouts                        – list recent scouting reports
  *   budget                        – show remaining daily scout budget
  *   pay <wallet> <usdc>           – kiteAIService.processSquadWagePayment
@@ -21,12 +21,12 @@ import { prisma } from "@/lib/db";
 import { kiteAIService } from "../ai/kite";
 import { autonomyPolicy, type AutonomyLevel } from "../ai/autonomy-policy";
 import { tinyfishService, tinyfishConfigured } from "../ai/tinyfish";
+import { createScoutReport } from "../ai/scout-report";
 import { readX402Config } from "../blockchain/x402-client";
 import { redisService } from "../redis";
 import { generateInference } from "@/lib/ai/inference";
 
 const EXPLORER_BASE = process.env.KITE_EXPLORER_URL || "https://testnet.kitescan.ai";
-const SCOUT_SERVICE_URL = process.env.KITE_SCOUT_SERVICE_URL || "";
 const SCOUT_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || "0.005");
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "sportwarrenbot";
 
@@ -198,6 +198,7 @@ export async function resolveActor(whatsappNumber: string): Promise<ResolvedActo
 
 function fmtTx(txHash: string | undefined | null): string {
   if (!txHash) return "(no tx)";
+  if (txHash.startsWith("internal-")) return txHash;
   return `${EXPLORER_BASE}/tx/${txHash}`;
 }
 
@@ -437,9 +438,6 @@ export async function dispatchWhatsAppCommand(
     }
 
     case "scout": {
-      if (!SCOUT_SERVICE_URL) {
-        return "❌ KITE_SCOUT_SERVICE_URL is not configured on this deployment.";
-      }
       const opponent = args.join(" ").trim();
       if (!opponent) return "Usage: `scout <opponent name>`";
       if (!actor.squadId) return "❌ You need to belong to a squad to commission scouting.";
@@ -484,44 +482,36 @@ export async function dispatchWhatsAppCommand(
         }
       }
 
-      const manager = await kiteAIService.upsertSquadManagerAgent(actor.squadId);
-      // Best-effort: top up a session if none exists
+      let report: Awaited<ReturnType<typeof createScoutReport>>;
       try {
-        await kiteAIService.createSession({
-          agentId: manager.id,
-          taskSummary: `WhatsApp scout: ${opponent}`,
-          maxPerTxUsdc: SCOUT_PRICE_USDC,
-          maxTotalUsdc: SCOUT_PRICE_USDC * 20, // Allow repeated testnet scouting in one session.
-          ttlSeconds: 3600,
-          scope: { source: "whatsapp", opponent },
-          approvedBy: actor.userId,
+        report = await createScoutReport({
+          opponent,
+          requestedBy: actor.userId,
+          priceUsdc: SCOUT_PRICE_USDC,
+          settlement: {
+            facilitator: "sportwarren-internal",
+            simulated: true,
+          },
+          enforceUserLimit: true,
+          enforceSquadLimit: true,
         });
-      } catch {/* session exists or budget caps it later */}
-
-      const res = await kiteAIService.executePaidRequest<{ summary?: string; dataSources?: string[] }>({
-        agentId: manager.id,
-        url: SCOUT_SERVICE_URL,
-        method: "POST",
-        body: { opponent, requestedBy: actor.userId },
-        maxAmountUsdc: SCOUT_PRICE_USDC,
-        subject: { type: "squad", id: actor.squadId },
-        kind: "scout_report",
-      });
-      if (!res.ok) return `❌ Scout failed: ${res.error}`;
+      } catch (err) {
+        return `❌ Scout failed: ${(err as Error).message}`;
+      }
 
       // Read remaining budget to include in the reply
       const remaining = await kiteAIService.getUserSpending(actor.userId, userLimit);
 
-      const txUrl = fmtTx(res.payment?.txHash);
-      const dataSources = (res.data as any)?.dataSources as string[] | undefined;
+      const txUrl = fmtTx(report.txHash);
+      const dataSources = report.dataSources;
       const dataSourceLine = dataSources?.length
         ? `📊 Data: ${dataSources.join(" · ")}`
         : "📊 Data: AI-generated (no stored match data)";
       const lines = [
         `🛰️ *Scouting Report · ${opponent}*`,
-        res.data?.summary ? `\n${res.data.summary}` : "\n(Report data is available on-chain via the attestation.)",
+        report.summary ? `\n${report.summary}` : "\n(Report data is available via the attestation.)",
         "",
-        `✅ *Settled on Kite*`,
+        `✅ *Recorded on Kite*`,
         `Receipt: ${txUrl}`,
         dataSourceLine,
         userLimit > 0
@@ -560,34 +550,26 @@ export async function dispatchWhatsAppCommand(
         hour: '2-digit', minute: '2-digit',
       });
 
-      // Execute the auto-scout inline
-      const manager = await kiteAIService.upsertSquadManagerAgent(actor.squadId);
+      let report: Awaited<ReturnType<typeof createScoutReport>>;
       try {
-        await kiteAIService.createSession({
-          agentId: manager.id,
-          taskSummary: `Demo trigger: auto-scout ${opponent}`,
-          maxPerTxUsdc: SCOUT_PRICE_USDC,
-          maxTotalUsdc: SCOUT_PRICE_USDC * 20,
-          ttlSeconds: 600,
-          scope: { source: 'whatsapp-trigger', opponent },
-          approvedBy: actor.userId,
+        report = await createScoutReport({
+          opponent,
+          requestedBy: actor.userId,
+          priceUsdc: SCOUT_PRICE_USDC,
+          settlement: {
+            facilitator: 'sportwarren-internal',
+            simulated: true,
+          },
+          enforceUserLimit: true,
+          enforceSquadLimit: true,
         });
-      } catch { /* skip */ }
+      } catch (err) {
+        return `❌ Auto-scout failed: ${(err as Error).message}`;
+      }
 
-      const res = await kiteAIService.executePaidRequest<{ summary?: string; dataSources?: string[] }>({
-        agentId: manager.id,
-        url: SCOUT_SERVICE_URL,
-        method: 'POST',
-        body: { opponent, requestedBy: actor.userId },
-        maxAmountUsdc: SCOUT_PRICE_USDC,
-        subject: { type: 'squad', id: actor.squadId },
-        kind: 'scout_report',
-      });
-      if (!res.ok) return `❌ Auto-scout failed: ${res.error}`;
-
-      const txUrl = fmtTx(res.payment?.txHash);
-      const summary = res.data?.summary || 'No summary available.';
-      const dataSources = (res.data as any)?.dataSources as string[] | undefined;
+      const txUrl = fmtTx(report.txHash);
+      const summary = report.summary || 'No summary available.';
+      const dataSources = report.dataSources;
       const dataSourceLine = dataSources?.length
         ? `📊 Data: ${dataSources.join(' · ')}`
         : '📊 Data: AI-generated (no stored match data)';
@@ -598,7 +580,7 @@ export async function dispatchWhatsAppCommand(
         '',
         summary,
         '',
-        `✅ *Settled on Kite*`,
+        `✅ *Recorded on Kite*`,
         `Receipt: ${txUrl}`,
         dataSourceLine,
         `Price: ${SCOUT_PRICE_USDC.toFixed(2)} testnet token`,
