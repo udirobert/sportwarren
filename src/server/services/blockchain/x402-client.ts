@@ -3,15 +3,14 @@
  *
  * SportWarren now follows Kite's supported Passport flow:
  *   - services advertise `gokite-aa` / `kite-testnet` payment requirements
- *   - outbound payments are approved by Kite MCP (`get_payer_addr`,
- *     `approve_payment`)
+ *   - outbound payments execute through the official `kpass` Passport CLI
  *   - inbound services forward the received X-PAYMENT payload to the
  *     facilitator for settlement before doing work
  */
 
-import axios, { AxiosError } from 'axios';
+import axios from 'axios';
 import { ethers } from 'ethers';
-import { approveKitePassportPayment } from './kite-passport.js';
+import { executeKitePassportRequest } from './kite-passport.js';
 
 const DEFAULT_SCHEME = 'gokite-aa';
 const DEFAULT_NETWORK = 'kite-testnet';
@@ -166,21 +165,6 @@ function buildV2Accepted(requirements: PaymentRequirements) {
   };
 }
 
-async function buildPaymentHeader(requirements: PaymentRequirements): Promise<{ header: string; payer: string }> {
-  const cfg = readX402Config();
-  if (cfg.scheme === 'gokite-aa') {
-    const approval = await approveKitePassportPayment({
-      payTo: requirements.payTo,
-      amount: getRequirementAmount(requirements),
-      tokenType: process.env.KITE_X402_TOKEN_TYPE || 'USDC',
-      merchantName: requirements.merchantName,
-    });
-    return { header: approval.xPayment, payer: approval.payer };
-  }
-
-  throw new Error(`[x402] unsupported payment scheme ${cfg.scheme}; configure Kite Passport gokite-aa`);
-}
-
 export async function paidFetch<T = unknown>(opts: PaidFetchOptions): Promise<PaidFetchResult<T>> {
   const cfg = readX402Config();
   const method = opts.method || 'GET';
@@ -221,11 +205,32 @@ export async function paidFetch<T = unknown>(opts: PaidFetchOptions): Promise<Pa
     }
   }
 
-  let payment;
   try {
-    payment = await buildPaymentHeader(requirements);
+    const executed = await executeKitePassportRequest<T>({
+      url: opts.url,
+      method,
+      headers: baseHeaders,
+      body: opts.body,
+    });
+    if (executed.status >= 400) {
+      throw new Error(`[x402] service returned ${executed.status} after Passport payment: ${JSON.stringify(executed.data)}`);
+    }
+    return {
+      status: executed.status,
+      data: executed.data,
+      payment: {
+        success: true,
+        network: requirements.network,
+        facilitator: cfg.facilitatorAddress,
+        payer: executed.walletAddress ?? 'kite-passport',
+        payee: requirements.payTo,
+        amount: getRequirementAmount(requirements),
+      },
+    };
   } catch (err) {
-    if (!isX402SimulationEnabled()) throw err;
+    if (!isX402SimulationEnabled()) {
+      throw err;
+    }
     return {
       status: 200,
       data: probe.data as T,
@@ -240,44 +245,6 @@ export async function paidFetch<T = unknown>(opts: PaidFetchOptions): Promise<Pa
       },
     };
   }
-
-  let paid;
-  try {
-    paid = await axios.request({
-      url: opts.url,
-      method,
-      headers: {
-        ...baseHeaders,
-        'X-PAYMENT': payment.header,
-      },
-      data: opts.body,
-      validateStatus: () => true,
-    });
-  } catch (err) {
-    const e = err as AxiosError;
-    throw new Error(`[x402] paid request failed: ${e.message}`);
-  }
-
-  if (paid.status >= 400) {
-    throw new Error(`[x402] service returned ${paid.status} after payment: ${JSON.stringify(paid.data)}`);
-  }
-
-  const settle = (paid.headers?.['x-payment-receipt'] as string | undefined) || paid.data?.payment;
-  const receipt: SettlementResult = {
-    success: true,
-    network: requirements.network,
-    facilitator: cfg.facilitatorAddress,
-    payer: payment.payer,
-    payee: requirements.payTo,
-    amount: getRequirementAmount(requirements),
-  };
-  if (settle && typeof settle === 'object') {
-    Object.assign(receipt, settle);
-  } else if (typeof settle === 'string') {
-    receipt.txHash = settle;
-  }
-
-  return { status: paid.status, data: paid.data as T, payment: receipt };
 }
 
 const DEFAULT_PLATFORM_FEE_PERCENT = 15;
