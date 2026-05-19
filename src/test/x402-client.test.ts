@@ -17,12 +17,12 @@ import {
 
 const envelope: PaymentEnvelope = {
   x402Version: 2,
-  scheme: 'gokite-aa',
-  network: 'kite-testnet',
+  scheme: 'exact',
+  network: 'eip155:2368',
   authorization: {
     from: '0xPayer',
     to: '0xPayTo',
-    value: '500000',
+    value: '500000000000000000',
     validAfter: '0',
     validBefore: '9999999999',
     nonce: '0xNonce',
@@ -34,10 +34,10 @@ const envelope: PaymentEnvelope = {
 
 const requirements: PaymentRequirements = {
   x402Version: 2,
-  scheme: 'gokite-aa',
-  network: 'kite-testnet',
-  maxAmountRequired: '500000',
-  amount: '500000',
+  scheme: 'exact',
+  network: 'eip155:2368',
+  maxAmountRequired: '500000000000000000',
+  amount: '500000000000000000',
   asset: '0xUSDC',
   payTo: '0xPayTo',
   maxTimeoutSeconds: 300,
@@ -52,46 +52,7 @@ describe('x402 client settlement', () => {
     delete process.env.KITE_X402_VERSION;
   });
 
-  it('defaults Kite/Pieverse settlement to the v1 gokite-aa body', async () => {
-    mockAxiosPost.mockResolvedValue({
-      status: 200,
-      data: { success: true, txHash: '0xTxHash' },
-    });
-
-    const result = await settleWithFacilitator(
-      { ...envelope, x402Version: undefined },
-      { ...requirements, x402Version: undefined },
-    );
-
-    expect(result.success).toBe(true);
-    expect(result.txHash).toBe('0xTxHash');
-    expect(mockAxiosPost).toHaveBeenCalledWith(
-      expect.stringMatching(/\/v2\/settle$/),
-      expect.objectContaining({
-        x402Version: 1,
-        paymentPayload: expect.objectContaining({
-          x402Version: 1,
-          scheme: 'gokite-aa',
-          network: 'kite-testnet',
-          payload: {
-            authorization: envelope.authorization,
-            signature: '0xSig',
-            asset: '0xUSDC',
-          },
-        }),
-        paymentRequirements: expect.objectContaining({
-          scheme: 'gokite-aa',
-          network: 'kite-testnet',
-          maxAmountRequired: '500000',
-          asset: '0xUSDC',
-        }),
-      }),
-      expect.objectContaining({ timeout: 10_000 }),
-    );
-  });
-
-  it('posts the v2 canonical settlement body to the facilitator when requested', async () => {
-    process.env.KITE_X402_VERSION = '2';
+  it('posts the live Pieverse-supported Kite v2 exact settlement body by default', async () => {
     mockAxiosPost.mockResolvedValue({
       status: 200,
       data: { success: true, txHash: '0xTxHash' },
@@ -108,8 +69,9 @@ describe('x402 client settlement', () => {
         paymentPayload: expect.objectContaining({
           x402Version: 2,
           accepted: expect.objectContaining({
-            scheme: 'gokite-aa',
-            amount: '500000',
+            scheme: 'exact',
+            network: 'eip155:2368',
+            amount: '500000000000000000',
             payTo: '0xPayTo',
           }),
           payload: {
@@ -118,7 +80,9 @@ describe('x402 client settlement', () => {
           },
         }),
         paymentRequirements: expect.objectContaining({
-          amount: '500000',
+          scheme: 'exact',
+          network: 'eip155:2368',
+          amount: '500000000000000000',
           asset: '0xUSDC',
         }),
       }),

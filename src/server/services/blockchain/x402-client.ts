@@ -8,8 +8,9 @@
  * Spec:        https://docs.x402.org/introduction
  * Facilitator: https://facilitator.pieverse.io  (operated by Pieverse for Kite)
  *
- * Payment scheme: `gokite-aa` (account-abstraction style, settled via
- * EIP-3009 `transferWithAuthorization` on the asset contract).
+ * Payment scheme: Pieverse currently registers Kite under x402 v2
+ * `exact` / `eip155:2368`, settled via EIP-3009
+ * `transferWithAuthorization` on the asset contract.
  *
  * Design note: this module deliberately does NOT depend on the `kpass` CLI.
  * `kpass` is the user-side approval surface; on the backend we sign with the
@@ -25,17 +26,15 @@ import { ethers } from 'ethers';
 // Configuration
 // ---------------------------------------------------------------------------
 
-const DEFAULT_SCHEME = 'gokite-aa';
-const DEFAULT_NETWORK = 'kite-testnet';
+const DEFAULT_SCHEME = 'exact';
+const DEFAULT_NETWORK = 'eip155:2368';
 const DEFAULT_FACILITATOR = 'https://facilitator.pieverse.io';
 const DEFAULT_FACILITATOR_ADDRESS = '0x12343e649e6b2b2b77649DFAb88f103c02F3C78b';
 const DEFAULT_USDC = '0x0fF5393387ad2f9f691FD6Fd28e07E3969e27e63';
 const DEFAULT_KITE_RPC = 'https://rpc-testnet.gokite.ai';
 const DEFAULT_KITE_CHAIN_ID = 2368;
-// Kite/Pieverse currently documents `gokite-aa` on `kite-testnet` with an
-// x402 v1 payment payload, even though the facilitator endpoint is `/v2/settle`.
-// Keep v2 parsing support for compatibility, but default Kite settlement to v1.
-const DEFAULT_X402_VERSION = 1;
+const DEFAULT_ASSET_DECIMALS = 18;
+const DEFAULT_X402_VERSION = 2;
 
 type X402Version = 1 | 2;
 
@@ -45,6 +44,7 @@ export type X402Config = {
   scheme: string;
   network: string;
   assetAddress: string;
+  assetDecimals: number;
   rpcUrl: string;
   chainId: number;
   x402Version: X402Version;
@@ -58,6 +58,7 @@ export function readX402Config(): X402Config {
     scheme: process.env.KITE_X402_SCHEME || DEFAULT_SCHEME,
     network: process.env.KITE_X402_NETWORK || DEFAULT_NETWORK,
     assetAddress: process.env.KITE_USDC_ADDRESS || DEFAULT_USDC,
+    assetDecimals: Number(process.env.KITE_USDC_DECIMALS || DEFAULT_ASSET_DECIMALS),
     rpcUrl: process.env.KITE_RPC_URL || process.env.NEXT_PUBLIC_KITE_RPC_URL || DEFAULT_KITE_RPC,
     chainId: Number(process.env.KITE_CHAIN_ID || DEFAULT_KITE_CHAIN_ID),
     x402Version: version === 1 ? 1 : 2,
@@ -177,7 +178,10 @@ function buildV2Accepted(requirements: PaymentRequirements) {
     amount: getRequirementAmount(normalized),
     payTo: normalized.payTo,
     maxTimeoutSeconds: normalized.maxTimeoutSeconds,
-    extra: normalized.extra,
+    extra: normalized.extra ?? {
+      name: process.env.KITE_USDC_DOMAIN_NAME || 'Test USD',
+      version: process.env.KITE_USDC_DOMAIN_VERSION || '2',
+    },
   };
 }
 
@@ -223,7 +227,7 @@ function assetDomain(asset: string, chainId: number) {
   // Standard USDC EIP-712 domain. The token contract on Kite testnet follows
   // the same shape; if it does not, override via env.
   return {
-    name: process.env.KITE_USDC_DOMAIN_NAME || 'USD Coin',
+    name: process.env.KITE_USDC_DOMAIN_NAME || 'Test USD',
     version: process.env.KITE_USDC_DOMAIN_VERSION || '2',
     chainId,
     verifyingContract: asset,
@@ -343,7 +347,7 @@ export async function paidFetch<T = unknown>(opts: PaidFetchOptions): Promise<Pa
 
   // Optional ceiling check
   if (opts.maxAmountUsdc !== undefined) {
-    const amountUsdc = Number(ethers.formatUnits(getRequirementAmount(requirements) || '0', 6));
+    const amountUsdc = Number(ethers.formatUnits(getRequirementAmount(requirements) || '0', cfg.assetDecimals));
     if (amountUsdc > opts.maxAmountUsdc) {
       throw new Error(
         `[x402] service requested ${amountUsdc} USDC > session per-tx ceiling ${opts.maxAmountUsdc}`,
@@ -458,7 +462,7 @@ export function buildPaymentRequirements(input: {
   outputSchema?: unknown;
 }): PaymentRequirements {
   const cfg = readX402Config();
-  const value = ethers.parseUnits(input.amountUsdc.toFixed(6), 6).toString();
+  const value = ethers.parseUnits(input.amountUsdc.toFixed(6), cfg.assetDecimals).toString();
   return {
     x402Version: cfg.x402Version,
     scheme: cfg.scheme,
@@ -468,6 +472,10 @@ export function buildPaymentRequirements(input: {
     asset: cfg.assetAddress,
     payTo: input.payTo,
     maxTimeoutSeconds: 300,
+    extra: {
+      name: process.env.KITE_USDC_DOMAIN_NAME || 'Test USD',
+      version: process.env.KITE_USDC_DOMAIN_VERSION || '2',
+    },
     description: input.description,
     merchantName: input.merchantName,
     resource: input.resource,
