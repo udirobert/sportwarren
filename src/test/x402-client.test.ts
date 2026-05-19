@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mockAxiosPost = vi.hoisted(() => vi.fn());
 const mockAxiosRequest = vi.hoisted(() => vi.fn());
-const mockApproveKitePassportPayment = vi.hoisted(() => vi.fn());
+const mockExecuteKitePassportRequest = vi.hoisted(() => vi.fn());
 
 vi.mock('axios', () => ({
   default: {
@@ -12,7 +12,7 @@ vi.mock('axios', () => ({
 }));
 
 vi.mock('@/server/services/blockchain/kite-passport', () => ({
-  approveKitePassportPayment: mockApproveKitePassportPayment,
+  executeKitePassportRequest: mockExecuteKitePassportRequest,
 }));
 
 import {
@@ -112,7 +112,7 @@ describe('x402 client settlement', () => {
     );
   });
 
-  it('uses Kite MCP approve_payment for outbound paid fetches', async () => {
+  it('uses Kite Passport CLI for outbound paid fetches', async () => {
     mockAxiosRequest
       .mockResolvedValueOnce({
         status: 402,
@@ -124,9 +124,11 @@ describe('x402 client settlement', () => {
         headers: { 'x-payment-receipt': '0xReceipt' },
         data: { ok: true },
       });
-    mockApproveKitePassportPayment.mockResolvedValue({
-      xPayment: 'base64-x-payment',
-      payer: '0xPayer',
+    mockExecuteKitePassportRequest.mockResolvedValue({
+      status: 200,
+      data: { ok: true },
+      walletAddress: '0xPayer',
+      raw: {},
     });
 
     const result = await paidFetch({
@@ -137,19 +139,16 @@ describe('x402 client settlement', () => {
     });
 
     expect(result.status).toBe(200);
-    expect(mockApproveKitePassportPayment).toHaveBeenCalledWith({
-      payTo: '0xPayTo',
-      amount: '5000000000000000',
-      tokenType: 'USDC',
-      merchantName: undefined,
+    expect(mockExecuteKitePassportRequest).toHaveBeenCalledWith({
+      url: 'https://example.com/scout',
+      method: 'POST',
+      headers: expect.objectContaining({ Accept: 'application/json' }),
+      body: { opponent: 'Liverpool' },
     });
-    expect(mockAxiosRequest).toHaveBeenLastCalledWith(expect.objectContaining({
-      headers: expect.objectContaining({ 'X-PAYMENT': 'base64-x-payment' }),
-    }));
     expect(result.payment).toMatchObject({
       payer: '0xPayer',
       payee: '0xPayTo',
-      txHash: '0xReceipt',
+      amount: '5000000000000000',
     });
   });
 

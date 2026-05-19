@@ -87,21 +87,21 @@ async function main() {
   });
 
   checks.push({
-    label: 'Kite MCP auth token configured',
-    ok: isKitePassportConfigured(),
-    detail: 'KITE_MCP_AUTH_TOKEN is required for real approve_payment calls',
+    label: 'Kite Passport CLI configured',
+    ok: await isKitePassportConfigured(),
+    detail: 'kpass must be logged in, registered, and have an active session',
   });
 
-  if (process.env.KITE_MCP_URL) {
+  if (process.env.KITE_FACILITATOR_URL) {
     const res = await axios.request({
-      url: process.env.KITE_MCP_URL,
-      method: 'POST',
-      headers: { Accept: 'application/json, text/event-stream' },
+      url: `${process.env.KITE_FACILITATOR_URL}/v2/supported`,
+      method: 'GET',
+      headers: { Accept: 'application/json' },
       timeout: 10_000,
       validateStatus: () => true,
     }).catch((error) => ({ status: 0, data: error instanceof Error ? error.message : String(error) }));
     checks.push({
-      label: 'Kite MCP endpoint reachable',
+      label: 'facilitator endpoint reachable',
       ok: res.status > 0 && res.status < 500,
       required: false,
       detail: `status=${res.status}`,

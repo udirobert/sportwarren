@@ -1,121 +1,119 @@
-import axios from 'axios';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
-const DEFAULT_KITE_MCP_URL = 'https://neo.dev.gokite.ai/v1/mcp';
+const execFileAsync = promisify(execFile);
 
-type JsonRpcResponse<T> = {
-  result?: T;
-  error?: { code?: number; message?: string; data?: unknown };
+type KpassExecuteResponse = {
+  status: string;
+  session_id?: string;
+  session_status?: string;
+  usage?: {
+    spent_total?: string;
+    reserved_total?: string;
+  };
+  delegation?: {
+    payment_policy?: {
+      max_total_amount?: string;
+    };
+  };
+  payment_requirement?: {
+    asset?: string;
+    amount?: string;
+  };
+  x402?: {
+    status_code?: number;
+    response_body?: string;
+    parsed_response_body?: unknown;
+    wallet_address?: string;
+    chain_id?: number;
+  };
+  error?: string;
+  hint?: string;
 };
 
-type ToolContent = {
-  type?: string;
-  text?: string;
+export type KitePassportExecuteResult<T = unknown> = {
+  status: number;
+  data: T;
+  walletAddress?: string;
+  chainId?: number;
+  raw: KpassExecuteResponse;
 };
 
-type ToolResult = {
-  content?: ToolContent[];
-  structuredContent?: unknown;
-  isError?: boolean;
-};
+function kpassBin(): string {
+  return process.env.KPASS_BIN || process.env.KITE_PASSPORT_BIN || 'kpass';
+}
 
-export type KitePassportPaymentApproval = {
-  xPayment: string;
-  payer: string;
-};
+export async function executeKitePassportRequest<T = unknown>(input: {
+  url: string;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: unknown;
+}): Promise<KitePassportExecuteResult<T>> {
+  const args = [
+    'agent:session',
+    'execute',
+    '--url',
+    input.url,
+    '--method',
+    input.method ?? 'POST',
+    '--output',
+    'json',
+  ];
 
-function readMcpConfig() {
+  if (input.headers && Object.keys(input.headers).length > 0) {
+    args.push('--headers', JSON.stringify(input.headers));
+  }
+  if (input.body !== undefined) {
+    args.push('--body', JSON.stringify(input.body));
+  }
+
+  let parsed: KpassExecuteResponse;
+  try {
+    const { stdout } = await execFileAsync(kpassBin(), args, {
+      timeout: 300_000,
+      maxBuffer: 10 * 1024 * 1024,
+    });
+    parsed = JSON.parse(stdout) as KpassExecuteResponse;
+  } catch (err) {
+    throw new Error(`Kite Passport execute failed: ${(err as Error).message}`);
+  }
+
+  if (parsed.status !== 'success') {
+    throw new Error(parsed.error || parsed.hint || 'Kite Passport execute failed');
+  }
+
+  const status = parsed.x402?.status_code ?? 500;
+  const data = parsed.x402?.parsed_response_body !== undefined
+    ? parsed.x402.parsed_response_body
+    : parseResponseBody(parsed.x402?.response_body);
+
   return {
-    url: process.env.KITE_MCP_URL || DEFAULT_KITE_MCP_URL,
-    authToken: process.env.KITE_MCP_AUTH_TOKEN?.trim(),
+    status,
+    data: data as T,
+    walletAddress: parsed.x402?.wallet_address,
+    chainId: parsed.x402?.chain_id,
+    raw: parsed,
   };
 }
 
-function parseMcpBody<T>(body: unknown): JsonRpcResponse<T> {
-  if (typeof body === 'string') {
-    const dataLine = body
-      .split('\n')
-      .map((line) => line.trim())
-      .find((line) => line.startsWith('data:'));
-    return JSON.parse((dataLine ?? body).replace(/^data:\s*/, '')) as JsonRpcResponse<T>;
-  }
-  return body as JsonRpcResponse<T>;
-}
-
-function parseToolJson(result: ToolResult): any {
-  if (result.isError) {
-    const message = result.content?.map((item) => item.text).filter(Boolean).join(' ') || 'Kite MCP tool returned an error';
-    throw new Error(message);
-  }
-  if (result.structuredContent && typeof result.structuredContent === 'object') {
-    return result.structuredContent;
-  }
-  const text = result.content?.find((item) => item.type === 'text' && item.text)?.text;
-  if (!text) return {};
+function parseResponseBody(body: string | undefined): unknown {
+  if (!body) return null;
   try {
-    return JSON.parse(text);
+    return JSON.parse(body);
   } catch {
-    return { text };
+    return body;
   }
 }
 
-async function callKiteMcpTool<T = any>(name: string, args: Record<string, unknown>): Promise<T> {
-  const cfg = readMcpConfig();
-  if (!cfg.authToken) {
-    throw new Error('KITE_MCP_AUTH_TOKEN is required for Kite Passport payments');
+export async function isKitePassportConfigured(): Promise<boolean> {
+  try {
+    const { stdout } = await execFileAsync(kpassBin(), ['status', '--output', 'json'], {
+      timeout: 10_000,
+      maxBuffer: 1024 * 1024,
+    });
+    const status = JSON.parse(stdout);
+    return Boolean(status?.user?.jwt_valid && status?.agent?.registered && status?.session?.active);
+  } catch {
+    return false;
   }
-
-  const res = await axios.request({
-    url: cfg.url,
-    method: 'POST',
-    headers: {
-      Accept: 'application/json, text/event-stream',
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${cfg.authToken}`,
-    },
-    data: {
-      jsonrpc: '2.0',
-      id: `${Date.now()}-${Math.random().toString(36).slice(2)}`,
-      method: 'tools/call',
-      params: { name, arguments: args },
-    },
-    timeout: 15_000,
-    validateStatus: () => true,
-  });
-
-  if (res.status >= 400) {
-    throw new Error(`Kite MCP ${name} failed: ${res.status} ${typeof res.data === 'string' ? res.data : JSON.stringify(res.data)}`);
-  }
-
-  const body = parseMcpBody<ToolResult>(res.data);
-  if (body.error) {
-    throw new Error(`Kite MCP ${name} failed: ${body.error.message ?? body.error.code ?? 'unknown error'}`);
-  }
-  return parseToolJson(body.result ?? {}) as T;
-}
-
-export async function approveKitePassportPayment(input: {
-  payTo: string;
-  amount: string;
-  tokenType?: string;
-  merchantName?: string;
-}): Promise<KitePassportPaymentApproval> {
-  const payerResult = await callKiteMcpTool<{ payer_addr?: string; payerAddr?: string }>('get_payer_addr', {});
-  const payer = payerResult.payer_addr ?? payerResult.payerAddr;
-  if (!payer) throw new Error('Kite MCP get_payer_addr did not return payer_addr');
-
-  const approval = await callKiteMcpTool<{ x_payment?: string; xPayment?: string }>('approve_payment', {
-    payer_addr: payer,
-    payee_addr: input.payTo,
-    amount: input.amount,
-    token_type: input.tokenType ?? 'USDC',
-    merchant_name: input.merchantName,
-  });
-  const xPayment = approval.x_payment ?? approval.xPayment;
-  if (!xPayment) throw new Error('Kite MCP approve_payment did not return x_payment');
-
-  return { xPayment, payer };
-}
-
-export function isKitePassportConfigured(): boolean {
-  return Boolean(readMcpConfig().authToken);
 }
