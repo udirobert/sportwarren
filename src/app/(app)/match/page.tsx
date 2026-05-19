@@ -14,6 +14,7 @@ import { useMatchVerification } from "@/hooks/match/useMatchVerification";
 import { useMatchCenterData } from "@/hooks/match/useMatchCenterData";
 import { useWallet } from "@/contexts/WalletContext";
 import { JourneyGateCard } from "@/components/common/JourneyGateCard";
+import { PageShell } from "@/components/common/PageShell";
 import { TelegramContextualTip } from "@/components/common/TelegramContextualTip";
 import {
   Trophy,
@@ -295,7 +296,7 @@ export default function MatchPage() {
 
   if (matchCenterGate.status === "blocked") {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-8 md:py-12 nav-spacer-top nav-spacer-bottom text-gray-900 dark:text-gray-100 space-y-4">
+      <PageShell maxWidth="4xl">
         <JourneyGateCard
           icon={Trophy}
           eyebrow={matchCenterGate.eyebrow}
@@ -304,12 +305,12 @@ export default function MatchPage() {
           primaryAction={matchCenterGate.primaryAction}
           secondaryAction={matchCenterGate.secondaryAction}
         />
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div ref={pullRef as React.RefObject<HTMLDivElement>} className="mx-auto max-w-6xl space-y-6 px-4 py-6 nav-spacer-top nav-spacer-bottom">
+    <PageShell ref={pullRef as React.RefObject<HTMLDivElement>} className="space-y-6">
       <div className="rounded-3xl border border-emerald-200 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.16),_transparent_45%),linear-gradient(135deg,#f5fffb,#ecfdf5)] p-6">
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
@@ -866,6 +867,6 @@ export default function MatchPage() {
           Refreshing match operations...
         </Card>
       )}
-    </div>
+    </PageShell>
   );
 }

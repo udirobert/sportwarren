@@ -1,9 +1,17 @@
 import { Card } from "@/components/ui/Card";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { SoccerLoader } from "@/components/ui/SoccerLoader";
 
 export default function SettingsLoading() {
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 nav-spacer-top nav-spacer-bottom space-y-6">
+    <div className="max-w-4xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom space-y-6 text-gray-900 dark:text-gray-100">
+      {/* Tactical Loading Indicator */}
+      <div className="flex items-center gap-3 px-2 mb-2">
+        <SoccerLoader size={20} />
+        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+          Loading Settings
+        </span>
+      </div>
       {/* Header */}
       <div className="flex items-center gap-3">
         <Skeleton className="w-10 h-10 rounded-xl" />
