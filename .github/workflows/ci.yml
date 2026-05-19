@@ -112,8 +112,8 @@ jobs:
       - name: Install Playwright browsers
         run: pnpm exec playwright install --with-deps
 
-      - name: Run database migrations
-        run: pnpm prisma migrate deploy
+      - name: Sync database schema
+        run: pnpm prisma db push
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sportwarren_test
 
