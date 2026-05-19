@@ -30,6 +30,7 @@ next-env.d.ts
 
 # Testing
 /coverage
+/e2e/auth-state.json
 
 # Misc
 .DS_Store

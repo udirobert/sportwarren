@@ -56,7 +56,16 @@ function buildScoutRequirements() {
 }
 
 function build402(): NextResponse {
-  return NextResponse.json({ requirements: buildScoutRequirements() }, { status: 402 });
+  const requirements = buildScoutRequirements();
+  const paymentRequired = Buffer.from(JSON.stringify({
+    x402Version: requirements.x402Version ?? 2,
+    accepts: [requirements],
+  }), 'utf-8').toString('base64');
+
+  return NextResponse.json(
+    { requirements, accepts: [requirements] },
+    { status: 402, headers: { 'PAYMENT-REQUIRED': paymentRequired } },
+  );
 }
 
 export async function GET() {
@@ -64,7 +73,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const paymentHeader = request.headers.get('x-payment');
+  const paymentHeader = request.headers.get('payment-signature') ?? request.headers.get('x-payment');
   if (!paymentHeader) return build402();
 
   // Decode + settle payment first; never produce work for an unpaid call.

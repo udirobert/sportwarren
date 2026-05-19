@@ -7,6 +7,7 @@ import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
 import { Card } from '@/components/ui/Card';
+import { TermTooltip, GlossaryButton } from '@/components/ui/TermTooltip';
 import { trpc } from '@/lib/trpc-client';
 import type { DashboardEntryStateId } from '@/lib/dashboard/entry-state';
 import type { PlayerPosition } from '@/types';
@@ -244,6 +245,9 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
             </button>
           </div>
         </Card>
+        <div className="absolute -top-12 right-0">
+          <GlossaryButton />
+        </div>
       </div>
     );
   }

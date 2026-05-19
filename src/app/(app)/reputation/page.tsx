@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { EmptyState } from "@/components/common/EmptyState";
 import { Target, History, CheckCircle, Clock, Trophy, Shield, Star } from "lucide-react";
 import { TrpcErrorBoundary } from "@/components/ui/TrpcErrorBoundary";
-import { VerificationBanner } from "@/components/common/VerificationBanner";
+import { ContextualNavCard } from "@/components/common/ContextualNavCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getJourneyZeroState } from "@/lib/journey/content";
 import { describeMatchForSquad, isSettledMatchStatus } from "@/lib/match/summary";
@@ -44,29 +44,18 @@ function ReputationPageInner() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-6 nav-spacer-top nav-spacer-bottom space-y-4 text-gray-900 dark:text-gray-100">
-      <VerificationBanner />
-      {/* Contextual nav */}
-      <Card className="border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 py-3">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-          <p className="text-sm text-gray-700 dark:text-gray-200">
-            {reputationContext}
-          </p>
-          <div className="flex gap-2 shrink-0">
-            <Link href="/match?mode=history">
-              <Button size="sm" variant="outline" className="flex items-center gap-1.5">
-                <History className="w-3.5 h-3.5" />
-                Match History
-              </Button>
-            </Link>
-            <Link href={pendingMatchesCount > 0 ? "/match?mode=verify" : "/match"}>
-              <Button size="sm" className="flex items-center gap-1.5">
-                {pendingMatchesCount > 0 ? <Clock className="w-3.5 h-3.5" /> : <Target className="w-3.5 h-3.5" />}
-                {pendingMatchesCount > 0 ? "Review Pending" : "Play a Match"}
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </Card>
+      <ContextualNavCard
+        contextMessage={reputationContext}
+        actions={[
+          { label: "Match History", href: "/match?mode=history", icon: History },
+          {
+            label: pendingMatchesCount > 0 ? "Review Pending" : "Play a Match",
+            href: pendingMatchesCount > 0 ? "/match?mode=verify" : "/match",
+            icon: pendingMatchesCount > 0 ? Clock : Target,
+            variant: "primary",
+          },
+        ]}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">

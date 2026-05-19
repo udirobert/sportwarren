@@ -199,6 +199,23 @@ describe('x402 scout route', () => {
       expect(body.error).toMatch(/invalid/i);
     });
 
+    it('POST accepts the v2 PAYMENT-SIGNATURE header', async () => {
+      mockCheckUserSpending.mockResolvedValue({ ok: true });
+      mockPrismaUserFindUnique.mockResolvedValue(null);
+      mockPrismaSquadFindFirst.mockResolvedValue(null);
+
+      const res = await POST(
+        fakeRequest(
+          { 'payment-signature': 'valid-v2-base64' },
+          { opponent: 'Liverpool', requestedBy: 'user_v2' },
+        ),
+      );
+
+      expect(res.status).toBe(200);
+      expect(mockDecodeXPayment).toHaveBeenCalledWith('valid-v2-base64');
+      expect(mockSettleWithFacilitator).toHaveBeenCalled();
+    });
+
     it('POST returns 402 when settlement with facilitator fails', async () => {
       mockSettleWithFacilitator.mockResolvedValue({
         success: false,

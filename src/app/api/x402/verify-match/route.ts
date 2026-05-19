@@ -51,12 +51,25 @@ function buildVerifyRequirements() {
   });
 }
 
+function build402(): NextResponse {
+  const requirements = buildVerifyRequirements();
+  const paymentRequired = Buffer.from(JSON.stringify({
+    x402Version: requirements.x402Version ?? 2,
+    accepts: [requirements],
+  }), 'utf-8').toString('base64');
+
+  return NextResponse.json(
+    { requirements, accepts: [requirements] },
+    { status: 402, headers: { 'PAYMENT-REQUIRED': paymentRequired } },
+  );
+}
+
 export async function GET() {
-  return NextResponse.json({ requirements: buildVerifyRequirements() }, { status: 402 });
+  return build402();
 }
 
 export async function POST(request: NextRequest) {
-  const paymentHeader = request.headers.get('x-payment');
+  const paymentHeader = request.headers.get('payment-signature') ?? request.headers.get('x-payment');
 
   // If no payment, return 402 with requirements
   if (!paymentHeader) {

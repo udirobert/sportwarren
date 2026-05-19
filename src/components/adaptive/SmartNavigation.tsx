@@ -13,6 +13,7 @@ import { useActiveSquad } from '@/contexts/ActiveSquadContext';
 import { SELF_SERVE_PLATFORM_LIST } from '@/types';
 import { ContextualHelp } from './ContextualHelp';
 import { AccountStatusControl } from '@/components/common/AccountStatusControl';
+import { GlossaryButton } from '@/components/ui/TermTooltip';
 import { trpc } from '@/lib/trpc-client';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { buildAvatarPresentationFromSummary } from '@/lib/avatar/adapters';
@@ -409,6 +410,9 @@ export const SmartNavigation: React.FC = () => {
                   <span className="text-xs font-medium text-center">{label}</span>
                 </Link>
               ))}
+            </div>
+            <div className="px-5 pb-4 pt-2 border-t border-gray-100 dark:border-gray-700">
+              <GlossaryButton />
             </div>
           </div>
         </>
