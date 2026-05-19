@@ -28,7 +28,6 @@ import { AGENT_PERSONAS } from '@/server/services/ai/prompts';
 import { kiteAIService } from '@/server/services/ai/kite';
 
 const SCOUT_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || '0.50');
-const SCOUT_MAX_USDC = Number(process.env.KITE_SCOUT_MAX_USDC || '0.50');
 
 function getPayToAddress(): string {
   const pk = process.env.WEB3_PRIVATE_KEY?.trim();
@@ -106,16 +105,17 @@ export async function POST(request: NextRequest) {
 
   // ── Per-user-per-day spending guard ──────────────────────────────
   if (body.requestedBy) {
+    const scoutLimit = kiteAIService.getScoutUserDailyLimit(body.requestedBy);
     const guard = await kiteAIService.checkUserSpending(
       body.requestedBy,
       SCOUT_PRICE_USDC,
-      SCOUT_MAX_USDC,
+      scoutLimit,
     );
     if (!guard.ok) {
       return NextResponse.json(
         {
           error: 'Daily scout limit reached',
-          limitUsdc: SCOUT_MAX_USDC,
+          limitUsdc: scoutLimit,
           remaining: guard.remaining,
         },
         { status: 429 },
