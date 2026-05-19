@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Info, Zap, Loader2 } from 'lucide-react';
+import { ChainLabel } from '@/components/common/ChainLabel';
 
 interface KiteVerificationBadgeProps {
   verified?: boolean;
@@ -69,7 +70,7 @@ export const KiteVerificationBadge: React.FC<KiteVerificationBadgeProps> = ({
         <div className="flex items-start gap-2">
           <Info className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />
           <p className="leading-tight">
-            This agent identity is anchored on the <span className="text-emerald-400 font-bold">Kite Chain</span>. All actions are cryptographically signed and verifiable.
+            This agent identity is anchored on the <span className="text-emerald-400 font-bold"><ChainLabel chain="kite" /></span>. All actions are cryptographically signed and verifiable.
           </p>
         </div>
         {lastPing && (

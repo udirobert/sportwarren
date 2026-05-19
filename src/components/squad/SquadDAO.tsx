@@ -3,6 +3,7 @@ import { Card } from "@/components/ui/Card";
 import { Vote, Plus, Check, X, Clock, Shield, ArrowRight } from "lucide-react";
 import { useWallet } from "@/contexts/WalletContext";
 import { useFujiGovernance } from "@/hooks/squad/useFujiGovernance";
+import { ChainLabel } from "@/components/common/ChainLabel";
 
 interface SquadDAOInfo {
   governanceAppId: number;
@@ -144,7 +145,7 @@ export const SquadDAO: React.FC = () => {
         <Shield className="w-12 h-12 text-gray-300 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-gray-900">Governance Rail Disconnected</h3>
         <p className="text-gray-600 max-w-sm mx-auto mt-2">
-          Connect an Algorand or Avalanche wallet to participate in squad governance and vote on proposals.
+          Connect a <ChainLabel chain="algorand" /> or <ChainLabel chain="avalanche" /> wallet to participate in squad governance and vote on proposals.
         </p>
       </Card>
     );
@@ -169,7 +170,7 @@ export const SquadDAO: React.FC = () => {
             <div className="flex items-center space-x-2 mb-1">
               <span className={`w-2 h-2 rounded-full ${isAvalanche ? 'bg-red-500' : 'bg-blue-500'} animate-pulse`} />
               <p className="text-gray-300 dark:text-gray-400 text-xs font-bold uppercase tracking-widest">
-                {isAvalanche ? 'Avalanche Fuji' : 'Algorand Testnet'} Governance
+                <ChainLabel chain={isAvalanche ? 'avalanche' : 'algorand'} showTechnical />{isAvalanche ? ' Fuji' : ' Testnet'} Governance
               </p>
             </div>
             <h2 className="text-2xl font-bold flex items-center">
@@ -336,7 +337,7 @@ export const SquadDAO: React.FC = () => {
             <div className="space-y-4">
               <div className="p-3 bg-blue-50 border border-blue-100 rounded-lg">
                 <p className="text-xs text-blue-700 leading-relaxed">
-                  <strong>Network:</strong> {isAvalanche ? 'Avalanche Fuji (EVM)' : 'Algorand Testnet (AVM)'}<br/>
+                  <strong>Network:</strong> <ChainLabel chain={isAvalanche ? 'avalanche' : 'algorand'} showTechnical />{isAvalanche ? ' Fuji (EVM)' : ' Testnet (AVM)'}<br/>
                   Proposals require a minimum threshold of voting power to be submitted to the chain.
                 </p>
               </div>

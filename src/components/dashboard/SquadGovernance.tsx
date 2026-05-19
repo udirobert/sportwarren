@@ -3,6 +3,7 @@
 import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { Shield, ExternalLink } from 'lucide-react';
+import { ChainLabel } from '@/components/common/ChainLabel';
 import { trpc } from '@/lib/trpc-client';
 
 export const SquadGovernance: React.FC<{ squadId: string }> = ({ squadId }) => {
@@ -15,7 +16,7 @@ export const SquadGovernance: React.FC<{ squadId: string }> = ({ squadId }) => {
             <div className="text-center py-6">
                 <Shield className="w-8 h-8 text-purple-400 mx-auto mb-2" />
                 <p className="text-sm font-semibold text-gray-700 mb-1">On-Chain Governance Active</p>
-                <p className="text-xs text-gray-500">Squad proposals are managed via the Avalanche Governor contract.</p>
+                <p className="text-xs text-gray-500">Squad proposals are managed via the <ChainLabel chain="avalanche" /> Governor contract.</p>
                 <a 
                     href="https://snowtrace.io" 
                     target="_blank" 

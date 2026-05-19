@@ -11,6 +11,7 @@ import {
 } from '@/lib/blockchain/evm-config';
 import { trpc } from '@/lib/trpc-client';
 import { AvatarHeroCard } from '@/components/ui/AvatarHeroCard';
+import { ChainLabel } from '@/components/common/ChainLabel';
 
 const avalancheNetworkLabel = getAvalancheNetworkLabel();
 
@@ -46,9 +47,9 @@ export const AchievementGallery: React.FC = () => {
         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
           <Trophy className="w-8 h-8 text-gray-300" />
         </div>
-        <h4 className="text-lg font-semibold text-gray-900">Avalanche Trophy Rail</h4>
+        <h4 className="text-lg font-semibold text-gray-900"><ChainLabel chain="avalanche" showTechnical /> Trophy Rail</h4>
         <p className="text-gray-500 text-sm mt-2 max-w-xs mx-auto">
-          Achievement NFTs are published on {avalancheNetworkLabel}. Switch to an Avalanche wallet to browse on-chain trophies for this account.
+          Achievement NFTs are published on {avalancheNetworkLabel}. Switch to a <ChainLabel chain="avalanche" /> wallet to browse on-chain trophies for this account.
         </p>
       </Card>
     );

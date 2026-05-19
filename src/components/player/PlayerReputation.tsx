@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { ChainLabel } from '@/components/common/ChainLabel';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -294,7 +295,7 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
                 </div>
                 <button className="text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1">
                   <Zap className="w-3 h-3" />
-                  Scan Kite Chain
+                  Scan <ChainLabel chain="kite" />
                 </button>
               </div>
 
