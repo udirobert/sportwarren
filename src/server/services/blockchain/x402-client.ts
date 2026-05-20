@@ -398,6 +398,7 @@ export async function paidFetch<T = unknown>(opts: PaidFetchOptions): Promise<Pa
         payer: executed.walletAddress ?? 'kite-passport',
         payee: facilitatorReqs.payTo,
         amount: getRequirementAmount(facilitatorReqs),
+        txHash: executed.txHash,
       },
     };
   }
@@ -582,7 +583,6 @@ export async function executeKiteDemoPayment(): Promise<{
 }> {
   const serviceUrl = (process.env.KITE_DEMO_SERVICE_URL || DEFAULT_KITE_DEMO_SERVICE_URL).trim();
   const maxUsdc = Number(process.env.KITE_DEMO_MAX_USDC || '0.02');
-  const explorer = (process.env.KITE_EXPLORER_URL || 'https://testnet.kitescan.ai').replace(/\/$/, '');
 
   if (!(await isKitePassportConfigured())) {
     return { ok: false, serviceUrl, error: 'Kite Passport not configured (kpass login, agent, active session)' };
@@ -595,12 +595,15 @@ export async function executeKiteDemoPayment(): Promise<{
       maxAmountUsdc: maxUsdc,
     });
     const txHash = result.payment?.txHash;
+    const explorerUrl = txHash && !txHash.startsWith('internal-')
+      ? `https://basescan.org/tx/${txHash}`
+      : undefined;
     return {
       ok: result.status < 400,
       serviceUrl,
       data: result.data,
       payment: result.payment,
-      explorerUrl: txHash && !txHash.startsWith('internal-') ? `${explorer}/tx/${txHash}` : undefined,
+      explorerUrl,
       error: result.status >= 400 ? `HTTP ${result.status}` : undefined,
     };
   } catch (err) {
