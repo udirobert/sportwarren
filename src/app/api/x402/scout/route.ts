@@ -56,7 +56,7 @@ function buildScoutRequirements() {
 function build402(): NextResponse {
   const requirements = buildScoutRequirements();
   const paymentRequired = Buffer.from(JSON.stringify({
-    x402Version: requirements.x402Version ?? 2,
+    x402Version: requirements.x402Version ?? 1,
     accepts: [requirements],
   }), 'utf-8').toString('base64');
 

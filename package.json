@@ -25,6 +25,7 @@
     "test:chainlink": "tsx scripts/test-chainlink.ts",
     "test:kite": "tsx scripts/test-kite.ts",
     "kite:x402:preflight": "tsx scripts/kite-x402-preflight.ts",
+    "kite:onchain-proof": "tsx scripts/kite-onchain-proof.ts",
     "test:verification": "tsx scripts/test-verification.ts",
     "prod:check": "tsx scripts/production-check.ts",
     "yellow:recover": "tsx scripts/yellow-recovery.ts",

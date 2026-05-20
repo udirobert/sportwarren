@@ -42,9 +42,9 @@ async function main() {
     detail: `rpc=${network.chainId.toString()}`,
   });
   checks.push({
-    label: 'official Kite Passport scheme configured',
-    ok: cfg.x402Version === 1 && cfg.scheme === 'gokite-aa' && cfg.network === 'kite-testnet',
-    detail: 'expected x402Version=1 scheme=gokite-aa network=kite-testnet',
+    label: 'Pieverse facilitator scheme configured',
+    ok: cfg.x402Version === 2 && cfg.scheme === 'exact' && cfg.network === 'eip155:2368',
+    detail: 'expected x402Version=2 scheme=exact network=eip155:2368',
   });
 
   const code = await provider.getCode(cfg.assetAddress);
@@ -79,10 +79,10 @@ async function main() {
   });
   checks.push({
     label: '402 requirements match Kite service-provider shape',
-    ok: requirements.x402Version === 1 &&
-      requirements.scheme === 'gokite-aa' &&
-      requirements.network === 'kite-testnet' &&
-      requirements.extra === null,
+    ok: requirements.x402Version === 2 &&
+      requirements.scheme === 'exact' &&
+      requirements.network === 'eip155:2368' &&
+      Boolean(requirements.extra),
     detail: `${requirements.scheme}/${requirements.network}`,
   });
 
