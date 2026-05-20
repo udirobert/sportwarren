@@ -9,7 +9,7 @@ SportWarren is a first-class participant in the **Kite Agentic Economy**, utiliz
 SportWarren implements three Kite flows:
 
 1. **Internal squad autonomy (WhatsApp / cron):** Scout reports via `createPlatformSettlement()` — EIP-3009 sign + Pieverse facilitator (`exact` / `eip155:2368` / v2). Real KiteScan tx when the facilitator accepts; otherwise an honest off-chain `internal-scout-*` receipt.
-2. **Judge on-chain proof (WhatsApp `kite-proof`):** Kite Passport (`kpass`) pays a **Kite-listed** x402 merchant (default: [Weather API](https://x402.dev.gokite.ai/api/weather)) — this is the path that produces judge-visible Passport + facilitator settlements.
+2. **Judge on-chain proof (WhatsApp `kite-proof`):** Kite Passport (`kpass`) pays a **Kite-listed** x402 merchant — default **[Weather · hugen](https://weather.hugen.tokyo/weather/current?city=London)** (~$0.01 USDC on Base). Listed in Passport discovery (`ksearch services list`); **never** rely on `x402.dev.gokite.ai` in production (often fails DNS on servers).
 3. **External agent commerce:** `POST /api/x402/scout` — paid service for external agents; same Pieverse settlement on inbound `X-Payment`.
 
 ### The Narrative
@@ -30,8 +30,10 @@ When a linked WhatsApp user runs `scout Liverpool`:
 Text **`kite-proof`** to WhatsApp **+1 (201) 534-5384** (or run `pnpm exec tsx scripts/kite-onchain-proof.ts` on the server):
 
 1. Active Kite Passport session on the server (`kpass`).
-2. Pays the Kite Weather x402 demo service (allowlisted merchant).
-3. Returns service response + KiteScan link when available.
+2. Pays a discovery-listed Weather API (**Base** USDC, not only Kite testnet).
+3. Returns JSON weather + facilitator proof (explorer link depends on chain — Base vs Kite).
+
+**Fund Passport:** add enough **Base** USDC for the demo (~$0.05) via the Passport dashboard; `x402.dev.gokite.ai` is not used — it commonly returns `ENOTFOUND` in production DNS.
 
 ### 3. External x402 Scout Endpoint
 `POST https://api.sportwarren.com/api/x402/scout`:
@@ -57,7 +59,7 @@ Configured on Hetzner (`snel-bot`) at `/home/deploy/.kpass/bin/kpass`; config sy
 | Account | `papaandthejimjams@gmail.com` |
 | Agent ID | `agent_019e42a0-7033-74a4-8f9e-346cacbc505d` (`squad_manager`) |
 | Session ID | `agent_session_019e42a1-b809-7aee-a4fc-8335653c7796` |
-| Session budget | 0.05 USDC / tx, 5 USDC total, expires **2026-06-18** |
+| Session budget | Approve with **≥ 0.02 USDC per tx** (Weather charges ~$0.01 on Base) and fund **Base** USDC in the Passport wallet. |
 
 **Production x402 env (required):**
 
@@ -66,7 +68,8 @@ KITE_X402_VERSION=2
 KITE_X402_SCHEME=exact
 KITE_X402_NETWORK=eip155:2368
 KITE_X402_SIMULATE=false   # must NOT be true in production
-KITE_DEMO_SERVICE_URL=https://x402.dev.gokite.ai/api/weather?location=London
+KITE_DEMO_SERVICE_URL=https://weather.hugen.tokyo/weather/current?city=London
+KITE_DEMO_MAX_USDC=0.02
 ```
 
 Do **not** point `KITE_SCOUT_SERVICE_URL` at `api.sportwarren.com` for kpass — use internal settlement or a catalog merchant.

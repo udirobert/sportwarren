@@ -138,7 +138,7 @@ describe('x402 client settlement', () => {
     });
 
     const result = await paidFetch({
-      url: 'https://x402.dev.gokite.ai/api/weather?location=London',
+      url: 'https://weather.hugen.tokyo/weather/current?city=London',
       method: 'GET',
       maxAmountUsdc: 0.01,
     });

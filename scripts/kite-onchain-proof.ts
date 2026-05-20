@@ -5,7 +5,7 @@
  *   pnpm exec tsx scripts/kite-onchain-proof.ts
  *
  * Requires: kpass logged in, registered agent, active session, funded wallet.
- * Optional: KITE_DEMO_SERVICE_URL (default: Kite Weather API on x402.dev.gokite.ai)
+ * Optional: KITE_DEMO_SERVICE_URL (default: Kite-listed Weather API on weather.hugen.tokyo — needs Base USDC in Passport wallet)
  */
 import * as dotenv from 'dotenv';
 import * as path from 'path';

@@ -26,9 +26,16 @@ const DEFAULT_KITE_CHAIN_ID = 2368;
 const DEFAULT_ASSET_DECIMALS = 18;
 const DEFAULT_X402_VERSION = 2;
 
-/** Default Kite-listed x402 demo (Weather API) for judge-visible Passport payments. */
+/**
+ * Default Kite catalog x402 demo (GET → 402, allowlisted for Passport discovery).
+ *
+ * Note: Listed services mostly settle on Base (8453 USDC); fund the Passport wallet for Base,
+ * not only Kite testnet, or set `KITE_DEMO_SERVICE_URL` to another discovery-listed endpoint.
+ *
+ * Docs URL `x402.dev.gokite.ai` often does not resolve in production DNS — do not use it as default.
+ */
 export const DEFAULT_KITE_DEMO_SERVICE_URL =
-  'https://x402.dev.gokite.ai/api/weather?location=London';
+  'https://weather.hugen.tokyo/weather/current?city=London';
 
 type X402Version = 1 | 2;
 
@@ -574,7 +581,7 @@ export async function executeKiteDemoPayment(): Promise<{
   error?: string;
 }> {
   const serviceUrl = (process.env.KITE_DEMO_SERVICE_URL || DEFAULT_KITE_DEMO_SERVICE_URL).trim();
-  const maxUsdc = Number(process.env.KITE_DEMO_MAX_USDC || '0.01');
+  const maxUsdc = Number(process.env.KITE_DEMO_MAX_USDC || '0.02');
   const explorer = (process.env.KITE_EXPLORER_URL || 'https://testnet.kitescan.ai').replace(/\/$/, '');
 
   if (!(await isKitePassportConfigured())) {
