@@ -579,11 +579,11 @@ export async function dispatchWhatsAppCommand(
         "✅ *Kite Passport x402 payment succeeded*",
         `Service: ${demo.serviceUrl}`,
         demo.explorerUrl
-          ? `KiteScan: ${demo.explorerUrl}`
-          : "Payment executed via Passport (check KiteScan for recent agent wallet txs).",
+          ? `🔗 Verify on-chain: ${demo.explorerUrl}`
+          : "Payment executed via Passport (check BaseScan for recent agent wallet txs).",
         preview ? `\nResponse: ${preview}` : "",
         "",
-        "This is the judge-visible on-chain path: Passport → allowlisted merchant → facilitator.",
+        "Paid via Kite Agent Passport → x402 → Base USDC settlement.",
       ];
       return lines.join("\n");
     }
