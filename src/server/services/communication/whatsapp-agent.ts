@@ -23,11 +23,9 @@ import { autonomyPolicy, type AutonomyLevel } from "../ai/autonomy-policy";
 import { tinyfishService, tinyfishConfigured } from "../ai/tinyfish";
 import { createScoutReport } from "../ai/scout-report";
 import {
+  createPlatformSettlement,
+  executeKiteDemoPayment,
   readX402Config,
-  settleWithFacilitator,
-  buildPaymentRequirements,
-  getPlatformWallet,
-  type SettlementResult,
 } from "../blockchain/x402-client";
 import { redisService } from "../redis";
 import { generateInference } from "@/lib/ai/inference";
@@ -35,68 +33,6 @@ import { generateInference } from "@/lib/ai/inference";
 const EXPLORER_BASE = process.env.KITE_EXPLORER_URL || "https://testnet.kitescan.ai";
 const SCOUT_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || "0.005");
 const TELEGRAM_BOT_USERNAME = process.env.TELEGRAM_BOT_USERNAME || "sportwarrenbot";
-
-/**
- * Create a platform-attested settlement for internal WhatsApp scout requests.
- *
- * Uses the platform wallet to construct a self-payment envelope and submits
- * it to the x402 facilitator. If the facilitator is unreachable or rejects,
- * falls back to a simulated settlement so the user flow is never blocked.
- */
-async function createPlatformSettlement(amountUsdc: number): Promise<SettlementResult> {
-  const cfg = readX402Config();
-  const platformWallet = getPlatformWallet();
-
-  if (!platformWallet) {
-    return {
-      success: true,
-      simulated: true,
-      network: cfg.network,
-      facilitator: 'sportwarren-internal',
-      payer: 'unknown',
-      payee: 'unknown',
-      amount: '0',
-    };
-  }
-
-  const requirements = buildPaymentRequirements({
-    payTo: platformWallet,
-    amountUsdc,
-    description: `SportWarren WhatsApp scout (${amountUsdc.toFixed(3)} USDC)`,
-    merchantName: 'SportWarren',
-  });
-
-  // Construct a self-payment envelope
-  const envelope = {
-    payload: {
-      authorization: {
-        from: platformWallet,
-        to: platformWallet,
-        value: requirements.amount,
-      },
-    },
-    scheme: cfg.scheme,
-    network: cfg.network,
-  };
-
-  try {
-    const result = await settleWithFacilitator(envelope, requirements);
-    if (result.success) return result;
-    if (result.error) console.warn('[scout] Facilitator rejected settlement, falling back to simulated:', result.error);
-  } catch (err) {
-    console.warn('[scout] Facilitator unreachable, falling back to simulated:', err);
-  }
-
-  return {
-    success: true,
-    simulated: true,
-    network: cfg.network,
-    facilitator: 'sportwarren-internal',
-    payer: platformWallet ?? 'unknown',
-    payee: platformWallet ?? 'unknown',
-    amount: requirements.amount ?? '0',
-  };
-}
 
 // ── Pending confirmations (in-memory, per-conversation) ────────────
 interface PendingAction {
@@ -182,6 +118,7 @@ const HELP = [
   "• `status`           – your agent analytics",
   "• `cost`             – pricing for all services",
   "• `attestations`     – view recent on-chain attestations",
+  "• `kite-proof`       – demo Kite Passport payment (judge on-chain proof)",
   "",
   "Web (TinyFish)",
   "• `tinyfish search <query>` – search the web (free)",
@@ -270,6 +207,14 @@ function fmtTx(txHash: string | undefined | null): string {
   return `${EXPLORER_BASE}/tx/${txHash}`;
 }
 
+function scoutSettlementLine(simulated: boolean, txHash: string | undefined | null): string {
+  const receipt = fmtTx(txHash);
+  if (!simulated && txHash && !txHash.startsWith("internal-")) {
+    return `✅ *Settled on Kite*\nReceipt: ${receipt}`;
+  }
+  return `📋 *SportWarren attestation* (off-chain receipt until facilitator settles)\nReceipt: ${receipt}`;
+}
+
 // ─── Link code consumption ───────────────────────────────────────────────────
 
 async function consumeLinkCode(code: string, whatsappNumber: string): Promise<Reply> {
@@ -294,7 +239,7 @@ async function consumeLinkCode(code: string, whatsappNumber: string): Promise<Re
 
 /** Allow-list of commands the AI can actually trigger via RUN: */
 const RUN_ALLOWED = new Set([
-  "help", "find", "search", "hire", "scout", "scouts", "budget", "pay", "status", "link",
+  "help", "find", "search", "hire", "scout", "scouts", "budget", "pay", "status", "link", "kite-proof", "kiteproof",
   "whoami", "unlink", "cost", "attestations", "trigger-auto-scout", "autonomy",
   "tinyfish", "topup", "top-up", "treasury",
 ]);
@@ -570,7 +515,6 @@ export async function dispatchWhatsAppCommand(
       // Read remaining budget to include in the reply
       const remaining = await kiteAIService.getUserSpending(actor.userId, userLimit);
 
-      const txUrl = fmtTx(report.txHash);
       const dataSources = report.dataSources;
       const dataSourceLine = dataSources?.length
         ? `📊 Data: ${dataSources.join(" · ")}`
@@ -579,12 +523,40 @@ export async function dispatchWhatsAppCommand(
         `🛰️ *Scouting Report · ${opponent}*`,
         report.summary ? `\n${report.summary}` : "\n(Report data is available via the attestation.)",
         "",
-        `✅ *Recorded on Kite*`,
-        `Receipt: ${txUrl}`,
+        scoutSettlementLine(report.simulated, report.txHash),
         dataSourceLine,
         userLimit > 0
           ? `Budget: ${remaining.remaining.toFixed(2)} left today. \`scouts\` → all reports.`
           : "`scouts` → all reports.",
+      ];
+      return lines.join("\n");
+    }
+
+    case "kite-proof":
+    case "kiteproof":
+    case "kite-demo": {
+      const demo = await executeKiteDemoPayment();
+      if (!demo.ok) {
+        return [
+          "❌ *Kite on-chain demo failed*",
+          demo.error ?? "Unknown error",
+          "",
+          "Judges: ensure kpass is logged in on the server with an active session and funded wallet.",
+          `Service: ${demo.serviceUrl}`,
+        ].join("\n");
+      }
+      const preview = demo.data && typeof demo.data === "object"
+        ? JSON.stringify(demo.data).slice(0, 280)
+        : String(demo.data ?? "").slice(0, 280);
+      const lines = [
+        "✅ *Kite Passport x402 payment succeeded*",
+        `Service: ${demo.serviceUrl}`,
+        demo.explorerUrl
+          ? `KiteScan: ${demo.explorerUrl}`
+          : "Payment executed via Passport (check KiteScan for recent agent wallet txs).",
+        preview ? `\nResponse: ${preview}` : "",
+        "",
+        "This is the judge-visible on-chain path: Passport → allowlisted merchant → facilitator.",
       ];
       return lines.join("\n");
     }
@@ -634,7 +606,6 @@ export async function dispatchWhatsAppCommand(
         return `❌ Auto-scout failed: ${(err as Error).message}`;
       }
 
-      const txUrl = fmtTx(report.txHash);
       const summary = report.summary || 'No summary available.';
       const dataSources = report.dataSources;
       const dataSourceLine = dataSources?.length
@@ -647,8 +618,7 @@ export async function dispatchWhatsAppCommand(
         '',
         summary,
         '',
-        `✅ *Recorded on Kite*`,
-        `Receipt: ${txUrl}`,
+        scoutSettlementLine(report.simulated, report.txHash),
         dataSourceLine,
         `Price: ${SCOUT_PRICE_USDC.toFixed(2)} testnet token`,
         '',

@@ -59,35 +59,19 @@ vi.mock('@/server/services/ai/scout-report', () => ({
 }));
 
 vi.mock('@/server/services/blockchain/x402-client', () => ({
-  readX402Config: vi.fn().mockReturnValue({
-    network: 'kite-testnet',
-    scheme: 'gokite-aa',
-    facilitatorUrl: 'https://facilitator.pieverse.io',
-    assetAddress: '0x0fF5393387ad2f9f691FD6Fd28e07E3969e27e63',
-    assetDecimals: 18,
-    rpcUrl: 'https://rpc-testnet.gokite.ai',
-    chainId: 2368,
-    facilitatorAddress: '0x12343e649e6b2b2b77649DFAb88f103c02F3C78b',
-    x402Version: 1,
-  }),
-  getPlatformWallet: vi.fn().mockReturnValue('0x1234567890123456789012345678901234567890'),
-  buildPaymentRequirements: vi.fn().mockReturnValue({
-    amount: '5000000000000000',
-    scheme: 'gokite-aa',
-    network: 'kite-testnet',
-    asset: '0x0fF5393387ad2f9f691FD6Fd28e07E3969e27e63',
-    payTo: '0x1234567890123456789012345678901234567890',
-    maxTimeoutSeconds: 300,
-    x402Version: 1,
-  }),
-  settleWithFacilitator: vi.fn().mockResolvedValue({
+  createPlatformSettlement: vi.fn().mockResolvedValue({
     success: true,
     simulated: true,
-    network: 'kite-testnet',
+    network: 'eip155:2368',
     facilitator: 'sportwarren-internal',
     payer: '0x1234567890123456789012345678901234567890',
     payee: '0x1234567890123456789012345678901234567890',
     amount: '5000000000000000',
+  }),
+  executeKiteDemoPayment: vi.fn().mockResolvedValue({
+    ok: true,
+    serviceUrl: 'https://x402.dev.gokite.ai/api/weather',
+    explorerUrl: 'https://testnet.kitescan.ai/tx/0xDemo',
   }),
 }));
 
@@ -188,7 +172,7 @@ describe('WhatsApp agent command discovery', () => {
       enforceSquadLimit: true,
     }));
     expect(reply).toContain('Scouting Report');
-    expect(reply).toContain('Recorded on Kite');
+    expect(reply).toContain('SportWarren attestation');
     expect(reply).toContain('internal-scout-1');
   });
 });

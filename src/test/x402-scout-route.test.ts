@@ -113,8 +113,9 @@ describe('x402 scout route', () => {
 
     // Stock defaults so focused tests don't need to re-stub everything
     mockBuildPaymentRequirements.mockReturnValue({
-      scheme: 'gokite-aa',
-      network: 'kite-testnet',
+      scheme: 'exact',
+      network: 'eip155:2368',
+      x402Version: 2,
       maxAmountRequired: '500000',
       asset: '0xUSDC',
       payTo: '0xPayTo',
@@ -127,16 +128,16 @@ describe('x402 scout route', () => {
     mockReadX402Config.mockReturnValue({
       facilitatorUrl: 'https://facilitator.pieverse.io',
       facilitatorAddress: '0xFacilitator',
-      scheme: 'gokite-aa',
-      network: 'kite-testnet',
+      scheme: 'exact',
+      network: 'eip155:2368',
       assetAddress: '0xUSDC',
       rpcUrl: 'https://rpc-testnet.gokite.ai',
       chainId: 2368,
     });
 
     mockDecodeXPayment.mockReturnValue({
-      scheme: 'gokite-aa',
-      network: 'kite-testnet',
+      scheme: 'exact',
+      network: 'eip155:2368',
       authorization: {
         from: '0xPayer',
         to: '0xPayTo',
@@ -178,7 +179,7 @@ describe('x402 scout route', () => {
       expect(res.status).toBe(402);
       const body = await res.json();
       expect(body.requirements).toBeDefined();
-      expect(body.requirements.scheme).toBe('gokite-aa');
+      expect(body.requirements.scheme).toBe('exact');
       expect(mockBuildPaymentRequirements).toHaveBeenCalled();
     });
 
