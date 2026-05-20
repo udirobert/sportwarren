@@ -537,11 +537,38 @@ export async function dispatchWhatsAppCommand(
     case "kite-demo": {
       const demo = await executeKiteDemoPayment();
       if (!demo.ok) {
+        const err = (demo.error ?? "").toLowerCase();
+        const hints: string[] = [];
+        if (err.includes("enotfound") || err.includes("getaddrinfo")) {
+          hints.push(
+            "DNS could not resolve the demo host — override `KITE_DEMO_SERVICE_URL` on the server to a merchant from `ksearch services list`.",
+          );
+        }
+        if (err.includes("insufficient_balance") || err.includes("balance is insufficient")) {
+          hints.push(
+            "The default catalog Weather API charges ~$0.01 USDC **on Base** — add Base USDC to your Passport wallet (dashboard / `kpass wallet balance`).",
+          );
+        }
+        if (err.includes("max_amount") || err.includes("per tx") || err.includes("ceiling")) {
+          hints.push(
+            "Session `max_amount_per_tx` is too low for this merchant — create a new session with e.g. `--max-amount-per-tx 0.05` and approve it.",
+          );
+        }
+        if (err.includes("payment_target_forbidden")) {
+          hints.push(
+            "That URL is not in Passport discovery — pick a merchant from `ksearch services list --payment-approach x402` and set `KITE_DEMO_SERVICE_URL`.",
+          );
+        }
+        if (!hints.length) {
+          hints.push(
+            "Check: `kpass status` shows logged-in user, registered agent, and active session.",
+          );
+        }
         return [
           "❌ *Kite on-chain demo failed*",
           demo.error ?? "Unknown error",
           "",
-          "Judges: ensure kpass is logged in on the server with an active session and funded wallet.",
+          ...hints,
           `Service: ${demo.serviceUrl}`,
         ].join("\n");
       }

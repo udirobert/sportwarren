@@ -70,7 +70,7 @@ vi.mock('@/server/services/blockchain/x402-client', () => ({
   }),
   executeKiteDemoPayment: vi.fn().mockResolvedValue({
     ok: true,
-    serviceUrl: 'https://x402.dev.gokite.ai/api/weather',
+    serviceUrl: 'https://weather.hugen.tokyo/weather/current?city=London',
     explorerUrl: 'https://testnet.kitescan.ai/tx/0xDemo',
   }),
 }));
