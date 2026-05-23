@@ -21,19 +21,22 @@ const queryClient = new QueryClient();
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const configuredPrivyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID?.trim();
-  const fallbackPrivyAppId = 'clov6v7p000l8m801469e38z6';
 
   if (!configuredPrivyAppId && typeof window !== 'undefined') {
-    console.warn(
-      'NEXT_PUBLIC_PRIVY_APP_ID is not set. Falling back to a demo Privy app ID, so social login methods may not match your Privy dashboard configuration.'
+    console.error(
+      '[SportWarren] NEXT_PUBLIC_PRIVY_APP_ID is not set. ' +
+      'Authentication will not work correctly. ' +
+      'Set this variable in .env.local to your Privy dashboard app ID.'
     );
   }
+
+  const privyAppId = configuredPrivyAppId || 'missing-privy-app-id';
 
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <PrivyProvider
-          appId={configuredPrivyAppId || fallbackPrivyAppId}
+          appId={privyAppId}
           config={{
             loginMethods: ['google', 'discord', 'email', 'apple'],
             appearance: {
