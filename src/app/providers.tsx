@@ -6,7 +6,7 @@ import { LensProvider } from "@/contexts/LensContext";
 import { TRPCProvider } from "@/lib/trpc-provider";
 import { EnvironmentProvider } from "@/contexts/EnvironmentContext";
 import { GuestMigrationPrompt } from "@/components/onboarding/GuestMigrationPrompt";
-import { PrivyProvider } from '@privy-io/react-auth';
+import { PrivyProvider, type PrivyClientConfig } from '@privy-io/react-auth';
 import { WagmiProvider } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { config } from '@/lib/web3';
@@ -32,24 +32,39 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   const privyAppId = configuredPrivyAppId || 'missing-privy-app-id';
 
+  const privyConfig: PrivyClientConfig = {
+    loginMethods: ['google', 'discord', 'email', 'apple'],
+    appearance: {
+      theme: 'dark',
+      accentColor: '#3b82f6',
+      showWalletLoginFirst: false,
+    },
+    embeddedWallets: {
+      ethereum: {
+        createOnLogin: 'users-without-wallets',
+      },
+    },
+  };
+
+  // During server-side prerendering without a valid Privy app ID, render
+  // children without the PrivyProvider so the build doesn't crash.
+  // Client-side will still log the error above.
+  if (!configuredPrivyAppId && typeof window === 'undefined') {
+    return (
+      <ErrorBoundary>
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
+      </ErrorBoundary>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <ThemeProvider>
         <PrivyProvider
           appId={privyAppId}
-          config={{
-            loginMethods: ['google', 'discord', 'email', 'apple'],
-            appearance: {
-              theme: 'dark',
-              accentColor: '#3b82f6',
-              showWalletLoginFirst: false,
-            },
-            embeddedWallets: {
-              ethereum: {
-                createOnLogin: 'users-without-wallets',
-              },
-            },
-          }}
+          config={privyConfig}
         >
           <QueryClientProvider client={queryClient}>
             <WagmiProvider config={config}>
