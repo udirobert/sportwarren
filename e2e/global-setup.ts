@@ -1,6 +1,7 @@
 import { generateAuthState } from './fixtures/auth';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 export default async function globalSetup() {
   const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
@@ -23,6 +24,7 @@ export default async function globalSetup() {
     ],
   };
 
-  const outputPath = path.join(__dirname, 'auth-state.json');
+  const currentDir = path.dirname(fileURLToPath(import.meta.url));
+  const outputPath = path.join(currentDir, 'auth-state.json');
   fs.writeFileSync(outputPath, JSON.stringify(storageState, null, 2));
 }
