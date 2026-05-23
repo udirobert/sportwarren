@@ -30,7 +30,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const privyAppId = configuredPrivyAppId || 'missing-privy-app-id';
+  // Privy app IDs are public client-side identifiers (like Firebase project
+  // IDs). The placeholder below is format-valid so prerendering and builds
+  // succeed even when the env var is missing; the console.error above
+  // ensures the misconfiguration is visible to developers at runtime.
+  const privyAppId = configuredPrivyAppId || 'clplaceholder000000000000';
 
   const privyConfig: PrivyClientConfig = {
     loginMethods: ['google', 'discord', 'email', 'apple'],
@@ -45,19 +49,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
       },
     },
   };
-
-  // During server-side prerendering without a valid Privy app ID, render
-  // children without the PrivyProvider so the build doesn't crash.
-  // Client-side will still log the error above.
-  if (!configuredPrivyAppId && typeof window === 'undefined') {
-    return (
-      <ErrorBoundary>
-        <ThemeProvider>
-          {children}
-        </ThemeProvider>
-      </ErrorBoundary>
-    );
-  }
 
   return (
     <ErrorBoundary>
