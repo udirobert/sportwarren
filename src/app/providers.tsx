@@ -23,7 +23,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   const configuredPrivyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID?.trim();
 
   if (!configuredPrivyAppId && typeof window !== 'undefined') {
-    console.error(
+    console.warn(
       '[SportWarren] NEXT_PUBLIC_PRIVY_APP_ID is not set. ' +
       'Authentication will not work correctly. ' +
       'Set this variable in .env.local to your Privy dashboard app ID.'
@@ -32,7 +32,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   // Privy app IDs are public client-side identifiers (like Firebase project
   // IDs). The placeholder below is format-valid so prerendering and builds
-  // succeed even when the env var is missing; the console.error above
+  // succeed even when the env var is missing; the console.warn above
   // ensures the misconfiguration is visible to developers at runtime.
   const privyAppId = configuredPrivyAppId || 'clplaceholder000000000000';
 
