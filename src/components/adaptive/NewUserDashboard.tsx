@@ -4,18 +4,18 @@ import React from 'react';
 import Link from 'next/link';
 import { Zap, ArrowRight, ExternalLink, Plus, CheckCircle2 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
-import type { DashboardEntryAction } from '@/lib/dashboard/entry-state';
+import type { DashboardEntryAction, DashboardEntryStateId } from '@/lib/dashboard/entry-state';
+import type { ChecklistId } from '@/lib/onboarding/types';
 import dynamic from 'next/dynamic';
 
 const AgenticConcierge = dynamic(() => import('@/components/adaptive/AgenticConcierge').then(m => ({ default: m.AgenticConcierge })), { ssr: false });
 
 interface NewUserDashboardProps {
   entryState: {
-    id: string;
+    id: DashboardEntryStateId;
     eyebrow: string;
     headline: string;
     description: string;
@@ -28,7 +28,7 @@ interface NewUserDashboardProps {
   isTourActive: boolean;
   setIsTourActive: (active: boolean) => void;
   setPersonalizationDone: (done: boolean) => void;
-  completeChecklistItem: (id: string) => void;
+  completeChecklistItem: (id: ChecklistId) => void;
   renderEntryAction: (action: DashboardEntryAction | undefined, tone: 'primary' | 'secondary') => React.ReactNode;
 }
 
@@ -38,7 +38,7 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
   venue,
   isTourActive,
   setIsTourActive,
-  setPersonalizationDone,
+  setPersonalizationDone: _setPersonalizationDone,
   completeChecklistItem,
   renderEntryAction,
 }) => {

@@ -1,10 +1,10 @@
 "use client";
 
 import React from 'react';
-import Link from 'next/link';
+
 import { ChevronDown, Check } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
+
 import { Avatar } from '@/components/ui/Avatar';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import type { DashboardEntryAction } from '@/lib/dashboard/entry-state';
@@ -27,20 +27,20 @@ interface DashboardHeaderProps {
   };
   avatarPresentation: any;
   currentProfile: { userId?: string; user: { avatar?: string | null; name?: string | null } } | null | undefined;
-  address: string;
+  address: string | null;
   isGuest: boolean;
   hasAccount: boolean;
   hasWallet: boolean;
   isVerified: boolean;
   venue: string;
-  primarySquadId: string | null;
+  primarySquadId: string | null | undefined;
   primarySquadName: string | null;
   activeMembersCount: number;
   memberships: SquadMembership[];
   isSquadPickerOpen: boolean;
   setIsSquadPickerOpen: (open: boolean) => void;
   setActiveSquad: (id: string) => void;
-  squadPickerRef: React.RefObject<HTMLDivElement | null>;
+  squadPickerRef: React.RefObject<HTMLDivElement | null> | React.RefObject<HTMLDivElement>;
   authStatus: { state: string; isRefreshing: boolean };
   renderEntryAction: (action: DashboardEntryAction | undefined, tone: 'primary' | 'secondary') => React.ReactNode;
 }
@@ -133,7 +133,7 @@ export const DashboardHeader: React.FC<DashboardHeaderProps> = ({
                     <span>{venue} preview</span>
                   ) : primarySquadName ? (
                     memberships.length > 1 ? (
-                      <div ref={squadPickerRef} className="relative">
+                      <div ref={squadPickerRef as React.RefObject<HTMLDivElement>} className="relative">
                         <button
                           type="button"
                           onClick={() => setIsSquadPickerOpen(!isSquadPickerOpen)}
