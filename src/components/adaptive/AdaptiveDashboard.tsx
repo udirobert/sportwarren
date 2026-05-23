@@ -7,7 +7,7 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, MessageCircle, Bell, Share2, Smartphone, Activity } from 'lucide-react';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, MessageCircle, Bell, Share2, Smartphone, Activity, ArrowRight } from 'lucide-react';
 import { DashboardSection, type DashboardWidget } from '@/components/adaptive/DashboardSection';
 import { DashboardHeader } from '@/components/adaptive/DashboardHeader';
 import { NewUserDashboard } from '@/components/adaptive/NewUserDashboard';
