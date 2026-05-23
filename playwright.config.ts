@@ -44,7 +44,7 @@ export default defineConfig({
   ],
 
   /* Global setup to generate auth state */
-  globalSetup: process.env.CI || process.env.E2E_AUTH ? require.resolve('./e2e/global-setup.ts') : undefined,
+  globalSetup: process.env.CI || process.env.E2E_AUTH ? './e2e/global-setup.ts' : undefined,
 
   /* Web server configuration for CI */
   webServer: process.env.CI
