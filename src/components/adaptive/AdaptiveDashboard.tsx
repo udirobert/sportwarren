@@ -41,6 +41,11 @@ import { PeerRatingTaskCard } from '@/components/dashboard/PeerRatingTaskCard';
 import { SquadDigitalTwinWidget } from '@/components/dashboard/SquadDigitalTwinWidget';
 import { DigitalTwinUpgradeGate } from '@/components/dashboard/DigitalTwinUpgradeGate';
 import { CoachKiteWidget } from '@/components/dashboard/CoachKiteWidget';
+import { SharpnessStreakWidget } from '@/components/dashboard/SharpnessStreakWidget';
+import { WeeklyChallengesWidget } from '@/components/dashboard/WeeklyChallengesWidget';
+import { PrestigeWidget } from '@/components/dashboard/PrestigeWidget';
+import { ReferralWidget } from '@/components/dashboard/ReferralWidget';
+import { ChallengeButton } from '@/components/squad/ChallengeButton';
 import dynamic from 'next/dynamic';
 import {
   DIGITAL_TWIN_3D_TEASER_KEY,
@@ -155,6 +160,12 @@ export const AdaptiveDashboard: React.FC = () => {
   const { availableOpponents } = useMatchCenterData(primarySquadId);
   const { completeChecklistItem, allChecklistDone, completedCount, totalCount } = useOnboarding();
   const currentUserId = currentProfile?.userId;
+  const profileSharpness = currentProfile?.sharpness ?? 50;
+  const profileUpdatedAt = currentProfile?.updatedAt ?? null;
+  const profileWeeklyStreak = (currentProfile as any)?.weeklyStreak ?? 0;
+  const profileLongestStreak = (currentProfile as any)?.longestStreak ?? 0;
+  const profileTotalXP = currentProfile?.totalXP ?? 0;
+  const profileUserName = currentProfile?.user?.name ?? 'Player';
   const { access: digitalTwin3DAccess } = useDigitalTwinBroadcastAccess({
     squadId: primarySquadId || undefined,
     preferences,
@@ -583,13 +594,15 @@ export const AdaptiveDashboard: React.FC = () => {
                           </Button>
                         </Link>
                       )}
-                      <Link
-                        href={`/settings?tab=connections`}
-                        className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                        title="Share result"
-                      >
-                        <Share2 className="w-3.5 h-3.5 text-gray-400 hover:text-green-600" />
-                      </Link>
+                      {match.id && (
+                        <Link
+                          href={`/match/${match.id}`}
+                          className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                          title="Share result"
+                        >
+                          <Share2 className="w-3.5 h-3.5 text-gray-400 hover:text-green-600" />
+                        </Link>
+                      )}
                     </div>
                   </div>
                 );
@@ -809,8 +822,99 @@ export const AdaptiveDashboard: React.FC = () => {
       },
     );
 
+    // === Engagement & Gamification Widgets ===
+
+    // Sharpness Streak
+    widgets.push({
+      id: 'sharpness-streak',
+      priority: 470,
+      requiredLevel: 'basic',
+      category: 'stats',
+      component: (
+        <SharpnessStreakWidget
+          sharpness={profileSharpness}
+          lastActivityDate={profileUpdatedAt ? new Date(profileUpdatedAt) : null}
+          currentStreak={profileWeeklyStreak}
+          longestStreak={profileLongestStreak}
+        />
+      ),
+    });
+
+    // Weekly Challenges
+    widgets.push({
+      id: 'weekly-challenges',
+      priority: 465,
+      requiredLevel: 'basic',
+      category: 'achievements',
+      component: (
+        <WeeklyChallengesWidget
+          weeklyStats={{
+            goals: stats?.goals ?? 0,
+            assists: stats?.assists ?? 0,
+            matches: stats?.matches ?? 0,
+            ratings: 0,
+            wins: 0,
+            cleanSheets: 0,
+            verifications: 0,
+            hatTricks: 0,
+          }}
+        />
+      ),
+    });
+
+    // Prestige Progress
+    widgets.push({
+      id: 'prestige-progress',
+      priority: 200,
+      requiredLevel: 'basic',
+      category: 'achievements',
+      component: (
+        <PrestigeWidget
+          totalLifetimeXP={profileTotalXP}
+          onClick={() => router.push('/stats')}
+        />
+      ),
+    });
+
+    // Referral Widget
+    if (currentUserId) {
+      widgets.push({
+        id: 'referral',
+        priority: 100,
+        requiredLevel: 'basic',
+        category: 'social',
+        component: (
+          <ReferralWidget
+            userId={currentUserId}
+            playerName={profileUserName}
+          />
+        ),
+      });
+    }
+
+    // Challenge Button (inside squad section)
+    if (primarySquadId && primarySquadName) {
+      widgets.push({
+        id: 'squad-challenge',
+        priority: 180,
+        requiredLevel: 'basic',
+        category: 'social',
+        component: (
+          <Card padding="sm">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white">Challenge Rivals</h3>
+                <p className="text-[10px] text-gray-500 dark:text-gray-400">Send a match challenge link</p>
+              </div>
+              <ChallengeButton squadId={primarySquadId} squadName={primarySquadName} />
+            </div>
+          </Card>
+        ),
+      });
+    }
+
     return widgets;
-  }, [addToast, allChecklistDone, availableOpponents, avatarPresentation, avatarPresentationQuery, completeChecklistItem, currentUserId, dataState, digitalTwin3DAccess, entryState.id, handleDigitalTwin3DPreview, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, primarySquadName, refreshSquads, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, squadTactics?.formation, stats, submitMatch, trackFeatureUsage]);
+  }, [addToast, allChecklistDone, availableOpponents, avatarPresentation, avatarPresentationQuery, completeChecklistItem, currentUserId, dataState, digitalTwin3DAccess, entryState.id, handleDigitalTwin3DPreview, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, primarySquadName, profileSharpness, profileUpdatedAt, profileWeeklyStreak, profileLongestStreak, profileTotalXP, profileUserName, refreshSquads, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, squadTactics?.formation, stats, submitMatch, trackFeatureUsage]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {
