@@ -57,22 +57,22 @@ export class ErrorBoundary extends Component<Props, State> {
       return (
         <div className="min-h-screen flex items-center justify-center p-4">
           <Card className="max-w-md w-full text-center">
-            <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <AlertTriangle className="w-8 h-8 text-red-600" />
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="w-8 h-8 text-red-600 dark:text-red-400" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
               Something went wrong
             </h2>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 dark:text-gray-400 mb-4">
               We apologize for the inconvenience. Please try refreshing the page.
             </p>
             {process.env.NODE_ENV === 'development' && this.state.error && (
-              <div className="mb-4 p-3 bg-gray-100 rounded-lg text-left overflow-auto max-h-40">
-                <p className="text-sm font-mono text-red-600">
+              <div className="mb-4 p-3 bg-gray-100 dark:bg-gray-800 rounded-lg text-left overflow-auto max-h-40">
+                <p className="text-sm font-mono text-red-600 dark:text-red-400">
                   {this.state.error.toString()}
                 </p>
                 {this.state.errorInfo && (
-                  <pre className="text-xs text-gray-600 mt-2">
+                  <pre className="text-xs text-gray-600 dark:text-gray-400 mt-2">
                     {this.state.errorInfo.componentStack}
                   </pre>
                 )}
@@ -117,10 +117,10 @@ export const SectionErrorBoundary: React.FC<SectionErrorBoundaryProps> = ({
       fallback={
         <Card className="p-6 text-center">
           <AlertTriangle className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-          <h3 className="font-semibold text-gray-900 mb-1">
+          <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-1">
             {sectionName} is unavailable
           </h3>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-400">
             There was an error loading this section. Please refresh the page.
           </p>
         </Card>
