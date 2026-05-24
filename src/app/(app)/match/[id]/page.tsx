@@ -10,6 +10,7 @@ import { MatchEnginePreview } from "@/components/dashboard/MatchEnginePreview";
 import { Trophy, Shield, Share2, Copy, CheckCircle2, AlertCircle, ArrowLeft, MessageCircle, Star, Sparkles } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { buildTelegramShareUrl } from "@/lib/telegram/deep-links";
+import { MatchShareCard } from "@/components/match/MatchShareCard";
 
 export default function PublicMatchPage() {
     const params = useParams();
@@ -159,6 +160,16 @@ export default function PublicMatchPage() {
                         </a>
                     </div>
                 </Card>
+
+                {/* Shareable Result Card */}
+                <MatchShareCard
+                    matchId={id}
+                    homeTeam={homeName}
+                    awayTeam={awayName}
+                    homeScore={match.homeScore ?? 0}
+                    awayScore={match.awayScore ?? 0}
+                    date={new Date(match.matchDate).toLocaleDateString()}
+                />
 
                 {/* Match Visualization */}
                 <MatchEnginePreview
