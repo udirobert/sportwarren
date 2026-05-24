@@ -50,11 +50,11 @@ export const PERSONALIZATION_STEPS: { id: OnboardingStep; title: string }[] = [
   { id: 'brand', title: 'Brand Your Squad' },
 ];
 
-// Checklist items
+// Checklist items — ordered to prove value first (match before wallet/squad)
 export const CHECKLIST_ITEMS: { id: string; label: string; description: string; emoji: string; href: string }[] = [
-  { id: 'join_squad', label: 'Create or join a squad', description: 'Squads are the core of SportWarren', emoji: '👥', href: '/squad' },
+  { id: 'log_match', label: 'Log your first match', description: 'Jump straight in — start earning XP now', emoji: '⚽', href: '/match?mode=capture' },
+  { id: 'join_squad', label: 'Create or join a squad', description: 'Squads unlock tactics & peer ratings', emoji: '👥', href: '/squad' },
   { id: 'set_formation', label: 'Set your formation', description: 'Define your squad tactics', emoji: '📋', href: '/squad?tab=tactics' },
-  { id: 'log_match', label: 'Log your first match', description: 'Start earning XP and reputation', emoji: '⚽', href: '/match?mode=capture' },
   { id: 'claim_identity', label: 'Save your progress', description: 'Connect a wallet to protect your data', emoji: '⚡', href: '/settings?tab=wallet' },
 ];
 

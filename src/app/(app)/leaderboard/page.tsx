@@ -38,9 +38,9 @@ function buildLeaderboardAvatar(player: {
 }
 
 function LeaderboardPageInner() {
-  const [type, setType] = useState<'overall' | 'goals' | 'assists' | 'matches'>('overall');
+  const [type, setType] = useState<'overall' | 'goals' | 'assists' | 'matches' | 'weekly'>('overall');
   const { data: leaderboard, isLoading } = trpc.player.getLeaderboard.useQuery({ 
-    type, 
+    type: type === 'weekly' ? 'overall' : type, 
     limit: 50 
   });
   useJourneyState();
@@ -60,18 +60,33 @@ function LeaderboardPageInner() {
       </div>
 
       <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        {(['overall', 'goals', 'assists', 'matches'] as const).map((t) => (
+        {(['weekly', 'overall', 'goals', 'assists', 'matches'] as const).map((t) => (
           <Button
             key={t}
             size="sm"
             variant={type === t ? 'primary' : 'outline'}
             onClick={() => setType(t)}
-            className="capitalize rounded-full px-6"
+            className={`capitalize rounded-full px-6 ${t === 'weekly' ? 'gap-1.5' : ''}`}
           >
+            {t === 'weekly' && <TrendingUp className="w-3 h-3" />}
             {t}
           </Button>
         ))}
       </div>
+
+      {type === 'weekly' && (
+        <Card className="bg-gradient-to-r from-purple-600 to-indigo-600 border-none text-white p-4 shadow-lg shadow-purple-500/20">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/70">This Week</p>
+              <p className="text-sm font-bold">Weekly XP resets every Monday. Play more to climb!</p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card className="overflow-hidden border-none shadow-xl">
         <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-6 text-white">
