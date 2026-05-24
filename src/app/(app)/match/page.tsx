@@ -5,8 +5,11 @@ import Link from "next/link";
 import { MatchCapture } from "@/components/match/MatchCapture";
 import { MatchConsensusPanel } from "@/components/match/MatchConsensus";
 import { MatchConfirmation } from "@/components/match/MatchConfirmation";
-import { XPGainSummary } from "@/components/player/XPGainPopup";
 import { MatchEnginePreview } from "@/components/dashboard/MatchEnginePreview";
+import { MatchPreviewView } from "@/components/match/MatchPreviewView";
+import { MatchVerifyView } from "@/components/match/MatchVerifyView";
+import { MatchHistoryView } from "@/components/match/MatchHistoryView";
+import { MatchXPSummaryView } from "@/components/match/MatchXPSummaryView";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { trpc } from "@/lib/trpc-client";
@@ -462,56 +465,7 @@ export default function MatchPage() {
       )}
 
       {viewMode === "preview" && (
-        <div className="space-y-6">
-          <Card className="border-blue-200 bg-blue-50/70 py-4">
-            <div className="flex items-start gap-3">
-              <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
-              <div className="flex-1">
-                <p className="font-semibold text-blue-900">Prepare for your next match</p>
-                <p className="mt-1 text-sm text-blue-700">
-                  Scout your opponent, simulate tactics, and optimize your lineup before taking the pitch.
-                </p>
-              </div>
-              <Link href="/match/preview">
-                <Button size="sm">Open Preview</Button>
-              </Link>
-            </div>
-          </Card>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="p-0 overflow-hidden border-emerald-100">
-              <div className="bg-emerald-900 px-4 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold text-emerald-100 uppercase tracking-wider">Tactical Hub</span>
-                <Cpu className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div className="p-4">
-                <h3 className="font-bold text-gray-900 mb-2">Simulation Engine</h3>
-                <p className="text-sm text-gray-600 mb-4">Run 1,000 simulations based on your current squad attributes and formation.</p>
-                <Link href="/match/preview?simulate=1">
-                  <Button variant="outline" size="sm" className="w-full">Run Simulation</Button>
-                </Link>
-              </div>
-            </Card>
-
-            <Card className="p-0 overflow-hidden border-blue-100">
-              <div className="bg-blue-900 px-4 py-2 flex items-center justify-between">
-                <span className="text-xs font-bold text-blue-100 uppercase tracking-wider">Scouting Report</span>
-                <Users className="w-4 h-4 text-blue-400" />
-              </div>
-              <div className="p-4">
-                <h3 className="font-bold text-gray-900 mb-2">Opponent Intel</h3>
-                <p className="text-sm text-gray-600 mb-4">Identify weaknesses in your next opponent's defensive line and exploit them.</p>
-                <Link href="/match/preview?tab=scouting">
-                  <Button variant="outline" size="sm" className="w-full">View Intel</Button>
-                </Link>
-              </div>
-            </Card>
-          </div>
-
-          <MatchEnginePreview 
-            squadId={activeSquadId} 
-          />
-        </div>
+        <MatchPreviewView squadId={activeSquadId} />
       )}
 
       {viewMode === "capture" && (
@@ -655,103 +609,23 @@ export default function MatchPage() {
       )}
 
       {viewMode === "verify" && (
-        <div className="space-y-4">
-          <TelegramContextualTip context="verification" />
-          {pendingMatches.length === 0 ? (
-            <Card className="py-10 text-center">
-              <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-500" />
-              <h2 className="text-lg font-semibold text-gray-900">No pending match reviews</h2>
-              <p className="mt-1 text-gray-600">Your verification queue is clear. Submit the next result from here.</p>
-            </Card>
-          ) : (
-            pendingMatches.map((match) => (
-              <Card
-                key={match.id}
-                className="cursor-pointer transition-shadow hover:shadow-md"
-                onClick={() => {
-                  setSelectedMatchId(match.id);
-                  setViewMode("detail");
-                }}
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="mb-2 flex items-center gap-3">
-                      <span className="rounded-full bg-yellow-100 px-2 py-1 text-xs font-semibold text-yellow-800">
-                        PENDING
-                      </span>
-                      <span className="text-sm text-gray-500">
-                        {match.verifications.filter((entry) => entry.verified).length}/{match.requiredVerifications} verified
-                      </span>
-                    </div>
-                    <div className="flex items-center space-x-4">
-                      <div className="text-center">
-                        <div className="font-semibold text-gray-900">{match.homeTeam}</div>
-                        <div className="text-2xl font-bold text-emerald-600">{match.homeScore}</div>
-                      </div>
-                      <div className="font-bold text-gray-400">VS</div>
-                      <div className="text-center">
-                        <div className="font-semibold text-gray-900">{match.awayTeam}</div>
-                        <div className="text-2xl font-bold text-rose-600">{match.awayScore}</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="text-right text-sm text-gray-500">
-                    {match.paymentRail?.enabled && (
-                      <div className="mb-2 rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">
-                        <ChainLabel chain="yellow" showTechnical /> Fee Locked
-                      </div>
-                    )}
-                    Review
-                  </div>
-                </div>
-              </Card>
-            ))
-          )}
-        </div>
+        <MatchVerifyView
+          pendingMatches={pendingMatches}
+          onSelectMatch={(id) => {
+            setSelectedMatchId(id);
+            setViewMode("detail");
+          }}
+        />
       )}
 
       {viewMode === "history" && (
-        <div className="space-y-4">
-          {settledMatches.length === 0 ? (
-            <Card className="py-10 text-center text-gray-600">No settled matches yet.</Card>
-          ) : (
-            settledMatches.map((match) => (
-              <Card key={match.id}>
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <div className="mb-2 flex items-center gap-3">
-                      <span className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                        match.status === "verified"
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-rose-100 text-rose-700"
-                      }`}>
-                        {match.status.toUpperCase()}
-                      </span>
-                      {match.paymentRail?.enabled && (
-                        <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">
-                          {match.paymentRail.assetSymbol} Fee Rail
-                        </span>
-                      )}
-                    </div>
-                    <h3 className="font-semibold text-gray-900">
-                      {match.homeTeam} {match.homeScore} - {match.awayScore} {match.awayTeam}
-                    </h3>
-                    <p className="text-sm text-gray-500">{match.timestamp.toLocaleString()}</p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setSelectedMatchId(match.id);
-                      setViewMode("detail");
-                    }}
-                  >
-                    Open Details
-                  </Button>
-                </div>
-              </Card>
-            ))
-          )}
-        </div>
+        <MatchHistoryView
+          settledMatches={settledMatches}
+          onSelectMatch={(id) => {
+            setSelectedMatchId(id);
+            setViewMode("detail");
+          }}
+        />
       )}
 
       {viewMode === "detail" && selectedMatch && (
@@ -796,71 +670,15 @@ export default function MatchPage() {
       )}
 
       {viewMode === "xp-summary" && showXPSummary && (
-        <div className="space-y-4">
-          <Button
-            onClick={() => {
-              setShowXPSummary(false);
-              setXpResultState("idle");
-              openVerificationQueue();
-            }}
-            variant="outline"
-          >
-            ← Back to Matches
-          </Button>
-
-          {xpResultState === "available" && xpSummaryData ? (
-            <>
-              <XPGainSummary
-                totalXP={xpSummaryData.totalXP}
-                attributeGains={xpSummaryData.attributeGains as any}
-              />
-
-              <Card className="py-6 text-center">
-                <Sparkles className="mx-auto mb-3 h-12 w-12 text-yellow-500" />
-                <h3 className="mb-2 text-lg font-semibold text-gray-900">XP Applied</h3>
-                <p className="mb-4 text-gray-600">
-                  Your attributes have been updated from the verified match.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                  <Link href="/reputation">
-                    <Button variant="outline">View Reputation →</Button>
-                  </Link>
-                  <Button
-                    onClick={() => {
-                      setShowXPSummary(false);
-                      setXpResultState("idle");
-                      openVerificationQueue();
-                    }}
-                  >
-                    Back to Matches
-                  </Button>
-                </div>
-              </Card>
-            </>
-          ) : (
-            <Card className="py-8 text-center">
-              <Clock3 className="mx-auto mb-3 h-12 w-12 text-blue-500" />
-              <h3 className="mb-2 text-lg font-semibold text-gray-900">Verification recorded</h3>
-              <p className="mx-auto mb-4 max-w-xl text-gray-600">
-                Your confirmation has been saved. XP and reputation will appear here once the remaining verification threshold is reached and the settlement run completes.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button
-                  onClick={() => {
-                    setShowXPSummary(false);
-                    setXpResultState("idle");
-                    openVerificationQueue();
-                  }}
-                >
-                  Back to Matches
-                </Button>
-                <Link href="/reputation">
-                  <Button variant="outline">Open Reputation</Button>
-                </Link>
-              </div>
-            </Card>
-          )}
-        </div>
+        <MatchXPSummaryView
+          xpResultState={xpResultState}
+          xpSummaryData={xpSummaryData}
+          onBack={() => {
+            setShowXPSummary(false);
+            setXpResultState("idle");
+            openVerificationQueue();
+          }}
+        />
       )}
 
       {loading && (

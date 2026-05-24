@@ -128,7 +128,10 @@ export const SmartNavigation: React.FC = () => {
     },
   ];
 
-  // Filter navigation items based on user preferences and unlock level
+  // Filter navigation items based on user preferences and unlock level.
+  // Primary bottom-bar items are sorted by static priority only — never by
+  // usage patterns — so positions stay stable and users build muscle memory.
+  // Usage-based sorting is applied only to overflow items.
   const visibleNavItems = allNavItems.filter(item => {
     // Check unlock level
     const levelMatch = 
@@ -143,20 +146,18 @@ export const SmartNavigation: React.FC = () => {
     const isUnlocked = preferences.unlockedFeatures.includes(featureKey);
 
     return levelMatch && conditionMatch && (isUnlocked || item.unlockLevel === 'basic');
-  }).sort((a, b) => {
-    // Prioritize recently used features
+  }).sort((a, b) => b.priority - a.priority);
+
+  // Split bottom nav: primary slots are pinned by priority;
+  // overflow items are sorted by recent usage for quick access.
+  const primaryItems = visibleNavItems.slice(0, BOTTOM_NAV_MAX - 1);
+  const overflowItems = visibleNavItems.slice(BOTTOM_NAV_MAX - 1).sort((a, b) => {
     const aRecentlyUsed = preferences.usagePatterns.lastActiveFeatures.includes(a.path.slice(1) || 'dashboard');
     const bRecentlyUsed = preferences.usagePatterns.lastActiveFeatures.includes(b.path.slice(1) || 'dashboard');
-    
     if (aRecentlyUsed && !bRecentlyUsed) return -1;
     if (!aRecentlyUsed && bRecentlyUsed) return 1;
-    
     return b.priority - a.priority;
   });
-
-  // Split bottom nav: primary slots + overflow into More sheet
-  const primaryItems = visibleNavItems.slice(0, BOTTOM_NAV_MAX - 1);
-  const overflowItems = visibleNavItems.slice(BOTTOM_NAV_MAX - 1);
   const hasOverflow = overflowItems.length > 0;
 
   const { theme, toggleTheme } = useTheme();

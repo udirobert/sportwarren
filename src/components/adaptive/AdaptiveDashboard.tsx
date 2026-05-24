@@ -7,9 +7,12 @@ import { StatCard } from '@/components/common/StatCard';
 import { ProgressiveDisclosure } from '@/components/adaptive/ProgressiveDisclosure';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, Plus, MessageCircle, Bell, Share2, CheckCircle2, ArrowRight, Smartphone, ExternalLink, ChevronDown, ChevronRight, Check, Activity } from 'lucide-react';
-import { TrpcErrorBoundary } from '@/components/ui/TrpcErrorBoundary';
+import { Target, Users, Trophy, TrendingUp, Calendar, Zap, Star, Sparkles, MessageCircle, Bell, Share2, Smartphone, Activity, ArrowRight } from 'lucide-react';
+import { DashboardSection, type DashboardWidget } from '@/components/adaptive/DashboardSection';
+import { DashboardHeader } from '@/components/adaptive/DashboardHeader';
+import { NewUserDashboard } from '@/components/adaptive/NewUserDashboard';
 import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
+import { TrpcErrorBoundary } from '@/components/ui/TrpcErrorBoundary';
 import { AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { useRouter } from 'next/navigation';
@@ -28,8 +31,6 @@ import { getDashboardEntryState, type DashboardEntryAction } from '@/lib/dashboa
 import { useTactics } from '@/hooks/squad/useTactics';
 import { useMatchCenterData } from '@/hooks/match/useMatchCenterData';
 import { useDigitalTwinBroadcastAccess } from '@/hooks/useDigitalTwinBroadcastAccess';
-import { Avatar } from '@/components/ui/Avatar';
-import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { CelebrationOverlay } from '@/components/ui/CelebrationOverlay';
 import { SoccerLoader } from '@/components/ui/SoccerLoader';
 import { summarizeAvatarUpgrade } from '@/lib/avatar/diff';
@@ -67,15 +68,6 @@ const LensSocialHub    = dynamic(() => import('@/components/dashboard/LensSocial
 const CaptainsLog      = dynamic(() => import('@/components/dashboard/CaptainsLog').then(m => ({ default: m.CaptainsLog })), { ssr: false });
 const EventFeed        = dynamic(() => import('@/components/dashboard/EventFeed').then(m => ({ default: m.EventFeed })), { ssr: false });
 const CommunicationHub = dynamic(() => import('@/components/dashboard/CommunicationHub').then(m => ({ default: m.CommunicationHub })), { ssr: false });
-
-interface DashboardWidget {
-  id: string;
-  component: React.ReactNode;
-  priority: number;
-  requiredLevel: 'basic' | 'intermediate' | 'advanced';
-  category: 'stats' | 'social' | 'matches' | 'achievements' | 'squad';
-  unlockCondition?: () => boolean;
-}
 
 export const AdaptiveDashboard: React.FC = () => {
   const { preferences, trackFeatureUsage, unlockFeature } = useUserPreferences();
@@ -923,21 +915,6 @@ export const AdaptiveDashboard: React.FC = () => {
     );
   }
 
-  const entryAccountLabel = isGuest
-    ? 'Guest preview'
-    : hasWallet
-      ? (isVerified ? 'Verified member' : 'Wallet connected')
-      : 'Signed in';
-  const entryWalletLabel = isGuest
-    ? 'Preview only'
-    : hasWallet
-      ? (isVerified ? 'Verified' : 'Signature needed')
-      : 'Not connected';
-  const entrySquadLabel = primarySquadName
-    ? `${primarySquadName}${activeSquad?.role ? ` • ${activeSquad.role.replace(/_/g, ' ')}` : ''}`
-    : entryState.squadLabel;
-  const entryFocusLabel = entryState.queueLabel;
-
   const renderEntryAction = (action: DashboardEntryAction | undefined, tone: 'primary' | 'secondary') => {
     if (!action) return null;
 
@@ -1043,121 +1020,16 @@ export const AdaptiveDashboard: React.FC = () => {
 
   if (entryState.isNewUser) {
     return (
-      <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10 nav-spacer-top nav-spacer-bottom">
-        {/* Onboarding card with large CTA */}
-        <Card className="overflow-hidden border-gray-200/80 bg-gradient-to-br from-white via-white to-green-50/30 dark:border-gray-700 dark:from-gray-900 dark:via-gray-900 dark:to-green-950/20">
-          <div className="text-center space-y-6 p-6">
-            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-green-600 dark:text-green-400">
-              {entryState.eyebrow}
-            </div>
-            <h1 className="text-2xl md:text-4xl font-black tracking-tight text-gray-900 dark:text-white">
-              {entryState.headline}
-            </h1>
-            <p className="text-sm md:text-base text-gray-600 dark:text-gray-300 max-w-lg mx-auto">
-              {entryState.description}
-            </p>
-
-            {/* Primary CTA — large, centered */}
-            {entryState.primaryAction.href ? (
-              <Link
-                href={entryState.primaryAction.href}
-                onClick={() => completeChecklistItem(entryState.primaryAction.intent === 'log_match' ? 'log_match' : 'set_formation')}
-                className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-xl shadow-green-500/30 hover:shadow-green-500/50 transition-all duration-200 hover:scale-[1.02]"
-              >
-                <Zap className="w-5 h-5 mr-2" />
-                {entryState.primaryAction.label}
-                <ArrowRight className="w-5 h-5 ml-2" />
-              </Link>
-            ) : (
-              renderEntryAction(entryState.primaryAction, 'primary')
-            )}
-
-            {entryState.secondaryAction && (
-              <div>
-                {renderEntryAction(entryState.secondaryAction, 'secondary')}
-              </div>
-            )}
-
-            {/* 3-step visual */}
-            {entryState.steps.length > 0 && (
-              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
-                <div className="flex items-center justify-center gap-1 md:gap-2">
-                  {entryState.steps.map((step, i) => (
-                    <React.Fragment key={step.number}>
-                      {i > 0 && (
-                        <div className={`w-6 md:w-10 h-px ${step.completed ? 'bg-green-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
-                      )}
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-sm font-black transition-colors ${
-                          step.completed
-                            ? 'bg-green-500 text-white'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-2 border-gray-300 dark:border-gray-600'
-                        }`}>
-                          {step.completed ? <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" /> : step.number}
-                        </div>
-                        <span className={`text-[10px] md:text-xs font-bold uppercase tracking-wide ${
-                          step.completed ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'
-                        }`}>
-                          {step.label}
-                        </span>
-                      </div>
-                    </React.Fragment>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Subtle meta line */}
-            <div className="flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-400">
-              {isGuest ? (
-                <span>{venue} preview</span>
-              ) : (
-                <span>{entryAccountLabel}</span>
-              )}
-            </div>
-          </div>
-        </Card>
-
-        {/* Onboarding checklist — always visible for new users */}
-        <div className="mt-4">
-          <OnboardingChecklist
-            journeyStage={entryState.id}
-            onStepAction={(_id) => {}}
-          />
-        </div>
-
-        {/* Mobile Telegram banner */}
-        <div className="md:hidden mt-4 rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
-          <div className="flex items-start gap-3">
-            <span className="text-2xl">📱</span>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-bold text-blue-900 dark:text-blue-100">Get the best mobile experience</p>
-              <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">Open SportWarren in Telegram for faster access and instant notifications.</p>
-              <a
-                href={buildTelegramDeepLink()}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 mt-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700"
-              >
-                Open in Telegram
-                <ExternalLink className="w-3 h-3" />
-              </a>
-            </div>
-          </div>
-        </div>
-
-        <OnboardingFlow onVisibilityChange={setIsTourActive} journeyStage={entryState.id} />
-        {!isTourActive && <AgenticConcierge journeyStage={entryState.id} />}
-
-        {/* Floating Action Button — pulsing for new users */}
-        <Link
-          href={entryState.primaryAction.href || '/match?mode=capture'}
-          className="fixed bottom-6 left-6 z-50 md:hidden bg-green-600 hover:bg-green-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl shadow-green-600/40 transition-all active:scale-95 animate-pulse"
-          aria-label={entryState.primaryAction.label}
-        >
-          <Plus className="w-6 h-6" />
-        </Link>
-      </div>
+      <NewUserDashboard
+        entryState={entryState}
+        isGuest={isGuest}
+        venue={venue}
+        isTourActive={isTourActive}
+        setIsTourActive={setIsTourActive}
+        setPersonalizationDone={setPersonalizationDone}
+        completeChecklistItem={completeChecklistItem}
+        renderEntryAction={renderEntryAction}
+      />
     );
   }
 
@@ -1188,140 +1060,27 @@ export const AdaptiveDashboard: React.FC = () => {
         </span>
       </div>
 
-      <div id="dashboard-header" className="mb-4">
-        <Card className="overflow-hidden border-gray-200/80 bg-gradient-to-br from-white via-white to-gray-50 dark:border-gray-700 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
-          <div className="space-y-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="flex items-start gap-5">
-                {avatarPresentation ? (
-                  <PlayerAvatar
-                    presentation={avatarPresentation}
-                    size="hero"
-                    className="hidden md:inline-flex"
-                  />
-                ) : (
-                  <Avatar
-                    src={currentProfile?.user.avatar}
-                    name={currentProfile?.user.name || address}
-                    size="xl"
-                    className="hidden md:block ring-4 ring-green-500/20"
-                  />
-                )}
-                <div className="min-w-0">
-                  <div className="mb-2 text-[10px] font-black uppercase tracking-[0.22em] text-green-600 dark:text-green-400">
-                    {entryState.eyebrow}
-                  </div>
-                  <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white md:text-4xl">
-                    {entryState.headline}
-                  </h1>
-                  <p className="mt-3 max-w-3xl text-sm leading-6 text-gray-600 dark:text-gray-300 md:text-base">
-                    {entryState.description}
-                  </p>
-                  {avatarPresentation && (
-                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold text-gray-500 dark:text-gray-300">
-                      <span>Level {avatarPresentation.level}</span>
-                      <span className="text-gray-300">•</span>
-                      <span>{avatarPresentation.frameTier.replace('_', ' ')}</span>
-                      {avatarPresentation.archetype && (
-                        <>
-                          <span className="text-gray-300">•</span>
-                          <span className="capitalize">{avatarPresentation.archetype}</span>
-                        </>
-                      )}
-                      {avatarPresentation.badge && (
-                        <>
-                          <span className="text-gray-300">•</span>
-                          <span>{avatarPresentation.badge.label}</span>
-                        </>
-                      )}
-                    </div>
-                  )}
-                  <div className="mt-4 flex flex-wrap items-center gap-2 text-[11px] font-bold uppercase tracking-[0.16em] text-gray-400">
-                  {isGuest ? (
-                    <span>{venue} preview</span>
-                  ) : primarySquadName ? (
-                    memberships.length > 1 ? (
-                      <div ref={squadPickerRef} className="relative">
-                        <button
-                          type="button"
-                          onClick={() => setIsSquadPickerOpen(!isSquadPickerOpen)}
-                          className="inline-flex items-center gap-1 rounded-md border border-gray-200 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.16em] text-gray-500 transition-colors hover:border-gray-400 hover:text-gray-700 dark:border-gray-600 dark:text-gray-300 dark:hover:border-gray-500 dark:hover:text-gray-100"
-                        >
-                          {entrySquadLabel}
-                          <ChevronDown className={`h-3 w-3 transition-transform ${isSquadPickerOpen ? 'rotate-180' : ''}`} />
-                        </button>
-                        {isSquadPickerOpen && (
-                          <div className="absolute left-0 top-full z-50 mt-1 min-w-[200px] overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg dark:border-gray-700 dark:bg-gray-900">
-                            {memberships.map((m) => (
-                              <button
-                                key={m.squad.id}
-                                type="button"
-                                onClick={() => {
-                                  setActiveSquad(m.squad.id);
-                                  setIsSquadPickerOpen(false);
-                                }}
-                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-gray-700 transition-colors hover:bg-gray-50 dark:text-gray-200 dark:hover:bg-gray-800"
-                              >
-                                <span className="flex-1 truncate">{m.squad.name}</span>
-                                {m.squad.id === primarySquadId && (
-                                  <Check className="h-3.5 w-3.5 flex-shrink-0 text-green-500" />
-                                )}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <span>{entrySquadLabel}</span>
-                    )
-                  ) : (
-                    <span>{entryAccountLabel}</span>
-                  )}
-                  {hasWallet && address && (
-                    <>
-                      <span className="text-gray-300">/</span>
-                      <span>{address.slice(0, 6)}…{address.slice(-4)}</span>
-                    </>
-                  )}
-                  {!hasWallet && hasAccount && (
-                    <>
-                      <span className="text-gray-300">/</span>
-                      <span>Wallet optional until you need protected actions</span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-              {renderEntryAction(entryState.secondaryAction, 'secondary')}
-              {renderEntryAction(entryState.primaryAction, 'primary')}
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              {[
-                { label: 'Account', value: entryAccountLabel },
-                { label: 'Wallet', value: entryWalletLabel },
-                { label: 'Squad', value: primarySquadName ? `${activeMembersCount || 1} active members` : entryState.squadLabel },
-                { label: 'Next', value: entryFocusLabel },
-              ].map((item) => (
-                <div
-                  key={item.label}
-                  className="rounded-2xl border border-gray-200 bg-white/70 px-4 py-3 dark:border-gray-700 dark:bg-gray-900/70"
-                >
-                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
-                    {item.label}
-                  </div>
-                  <div className="mt-2 text-sm font-bold text-gray-900 dark:text-white">
-                    {item.value}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Card>
-      </div>
+      <DashboardHeader
+        entryState={entryState}
+        avatarPresentation={avatarPresentation}
+        currentProfile={currentProfile}
+        address={address}
+        isGuest={isGuest}
+        hasAccount={hasAccount}
+        hasWallet={hasWallet}
+        isVerified={isVerified}
+        venue={venue}
+        primarySquadId={primarySquadId}
+        primarySquadName={primarySquadName}
+        activeMembersCount={activeMembersCount}
+        memberships={memberships}
+        isSquadPickerOpen={isSquadPickerOpen}
+        setIsSquadPickerOpen={setIsSquadPickerOpen}
+        setActiveSquad={setActiveSquad}
+        squadPickerRef={squadPickerRef}
+        authStatus={authStatus}
+        renderEntryAction={renderEntryAction}
+      />
 
       <VerificationBanner className="mb-4" />
 
@@ -1399,7 +1158,7 @@ export const AdaptiveDashboard: React.FC = () => {
         const progressWidgets = visibleWidgets.filter(w => progressIds.includes(w.id));
         const otherWidgets = visibleWidgets.filter(w => ![...todayIds, ...squadIds, ...progressIds].includes(w.id));
 
-        const sectionLayouts: Record<string, Record<string, string>> = {
+        const sectionLayouts = {
           Today: {
             'quick-log': 'md:col-span-12',
             'match-engine': 'md:col-span-12',
@@ -1434,101 +1193,25 @@ export const AdaptiveDashboard: React.FC = () => {
           Progress: [],
         };
 
-        const getSpan = (title: string, id: string) =>
-          sectionLayouts[title]?.[id] ?? 'md:col-span-12 lg:col-span-6';
-
-        const Section = ({ title, widgets }: { title: string; widgets: typeof visibleWidgets }) => {
-          if (widgets.length === 0) return null;
-          const isExpanded = expandedSections[title] ?? (title === 'Today' ? true : false);
-          const featuredIds = new Set(featuredBySection[title] ?? []);
-          const featured = widgets.filter(w => featuredIds.has(w.id));
-          const rest = widgets.filter(w => !featuredIds.has(w.id));
-          const maxRest = isExpanded ? rest.length : 2;
-          const totalHidden = widgets.length - (featured.length + maxRest);
-
-          return (
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <h2 className="section-title">{title}</h2>
-                <button
-                  onClick={() => setExpandedSections(prev => ({ ...prev, [title]: !prev[title] }))}
-                  className="flex items-center gap-1 text-xs font-bold uppercase tracking-widest text-gray-400 hover:text-gray-200 transition-colors"
-                >
-                  {isExpanded ? (
-                    <>Show Less <ChevronDown className="w-3 h-3" /></>
-                  ) : (
-                    <>Show {totalHidden > 0 ? `${totalHidden + maxRest}` : 'All'} <ChevronRight className="w-3 h-3" /></>
-                  )}
-                </button>
-              </div>
-
-              {/* Mobile: feature stack + horizontal snap scroll */}
-              {featured.length > 0 && (
-                <div className="md:hidden space-y-3 mb-3">
-                  {featured.map(w => (
-                    <div key={w.id} id={w.id}>
-                      {w.component}
-                    </div>
-                  ))}
-                  {!isExpanded && totalHidden > 0 && (
-                    <button
-                      onClick={() => setExpandedSections(prev => ({ ...prev, [title]: true }))}
-                      className="w-full py-3 text-xs font-bold uppercase tracking-widest text-green-400 border border-dashed border-white/10 rounded-xl hover:bg-white/5 transition-colors"
-                    >
-                      +{totalHidden} more
-                    </button>
-                  )}
-                </div>
-              )}
-              {rest.length > 0 && (
-                <div className="md:hidden -mx-3 px-3 relative">
-                  <div
-                    className={`flex gap-3 overflow-x-auto pb-2 snap-x snap-proximity scrollbar-hide scroll-lock-x ${rest.length > 1 ? 'carousel-fade-right' : ''}`}
-                    style={{ scrollbarWidth: 'none' }}
-                  >
-                    {rest.slice(0, isExpanded ? rest.length : maxRest).map(w => (
-                      <div key={w.id} id={w.id} className="snap-start shrink-0 w-[85vw] max-w-sm">
-                        {w.component}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Desktop: featured full-width + dense grid */}
-              <div className="hidden md:block space-y-3">
-                {featured.map(w => (
-                  <div key={w.id} id={w.id}>
-                    {w.component}
-                  </div>
-                ))}
-                {rest.slice(0, isExpanded ? rest.length : maxRest).length > 0 && (
-                  <div className="grid grid-cols-12 gap-3 grid-flow-row-dense">
-                    {rest.slice(0, isExpanded ? rest.length : maxRest).map(w => (
-                      <div key={w.id} id={w.id} className={`${getSpan(title, w.id)} min-w-0`}>
-                        {w.component}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {!isExpanded && totalHidden > 0 && (
-                  <button
-                    onClick={() => setExpandedSections(prev => ({ ...prev, [title]: true }))}
-                    className="w-full py-3 text-xs font-bold uppercase tracking-widest text-green-400 border border-dashed border-white/10 rounded-xl hover:bg-white/5 transition-colors"
-                  >
-                    +{totalHidden} more widgets
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        };
+        const sections = [
+          { title: 'Today', widgets: todayWidgets },
+          { title: 'Squad', widgets: squadWidgets },
+          { title: 'Progress', widgets: progressWidgets },
+        ] as const;
 
         return (
           <div className="space-y-3 md:space-y-5">
-            <Section title="Today" widgets={todayWidgets} />
-            <Section title="Squad" widgets={squadWidgets} />
-            <Section title="Progress" widgets={progressWidgets} />
+            {sections.map(({ title, widgets }) => (
+              <DashboardSection
+                key={title}
+                title={title}
+                widgets={widgets}
+                isExpanded={expandedSections[title] ?? (title === 'Today')}
+                onToggle={() => setExpandedSections(prev => ({ ...prev, [title]: !prev[title] }))}
+                layoutMap={sectionLayouts}
+                featuredIds={featuredBySection[title] ?? []}
+              />
+            ))}
             {otherWidgets.map(w => <div key={w.id} id={w.id}>{w.component}</div>)}
           </div>
         );
