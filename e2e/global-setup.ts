@@ -3,6 +3,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
+
 export default async function globalSetup() {
   const baseUrl = process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:3000';
 
