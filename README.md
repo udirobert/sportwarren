@@ -51,7 +51,7 @@ For hackathon review: WhatsApp scout receipts are internal SportWarren attestati
 - **Digital Twin 3D Simulation** - High-fidelity "Broadcast Engine" for match visualization.
 - **Peer Consensus Engine** - Post-match evaluations that drive player attribute growth.
 - **Agentic Commerce (x402)** - Autonomous agent-to-agent financial flows on Kite.
-- **Multi-Chain Stack** - Purpose-built roles for Algorand, Avalanche, Kite, TON, Yellow, and Lens.
+- **Multi-Chain Stack** - Purpose-built roles for Algorand, GOAT Network, Kite, TON, Yellow, and Lens.
 
 ---
 

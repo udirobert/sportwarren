@@ -47,8 +47,8 @@ const formatChainLabel = (chain: string | null) => {
   switch (chain) {
     case "algorand":
       return "Algorand wallet";
-    case "avalanche":
-      return "Avalanche wallet";
+    case "goat":
+      return "GOAT Network wallet";
     case "lens":
       return "Lens wallet";
     case "social":
@@ -150,7 +150,7 @@ export function AccountStatusControl({
         reference: socialReference,
         fullReference: address || "Social sign-in active",
         support: hasEmbeddedWalletAddress
-          ? "Your Privy wallet is live. Add Avalanche, Lens, or Algorand when you need protected actions."
+          ? "Your Privy wallet is live. Add GOAT Network, Lens, or Algorand when you need protected actions."
           : "Add a wallet when you need protected actions or treasury access.",
         icon: UserRound,
         iconTone: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-200",

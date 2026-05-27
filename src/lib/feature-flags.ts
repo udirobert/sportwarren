@@ -27,7 +27,7 @@ export const FLAGS = {
 
   // ── Post-MVP (disabled) ─────────────────────────────────────────────
   PREDICTION_MARKETS:  { default: false, description: 'TON prediction markets' },
-  DAO_GOVERNANCE:      { default: false, description: 'On-chain DAO voting (Avalanche)' },
+  DAO_GOVERNANCE:      { default: false, description: 'On-chain DAO voting (GOAT Network)' },
   TRANSFER_MARKET:     { default: false, description: 'Player transfer offers between squads' },
   AI_STAFF_CHAT:       { default: false, description: 'AI persona staff advisors' },
   LENS_SOCIAL:         { default: false, description: 'Lens Protocol social publishing' },

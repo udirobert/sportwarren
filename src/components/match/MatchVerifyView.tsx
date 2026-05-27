@@ -56,7 +56,7 @@ export const MatchVerifyView: React.FC<MatchVerifyViewProps> = ({
             <div className="text-right text-sm text-gray-500">
               {match.paymentRail?.enabled && (
                 <div className="mb-2 rounded-full bg-blue-100 px-2 py-1 text-xs font-semibold text-blue-700">
-                  <ChainLabel chain="yellow" showTechnical /> Fee Locked
+                  <ChainLabel chain="yellow" /> Fee Locked
                 </div>
               )}
               Review

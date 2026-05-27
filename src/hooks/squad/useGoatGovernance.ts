@@ -1,11 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ethers } from 'ethers';
-import { useWallet } from '@/contexts/WalletContext';
-import { getAvalancheContracts } from '@/lib/blockchain/evm-config';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { ethers } from "ethers";
+import { useWallet } from "@/contexts/WalletContext";
+import {
+  getGoatContracts,
+  getGoatRpcUrl,
+  getGoatChain,
+} from "@/lib/blockchain/evm-config";
 
-// Minimal ABIs for governance
 const GOVERNOR_ABI = [
   "function propose(address[] targets, uint256[] values, bytes[] calldatas, string description) public returns (uint256)",
   "function castVote(uint256 proposalId, uint8 support) public returns (uint256)",
@@ -26,13 +29,19 @@ const TOKEN_ABI = [
   "function delegates(address account) public view returns (address)",
 ];
 
-const { governor: GOVERNOR_ADDRESS, squadToken: TOKEN_ADDRESS } = getAvalancheContracts();
-
-export interface FujiProposal {
+export interface GoatProposal {
   id: string;
   proposer: string;
   description: string;
-  status: 'Pending' | 'Active' | 'Canceled' | 'Defeated' | 'Succeeded' | 'Queued' | 'Expired' | 'Executed';
+  status:
+    | "Pending"
+    | "Active"
+    | "Canceled"
+    | "Defeated"
+    | "Succeeded"
+    | "Queued"
+    | "Expired"
+    | "Executed";
   votesFor: string;
   votesAgainst: string;
   votesAbstain: string;
@@ -40,31 +49,48 @@ export interface FujiProposal {
   endBlock: number;
 }
 
-export function useFujiGovernance() {
+export function useGoatGovernance() {
   const { address, chain } = useWallet();
-  const [proposals, setProposals] = useState<FujiProposal[]>([]);
+  const [proposals, setProposals] = useState<GoatProposal[]>([]);
   const [tokenBalance, setTokenBalance] = useState("0");
   const [votingPower, setVotingPower] = useState("0");
   const [delegatee, setDelegatee] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isFuji = chain === 'avalanche';
+  const isGoat = chain === "goat";
+  const contracts = getGoatContracts();
+  const GOVERNOR_ADDRESS = contracts.governor;
+  const TOKEN_ADDRESS = contracts.squadToken;
+  const hasContracts = Boolean(GOVERNOR_ADDRESS && TOKEN_ADDRESS);
 
   const provider = useMemo(() => {
-    if (typeof window !== 'undefined' && (window as any).ethereum && isFuji) {
+    if (
+      typeof window !== "undefined" &&
+      (window as any).ethereum &&
+      isGoat &&
+      hasContracts
+    ) {
       return new ethers.BrowserProvider((window as any).ethereum);
     }
     return null;
-  }, [isFuji]);
+  }, [isGoat, hasContracts]);
 
   const fetchGovernanceData = useCallback(async () => {
-    if (!provider || !address) return;
+    if (!provider || !address || !hasContracts) return;
 
     setLoading(true);
     try {
-      const tokenContract = new ethers.Contract(TOKEN_ADDRESS, TOKEN_ABI, provider);
-      const governorContract = new ethers.Contract(GOVERNOR_ADDRESS, GOVERNOR_ABI, provider);
+      const tokenContract = new ethers.Contract(
+        TOKEN_ADDRESS,
+        TOKEN_ABI,
+        provider,
+      );
+      const governorContract = new ethers.Contract(
+        GOVERNOR_ADDRESS,
+        GOVERNOR_ABI,
+        provider,
+      );
 
       const [balance, votes, currentDelegatee] = await Promise.all([
         tokenContract.balanceOf(address),
@@ -76,72 +102,90 @@ export function useFujiGovernance() {
       setVotingPower(ethers.formatEther(votes));
       setDelegatee(currentDelegatee);
 
-      // Fetch proposals via events (simplified for demo)
       const filter = governorContract.filters.ProposalCreated();
-      const events = await governorContract.queryFilter(filter, -10000); // Last 10k blocks
+      const events = await governorContract.queryFilter(filter, -10000);
 
-      const processedProposals = await Promise.all(events.map(async (event: any) => {
-        const proposalId = event.args.proposalId;
-        const stateIndex = await governorContract.state(proposalId);
-        const states = ['Pending', 'Active', 'Canceled', 'Defeated', 'Succeeded', 'Queued', 'Expired', 'Executed'];
-        
-        return {
-          id: proposalId.toString(),
-          proposer: event.args.proposer,
-          description: event.args.description,
-          status: states[stateIndex] as FujiProposal['status'],
-          votesFor: "0", // Simplified
-          votesAgainst: "0",
-          votesAbstain: "0",
-          startBlock: Number(event.args.voteStart),
-          endBlock: Number(event.args.voteEnd),
-        };
-      }));
+      const processedProposals = await Promise.all(
+        events.map(async (event: any) => {
+          const proposalId = event.args.proposalId;
+          const stateIndex = await governorContract.state(proposalId);
+          const states = [
+            "Pending",
+            "Active",
+            "Canceled",
+            "Defeated",
+            "Succeeded",
+            "Queued",
+            "Expired",
+            "Executed",
+          ];
+
+          return {
+            id: proposalId.toString(),
+            proposer: event.args.proposer,
+            description: event.args.description,
+            status: states[stateIndex] as GoatProposal["status"],
+            votesFor: "0",
+            votesAgainst: "0",
+            votesAbstain: "0",
+            startBlock: Number(event.args.voteStart),
+            endBlock: Number(event.args.voteEnd),
+          };
+        }),
+      );
 
       setProposals(processedProposals.reverse());
     } catch (err) {
-      console.error("Failed to fetch Fuji governance data:", err);
-      setError("Failed to load governance data from Avalanche.");
+      console.error("Failed to fetch GOAT governance data:", err);
+      setError("Failed to load governance data from GOAT Network.");
     } finally {
       setLoading(false);
     }
-  }, [provider, address]);
+  }, [provider, address, hasContracts, GOVERNOR_ADDRESS, TOKEN_ADDRESS]);
 
   useEffect(() => {
-    if (isFuji && address) {
+    if (isGoat && address && hasContracts) {
       fetchGovernanceData();
     }
-  }, [isFuji, address, fetchGovernanceData]);
+  }, [isGoat, address, hasContracts, fetchGovernanceData]);
 
   const castVote = async (proposalId: string, support: number) => {
-    if (!provider || !address) return;
+    if (!provider || !address || !hasContracts) return;
     setLoading(true);
     try {
       const signer = await provider.getSigner();
-      const governorContract = new ethers.Contract(GOVERNOR_ADDRESS, GOVERNOR_ABI, signer);
+      const governorContract = new ethers.Contract(
+        GOVERNOR_ADDRESS,
+        GOVERNOR_ABI,
+        signer,
+      );
       const tx = await governorContract.castVote(proposalId, support);
       await tx.wait();
       await fetchGovernanceData();
     } catch (err: any) {
-      console.error("Failed to cast vote:", err);
-      setError(err.message || "Failed to cast vote on Fuji.");
+      console.error("Failed to cast vote on GOAT:", err);
+      setError(err.message || "Failed to cast vote on GOAT Network.");
     } finally {
       setLoading(false);
     }
   };
 
   const delegate = async (targetAddress: string) => {
-    if (!provider || !address) return;
+    if (!provider || !address || !hasContracts) return;
     setLoading(true);
     try {
       const signer = await provider.getSigner();
-      const tokenContract = new ethers.Contract(TOKEN_ADDRESS, TOKEN_ABI, signer);
+      const tokenContract = new ethers.Contract(
+        TOKEN_ADDRESS,
+        TOKEN_ABI,
+        signer,
+      );
       const tx = await tokenContract.delegate(targetAddress);
       await tx.wait();
       await fetchGovernanceData();
     } catch (err: any) {
-      console.error("Failed to delegate:", err);
-      setError(err.message || "Failed to delegate on Fuji.");
+      console.error("Failed to delegate on GOAT:", err);
+      setError(err.message || "Failed to delegate on GOAT Network.");
     } finally {
       setLoading(false);
     }
@@ -157,5 +201,6 @@ export function useFujiGovernance() {
     castVote,
     delegate,
     refresh: fetchGovernanceData,
+    hasContracts,
   };
 }

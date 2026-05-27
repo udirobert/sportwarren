@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
 import { useWallet } from '@/contexts/WalletContext';
-import { getAvalancheContracts } from '@/lib/blockchain/evm-config';
+import { getGoatContracts } from '@/lib/blockchain/evm-config';
 
 const ACHIEVEMENT_ABI = [
   "function balanceOf(address owner) public view returns (uint256)",
@@ -12,7 +12,7 @@ const ACHIEVEMENT_ABI = [
   "event Transfer(address indexed from, address indexed to, uint256 indexed tokenId)",
 ];
 
-const { achievementNft: ACHIEVEMENT_ADDRESS } = getAvalancheContracts();
+const { achievementNft: ACHIEVEMENT_ADDRESS } = getGoatContracts();
 
 export interface AchievementNFT {
   tokenId: string;
@@ -31,14 +31,14 @@ export function useAchievements() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isAvalanche = chain === 'avalanche';
+  const isGoat = chain === 'goat';
 
   const provider = useMemo(() => {
-    if (typeof window !== 'undefined' && (window as any).ethereum && isAvalanche) {
+    if (typeof window !== 'undefined' && (window as any).ethereum && isGoat) {
       return new ethers.BrowserProvider((window as any).ethereum);
     }
     return null;
-  }, [isAvalanche]);
+  }, [isGoat]);
 
   const fetchAchievements = useCallback(async () => {
     if (!provider || !address) return;
@@ -79,17 +79,17 @@ export function useAchievements() {
       setAchievements(fetched);
     } catch (err) {
       console.error("Failed to fetch achievements:", err);
-      setError("Failed to load achievements from Fuji.");
+      setError("Failed to load achievements from GOAT Network.");
     } finally {
       setLoading(false);
     }
   }, [provider, address]);
 
   useEffect(() => {
-    if (isAvalanche && address) {
+    if (isGoat && address) {
       fetchAchievements();
     }
-  }, [isAvalanche, address, fetchAchievements]);
+  }, [isGoat, address, fetchAchievements]);
 
   return {
     achievements,

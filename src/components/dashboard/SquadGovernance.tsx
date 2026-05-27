@@ -9,21 +9,21 @@ import { trpc } from '@/lib/trpc-client';
 export const SquadGovernance: React.FC<{ squadId: string }> = ({ squadId }) => {
     const { data: proposals } = trpc.squad.getProposals.useQuery({ squadId });
 
-    // Governance is now handled on-chain via the Avalanche Governor
+    // Governance is now handled on-chain via the GOAT Network Governor
     // This component shows the current proposal status from the on-chain indexer
     if (!proposals || proposals.length === 0) return (
         <Card className="bg-gradient-to-br from-purple-50 to-indigo-50 border border-purple-100">
             <div className="text-center py-6">
                 <Shield className="w-8 h-8 text-purple-400 mx-auto mb-2" />
                 <p className="text-sm font-semibold text-gray-700 mb-1">On-Chain Governance Active</p>
-                <p className="text-xs text-gray-500">Squad proposals are managed via the <ChainLabel chain="avalanche" /> Governor contract.</p>
+                <p className="text-xs text-gray-500">Squad proposals are managed via the <ChainLabel chain="goat" /> Governor contract.</p>
                 <a 
-                    href="https://snowtrace.io" 
+                    href="https://explorer.testnet3.goat.network" 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-1 mt-3 text-xs text-purple-600 hover:text-purple-700 font-medium"
                 >
-                    View on Snowtrace <ExternalLink className="w-3 h-3" />
+                    View on GOAT Explorer <ExternalLink className="w-3 h-3" />
                 </a>
             </div>
         </Card>
@@ -53,9 +53,9 @@ export const SquadGovernance: React.FC<{ squadId: string }> = ({ squadId }) => {
                         </div>
 
                         <div className="mt-3 flex items-center justify-between">
-                            <span className="text-xs text-gray-500">Vote via Avalanche Governor</span>
+                            <span className="text-xs text-gray-500">Vote via GOAT Governor</span>
                             <a 
-                                href={`https://snowtrace.io/address/${proposal.contractAddress}`}
+                                href={`https://explorer.testnet3.goat.network/address/${proposal.contractAddress}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs text-purple-600 hover:text-purple-700 font-medium inline-flex items-center gap-1"

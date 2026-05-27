@@ -1,5 +1,4 @@
 import { defineChain } from 'viem';
-import { avalanche, avalancheFuji } from 'viem/chains';
 
 export const kiteTestnet = defineChain({
   id: 2368,
@@ -23,14 +22,68 @@ export const kiteTestnet = defineChain({
   testnet: true,
 });
 
-const DEFAULT_AVALANCHE_CHAIN_ID = 43113;
-const DEFAULT_AVALANCHE_RPC_URL = 'https://api.avax-test.network/ext/bc/C/rpc';
-const DEFAULT_AVALANCHE_EXPLORER_BASE_URL = 'https://testnet.snowtrace.io';
+export const goatMainnet = defineChain({
+  id: 2345,
+  name: 'GOAT Network',
+  nativeCurrency: {
+    name: 'Bitcoin',
+    symbol: 'BTC',
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ['https://rpc.goat.network'],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: 'GOAT Explorer',
+      url: 'https://explorer.goat.network',
+    },
+  },
+});
 
-const DEFAULT_AVALANCHE_CONTRACTS = {
-  squadToken: '0x9ecDe1788E1cE1B40024F0fD9eA87f49a94781dB',
-  governor: '0x2e98aF1871bF208Ad361202884AB88F904eFf826',
-  achievementNft: '0xF8ae857B73DF377A4D9387600bA15c0f1e0e15C4',
+export const goatTestnet = defineChain({
+  id: 48816,
+  name: 'GOAT Testnet3',
+  nativeCurrency: {
+    name: 'Bitcoin',
+    symbol: 'BTC',
+    decimals: 18,
+  },
+  rpcUrls: {
+    default: {
+      http: ['https://rpc.testnet3.goat.network'],
+    },
+  },
+  blockExplorers: {
+    default: {
+      name: 'GOAT Testnet Explorer',
+      url: 'https://explorer.testnet3.goat.network',
+    },
+  },
+  testnet: true,
+});
+
+const DEFAULT_GOAT_CHAIN_ID = 48816;
+const DEFAULT_GOAT_RPC_URL = 'https://rpc.testnet3.goat.network';
+const DEFAULT_GOAT_EXPLORER_BASE_URL = 'https://explorer.testnet3.goat.network';
+
+const DEFAULT_GOAT_ERC8004_CONTRACTS = {
+  identityRegistry: '0x556089008Fc0a60cD09390Eca93477ca254A5522',
+  reputationRegistry: '0xd9140951d8aE6E5F625a02F5908535e16e3af964',
+} as const;
+
+const DEFAULT_GOAT_MAINNET_ERC8004_CONTRACTS = {
+  identityRegistry: '0x8004A169FB4a3325136EB29fA0ceB6D2e539a432',
+  reputationRegistry: '0x8004BAa17C55a88189AE136b182e5fdA19dE9b63',
+} as const;
+
+const DEFAULT_GOAT_GOVERNANCE_CONTRACTS = {
+  governor: process.env.GOAT_GOVERNOR_ADDRESS || '',
+  squadToken: process.env.GOAT_SQUAD_TOKEN_ADDRESS || '',
+  achievementNft: process.env.GOAT_ACHIEVEMENT_NFT_ADDRESS || '',
+} as const;
 } as const;
 
 function readNumberEnv(value: string | undefined, fallback: number) {
@@ -44,55 +97,77 @@ function readStringEnv(value: string | undefined, fallback: string) {
   return normalized || fallback;
 }
 
-export function getConfiguredAvalancheChainId() {
-  return readNumberEnv(process.env.NEXT_PUBLIC_AVALANCHE_CHAIN_ID, DEFAULT_AVALANCHE_CHAIN_ID);
-}
-
-export function getAvalancheChain() {
-  return getConfiguredAvalancheChainId() === avalanche.id ? avalanche : avalancheFuji;
-}
-
-export function getAvalancheRpcUrl() {
-  return readStringEnv(process.env.NEXT_PUBLIC_AVALANCHE_RPC_URL, DEFAULT_AVALANCHE_RPC_URL);
-}
-
 export function getKiteRpcUrl() {
   return readStringEnv(process.env.NEXT_PUBLIC_KITE_RPC_URL, kiteTestnet.rpcUrls.default.http[0] as string);
 }
 
-export function getAvalancheExplorerBaseUrl() {
-  return getConfiguredAvalancheChainId() === avalanche.id
-    ? 'https://snowtrace.io'
-    : DEFAULT_AVALANCHE_EXPLORER_BASE_URL;
+export function getConfiguredGoatChainId() {
+  return readNumberEnv(process.env.NEXT_PUBLIC_GOAT_CHAIN_ID, DEFAULT_GOAT_CHAIN_ID);
 }
 
-export function getAvalancheNetworkLabel() {
-  return getConfiguredAvalancheChainId() === avalanche.id
-    ? 'Avalanche C-Chain'
-    : 'Avalanche Fuji';
+export function getGoatChain() {
+  return getConfiguredGoatChainId() === goatMainnet.id ? goatMainnet : goatTestnet;
 }
 
-export function getAvalancheContracts() {
+export function getGoatRpcUrl() {
+  return readStringEnv(process.env.NEXT_PUBLIC_GOAT_RPC_URL, DEFAULT_GOAT_RPC_URL);
+}
+
+export function getGoatExplorerBaseUrl() {
+  return getConfiguredGoatChainId() === goatMainnet.id
+    ? 'https://explorer.goat.network'
+    : DEFAULT_GOAT_EXPLORER_BASE_URL;
+}
+
+export function getGoatNetworkLabel() {
+  return getConfiguredGoatChainId() === goatMainnet.id
+    ? 'GOAT Network'
+    : 'GOAT Testnet3';
+}
+
+export function getGoatErc8004Contracts() {
+  const isMainnet = getConfiguredGoatChainId() === goatMainnet.id;
+  const defaults = isMainnet ? DEFAULT_GOAT_MAINNET_ERC8004_CONTRACTS : DEFAULT_GOAT_ERC8004_CONTRACTS;
   return {
-    squadToken: readStringEnv(
-      process.env.NEXT_PUBLIC_AVALANCHE_SQUAD_TOKEN_ADDRESS,
-      DEFAULT_AVALANCHE_CONTRACTS.squadToken,
+    identityRegistry: readStringEnv(
+      process.env.GOAT_IDENTITY_REGISTRY_ADDRESS,
+      defaults.identityRegistry,
     ),
-    governor: readStringEnv(
-      process.env.NEXT_PUBLIC_AVALANCHE_GOVERNOR_ADDRESS,
-      DEFAULT_AVALANCHE_CONTRACTS.governor,
-    ),
-    achievementNft: readStringEnv(
-      process.env.NEXT_PUBLIC_AVALANCHE_ACHIEVEMENT_NFT_ADDRESS,
-      DEFAULT_AVALANCHE_CONTRACTS.achievementNft,
+    reputationRegistry: readStringEnv(
+      process.env.GOAT_REPUTATION_REGISTRY_ADDRESS,
+      defaults.reputationRegistry,
     ),
   };
 }
 
-export function getAchievementExplorerUrl(tokenId?: string | number) {
-  const contractAddress = getAvalancheContracts().achievementNft;
-  const suffix = tokenId === undefined ? '' : `?a=${tokenId}`;
-  return `${getAvalancheExplorerBaseUrl()}/token/${contractAddress}${suffix}`;
+export function getGoatAgentRegistryId() {
+  const chainId = getConfiguredGoatChainId();
+  const identityAddress = getGoatErc8004Contracts().identityRegistry;
+  return `eip155:${chainId}:${identityAddress}`;
 }
 
-export const evmWalletChains = [avalancheFuji, avalanche, kiteTestnet] as const;
+export function getGoatContracts() {
+  return {
+    governor: readStringEnv(
+      process.env.GOAT_GOVERNOR_ADDRESS,
+      DEFAULT_GOAT_GOVERNANCE_CONTRACTS.governor,
+    ),
+    squadToken: readStringEnv(
+      process.env.GOAT_SQUAD_TOKEN_ADDRESS,
+      DEFAULT_GOAT_GOVERNANCE_CONTRACTS.squadToken,
+    ),
+    achievementNft: readStringEnv(
+      process.env.GOAT_ACHIEVEMENT_NFT_ADDRESS,
+      DEFAULT_GOAT_GOVERNANCE_CONTRACTS.achievementNft,
+    ),
+  };
+}
+
+export function getGoatAchievementExplorerUrl(tokenId?: string | number) {
+  const contractAddress = getGoatContracts().achievementNft;
+  if (!contractAddress) return getGoatExplorerBaseUrl();
+  const suffix = tokenId === undefined ? '' : `?a=${tokenId}`;
+  return `${getGoatExplorerBaseUrl()}/token/${contractAddress}${suffix}`;
+}
+
+export const evmWalletChains = [kiteTestnet, goatTestnet, goatMainnet] as const;

@@ -142,13 +142,13 @@ export function getJourneyActionGate(
   if (
     surface === 'squad_governance' &&
     input.chain !== 'algorand' &&
-    input.chain !== 'avalanche'
+    input.chain !== 'goat'
   ) {
     return createBlockedGate(
       'unsupported_governance_wallet',
       'Governance Rail',
-      'Use an Algorand or Avalanche wallet for governance',
-      'Treasury and transfers can still run through the squad workspace, but on-chain proposal voting currently depends on an Algorand or Avalanche wallet.',
+      'Use an Algorand or GOAT Network wallet for governance',
+      'Treasury and transfers can still run through the squad workspace, but on-chain proposal voting currently depends on an Algorand or GOAT Network wallet.',
       { label: 'Review wallet setup', href: SETTINGS_WALLET_HREF },
       { label: 'Open treasury', href: `${SQUAD_HREF}?tab=treasury` },
     );

@@ -26,6 +26,16 @@ const config: HardhatUserConfig = {
             url: "https://rpc-testnet.gokite.ai",
             chainId: 2368,
             accounts: process.env.AVALANCHE_PRIVATE_KEY ? [process.env.AVALANCHE_PRIVATE_KEY] : []
+        },
+        goatMainnet: {
+            url: "https://rpc.goat.network",
+            chainId: 2345,
+            accounts: process.env.GOAT_PRIVATE_KEY ? [process.env.GOAT_PRIVATE_KEY] : []
+        },
+        goatTestnet3: {
+            url: "https://rpc.testnet3.goat.network",
+            chainId: 48816,
+            accounts: process.env.GOAT_PRIVATE_KEY ? [process.env.GOAT_PRIVATE_KEY] : []
         }
     }
 };

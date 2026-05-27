@@ -6,14 +6,14 @@ import { Trophy, Award, Shield, Star, ExternalLink, Loader2 } from 'lucide-react
 import { useAchievements } from '@/hooks/useAchievements';
 import { useWallet } from '@/contexts/WalletContext';
 import {
-  getAchievementExplorerUrl,
-  getAvalancheNetworkLabel,
+  getGoatAchievementExplorerUrl,
+  getGoatNetworkLabel,
 } from '@/lib/blockchain/evm-config';
 import { trpc } from '@/lib/trpc-client';
 import { AvatarHeroCard } from '@/components/ui/AvatarHeroCard';
 import { ChainLabel } from '@/components/common/ChainLabel';
 
-const avalancheNetworkLabel = getAvalancheNetworkLabel();
+const goatNetworkLabel = getGoatNetworkLabel();
 
 export const AchievementGallery: React.FC = () => {
   const { address, chain, hasWallet } = useWallet();
@@ -41,15 +41,15 @@ export const AchievementGallery: React.FC = () => {
     );
   }
 
-  if (chain !== 'avalanche') {
+  if (chain !== 'goat') {
     return (
       <Card className="p-8 text-center bg-gray-50 border-dashed border-2 border-gray-200">
         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
           <Trophy className="w-8 h-8 text-gray-300" />
         </div>
-        <h4 className="text-lg font-semibold text-gray-900"><ChainLabel chain="avalanche" showTechnical /> Trophy Rail</h4>
+        <h4 className="text-lg font-semibold text-gray-900"><ChainLabel chain="goat" /> Trophy Rail</h4>
         <p className="text-gray-500 text-sm mt-2 max-w-xs mx-auto">
-          Achievement NFTs are published on {avalancheNetworkLabel}. Switch to a <ChainLabel chain="avalanche" /> wallet to browse on-chain trophies for this account.
+          Achievement NFTs are published on {goatNetworkLabel}. Switch to a <ChainLabel chain="goat" /> wallet to browse on-chain trophies for this account.
         </p>
       </Card>
     );
@@ -59,7 +59,7 @@ export const AchievementGallery: React.FC = () => {
     return (
       <div className="flex flex-col items-center justify-center p-12 text-gray-500">
         <Loader2 className="w-8 h-8 animate-spin mb-4" />
-        <p className="text-sm font-medium animate-pulse">Scanning {avalancheNetworkLabel} for achievements...</p>
+        <p className="text-sm font-medium animate-pulse">Scanning {goatNetworkLabel} for achievements...</p>
       </div>
     );
   }
@@ -82,7 +82,7 @@ export const AchievementGallery: React.FC = () => {
         </div>
         <h4 className="text-lg font-semibold text-gray-900">No On-Chain Trophies Yet</h4>
         <p className="text-gray-500 text-sm mt-2 max-w-xs mx-auto">
-          Win matches, complete challenges, and earn verified on-chain achievements on {avalancheNetworkLabel}.
+          Win matches, complete challenges, and earn verified on-chain achievements on {goatNetworkLabel}.
         </p>
       </Card>
     );
@@ -95,7 +95,7 @@ export const AchievementGallery: React.FC = () => {
           presentation={avatarPresentation}
           title="Achievement Identity"
           subtitle="Your avatar now reflects the progression story behind every verified trophy and season milestone."
-          statLine={`${achievements.length} on-chain trophy${achievements.length === 1 ? '' : 'ies'} on ${avalancheNetworkLabel}`}
+          statLine={`${achievements.length} on-chain trophy${achievements.length === 1 ? '' : 'ies'} on ${goatNetworkLabel}`}
         />
       )}
 
@@ -116,7 +116,7 @@ export const AchievementGallery: React.FC = () => {
               )}
               <div className="absolute inset-0 flex items-center justify-center gap-3 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
                 <a
-                  href={getAchievementExplorerUrl(nft.tokenId)}
+                  href={getGoatAchievementExplorerUrl(nft.tokenId)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="rounded-full bg-white p-2 text-blue-600 transition-transform hover:scale-110"
@@ -146,7 +146,7 @@ export const AchievementGallery: React.FC = () => {
                     </div>
                   ))}
                 </div>
-                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{avalancheNetworkLabel}</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{goatNetworkLabel}</span>
               </div>
             </div>
           </Card>

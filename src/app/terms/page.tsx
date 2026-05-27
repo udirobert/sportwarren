@@ -85,7 +85,7 @@ export default function TermsOfService() {
           <section>
             <h2 className="text-lg font-semibold text-white mb-3">6. Blockchain &amp; Digital Assets</h2>
             <p className="mb-3">
-              SportWarren integrates with multiple blockchain networks (Algorand, Avalanche, TON). Transactions
+              SportWarren integrates with multiple blockchain networks (Algorand, GOAT Network, TON). Transactions
               on these networks are irreversible. Gas fees and transaction costs are your responsibility.
             </p>
             <p>

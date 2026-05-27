@@ -421,7 +421,7 @@ export interface DerbyBonus {
 }
 
 // ============================================================================
-// AGENT DOMAIN (Avalanche)
+// AGENT DOMAIN (GOAT Network)
 // ============================================================================
 
 export interface Agent {
@@ -553,7 +553,7 @@ export interface UserPreferences {
   notifications: boolean;
   compactMode: boolean;
   onboardingCompleted: boolean;
-  preferredChain: 'algorand' | 'avalanche' | 'base' | 'lens' | 'social';
+  preferredChain: 'algorand' | 'goat' | 'base' | 'lens' | 'social';
 
   // Core interests
   primaryRole?: 'player' | 'organizer' | 'fan' | 'coach';

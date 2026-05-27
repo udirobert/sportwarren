@@ -29,7 +29,7 @@ export default function PrivacyPolicy() {
 
             <h3 className="text-base font-medium text-white/80 mt-4 mb-2">Information you provide:</h3>
             <ul className="list-disc pl-5 space-y-1">
-              <li>Wallet addresses (Algorand, Avalanche, EVM, TON)</li>
+              <li>Wallet addresses (Algorand, GOAT Network, EVM, TON)</li>
               <li>Profile information (name, avatar, position preference)</li>
               <li>Match results and peer ratings</li>
               <li>Squad data (names, formations, tactics)</li>
@@ -65,7 +65,7 @@ export default function PrivacyPolicy() {
             <p className="mb-3">We share data with:</p>
             <ul className="list-disc pl-5 space-y-1">
               <li><strong>Squad members:</strong> Your match stats, ratings, and profile are visible to squad mates</li>
-              <li><strong>Blockchain networks:</strong> Match verification data is recorded on-chain (Algorand, Avalanche)</li>
+              <li><strong>Blockchain networks:</strong> Match verification data is recorded on-chain (Algorand, GOAT Network)</li>
               <li><strong>Service providers:</strong> Sentry (error tracking), PostHog (analytics), Venice AI / OpenAI (AI inference)</li>
               <li><strong>Telegram:</strong> If you connect Telegram, your Telegram ID is linked to your account</li>
             </ul>

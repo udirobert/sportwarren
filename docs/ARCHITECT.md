@@ -15,7 +15,7 @@ SportWarren assigns each network a strict, non-interchangeable role based on its
 |---------|------------------------|---------------|
 | **Kite AI** | Agent identity, x402 commerce, attestations | Purpose-built for autonomous agent economy and spending sessions. |
 | **Algorand** | Match verification, reputation state | Fast, low-cost verification and durable football records. |
-| **Avalanche** | Squad governance, treasury, digital assets | Strong EVM tooling for programmable squad coordination and escrow. |
+| **GOAT Network** | Squad governance, treasury, digital assets | Bitcoin-secured via BitVM2. Native x402 micropayments and ERC-8004 agent identity. |
 | **TON** | Telegram-native wallet UX, rewards | Native fit for Telegram distribution and user treasury actions. |
 | **Yellow** | Instant operational settlement | Operational liquidity without forcing every action into a slow on-chain path. |
 | **Lens** | Social identity and distribution | Portable social graph for player and squad visibility. |
@@ -71,15 +71,21 @@ After every match, players rate teammates' attributes (Pace, Shooting, etc.).
 
 ---
 
-## 🔺 Avalanche: Governance & Assets
+## 🐐 GOAT Network: Governance & Assets
 
-Avalanche Fuji serves as the settlement layer for squad governance and high-value digital assets.
+GOAT Network (Bitcoin L2) serves as the settlement layer for squad governance and high-value digital assets, secured via BitVM2.
 
 ### Key Contracts
 - **SquadToken (ERC20 Votes):** Native governance token for squad DAO voting.
 - **SquadGovernor:** Main governance logic (proposals, voting, execution).
 - **AchievementNFT (ERC721):** Verifiable credentials for match milestones.
 - **AgentEscrow:** Secure payment holding for agent marketplace integrations.
+- **GoatReputation (ERC-8004):** On-chain agent identity and reputation registry.
+
+### Why GOAT over Avalanche
+- **Bitcoin-native security** via BitVM2 — athlete career data inherits Bitcoin's longevity.
+- **Native x402 micropayments** and ERC-8004 agent identity for autonomous commerce.
+- **Sustainable BTC yield** from sequencer fees for squad treasuries.
 
 ---
 
@@ -103,4 +109,4 @@ Avalanche Fuji serves as the settlement layer for squad governance and high-valu
 | **API** | tRPC (type-safe RPC) |
 | **Database** | PostgreSQL 15, Prisma 7 |
 | **Auth** | Multi-chain wallet signatures |
-| **Blockchains** | Kite (Lead), Algorand, Avalanche, TON, Yellow, Lens |
+| **Blockchains** | Kite (Lead), Algorand, GOAT Network, TON, Yellow, Lens |

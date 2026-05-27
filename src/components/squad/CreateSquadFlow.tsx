@@ -154,7 +154,7 @@ export const CreateSquadFlow: React.FC<CreateSquadFlowProps> = ({ onCreated, onC
                                     <span className="text-blue-400 font-black">5,000 Credits</span>
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest"><ChainLabel chain="lens" showTechnical /> Reputation</span>
+                                    <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest"><ChainLabel chain="lens" /> Reputation</span>
                                     <span className="text-white font-black">0 (Building)</span>
                                 </div>
                             </div>

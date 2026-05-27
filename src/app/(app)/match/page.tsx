@@ -359,7 +359,7 @@ export default function MatchPage() {
         <Card className="border-blue-200 bg-blue-50/70">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm text-blue-700"><ChainLabel chain="yellow" showTechnical /> Fee Rail</p>
+              <p className="text-sm text-blue-700"><ChainLabel chain="yellow" /> Fee Rail</p>
               <p className="text-3xl font-bold text-gray-900">{railEnabledCount}</p>
             </div>
             <Cpu className="h-8 w-8 text-blue-600" />
