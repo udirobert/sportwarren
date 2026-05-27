@@ -96,7 +96,7 @@ function readBooleanEnv(value: string | undefined) {
 }
 
 function isEvmChain(chain: string | null) {
-  return chain === 'avalanche' || chain === 'lens';
+  return chain === 'goat' || chain === 'lens';
 }
 
 function getYellowClientConfig() {

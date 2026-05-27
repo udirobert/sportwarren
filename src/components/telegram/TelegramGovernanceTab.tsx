@@ -124,7 +124,7 @@ export function TelegramGovernanceTab({ context, onRefresh: _onRefresh }: Telegr
           </div>
         </div>
         <a
-          href="https://testnet.snowtrace.io/address/0x2e98aF1871bF208Ad361202884AB88F904eFf826"
+          href="https://explorer.testnet3.goat.network/address/0x2e98aF1871bF208Ad361202884AB88F904eFf826"
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-1 rounded-lg bg-white/5 px-3 py-2 text-[10px] font-bold text-blue-400 transition active:scale-95"
@@ -179,7 +179,7 @@ export function TelegramGovernanceTab({ context, onRefresh: _onRefresh }: Telegr
             <div className="mb-4 rounded-xl bg-blue-500/5 border border-blue-500/10 p-3 flex items-start gap-2">
               <Info className="h-4 w-4 text-blue-400 shrink-0 mt-0.5" />
               <p className="text-[11px] text-blue-200/70 leading-relaxed">
-                Your vote is cast via the platform relayer on <ChainLabel chain="avalanche" /> Fuji. The transaction will be signed and submitted on-chain.
+                Your vote is cast via the platform relayer on <ChainLabel chain="goat" />. The transaction will be signed and submitted on-chain.
               </p>
             </div>
             <div className="flex gap-3">
@@ -258,7 +258,7 @@ export function TelegramGovernanceTab({ context, onRefresh: _onRefresh }: Telegr
                 : 'Proposals will appear here once they reach this stage.'}
             </p>
             <a
-              href="https://testnet.snowtrace.io/address/0x2e98aF1871bF208Ad361202884AB88F904eFf826#writeContract"
+              href="https://explorer.testnet3.goat.network/address/0x2e98aF1871bF208Ad361202884AB88F904eFf826#writeContract"
               target="_blank"
               rel="noopener noreferrer"
               className="mt-4 inline-flex items-center gap-1 rounded-xl bg-blue-500/10 px-4 py-2 text-xs font-bold text-blue-400 border border-blue-500/20"
@@ -335,7 +335,7 @@ export function TelegramGovernanceTab({ context, onRefresh: _onRefresh }: Telegr
               <div className="pt-1 flex items-center justify-between border-t border-white/5">
                 <span className="text-[10px] text-slate-600">Proposer: {proposal.proposer?.slice(0, 6)}...{proposal.proposer?.slice(-4)}</span>
                 <a
-                  href={`https://testnet.snowtrace.io/tx/${proposal.id}`}
+                  href={`https://explorer.testnet3.goat.network/tx/${proposal.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[10px] text-blue-400 hover:text-blue-300 font-medium inline-flex items-center gap-1"
@@ -353,7 +353,7 @@ export function TelegramGovernanceTab({ context, onRefresh: _onRefresh }: Telegr
       <div className="rounded-2xl bg-blue-500/5 border border-blue-500/10 p-4 flex gap-3">
         <Shield className="h-5 w-5 text-blue-400 shrink-0" />
         <p className="text-[11px] leading-relaxed text-blue-200/70">
-          Proposals are fetched directly from the SquadGovernor contract on <ChainLabel chain="avalanche" /> Fuji. 
+          Proposals are fetched directly from the SquadGovernor contract on <ChainLabel chain="goat" />. 
           Votes are submitted on-chain via the platform relayer.
         </p>
       </div>

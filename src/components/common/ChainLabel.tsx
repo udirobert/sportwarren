@@ -1,9 +1,9 @@
 "use client";
 
 import React from "react";
-import { Shield, Zap, Wallet, Globe, Network, BadgeCheck, type LucideIcon } from "lucide-react";
+import { Shield, Zap, Wallet, Globe, Hexagon, type LucideIcon } from "lucide-react";
 
-type ChainId = "algorand" | "avalanche" | "kite" | "ton" | "yellow" | "lens";
+export type ChainId = "algorand" | "goat" | "kite" | "ton" | "yellow" | "lens";
 
 interface ChainInfo {
   label: string;
@@ -19,11 +19,11 @@ const CHAIN_REGISTRY: Record<ChainId, ChainInfo> = {
     description: "Secure match result verification and reputation records",
     color: "text-sky-600 dark:text-sky-400",
   },
-  avalanche: {
+  goat: {
     label: "Governance Chain",
-    icon: Network,
-    description: "Squad DAO voting, treasury, and digital asset ownership",
-    color: "text-red-600 dark:text-red-400",
+    icon: Hexagon,
+    description: "Bitcoin-secured squad DAOs, asset escrow, and global reputation via BitVM2",
+    color: "text-orange-600 dark:text-orange-400",
   },
   kite: {
     label: "Agent Network",
@@ -60,7 +60,7 @@ interface ChainLabelProps {
 
 const TECHNICAL_NAMES: Record<ChainId, string> = {
   algorand: "Algorand",
-  avalanche: "Avalanche",
+  goat: "GOAT Network",
   kite: "Kite AI",
   ton: "TON",
   yellow: "Yellow",

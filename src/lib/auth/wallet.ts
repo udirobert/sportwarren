@@ -2,7 +2,7 @@ import algosdk from 'algosdk';
 import { ethers } from 'ethers';
 import { SIGNATURE_EXPIRY_MS } from './constants';
 
-export type WalletChain = 'algorand' | 'avalanche' | 'lens' | 'social';
+export type WalletChain = 'algorand' | 'goat' | 'lens' | 'social';
 
 export interface WalletAuthPayload {
   address: string;
@@ -94,7 +94,7 @@ export async function verifyEvmSignature(
     
     return recoveredAddress.toLowerCase() === address.toLowerCase();
   } catch (error) {
-    console.error('Avalanche signature verification failed:', error);
+    console.error('EVM signature verification failed:', error);
     return false;
   }
 }
@@ -111,7 +111,7 @@ export async function verifyWalletSignature(
 
   if (chain === 'algorand') {
     verified = await verifyAlgorandSignature(address, signature, message, timestamp);
-  } else if (chain === 'avalanche' || chain === 'lens' || chain === 'social') {
+  } else if (chain === 'goat' || chain === 'lens' || chain === 'social') {
     verified = await verifyEvmSignature(address, signature, message, timestamp);
   } else {
     throw new Error(`Unsupported chain: ${chain}`);
@@ -125,7 +125,7 @@ export async function verifyWalletSignature(
 }
 
 export const isSupportedWalletChain = (chain?: string): chain is WalletChain =>
-  chain === 'algorand' || chain === 'avalanche' || chain === 'lens' || chain === 'social';
+  chain === 'algorand' || chain === 'goat' || chain === 'lens' || chain === 'social';
 
 /**
  * Generate authentication message for wallet signing

@@ -45,7 +45,7 @@ SportWarren uses a role-specific multi-chain system. Fallback **Simulation Mode*
 |---------|----------------|---------------|
 | **Kite AI** | Agents & Commerce | `KITE_API_KEY`, `WEB3_PRIVATE_KEY`, `KITE_SCOUT_PRICE_USDC`, `KITE_SCOUT_MAX_USDC`, `KITE_SCOUT_MAX_USDC_SQUAD` |
 | **Algorand** | Verification | `DEPLOYER_MNEMONIC`, `ALGORAND_APP_ID` |
-| **Avalanche** | Governance | `AVALANCHE_PRIVATE_KEY` |
+| **GOAT Network** | Governance | `GOAT_PRIVATE_KEY`, `GOAT_GOVERNOR_ADDRESS`, `GOAT_SQUAD_TOKEN_ADDRESS`, `GOAT_ACHIEVEMENT_NFT_ADDRESS` |
 | **TON** | Telegram Wallet | `TONCENTER_API_KEY` |
 
 ---

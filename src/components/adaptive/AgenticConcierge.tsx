@@ -206,7 +206,7 @@ export const AgenticConcierge: React.FC<AgenticConciergeProps> = ({ journeyStage
                                 </div>
                                 <div>
                                     <div className="flex items-center gap-1.5 leading-none mb-1">
-                                        <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest"><ChainLabel chain="kite" showTechnical /> Agent</div>
+                                        <div className="text-[10px] font-black text-blue-400 uppercase tracking-widest"><ChainLabel chain="kite" /> Agent</div>
                                         <span className="w-1 h-1 bg-gray-700 rounded-full" />
                                         <a 
                                             href="https://explorer.gokite.ai/passport/KITE-MARCUS-SW-01" 

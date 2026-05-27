@@ -36,7 +36,7 @@ describe('ChainLabel', () => {
   });
 
   it('renders all chain types without error', () => {
-    const chains = ['algorand', 'avalanche', 'kite', 'ton', 'yellow', 'lens'] as const;
+    const chains = ['algorand', 'goat', 'kite', 'ton', 'yellow', 'lens'] as const;
     for (const chain of chains) {
       const { container } = render(<ChainLabel chain={chain} />);
       expect(container.firstChild).toBeInTheDocument();
@@ -47,7 +47,7 @@ describe('ChainLabel', () => {
 describe('getChainLabel', () => {
   it('returns human-readable label by default', () => {
     expect(getChainLabel('algorand')).toBe('Verification Network');
-    expect(getChainLabel('avalanche')).toBe('Governance Chain');
+    expect(getChainLabel('goat')).toBe('Governance Chain');
     expect(getChainLabel('kite')).toBe('Agent Network');
     expect(getChainLabel('ton')).toBe('Treasury Network');
     expect(getChainLabel('yellow')).toBe('Settlement Rail');
@@ -56,7 +56,7 @@ describe('getChainLabel', () => {
 
   it('returns technical name when showTechnical is true', () => {
     expect(getChainLabel('algorand', true)).toBe('Algorand');
-    expect(getChainLabel('avalanche', true)).toBe('Avalanche');
+    expect(getChainLabel('goat', true)).toBe('GOAT Network');
     expect(getChainLabel('kite', true)).toBe('Kite AI');
     expect(getChainLabel('ton', true)).toBe('TON');
     expect(getChainLabel('yellow', true)).toBe('Yellow');

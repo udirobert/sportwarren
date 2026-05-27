@@ -26,6 +26,11 @@ const DEFAULT_KITE_CHAIN_ID = 2368;
 const DEFAULT_ASSET_DECIMALS = 18;
 const DEFAULT_X402_VERSION = 2;
 
+const GOAT_NETWORK_CHAIN_ID = 2345;
+const GOAT_TESTNET_CHAIN_ID = 48816;
+const GOAT_NETWORK = `eip155:${GOAT_NETWORK_CHAIN_ID}`;
+const GOAT_TESTNET = `eip155:${GOAT_TESTNET_CHAIN_ID}`;
+
 /**
  * Default Kite catalog x402 demo (GET → 402, allowlisted for Passport discovery).
  *
@@ -129,6 +134,34 @@ export function readX402Config(): X402Config {
     chainId: Number(process.env.KITE_CHAIN_ID || DEFAULT_KITE_CHAIN_ID),
     x402Version: version === 1 ? 1 : 2,
   };
+}
+
+export function readGoatX402Config(): X402Config {
+  const isMainnet = Number(process.env.GOAT_CHAIN_ID || GOAT_TESTNET_CHAIN_ID) === GOAT_NETWORK_CHAIN_ID;
+  return {
+    facilitatorUrl: process.env.GOAT_FACILITATOR_URL
+      || (isMainnet ? 'https://facilitator.goat.network' : 'https://facilitator.testnet3.goat.network'),
+    facilitatorAddress: process.env.GOAT_FACILITATOR_ADDRESS || DEFAULT_FACILITATOR_ADDRESS,
+    scheme: process.env.GOAT_X402_SCHEME || DEFAULT_SCHEME,
+    network: isMainnet ? GOAT_NETWORK : GOAT_TESTNET,
+    assetAddress: process.env.GOAT_USDC_ADDRESS || DEFAULT_USDC,
+    assetDecimals: Number(process.env.GOAT_USDC_DECIMALS || DEFAULT_ASSET_DECIMALS),
+    rpcUrl: process.env.GOAT_RPC_URL
+      || (isMainnet ? 'https://rpc.goat.network' : 'https://rpc.testnet3.goat.network'),
+    chainId: isMainnet ? GOAT_NETWORK_CHAIN_ID : GOAT_TESTNET_CHAIN_ID,
+    x402Version: 2,
+  };
+}
+
+/**
+ * Determine which x402 config to use based on a target network string.
+ * Falls back to Kite config when the target is not GOAT Network.
+ */
+export function resolveX402Config(targetNetwork?: string): X402Config {
+  if (targetNetwork === GOAT_NETWORK || targetNetwork === GOAT_TESTNET) {
+    return readGoatX402Config();
+  }
+  return readX402Config();
 }
 
 function isX402SimulationEnabled(): boolean {
@@ -286,7 +319,7 @@ export async function signPayment(
   const wallet = getServerWallet();
   if (!wallet) return null;
 
-  const cfg = readX402Config();
+  const cfg = resolveX402Config(requirements.network);
   const normalized = toFacilitatorRequirements(requirements);
   const value = amountWei ?? getRequirementAmount(normalized);
 
@@ -615,7 +648,7 @@ export async function settleWithFacilitator(
   envelope: PaymentEnvelope,
   requirements?: PaymentRequirements,
 ): Promise<SettlementResult> {
-  const cfg = readX402Config();
+  const cfg = resolveX402Config(envelope.network);
   const reqs = toFacilitatorRequirements(requirements ?? {
     scheme: envelope.scheme,
     network: envelope.network,

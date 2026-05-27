@@ -1,5 +1,5 @@
 import { ethers } from 'ethers';
-import { getAvalancheRpcUrl, getAvalancheContracts } from '@/lib/blockchain/evm-config';
+import { getGoatRpcUrl, getGoatContracts } from '@/lib/blockchain/evm-config';
 
 // Full ABI for reading governance state and events
 const GOVERNOR_ABI = [
@@ -50,16 +50,16 @@ export class GovernanceIndexer {
   private provider: ethers.JsonRpcProvider | null = null;
   private governorContract: ethers.Contract | null = null;
   private tokenContract: ethers.Contract | null = null;
-  private contracts: ReturnType<typeof getAvalancheContracts> | null = null;
+  private contracts: ReturnType<typeof getGoatContracts> | null = null;
   private initialized = false;
 
   initialize() {
     if (this.initialized) return;
 
     try {
-      const rpcUrl = getAvalancheRpcUrl();
+      const rpcUrl = getGoatRpcUrl();
       this.provider = new ethers.JsonRpcProvider(rpcUrl);
-      this.contracts = getAvalancheContracts();
+      this.contracts = getGoatContracts();
 
       this.governorContract = new ethers.Contract(
         this.contracts.governor,
@@ -252,7 +252,7 @@ export class GovernanceIndexer {
         quorum: ethers.formatEther(quorum),
         votingPeriod: Number(votingPeriod),
         proposalThreshold: ethers.formatEther(proposalThreshold),
-        network: 'Avalanche Fuji',
+        network: 'GOAT Network',
       };
     } catch (err) {
       console.error('[GOVERNANCE-INDEXER] Failed to get governance params:', err);

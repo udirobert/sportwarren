@@ -11,8 +11,8 @@ import { trackWalletConnection, trackGuestMode, trackFeatureUsed } from '@/lib/a
 // Storage keys - centralized for consistency
 const STORAGE_KEYS = {
   ALGORAND_ADDRESS: 'sw_algorand_address',
-  AVALANCHE_ADDRESS: 'sw_avalanche_address',
   LENS_ADDRESS: 'sw_lens_address',
+  GOAT_ADDRESS: 'sw_goat_address',
   PREFERRED_CHAIN: 'sw_preferred_chain',
   USER_PREFERENCES: 'sw_user_preferences',
   GUEST_PENDING_MIGRATION: 'sw_guest_pending_migration',
@@ -98,10 +98,10 @@ interface AuthStatus {
   isRefreshing: boolean;
 }
 
-const isWalletChain = (value: string | null): value is 'algorand' | 'avalanche' | 'lens' =>
-  value === 'algorand' || value === 'avalanche' || value === 'lens';
+const isWalletChain = (value: string | null): value is 'algorand' | 'lens' | 'goat' =>
+  value === 'algorand' || value === 'lens' || value === 'goat';
 
-const isAuthCapableChain = (value: string | null): value is 'algorand' | 'avalanche' | 'lens' | 'social' =>
+const isAuthCapableChain = (value: string | null): value is 'algorand' | 'lens' | 'goat' | 'social' =>
   value === 'social' || isWalletChain(value);
 
 const getStoredAuth = (): { signature?: string; message?: string; timestamp?: number; address?: string; chain?: string } => {
@@ -183,16 +183,16 @@ interface WalletContextType {
   hasWallet: boolean;
   isGuest: boolean;
   loginMethod: 'wallet' | 'social' | 'guest' | null;
-  chain: 'algorand' | 'avalanche' | 'lens' | 'social' | null;
+  chain: 'algorand' | 'lens' | 'goat' | 'social' | null;
   balance: number;
-  connect: (method: 'algorand' | 'avalanche' | 'lens' | 'google' | 'discord') => Promise<void>;
+  connect: (method: 'algorand' | 'lens' | 'goat' | 'google' | 'discord') => Promise<void>;
   loginAsGuest: () => void;
   refreshAuthSignature: () => Promise<boolean>;
   disconnect: () => void;
   authStatus: AuthStatus;
   isVerified: boolean;
   preferences: UserPreferences | null;
-  setPreferredChain: (chain: 'algorand' | 'avalanche' | 'lens' | 'social') => void;
+  setPreferredChain: (chain: 'algorand' | 'lens' | 'goat' | 'social') => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -212,7 +212,7 @@ interface WalletProviderProps {
 export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [address, setAddress] = useState<string | null>(null);
   const [walletAddress, setWalletAddress] = useState<string | null>(null);
-  const [chain, setChain] = useState<'algorand' | 'avalanche' | 'lens' | 'social' | null>(null);
+  const [chain, setChain] = useState<'algorand' | 'lens' | 'goat' | 'social' | null>(null);
   const [balance, setBalance] = useState<number>(0);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [isGuest, setIsGuest] = useState<boolean>(false);
@@ -262,7 +262,6 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const migrateStorageKeys = () => {
     const migrations = [
       { old: 'algorand_address', new: STORAGE_KEYS.ALGORAND_ADDRESS },
-      { old: 'avalanche_address', new: STORAGE_KEYS.AVALANCHE_ADDRESS },
       { old: 'lens_address', new: STORAGE_KEYS.LENS_ADDRESS },
       { old: 'preferred_chain', new: STORAGE_KEYS.PREFERRED_CHAIN },
       { old: 'userPreferences', new: STORAGE_KEYS.USER_PREFERENCES },
@@ -353,25 +352,25 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       const savedPrefs = loadPreferences();
 
       const savedAlgorand = localStorage.getItem(STORAGE_KEYS.ALGORAND_ADDRESS);
-      const savedAvalanche = localStorage.getItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
       const savedLens = localStorage.getItem(STORAGE_KEYS.LENS_ADDRESS);
-      const _savedChain = localStorage.getItem(STORAGE_KEYS.PREFERRED_CHAIN) as 'algorand' | 'avalanche' | 'lens' | null;
+      const savedGoat = localStorage.getItem(STORAGE_KEYS.GOAT_ADDRESS);
+      const _savedChain = localStorage.getItem(STORAGE_KEYS.PREFERRED_CHAIN) as 'algorand' | 'lens' | 'goat' | null;
 
       if (savedAlgorand) {
         setAddress(savedAlgorand);
         setWalletAddress(savedAlgorand);
         setChain('algorand');
         fetchAlgorandBalance(savedAlgorand);
-      } else if (savedAvalanche) {
-        setAddress(savedAvalanche);
-        setWalletAddress(savedAvalanche);
-        setChain('avalanche');
-        fetchAvalancheBalance(savedAvalanche);
       } else if (savedLens) {
         setAddress(savedLens);
         setWalletAddress(savedLens);
         setChain('lens');
         fetchLensBalance(savedLens);
+      } else if (savedGoat) {
+        setAddress(savedGoat);
+        setWalletAddress(savedGoat);
+        setChain('goat');
+        fetchGoatBalance(savedGoat);
       } else if (localStorage.getItem('sw_is_guest') === 'true') {
         setIsGuest(true);
         setAddress('0xGUEST_DEMO_MODE');
@@ -406,18 +405,6 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     }
   };
 
-  const fetchAvalancheBalance = async (addr: string) => {
-    try {
-      const response = await fetch(`/api/avalanche/balance?address=${addr}`);
-      if (response.ok) {
-        const data = await response.json();
-        setBalance(data.balance || 0);
-      }
-    } catch (error) {
-      console.error('Failed to fetch Avalanche balance:', error);
-    }
-  };
-
   const fetchLensBalance = async (addr: string) => {
     try {
       const response = await fetch(`/api/lens/balance?address=${addr}`);
@@ -427,6 +414,18 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       }
     } catch (error) {
       console.error('Failed to fetch Lens balance:', error);
+    }
+  };
+
+  const fetchGoatBalance = async (addr: string) => {
+    try {
+      const response = await fetch(`/api/goat/balance?address=${addr}`);
+      if (response.ok) {
+        const data = await response.json();
+        setBalance(data.balance || 0);
+      }
+    } catch (error) {
+      console.error('Failed to fetch GOAT Network balance:', error);
     }
   };
 
@@ -501,7 +500,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     return () => window.clearTimeout(timeout);
   }, [authStatus.expiresAt, authStatus.state, authStatus.signedAt, updateAuthStatus, refreshAuthSignature]);
 
-  const connect = async (method: 'algorand' | 'avalanche' | 'lens' | 'google' | 'discord') => {
+  const connect = async (method: 'algorand' | 'lens' | 'goat' | 'google' | 'discord') => {
     try {
       const pendingGuestMigration = hasGuestProgress();
       if (pendingGuestMigration) {
@@ -598,9 +597,13 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         trackWalletConnection('algorand', true);
         trackFeatureUsed('wallet_connect');
 
-      } else if (method === 'avalanche' || method === 'lens') {
+      } else if (method === 'lens' || method === 'goat') {
         // ── Unified EVM Connection via wagmi ──
-        const targetChainId = method === 'avalanche' ? 43114 : 232;
+        const chainIdMap: Record<string, number> = {
+          lens: 232,
+          goat: 48816,
+        };
+        const targetChainId = chainIdMap[method] ?? 48816;
         
         // Find appropriate connector (prefer injected for these chains if not using Privy social)
         // Note: With Privy-Wagmi bridge, connectors[0] is often the Privy connector
@@ -624,12 +627,16 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
         setAddress(walletAddress);
         setWalletAddress(walletAddress);
         setChain(method);
-        localStorage.setItem(method === 'avalanche' ? STORAGE_KEYS.AVALANCHE_ADDRESS : STORAGE_KEYS.LENS_ADDRESS, walletAddress);
+        const storageKeyMap: Record<string, string> = {
+          lens: STORAGE_KEYS.LENS_ADDRESS,
+          goat: STORAGE_KEYS.GOAT_ADDRESS,
+        };
+        localStorage.setItem(storageKeyMap[method] ?? STORAGE_KEYS.GOAT_ADDRESS, walletAddress);
         localStorage.setItem(STORAGE_KEYS.PREFERRED_CHAIN, method);
         persistAuth(signature, message, timestamp, walletAddress, method);
         setLoginMethod('wallet');
         
-        if (method === 'avalanche') fetchAvalancheBalance(walletAddress);
+        if (method === 'goat') fetchGoatBalance(walletAddress);
         else fetchLensBalance(walletAddress);
         
         trackWalletConnection(method, true);
@@ -679,6 +686,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     localStorage.removeItem(STORAGE_KEYS.ALGORAND_ADDRESS);
     localStorage.removeItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
     localStorage.removeItem(STORAGE_KEYS.LENS_ADDRESS);
+    localStorage.removeItem(STORAGE_KEYS.GOAT_ADDRESS);
     localStorage.removeItem('sw_social_address');
     localStorage.removeItem('sw_login_method');
     localStorage.removeItem('sw_is_guest');
@@ -686,7 +694,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     clearAuth();
   };
 
-  const setPreferredChain = (newChain: 'algorand' | 'avalanche' | 'lens' | 'social') => {
+  const setPreferredChain = (newChain: 'algorand' | 'lens' | 'goat' | 'social') => {
     setPreferences(prev => {
       const updated: UserPreferences = {
         ...prev,

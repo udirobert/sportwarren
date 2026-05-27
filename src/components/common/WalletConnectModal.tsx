@@ -33,7 +33,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
     error: lensError,
   } = useLens();
   const { addToast } = useToast();
-  const [selectedChain, setSelectedChain] = useState<'algorand' | 'avalanche' | 'lens' | null>(null);
+  const [selectedChain, setSelectedChain] = useState<'algorand' | 'goat' | 'lens' | null>(null);
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showWalletOptions, setShowWalletOptions] = useState(forceWalletSetup);
@@ -74,7 +74,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
     }
   };
 
-  const handleConnect = async (targetChain: 'algorand' | 'avalanche' | 'lens') => {
+  const handleConnect = async (targetChain: 'algorand' | 'goat' | 'lens') => {
     setSelectedChain(targetChain);
     setIsConnecting(true);
     setError(null);
@@ -352,16 +352,16 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
               </button>
 
               <button
-                onClick={() => handleConnect('avalanche')}
+                onClick={() => handleConnect('goat')}
                 disabled={isConnecting}
-                className="w-full p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-red-500 hover:bg-red-50 transition-all flex items-center gap-4 disabled:opacity-50"
+                className="w-full p-4 bg-white border-2 border-gray-200 rounded-xl hover:border-orange-500 hover:bg-orange-50 transition-all flex items-center gap-4 disabled:opacity-50"
               >
-                <div className="w-10 h-10 bg-gradient-to-br from-red-500 to-red-600 rounded-lg flex items-center justify-center font-bold text-white text-xs">AVAX</div>
+                <div className="w-10 h-10 bg-gradient-to-br from-orange-500 to-amber-600 rounded-lg flex items-center justify-center font-bold text-white text-xs">GOAT</div>
                 <div className="text-left flex-1">
-                  <h3 className="font-bold text-gray-900 text-sm leading-tight">Avalanche</h3>
-                  <p className="text-xs text-gray-600 dark:text-gray-300">Squad governance & treasury</p>
+                  <h3 className="font-bold text-gray-900 text-sm leading-tight">GOAT Network</h3>
+                  <p className="text-xs text-gray-600 dark:text-gray-300">Bitcoin-secured governance & reputation</p>
                 </div>
-                {selectedChain === 'avalanche' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-red-600" />}
+                {selectedChain === 'goat' && isConnecting && <Loader2 className="w-5 h-5 animate-spin text-orange-600" />}
               </button>
 
               <button

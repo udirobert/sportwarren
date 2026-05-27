@@ -95,7 +95,7 @@ export default function SettingsPage() {
     isDisconnectingPlatform,
   } = usePlatformConnections({ squadId: primarySquad?.id });
   const needsVerification = hasWallet && (authStatus.state === 'missing' || authStatus.state === 'expired');
-  const hasYellowEligibleWallet = hasWallet && (chain === 'avalanche' || chain === 'lens');
+  const hasYellowEligibleWallet = hasWallet && (chain === 'goat' || chain === 'lens');
   const accountStatusLabel = isGuest
     ? 'Guest preview'
     : hasWallet
@@ -126,7 +126,7 @@ export default function SettingsPage() {
       ? 'Verify wallet first'
       : hasYellowEligibleWallet
         ? 'Ready'
-        : 'Requires Avalanche or Lens';
+        : 'Requires GOAT Network or Lens';
   const disconnectLabel = hasWallet ? 'Disconnect Wallet' : 'Sign Out';
 
   useEffect(() => {
@@ -494,7 +494,7 @@ export default function SettingsPage() {
               </div>
 
               <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                <p className="text-xs text-gray-600 dark:text-gray-300 uppercase tracking-wide"><ChainLabel chain="yellow" showTechnical /> Rail</p>
+                <p className="text-xs text-gray-600 dark:text-gray-300 uppercase tracking-wide"><ChainLabel chain="yellow" /> Rail</p>
                 <p className={`font-medium ${hasYellowEligibleWallet && !needsVerification ? 'text-green-600' : 'text-gray-900 dark:text-white'}`}>
                   {yellowRailLabel}
                 </p>
@@ -880,7 +880,7 @@ export default function SettingsPage() {
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Wallet Access</h2>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Wallets are optional until you need protected actions. Yellow settlement requires a verified <ChainLabel chain="avalanche" /> or <ChainLabel chain="lens" /> wallet.
+                  Wallets are optional until you need protected actions. Yellow settlement requires a verified <ChainLabel chain="goat" /> or <ChainLabel chain="lens" /> wallet.
                 </p>
               </div>
               {hasWallet && !needsVerification ? (
@@ -912,7 +912,7 @@ export default function SettingsPage() {
               </div>
 
               <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
-                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-600 dark:text-gray-300"><ChainLabel chain="yellow" showTechnical /> Rail</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-600 dark:text-gray-300"><ChainLabel chain="yellow" /> Rail</div>
                 <div className="mt-2 text-sm font-bold text-gray-900 dark:text-white">{yellowRailLabel}</div>
                 <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">
                   Treasury settlements, match fee locks, and transfer escrow only activate when the connected wallet can authorize Yellow on a supported EVM chain.
@@ -939,7 +939,7 @@ export default function SettingsPage() {
           {hasWallet && !hasYellowEligibleWallet && (
             <Card className="border-blue-300 bg-blue-100">
               <p className="text-sm text-blue-900">
-                <ChainLabel chain="algorand" showTechnical /> wallets can still unlock SportWarren identity and protected data, but Yellow settlement currently requires <ChainLabel chain="avalanche" /> or <ChainLabel chain="lens" /> because the rail is EVM-based.
+                <ChainLabel chain="algorand" /> wallets can still unlock SportWarren identity and protected data, but <ChainLabel chain="yellow" /> settlement currently requires <ChainLabel chain="goat" /> or <ChainLabel chain="lens" /> compatible wallets.
               </p>
             </Card>
           )}
