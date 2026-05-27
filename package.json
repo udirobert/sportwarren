@@ -35,6 +35,8 @@
     "postinstall": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
+    "goat:demo": "tsx scripts/goat-agent-demo.ts",
+    "goat:deploy:dry-run": "tsx scripts/deploy-to-goat.ts",
     "prepare": "husky"
   },
   "prisma": {

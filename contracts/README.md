@@ -8,14 +8,13 @@ Within the broader SportWarren architecture, these contracts work alongside **Ki
 
 SportWarren uses on-chain contracts where they fit best:
 
-| Feature | Algorand | Avalanche |
+| Feature | Algorand | Goat Network (Bitcoin L2) |
 |---------|----------|-----------|
-| **Purpose** | Match verification, reputation, proof-backed match state | Governance, treasury policy, programmable assets, escrow |
-| **Language** | TEAL | Solidity |
-| **Development** | algosdk + TEAL | Foundry + Solidity |
-| **Network** | Testnet → Mainnet | Fuji → C-Chain |
+| **Purpose** | Match verification, reputation, proof-backed match state | Governance, treasury policy, programmable assets, Agentic Economy |
+| **Language** | TEAL | Solidity (EVM) |
+| **Network** | Testnet → Mainnet | BitVM2 Testnet → Mainnet |
 
-These chains are not competing implementations of the same feature set. Algorand and Avalanche have strict roles inside a wider multi-network system.
+These chains are not competing implementations of the same feature set. Algorand handles the high-frequency sports data, while Goat Network serves as the secure, Bitcoin-native settlement and agent logic layer.
 
 ## Contract Structure
 
@@ -23,31 +22,17 @@ These chains are not competing implementations of the same feature set. Algorand
 contracts/
 ├── README.md                   # This file
 ├── algorand/                   # Algorand TEAL contracts
-│   ├── squad_dao/
-│   │   ├── approval.teal      # Main DAO logic
-│   │   └── clear_state.teal   # Account cleanup
-│   ├── match_verification/
-│   │   ├── approval.teal
-│   │   └── clear_state.teal
-│   ├── reputation_system/
-│   │   ├── approval.teal
-│   │   └── clear_state.teal
-│   └── global_challenges/
-│       ├── approval.teal
-│       └── clear_state.teal
-└── avalanche/                  # Avalanche Solidity contracts (Phase 2)
+└── goat/                       # EVM Solidity contracts (Goat Network Target)
     ├── SquadDAO.sol           # Squad governance (ERC-8004 compatible)
-    ├── MatchVerification.sol  # Match result verification
-    ├── Reputation.sol         # Player reputation tokens
-    ├── GlobalChallenges.sol   # Tournament management
+    ├── AgentEscrow.sol        # Micropayment handling for AI Scouts (x402)
+    ├── SquadToken.sol         # Governance & Incentive token
+    ├── Reputation.sol         # Player reputation tokens (ERC-8004)
     ├── interfaces/
-    │   ├── IChainAbstraction.sol
-    │   └── IAgentIdentity.sol
+    │   ├── IAgentIdentity.sol # ERC-8004 Interface
+    │   └── IGoatYield.sol     # Goat Native Yield Interface
     └── test/
         ├── SquadDAO.t.sol
-        ├── MatchVerification.t.sol
         ├── Reputation.t.sol
-        └── GlobalChallenges.t.sol
 ```
 
 ## Available Contracts
