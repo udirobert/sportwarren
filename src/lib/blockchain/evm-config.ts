@@ -84,7 +84,6 @@ const DEFAULT_GOAT_GOVERNANCE_CONTRACTS = {
   squadToken: process.env.GOAT_SQUAD_TOKEN_ADDRESS || '',
   achievementNft: process.env.GOAT_ACHIEVEMENT_NFT_ADDRESS || '',
 } as const;
-} as const;
 
 function readNumberEnv(value: string | undefined, fallback: number) {
   if (!value) return fallback;
