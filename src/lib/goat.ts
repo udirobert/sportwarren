@@ -14,11 +14,8 @@ interface EthereumProvider {
   request: (args: { method: string; params?: unknown[] }) => Promise<unknown>;
 }
 
-declare global {
-  interface Window {
-    ethereum?: EthereumProvider;
-  }
-}
+const getEthereum = (): EthereumProvider | undefined =>
+  typeof window !== "undefined" ? (window as any).ethereum : undefined;
 
 export const connectGoatWallet = async (): Promise<{
   address: string;
@@ -29,14 +26,15 @@ export const connectGoatWallet = async (): Promise<{
       return { address: "", error: "Window is undefined" };
     }
 
-    if (!window.ethereum) {
+    const eth = getEthereum();
+    if (!eth) {
       return {
         address: "",
         error: "No wallet found. Please install MetaMask or another EVM-compatible wallet.",
       };
     }
 
-    const provider = new ethers.BrowserProvider(window.ethereum);
+    const provider = new ethers.BrowserProvider(eth);
     const accounts = await provider.send("eth_requestAccounts", []);
     const targetChain = getGoatChain();
 

@@ -684,7 +684,6 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     setIsGuest(false);
     setLoginMethod(null);
     localStorage.removeItem(STORAGE_KEYS.ALGORAND_ADDRESS);
-    localStorage.removeItem(STORAGE_KEYS.AVALANCHE_ADDRESS);
     localStorage.removeItem(STORAGE_KEYS.LENS_ADDRESS);
     localStorage.removeItem(STORAGE_KEYS.GOAT_ADDRESS);
     localStorage.removeItem('sw_social_address');
