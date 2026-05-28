@@ -132,6 +132,7 @@ export class TelegramService {
   private pendingMatchDrafts = new Map<string, PendingMatchDraft>();
   private pendingGroupVerifications = new Map<string, PendingGroupVerification>();
   private aiParseRateLimit = new Map<string, number[]>();
+  private pendingSquadSelectText = new Map<string, { text: string; expiresAt: number }>();
   private generalChatMemory = new Map<number, GeneralChatMessage[]>();
 
   constructor(redisService: TelegramRedisStore | null = null) {
@@ -1458,11 +1459,17 @@ export class TelegramService {
         targetSquadName = memberships[0].squad.name;
       } else {
         // No chat link and multiple squads - need to ask which one
-         const keyboard = {
-           inline_keyboard: memberships.map((m: SquadMember & { squad: { id: string; name: string } }) => [
-             { text: m.squad.name, callback_data: `select_squad_log:${m.squad.id}:${Buffer.from(matchText).toString('base64')}` }
-           ]),
-         };
+        // Store match text server-side (callback data limit is 64 bytes)
+        const tempKey = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        this.pendingSquadSelectText.set(tempKey, {
+          text: matchText,
+          expiresAt: Date.now() + 10 * 60 * 1000, // 10 min TTL
+        });
+        const keyboard = {
+          inline_keyboard: memberships.map((m: SquadMember & { squad: { id: string; name: string } }) => [
+            { text: m.squad.name, callback_data: `select_squad_log:${m.squad.id}:${tempKey}` }
+          ]),
+        };
         await this.bot.sendMessage(
           chatId,
           "⚽ You're a member of multiple squads. Which one is this match for?",
@@ -2810,8 +2817,15 @@ export class TelegramService {
       const parts = data.split(":");
       if (parts.length >= 3) {
         const selectedSquadId = parts[1];
-        const matchTextBase64 = parts.slice(2).join(":"); // Rejoin in case base64 had colons
-        const matchText = Buffer.from(matchTextBase64, 'base64').toString('utf8');
+        const tempKey = parts.slice(2).join(":");
+        const stored = this.pendingSquadSelectText.get(tempKey);
+        if (!stored || stored.expiresAt < Date.now()) {
+          this.pendingSquadSelectText.delete(tempKey);
+          await this.bot.answerCallbackQuery(query.id, { text: "This selection has expired. Please try /log again." });
+          return;
+        }
+        const matchText = stored.text;
+        this.pendingSquadSelectText.delete(tempKey);
 
         await this.handleSquadSelectedForLog(chatId, selectedSquadId, matchText);
         await this.bot.answerCallbackQuery(query.id);
@@ -2886,6 +2900,24 @@ export class TelegramService {
           draft.opponentScore,
           submitterName,
         );
+
+        // Also send WhatsApp verification if either squad has a linked WhatsApp group
+        try {
+          const { getWhatsAppService } = await import('./whatsapp');
+          const whatsappService = getWhatsAppService();
+          if (whatsappService?.isConfigured()) {
+            await whatsappService.sendGroupVerification(
+              result.id,
+              draft.squadId,
+              result.awaySquadId,
+              draft.teamScore,
+              draft.opponentScore,
+              submitterName,
+            );
+          }
+        } catch {
+          // WhatsApp not configured — skip silently
+        }
       }
     } catch (error) {
       const message =
