@@ -225,7 +225,16 @@ export async function calculateConsensus(prisma: PrismaClient, matchId: string) 
     data: { peerRatingsClosed: true }
   });
 
-  // 5. Notify results
+  // 4.5 Apply base match XP (participation, goals, assists, clean sheet)
+  // This is idempotent — skips if already applied during verification.
+  try {
+    const { applyMatchXP } = await import('@/server/services/match-xp');
+    await applyMatchXP(prisma, matchId);
+  } catch (xpErr) {
+    console.error('Failed to apply match XP during consensus:', xpErr);
+  }
+
+  // 5. Send match card to group chats (replaces text-only notification)
   const squadsToNotify = [
     { id: match.homeSquadId, name: match.homeSquad.name },
     { id: match.awaySquadId, name: match.awaySquad.name }
@@ -242,7 +251,7 @@ export async function calculateConsensus(prisma: PrismaClient, matchId: string) 
       if (tgGroup?.chatId) {
         const telegramService = getTelegramService();
         if (telegramService) {
-          await telegramService.sendConsensusResults(tgGroup.chatId, matchId, squadInfo.name);
+          await telegramService.sendMatchCard(tgGroup.chatId, matchId, squadInfo.id, squadInfo.name);
         }
       }
     }
