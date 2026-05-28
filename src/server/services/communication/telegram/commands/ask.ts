@@ -1,5 +1,7 @@
 import type { TelegramCommand, CommandContext, ResolvedIdentity } from '../types';
 
+type GeneralMessageHandler = (chatId: number, text: string) => Promise<boolean>;
+
 type AskHandlers = {
   handleAiStaffQuery: (chatId: number, query: string) => Promise<void>;
   handleGeneralAiQuery: (chatId: number, text: string) => Promise<void>;
@@ -53,10 +55,15 @@ export class AskCommand implements TelegramCommand {
  */
 export function setupGeneralChatHandler(
   bot: any,
-  handleGeneralAiQuery: (chatId: number, text: string) => Promise<void>
+  handleGeneralAiQuery: (chatId: number, text: string) => Promise<void>,
+  handleGeneralMessage?: GeneralMessageHandler,
 ): void {
   bot.on("message", async (msg: any) => {
     if (msg.text?.startsWith("/") || !msg.text) return;
+    if (handleGeneralMessage) {
+      const handled = await handleGeneralMessage(msg.chat.id, msg.text);
+      if (handled) return;
+    }
     await handleGeneralAiQuery(msg.chat.id, msg.text);
   });
 }

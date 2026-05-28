@@ -61,9 +61,13 @@ Text **+1 (201) 534-5384** on WhatsApp:
 
 ## 🚀 Key Features
 
+- **Formation Playground** — Interactive tactics editor with static pitch and animated simulation. Toggle between setting formations and watching them play out. Share challenge links that invite opponents to counter your setup.
+- **Counter-Play Viral Loop** — Share a formation, receive a counter-formation, simulate the match, get a result card. Every share generates a second interaction.
 - **Match Preview Engine** — Interactive pitch visualization with win probabilities and tactical breakdowns.
 - **Live Commentary** — AI-generated play-by-play during matches directly in WhatsApp group chats.
 - **Peer Consensus Engine** — Post-match player ratings that drive FIFA-style attribute progression.
+- **Proactive Match Detection** — The Telegram bot detects match results from casual chat ("we won 3-1") without requiring commands.
+- **Zero-Friction Logging** — Any squad member can log matches (not just captains). Opponent squads are auto-created if they don't exist on the platform.
 - **Player & Squad Progression** — Stats, attributes, and reputation that grow with every match.
 - **Autonomous Squad Agents** — Kite Passport AI agents that manage scouting, intelligence procurement, and on-chain payments in the background.
 - **Multi-Chain Architecture** — Purpose-built roles for Algorand (verification), GOAT Network (governance), Kite (agents), TON (Telegram wallet), and Lens (social identity).
