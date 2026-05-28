@@ -12,6 +12,10 @@ Telegram is the primary surface for **squad coordination and power users**.
 ### Features
 - **Mini App:** Full "Championship Manager" UI for squad management, tactics, and player attributes.
 - **Bot Commands:** Fast logging (`/log`), stat checks (`/stats`), and fixtures.
+- **Proactive Match Detection:** The bot detects match results from casual chat ("we won 3-1 against Red Lions") and prompts for confirmation — no `/log` required.
+- **Any-Member Logging:** Any linked squad member can log a match, not just captains. Group reaction verification (confirm/dispute buttons) ensures accuracy.
+- **Auto-Created Opponents:** When logging a match against a squad not on the platform, a placeholder squad is created automatically so the match can proceed.
+- **Match Cards:** After verification and peer consensus, a visual match result card (score, MOTM, XP progression) is sent to both squad group chats as a photo.
 - **TON Integration:** Native wallet UX for treasury top-ups and rewards.
 
 ---

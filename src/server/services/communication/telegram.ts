@@ -118,6 +118,14 @@ function readMetadataString(metadata: unknown, key: string): string | null {
   return typeof value === "string" && value.trim() ? value : null;
 }
 
+function generateCasualShortName(name: string): string {
+  const cleaned = name.replace(/[^a-zA-Z0-9]/g, "").substring(0, 3).toUpperCase();
+  const prefix = cleaned.length >= 2 ? cleaned : "CA";
+  const suffix = Date.now().toString(36).slice(-3).toUpperCase();
+  const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+  return `${prefix}${suffix}${random}`.substring(0, 8);
+}
+
 export class TelegramService {
   private bot: TelegramBot;
   private redisService: TelegramRedisStore | null;
@@ -183,7 +191,11 @@ export class TelegramService {
     registerCommands(this.bot);
 
     // General chat handler for non-command messages
-    setupGeneralChatHandler(this.bot, this.handleGeneralAiQuery.bind(this));
+    setupGeneralChatHandler(
+      this.bot,
+      this.handleGeneralAiQuery.bind(this),
+      this.handleNaturalLanguageMatchLog.bind(this),
+    );
   }
 
   getBot(): TelegramBot {
@@ -650,6 +662,31 @@ export class TelegramService {
   }
 
   private async handleGeneralAiQuery(chatId: number, text: string): Promise<void> {
+    // ── Proactive match result detection ──────────────────────────────
+    // Before falling through to AI chat, check if this looks like a match result.
+    // Regex first (fast, exact), then AI parser (slower, fuzzy).
+    const regexParsed = parseTelegramMatchResult(text);
+    if (regexParsed) {
+      await this.handleMatchLog(chatId, text);
+      return;
+    }
+
+    // Only try AI parser for messages that might contain score-like patterns
+    // (numbers present, reasonable length) to avoid wasting inference on greetings.
+    const looksLikeScore = /\d/.test(text) && text.length >= 5 && text.length <= 120;
+    if (looksLikeScore) {
+      try {
+        const aiParsed = await parseNaturalLanguageMatch(text);
+        if (aiParsed && aiParsed.confidence >= 0.75) {
+          await this.handleMatchLog(chatId, text);
+          return;
+        }
+      } catch {
+        // AI parser failed — fall through to normal chat
+      }
+    }
+
+    // ── Normal AI chat ────────────────────────────────────────────────
     await this.bot.sendChatAction(chatId, "typing");
 
     try {
@@ -665,7 +702,7 @@ export class TelegramService {
           ? "The user has a linked squad, so guide them to the most relevant next action."
           : "The user is new, so explain that /app opens Telegram-native onboarding where they can create or join a squad.",
         "If they ask how to open the Mini App, tell them to type /app.",
-        "If they want to log a result, tell them to use /log 4-2 win vs Red Lions.",
+        "If they want to log a result, tell them to use /log 4-2 win vs Red Lions. Any squad member can log.",
         "If they want stats, tell them to use /stats or /stats Marcus.",
         "If they want fixtures, tell them to use /fixtures.",
         "If they want treasury or TON actions, tell them to use /treasury.",
@@ -1339,6 +1376,30 @@ export class TelegramService {
     }
   }
 
+  private async handleNaturalLanguageMatchLog(
+    chatId: number,
+    matchText: string,
+  ): Promise<boolean> {
+    const trimmed = matchText.trim();
+    if (trimmed.length < 6) {
+      return false;
+    }
+
+    const parsed = parseTelegramMatchResult(trimmed);
+    if (parsed) {
+      await this.handleMatchLog(chatId, trimmed);
+      return true;
+    }
+
+    const aiParsed = await parseNaturalLanguageMatch(trimmed);
+    if (!aiParsed || aiParsed.confidence <= 0.7) {
+      return false;
+    }
+
+    await this.handleMatchLog(chatId, trimmed);
+    return true;
+  }
+
   private async handleMatchLog(
     chatId: number,
     matchText: string,
@@ -1396,12 +1457,12 @@ export class TelegramService {
         return;
       }
 
-       // Check if user is captain of the target squad
+       // Check if user is a member of the target squad (any active member can log)
        const membership = memberships.find((m: SquadMember) => m.squadId === targetSquadId);
-      if (!membership || !isSquadLeader(membership.role)) {
+      if (!membership) {
         await this.sendMarkdown(
           chatId,
-          `⚠️ Only captains can log matches for *${targetSquadName}*.`,
+          `⚠️ You must be a member of *${targetSquadName}* to log matches.`,
         );
         return;
       }
@@ -1510,15 +1571,6 @@ export class TelegramService {
         return;
       }
 
-      // Check captain permissions
-      if (!isSquadLeader(membership.role)) {
-        await this.sendMarkdown(
-          chatId,
-          `⚠️ Only captains can log matches for *${membership.squad.name}*.`,
-        );
-        return;
-      }
-
       // Parse the match result
       let parsed: ParsedTelegramMatchResult | null = parseTelegramMatchResult(matchText);
 
@@ -1622,7 +1674,33 @@ export class TelegramService {
       return closeMatches[0];
     }
 
-    return null;
+    // Auto-create a placeholder opponent squad so the match can proceed.
+    // The opponent can claim it later via the Mini App.
+    const sanitizedName = opponentName.trim().slice(0, 60);
+    const shortNameBase = sanitizedName
+      .replace(/[^a-zA-Z0-9 ]/g, "")
+      .split(/\s+/)
+      .map((w) => w.charAt(0))
+      .join("")
+      .toUpperCase()
+      .slice(0, 4) || "OPP";
+
+    // Ensure shortName uniqueness by appending a random suffix if needed
+    let shortName = shortNameBase;
+    const existing = await prisma.squad.findFirst({ where: { shortName } });
+    if (existing) {
+      shortName = `${shortNameBase}${Math.floor(Math.random() * 90 + 10)}`;
+    }
+
+    const placeholder = await prisma.squad.create({
+      data: {
+        name: sanitizedName,
+        shortName,
+        isPlaceholder: true,
+      },
+    });
+
+    return placeholder;
   }
 
   private async processMatchLog(
@@ -1639,9 +1717,9 @@ export class TelegramService {
       draft.squadId,
       draft.submittedBy,
     );
-    if (!membership || !isSquadLeader(membership.role)) {
+    if (!membership) {
       throw new Error(
-        "Only current squad captains can submit Telegram match logs.",
+        "You must be an active squad member to submit match logs.",
       );
     }
 
@@ -1657,11 +1735,6 @@ export class TelegramService {
       draft.squadId,
       draft.opponent,
     );
-    if (!opponent) {
-      throw new Error(
-        `We could not find a squad named "${draft.opponent}". Use the exact SportWarren squad name and try again.`,
-      );
-    }
 
     const isSociallyTrusted = await this.checkSocialTrust(squad.id, opponent.id);
 

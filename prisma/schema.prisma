@@ -171,6 +171,9 @@ model Squad {
   founded    DateTime @default(now())
   homeGround String?  @map("home_ground")
 
+  // Placeholder squads auto-created from match logging (opponent not yet on platform)
+  isPlaceholder Boolean @default(false) @map("is_placeholder")
+
   // Weekly Schedule (0=Sunday, 1=Monday, etc.)
   preferredMatchDay Int @default(0) @map("preferred_match_day")
 

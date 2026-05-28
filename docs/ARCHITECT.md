@@ -27,6 +27,18 @@ Match Scheduled → Pre-Match Preview → Live Match → Post-Match Ratings → 
 
 The core gamification loop: after every match, players rate teammates on Pace, Shooting, Passing, Defending, and Physicality.
 
+### Telegram Match Lifecycle (Zero-Friction)
+
+The Telegram bot implements a fully automated post-match pipeline:
+
+1. **Detection** — Bot intercepts casual chat ("we won 3-1") via regex + AI parser (confidence >= 0.75) before it reaches the general AI handler
+2. **Logging** — Any linked squad member can log (not just captains). Draft confirmation via inline buttons.
+3. **Verification** — Group reaction: Confirm/Dispute buttons posted to both squad group chats. Auto-verifies at 3+ confirms or 6h silence.
+4. **XP Distribution** — `applyMatchXP` fires automatically on verification and after peer consensus closes (idempotent)
+5. **Card Delivery** — Match result card (Satori PNG) sent to both groups as a photo after consensus
+
+**Auto-Created Opponents:** When logging against an unknown squad, a placeholder `Squad` record is created with `isPlaceholder: true` so the match proceeds. The opponent can claim it later via the Mini App.
+
 ### Rating Mechanics
 - **Consensus Logic:** Uses **Median** scores to neutralize outliers and trolling.
 - **Scout XP:** Raters earn "Scout XP" when their ratings align with the squad consensus — inaccurate raters lose influence over time.
@@ -107,13 +119,44 @@ GOAT Network (Bitcoin L2) serves as the settlement layer for squad governance an
 
 ---
 
+## 🎮 Formation Playground & Counter-Play Loop
+
+The Formation Playground is the primary user acquisition surface — an interactive pitch editor that doubles as a viral growth engine.
+
+### Architecture
+- **FormationPlayground** — Client component with 4 flow states: `build`, `challenge_received`, `counter_setup`, `result`
+- **PitchCanvas** — DOM-based pitch renderer with framer-motion animations (tactics mode)
+- **MatchEnginePreview** — Tick-based match simulation with physics, passing, GK saves (simulation mode)
+- **ExportPanel** — PNG export (html-to-image), Web Share API, WebM video recording (MediaRecorder)
+
+### Counter-Play Viral Loop
+```
+User A builds formation → shares challenge URL (vs_f, vs_s, vs_c, vs_n params)
+    ↓
+User B opens URL → sees ChallengeOverlay ("Countering your 4-3-3")
+    ↓
+User B clicks "Counter with 4-5-1" → simulation runs
+    ↓
+MatchResultCard renders (score, goals, possession, Rematch/Share/Challenge Back)
+    ↓
+User B clicks "Challenge Back" → new URL copied → loop restarts
+```
+
+### Tactical Counter Engine
+`suggestCounterFormation()` maps each formation to a tactically sound counter (e.g., 4-3-3 → 4-5-1, compact mid blocks width). Auto-suggested when a challenge is received.
+
+### Social Previews
+`/api/og/formation` generates 1200x630 OG images with pitch visualization and player dots for social sharing previews.
+
+---
+
 ## 🚀 Development Roadmap
 
 | Phase | Milestone | Status |
 |-------|-----------|--------|
 | **Phase 1** | **Core Loop:** Match logging, Algorand verification, XP system. | ✅ 100% |
 | **Phase 2** | **Agents & Economy:** Kite AI x402, Staff Office, Squad DAOs. | ✅ 100% |
-| **Phase 3** | **Viral Features:** Territory control, Lens Social, Derby tracking. | ✅ 90% |
+| **Phase 3** | **Viral Features:** Formation playground, counter-play loop, Lens Social, Derby tracking. | ✅ 95% |
 | **Phase 4** | **Immersive Evolution:** 3D Broadcast Engine, "Digital Twin" sim. | 🚀 Future |
 
 ---
