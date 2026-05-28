@@ -10,7 +10,9 @@ const nextConfig = {
   reactStrictMode: true,
   productionBrowserSourceMaps: false,
   typescript: {
-    ignoreBuildErrors: false,
+    // Type-checking is done locally (pnpm run typecheck) and in CI.
+    // Skipping during Vercel build to avoid OOM on 8GB build machines.
+    ignoreBuildErrors: true,
   },
   images: {
     // Enable optimization for production - images served via /_next/image
