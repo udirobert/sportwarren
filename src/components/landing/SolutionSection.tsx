@@ -1,19 +1,19 @@
 import React from 'react';
-import { CheckCircle2, Cpu, Target, Users, Sparkles, ArrowRight, Zap, TrendingUp, Trophy } from 'lucide-react';
+import { CheckCircle2, Swords, Trophy, Users, Sparkles, ArrowRight, Zap, TrendingUp, Target } from 'lucide-react';
 import { ScrollReveal } from '@/components/landing/ScrollReveal';
 
-const simulationFeatures = [
-  { label: 'Simulate Match Engine', Icon: Cpu },
-  { label: 'Scout Opponent Tactics', Icon: Target },
-  { label: 'Optimize Lineups', Icon: Users },
-  { label: 'AI Staff Briefings', Icon: Sparkles },
+const coreFeatures = [
+  { label: 'Set Up Your Formation', Icon: Target },
+  { label: 'Challenge Any Squad', Icon: Swords },
+  { label: 'Simulate & Verify', Icon: Sparkles },
+  { label: 'Win Tournaments', Icon: Trophy },
 ];
 
 const impactItems = [
-  { label: 'Unlock Player Potential', Icon: Zap, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30' },
-  { label: 'Shooting XP +125', Icon: TrendingUp, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
-  { label: 'Squad Reputation +50', Icon: Trophy, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
-  { label: 'On-Chain Verifiable Result', Icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
+  { label: 'Counter-Play Viral Loop', Icon: Zap, color: 'text-orange-400', bg: 'bg-orange-500/10', border: 'border-orange-500/30' },
+  { label: 'Tournament Brackets', Icon: Trophy, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
+  { label: 'Group Verification', Icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
+  { label: 'XP & Stats Tracking', Icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
 ];
 
 export const SolutionSection: React.FC = () => (
@@ -26,10 +26,10 @@ export const SolutionSection: React.FC = () => (
             <span>The Solution</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 sm:mb-6">
-            A <span className="bg-gradient-to-r from-blue-400 to-cyan-500 bg-clip-text text-transparent">Tactical Simulation</span> That Matters
+            Challenge. <span className="bg-gradient-to-r from-blue-400 to-cyan-500 bg-clip-text text-transparent">Simulate.</span> Compete.
           </h2>
           <p className="text-sm sm:text-base lg:text-xl text-gray-300 max-w-3xl mx-auto">
-            SportWarren brings a high-fidelity match engine to your real-world games. Scout your opponents, simulate tactics, and watch your squad&apos;s performance evolve.
+            Set up your formation, challenge opponents to counter it, simulate the match, and settle it with group verification. Then enter tournaments to prove you're the best.
           </p>
         </ScrollReveal>
       </div>
@@ -37,8 +37,8 @@ export const SolutionSection: React.FC = () => (
       <div className="relative">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <ScrollReveal direction="left" className="space-y-4 sm:space-y-6">
-            <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-4 sm:mb-6">Tactical Preview</h3>
-            {simulationFeatures.map((item) => (
+            <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-4 sm:mb-6">The Core Loop</h3>
+            {coreFeatures.map((item) => (
               <div key={item.label} className="flex items-center space-x-3 sm:space-x-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-3 sm:p-4">
                 <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 flex items-center justify-center">
                   <item.Icon className="w-4 h-4 sm:w-5 sm:h-5 text-gray-300" aria-hidden="true" />
@@ -53,7 +53,7 @@ export const SolutionSection: React.FC = () => (
           </div>
 
           <ScrollReveal direction="right" className="space-y-4 sm:space-y-6">
-            <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-4 sm:mb-6">Real World Impact</h3>
+            <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-4 sm:mb-6">What You Get</h3>
             {impactItems.map((item) => (
               <div key={item.label} className={`flex items-center space-x-3 sm:space-x-4 ${item.bg} backdrop-blur-sm border ${item.border} rounded-xl p-3 sm:p-4`}>
                 <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 flex items-center justify-center">
