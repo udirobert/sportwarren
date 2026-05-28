@@ -1,14 +1,75 @@
 # SportWarren Architect
 
-**Technical Blueprint for a Phygital Football Platform**
+**Technical Blueprint — Championship Manager for real-world football**
 
-SportWarren coordinates a role-specific multi-chain stack to bridge real-world football performance with verifiable on-chain identity and autonomous commerce.
+SportWarren gamifies grassroots football by giving every match the depth of a management sim: pre-match previews, live commentary, post-match peer ratings, and persistent player progression. This doc covers how the platform works under the hood — the match lifecycle, the peer consensus engine, and the multi-chain infrastructure that powers autonomous squad agents.
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ The Match Lifecycle
 
-### Multi-Chain Responsibility Model
+Every match in SportWarren follows a consistent pipeline:
+
+```
+Match Scheduled → Pre-Match Preview → Live Match → Post-Match Ratings → Attribute Progression
+```
+
+| Phase | What Happens | User Surface |
+|-------|-------------|--------------|
+| **Pre-Match** | AI generates win probabilities, tactical breakdowns, and head-to-head comparisons. Autonomous squad agent may procure external intelligence on opponents. | WhatsApp + Telegram preview card |
+| **Live Match** | Real-time commentary delivered to squad WhatsApp groups. Match events (goals, cards, subs) logged through chat commands or Telegram Mini App. | WhatsApp group chat |
+| **Post-Match** | Teammates rate each other's FIFA-style attributes. Consensus logic deduplicates and weights ratings. Result verified through Algorand attestation. | WhatsApp prompts + Telegram dashboard |
+| **Progression** | Player attributes evolve based on peer consensus and match history. XP earned for accurate ratings. Squad stats aggregate into season-long narratives. | Squad profile + player cards |
+
+---
+
+## 🎯 Peer Consensus Engine
+
+The core gamification loop: after every match, players rate teammates on Pace, Shooting, Passing, Defending, and Physicality.
+
+### Rating Mechanics
+- **Consensus Logic:** Uses **Median** scores to neutralize outliers and trolling.
+- **Scout XP:** Raters earn "Scout XP" when their ratings align with the squad consensus — inaccurate raters lose influence over time.
+- **Influence Weighting:** "Elite Scouts" have higher vote weight; "Rookies" or chronic outliers have their weight dampened.
+
+### Match Verification Tiers
+Results escalate from self-reported to cryptographically verified:
+
+- **Bronze:** Self-reported by one captain.
+- **Silver:** Both captains confirm.
+- **Gold:** Both confirm + media evidence.
+- **Platinum:** Verified by the **Chainlink CRE** (Consensus, Reputation, and Environment) workflow (60% Location + 40% Weather).
+
+---
+
+## ⚡ Kite AI: Autonomous Squad Agents
+
+Every squad in SportWarren gets an autonomous AI agent — a **Squad Manager** with its own Kite Passport identity, spending budget, and decision-making capability. Agents operate in the background so players never touch a wallet or a DEX.
+
+### What Agents Do
+- Scout opponents before matches (cron-triggered 22h before kickoff, or on-demand via WhatsApp)
+- Discover and pay for intelligence services from the Kite x402 marketplace
+- Manage squad budgets within user-delegated limits
+- Record every action as a cryptographically signed attestation
+
+### Agentic Commerce (x402)
+SportWarren is a first-class participant in the Kite Agentic Economy.
+
+- **Outbound:** Squad agents autonomously procure paid services using Kite Passport sessions.
+- **Inbound:** External agents can pay SportWarren for scouting reports via `/api/x402/scout`.
+- **Settlement:** USDC payments settle on Base through Kite Passport routing, with verifiable transaction hashes.
+
+### Budget Guards
+| Guard | Limit | Scope |
+|-------|-------|-------|
+| Per-user daily | `KITE_SCOUT_MAX_USDC` (default $0.50) | Individual player |
+| Per-squad daily | `KITE_SCOUT_MAX_USDC_SQUAD` (default $2.50) | Shared across squad members |
+| Platform payout | `KITE_DAILY_PAYOUT_BUDGET_USDC` (default $200) | Total agent-initiated spending |
+
+---
+
+## 🏗️ Multi-Chain Architecture
+
 SportWarren assigns each network a strict, non-interchangeable role based on its technical strengths:
 
 | Network | Product Responsibility | Why It Exists |
@@ -22,52 +83,9 @@ SportWarren assigns each network a strict, non-interchangeable role based on its
 
 ---
 
-## ⚡ Kite AI: The Agentic Economy
+## 🟦 Algorand: Match State & Verification
 
-SportWarren is a first-class participant in the Kite Agentic Economy. Every **Squad Manager** and **Player Twin** is an autonomous agent with a unique Kite Passport ID.
-
-### x402 Protocol Implementation
-We use the **x402 (Payment Required)** protocol for autonomous agent-to-agent commerce.
-
-- **Autonomous Spending:** Squad manager agents are authorized via `KiteSession` budgets to procure external services.
-- **Settlement:** External paid services use Kite Passport/x402 execution and facilitator settlement on Kite Testnet when the merchant host is supported by Passport discovery.
-- **Attestations:** Every action (match result, scout report, wage payment) is recorded as a cryptographically signed attestation with a valid schema type (`player` | `squad` | `match` | `agent`).
-- **Internal Scout Path:** WhatsApp and cron scout commands call the shared `createScoutReport` service directly, enforce budgets, and persist a SportWarren attestation receipt. The public `/api/x402/scout` route remains the external paid x402 surface.
-
-### Receipt Model
-SportWarren distinguishes two receipt types:
-
-1. **SportWarren attestation receipts** — compact ids such as `internal-scout-...`, used for internal autonomous actions where no external payment transaction is created.
-2. **Kite transaction receipts** — real tx hashes from direct Kite transfers or supported x402 settlements, safe to link to KiteScan.
-
-The product should not label internal attestation ids as KiteScan transactions.
-
-### Economic Guards
-The x402 scout economy enforces a **dual spending cap** to prevent abuse:
-
-1. **Per-user daily limit** — `KITE_SCOUT_MAX_USDC` (default 0.50 USDC/player/day). Every `/api/x402/scout` call enforces this via Redis-backed counters.
-2. **Per-squad daily limit** — `KITE_SCOUT_MAX_USDC_SQUAD` (default 2.50 USDC/squad/day). Shared across all squad members — 5 players on the same squad share one pool.
-3. **Platform payout budget** — `KITE_DAILY_PAYOUT_BUDGET_USDC` (default 200 USDC/day). Cap on total agent-initiated payouts.
-
-The user and squad guards are checked in the WhatsApp agent scout handler and the direct `/api/x402/scout` route, so no scout path bypasses the budget model.
-
----
-
-## 🟦 Algorand: Match Consensus & Peer Ratings
-
-The **MatchVerification** engine handles the transition from "reported" to "verified" results, while **Peer Ratings** capture what the stat sheet misses.
-
-### 1. Match Verification Tiers
-- **Bronze:** Self-reported.
-- **Silver:** Both captains confirm.
-- **Gold:** Both confirm + media evidence.
-- **Platinum:** Verified by the **Chainlink CRE** (Consensus, Reputation, and Environment) workflow (60% Location + 40% Weather).
-
-### 2. Peer Attribute Ratings (Crowdsourced XP)
-After every match, players rate teammates' attributes (Pace, Shooting, etc.).
-- **Consensus Logic:** Uses **Median** scores to prevent outliers/trolling.
-- **Scout Reputation:** Raters earn "Scout XP" when their ratings align with the squad consensus.
-- **Influence Weighting:** "Elite Scouts" have higher vote weight; "Rookies" or outliers have their weight dampened.
+Algorand stores verified match results and player reputation as durable on-chain records. The **MatchVerification** engine handles the transition from self-reported results to cryptographically confirmed outcomes, while the Peer Consensus Engine (described above) writes attribute updates as attestations.
 
 ---
 

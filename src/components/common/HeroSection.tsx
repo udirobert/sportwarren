@@ -7,7 +7,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { getJourneyContent } from '@/lib/journey/content';
 import { getJourneyStage } from '@/lib/journey/stage';
 import { AccountStatusControl } from '@/components/common/AccountStatusControl';
-import { InteractiveMatchPreview } from '@/components/landing/InteractiveMatchPreview';
+import { FormationPlayground } from '@/components/landing/FormationPlayground';
 import { ProblemSection } from '@/components/landing/ProblemSection';
 import { SolutionSection } from '@/components/landing/SolutionSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
@@ -190,7 +190,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
 
           <div className="mb-6">
             <React.Suspense fallback={<div className="h-[400px] w-full animate-pulse rounded-2xl bg-white/5" />}>
-              <InteractiveMatchPreview />
+              <FormationPlayground />
             </React.Suspense>
           </div>
 
