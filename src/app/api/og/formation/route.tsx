@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 /**
  * Generates a formation card image (1200x630 PNG) for social sharing.
