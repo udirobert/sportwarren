@@ -37,7 +37,10 @@ export const MatchEnginePreview: React.FC<{
     playersPerSide?: number; 
     hasKeeper?: boolean;
     homeColor?: string;
-}> = ({ squadId, awaySquadId, formation, playersPerSide = 11, hasKeeper = true, homeColor }) => {
+    playerNames?: string[];
+    awayPlayerNames?: string[];
+    onMatchEnd?: (result: { homeScore: number; awayScore: number; events: Array<{ time: string; text: string; type: string }> }) => void;
+}> = ({ squadId, awaySquadId, formation, playersPerSide = 11, hasKeeper = true, homeColor, playerNames, awayPlayerNames, onMatchEnd }) => {
     const { preferences } = useUserPreferences();
     const activeHomeColor = homeColor || preferences.squadBranding?.primaryColor || '#10b981';
     const env = useEnvironment();
@@ -523,6 +526,13 @@ export const MatchEnginePreview: React.FC<{
             matchPhaseRef.current = 'fulltime';
             addEvent('🏁 Full time! The match has ended.', 'incident');
             setIsPlaying(false);
+            if (onMatchEnd) {
+                onMatchEnd({
+                    homeScore: scoreRef.current.home,
+                    awayScore: scoreRef.current.away,
+                    events: commentary.map(c => ({ time: c.time, text: c.text, type: c.type })),
+                });
+            }
         } else if (nextTick >= SIM_PARAMS.halftimeTick && matchPhaseRef.current === 'first_half') {
             matchPhaseRef.current = 'halftime';
             addEvent('⏸ Half time.', 'incident');
@@ -638,10 +648,10 @@ export const MatchEnginePreview: React.FC<{
     const { members, loading: membersLoading } = useSquadDetails(squadId);
     const { members: awayMembers, loading: awayMembersLoading } = useSquadDetails(awaySquadId);
 
-    // Reset initialization when formation changes
+    // Reset initialization when formation or custom names change
     useEffect(() => {
         playersInitialised.current = false;
-    }, [formation]);
+    }, [formation, playerNames, awayPlayerNames]);
 
     // Initialize players (runs once after members load)
     useEffect(() => {
@@ -663,8 +673,12 @@ export const MatchEnginePreview: React.FC<{
         const awayFormation = homeFormation.map(([x, y, role]) => [100 - x, y, role]) as Array<[number, number, string]>;
         const allNames = ['GK', 'Tunde', 'Kofi', 'Diallo', 'Eze', 'Yusuf', 'Marcus', 'Jamie', 'Kwame', 'Alex', 'Seun', 'Bayo', 'Chidi', 'Emeka', 'Femi', 'Gbenga'];
         const isGhostMode = !squadId && isGuest;
-        const homeNames = allNames.slice(0, playersPerSide);
-        const awayNames = ['GK', 'Rival', 'Stone', 'Park', 'Cruz', 'Osei', 'Nkosi', 'Levi', 'Dani', 'Ramos', 'Finn', 'Musa', 'Sven', 'Ito', 'Bale', 'Zara'].slice(0, playersPerSide);
+        const homeNames = playerNames && playerNames.length > 0
+            ? ['GK', ...playerNames].slice(0, playersPerSide)
+            : allNames.slice(0, playersPerSide);
+        const awayNames = awayPlayerNames && awayPlayerNames.length > 0
+            ? ['GK', ...awayPlayerNames].slice(0, playersPerSide)
+            : ['GK', 'Rival', 'Stone', 'Park', 'Cruz', 'Osei', 'Nkosi', 'Levi', 'Dani', 'Ramos', 'Finn', 'Musa', 'Sven', 'Ito', 'Bale', 'Zara'].slice(0, playersPerSide);
 
         let seededPlayers: PlayerPuck[] = [];
 
