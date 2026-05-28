@@ -326,7 +326,7 @@ export async function createTelegramMiniAppSquad(
   }
 
   const existingShortName = await prisma.squad.findFirst({
-    where: { shortName: { equals: shortName, mode: "insensitive" } },
+    where: { shortName: { equals: shortName, mode: "insensitive" }, isPlaceholder: false },
     select: { id: true },
   });
 
@@ -334,19 +334,50 @@ export async function createTelegramMiniAppSquad(
     throw new Error("That short name is already taken.");
   }
 
-  const squad = await prisma.squad.create({
-    data: {
-      name,
-      shortName,
-      homeGround,
-      members: {
-        create: {
-          userId: identity.user.id,
-          role: "captain",
+  // Check if a placeholder squad with a matching name exists (auto-created from match logging)
+  const placeholder = await prisma.squad.findFirst({
+    where: {
+      isPlaceholder: true,
+      OR: [
+        { name: { equals: name, mode: "insensitive" } },
+        { name: { contains: name, mode: "insensitive" } },
+      ],
+    },
+    orderBy: { createdAt: "asc" },
+  });
+
+  let squad;
+  if (placeholder) {
+    // Claim the placeholder
+    squad = await prisma.squad.update({
+      where: { id: placeholder.id },
+      data: {
+        isPlaceholder: false,
+        shortName,
+        homeGround,
+        members: {
+          create: {
+            userId: identity.user.id,
+            role: "captain",
+          },
         },
       },
-    },
-  });
+    });
+  } else {
+    squad = await prisma.squad.create({
+      data: {
+        name,
+        shortName,
+        homeGround,
+        members: {
+          create: {
+            userId: identity.user.id,
+            role: "captain",
+          },
+        },
+      },
+    });
+  }
 
   await updateActiveSquadContext(prisma, identity.id, squad.id);
 
