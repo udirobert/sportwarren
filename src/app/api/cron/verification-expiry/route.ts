@@ -125,6 +125,15 @@ export async function GET(request: Request) {
           playerStats: seededStats,
         });
 
+        // Apply match XP (base stats: participation, goals, assists, clean sheet)
+        // Idempotent — skips if already applied via group verification path
+        try {
+          const { applyMatchXP } = await import('@/server/services/match-xp');
+          await applyMatchXP(prisma, match.id);
+        } catch (xpErr) {
+          console.warn(`applyMatchXP failed for auto-verified match ${match.id}:`, xpErr);
+        }
+
         // Notify match verified (sends peer rating prompt)
         await notifyMatchVerified(
           match.id,
@@ -143,6 +152,19 @@ export async function GET(request: Request) {
           }
         } catch {
           // Telegram service may not be available in all environments
+        }
+
+        // Also resolve WhatsApp group verifications
+        try {
+          const { getWhatsAppService } = await import(
+            '@/server/services/communication/whatsapp'
+          );
+          const whatsappService = getWhatsAppService();
+          if (whatsappService) {
+            await whatsappService.resolveGroupVerificationExternal(match.id);
+          }
+        } catch {
+          // WhatsApp service may not be available in all environments
         }
 
         verifiedCount++;

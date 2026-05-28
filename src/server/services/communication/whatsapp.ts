@@ -15,11 +15,30 @@ export interface WhatsAppConfig {
   baseUrl?: string;
 }
 
+interface PendingWhatsAppVerification {
+  matchId: string;
+  homeSquadId: string;
+  awaySquadId: string;
+  homeSquadName: string;
+  awaySquadName: string;
+  homeScore: number;
+  awayScore: number;
+  homeGroupJid?: string;
+  awayGroupJid?: string;
+  confirms: Set<string>;
+  disputes: Set<string>;
+  createdAt: number;
+  totalMembers: number;
+}
+
 export class WhatsAppService implements MessagingProvider {
   readonly platform = 'whatsapp' as const;
   private client: WhatsAppClient;
   private phoneNumberId: string;
   private readonly DEFAULT_FOOTER = "Marcus, Academy Director";
+
+  // ── Group verification state ──
+  private pendingVerifications = new Map<string, PendingWhatsAppVerification>();
 
   constructor(config?: WhatsAppConfig) {
     const apiKey = config?.apiKey || process.env.KAPSO_API_KEY;
@@ -188,9 +207,18 @@ export class WhatsAppService implements MessagingProvider {
           const parts = id.split('_');
           const status = parts[1] === 'yes' ? 'available' : 'unavailable';
           const matchId = parts[2];
-          // Fire-and-forget so the webhook responds fast.
           void this.handleRsvp(from, matchId, status).catch((err) => {
             console.error('[WHATSAPP] RSVP handler failed', err);
+          });
+        } else if (typeof id === 'string' && id.startsWith('verify_confirm_')) {
+          const matchId = id.replace('verify_confirm_', '');
+          void this.handleVerificationCallback(from, 'confirm', matchId).catch((err) => {
+            console.error('[WHATSAPP] Verification confirm handler failed', err);
+          });
+        } else if (typeof id === 'string' && id.startsWith('verify_dispute_')) {
+          const matchId = id.replace('verify_dispute_', '');
+          void this.handleVerificationCallback(from, 'dispute', matchId).catch((err) => {
+            console.error('[WHATSAPP] Verification dispute handler failed', err);
           });
         }
       }
@@ -257,7 +285,322 @@ export class WhatsAppService implements MessagingProvider {
     await this.sendText(whatsappNumber, `Tactical confirm: Your availability for match ${matchId.slice(0, 4)} is logged as ${status.toUpperCase()}. - Marcus`);
   }
 
+  // ── Group verification flow ──────────────────────────────────────────────
+
+  /**
+   * Send a group verification message to both squad WhatsApp groups.
+   * WhatsApp doesn't support editing interactive messages, so button counts
+   * are static. Updates are sent as follow-up text messages.
+   */
+  async sendGroupVerification(
+    matchId: string,
+    homeSquadId: string,
+    awaySquadId: string,
+    homeScore: number,
+    awayScore: number,
+    submittedByName: string,
+  ): Promise<void> {
+    const [homeSquad, awaySquad] = await Promise.all([
+      prisma.squad.findUnique({
+        where: { id: homeSquadId },
+        include: { groups: { where: { platform: 'whatsapp' } }, members: true },
+      }),
+      prisma.squad.findUnique({
+        where: { id: awaySquadId },
+        include: { groups: { where: { platform: 'whatsapp' } }, members: true },
+      }),
+    ]);
+
+    if (!homeSquad || !awaySquad) return;
+
+    const homeGroupJid = homeSquad.groups.find((g) => g.chatId)?.chatId;
+    const awayGroupJid = awaySquad.groups.find((g) => g.chatId)?.chatId;
+
+    if (!homeGroupJid && !awayGroupJid) return;
+
+    const totalMembers = new Set([
+      ...homeSquad.members.map((m) => m.userId),
+      ...awaySquad.members.map((m) => m.userId),
+    ]).size;
+
+    const threshold = totalMembers <= 4
+      ? Math.max(2, Math.ceil(totalMembers * 0.5))
+      : 3;
+
+    this.pendingVerifications.set(matchId, {
+      matchId,
+      homeSquadId,
+      awaySquadId,
+      homeSquadName: homeSquad.name,
+      awaySquadName: awaySquad.name,
+      homeScore,
+      awayScore,
+      homeGroupJid: homeGroupJid || undefined,
+      awayGroupJid: awayGroupJid || undefined,
+      confirms: new Set(),
+      disputes: new Set(),
+      createdAt: Date.now(),
+      totalMembers,
+    });
+
+    const messageText = [
+      `⚽ *Match Result Submitted*`,
+      ``,
+      `*${homeSquad.name}* ${homeScore} - ${awayScore} *${awaySquad.name}*`,
+      `Submitted by ${submittedByName}`,
+      ``,
+      `${threshold} confirms needed to verify. Tap below:`,
+    ].join('\n');
+
+    const buttons = [
+      { id: `verify_confirm_${matchId}`, title: `✅ Confirm` },
+      { id: `verify_dispute_${matchId}`, title: `❌ Dispute` },
+    ];
+
+    if (homeGroupJid) {
+      try {
+        await this.sendButtons(homeGroupJid, messageText, buttons, 'SportWarren Verification');
+      } catch (err) {
+        console.error(`Failed to send WA verification to home group ${homeGroupJid}:`, err);
+      }
+    }
+
+    if (awayGroupJid) {
+      try {
+        await this.sendButtons(awayGroupJid, messageText, buttons, 'SportWarren Verification');
+      } catch (err) {
+        console.error(`Failed to send WA verification to away group ${awayGroupJid}:`, err);
+      }
+    }
+  }
+
+  /**
+   * Handle a confirm/dispute button press from the webhook.
+   */
+  async handleVerificationCallback(
+    from: string,
+    action: 'confirm' | 'dispute',
+    matchId: string,
+  ): Promise<void> {
+    const pending = this.pendingVerifications.get(matchId);
+    if (!pending) {
+      await this.sendText(from, 'This verification has expired or been resolved.');
+      return;
+    }
+
+    // Resolve user identity
+    const identity = await prisma.platformIdentity.findUnique({
+      where: {
+        platform_platformUserId: {
+          platform: 'whatsapp',
+          platformUserId: from,
+        },
+      },
+      include: { user: { include: { squads: true } } },
+    });
+
+    if (!identity) {
+      await this.sendText(from, 'Link your account first: use the link command in SportWarren Settings.');
+      return;
+    }
+
+    const isMember = identity.user.squads.some(
+      (m: { squadId: string }) => m.squadId === pending.homeSquadId || m.squadId === pending.awaySquadId,
+    );
+
+    if (!isMember) {
+      await this.sendText(from, 'Only squad members can verify match results.');
+      return;
+    }
+
+    const userId = from;
+
+    // Toggle behavior: adding to one set removes from the other
+    if (action === 'confirm') {
+      if (pending.confirms.has(userId)) {
+        pending.confirms.delete(userId);
+      } else {
+        pending.confirms.add(userId);
+        pending.disputes.delete(userId);
+      }
+    } else {
+      if (pending.disputes.has(userId)) {
+        pending.disputes.delete(userId);
+      } else {
+        pending.disputes.add(userId);
+        pending.confirms.delete(userId);
+      }
+    }
+
+    // Send updated count as a text message (WhatsApp can't edit interactive messages)
+    const threshold = pending.totalMembers <= 4
+      ? Math.max(2, Math.ceil(pending.totalMembers * 0.5))
+      : 3;
+
+    const statusMsg = [
+      `📊 Verification update: ${pending.confirms.size}/${threshold} confirms, ${pending.disputes.size} disputes`,
+    ].join('\n');
+
+    // Send to the group where the vote happened
+    const groupJid = pending.homeGroupJid || pending.awayGroupJid;
+    if (groupJid) {
+      try {
+        await this.sendText(groupJid, statusMsg);
+      } catch {
+        // Group may not accept texts from bot
+      }
+    }
+
+    // Check thresholds
+    if (pending.confirms.size >= threshold && pending.disputes.size === 0) {
+      await this.resolveGroupVerification(matchId, 'verified');
+    } else if (pending.disputes.size >= 2) {
+      await this.resolveGroupVerification(matchId, 'disputed');
+    }
+  }
+
+  /**
+   * Resolve a group verification: update match status and send match card.
+   */
+  private async resolveGroupVerification(
+    matchId: string,
+    resolution: 'verified' | 'disputed',
+  ): Promise<void> {
+    const pending = this.pendingVerifications.get(matchId);
+    if (!pending) return;
+
+    this.pendingVerifications.delete(matchId);
+
+    if (resolution === 'disputed') {
+      await prisma.match.update({
+        where: { id: matchId },
+        data: { status: 'disputed' },
+      });
+
+      const msg = `⚠️ Match ${pending.homeSquadName} vs ${pending.awaySquadName} has been disputed. Captains: review and resubmit.`;
+      if (pending.homeGroupJid) await this.sendText(pending.homeGroupJid, msg).catch(() => {});
+      if (pending.awayGroupJid) await this.sendText(pending.awayGroupJid, msg).catch(() => {});
+      return;
+    }
+
+    // Verified: run full verification workflow
+    try {
+      const { verifyMatchResult } = await import('@/server/services/match-workflow');
+      const verifierIds = Array.from(pending.confirms);
+
+      for (const verifierId of verifierIds) {
+        try {
+          const identity = await prisma.platformIdentity.findUnique({
+            where: {
+              platform_platformUserId: {
+                platform: 'whatsapp',
+                platformUserId: verifierId,
+              },
+            },
+          });
+          if (identity) {
+            await verifyMatchResult({
+              prisma,
+              matchId,
+              verifierId: identity.userId,
+              verified: true,
+              homeScore: pending.homeScore,
+              awayScore: pending.awayScore,
+            });
+          }
+        } catch {
+          // Skip failed verifiers
+        }
+      }
+
+      // Send match card to both groups
+      await this.sendMatchCardIfPossible(pending);
+    } catch (err) {
+      console.error(`Failed to resolve WA verification for match ${matchId}:`, err);
+    }
+  }
+
+  /**
+   * Send match card image to both squad WhatsApp groups.
+   */
+  private async sendMatchCardIfPossible(pending: PendingWhatsAppVerification): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_CLIENT_URL || process.env.CLIENT_URL;
+    if (!baseUrl) return;
+
+    const caption = [
+      `✅ *Match Verified*`,
+      ``,
+      `*${pending.homeSquadName}* ${pending.homeScore} - ${pending.awayScore} *${pending.awaySquadName}*`,
+      `Full stats: ${baseUrl}/match/${pending.matchId}`,
+    ].join('\n');
+
+    const imageUrl = `${baseUrl}/api/og/match-card?matchId=${pending.matchId}&squadId=${pending.homeSquadId}`;
+
+    for (const groupJid of [pending.homeGroupJid, pending.awayGroupJid]) {
+      if (!groupJid) continue;
+      try {
+        await this.sendImage(groupJid, imageUrl, caption);
+      } catch {
+        // Fallback to text-only
+        try {
+          await this.sendText(groupJid, caption);
+        } catch {
+          // Give up
+        }
+      }
+    }
+  }
+
+  /**
+   * Get expired group verifications (for cron integration).
+   */
+  getExpiredGroupVerifications(): PendingWhatsAppVerification[] {
+    const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
+    return Array.from(this.pendingVerifications.values()).filter(
+      (v) => v.createdAt <= sixHoursAgo,
+    );
+  }
+
+  /**
+   * External trigger to resolve a verification (called by cron).
+   */
+  async resolveGroupVerificationExternal(matchId: string): Promise<void> {
+    const pending = this.pendingVerifications.get(matchId);
+    if (!pending) return;
+
+    const threshold = pending.totalMembers <= 4
+      ? Math.max(2, Math.ceil(pending.totalMembers * 0.5))
+      : 3;
+
+    if (pending.confirms.size >= threshold) {
+      await this.resolveGroupVerification(matchId, 'verified');
+    } else if (pending.disputes.size >= 2) {
+      await this.resolveGroupVerification(matchId, 'disputed');
+    } else {
+      // Silence = consent after 6 hours
+      await this.resolveGroupVerification(matchId, 'verified');
+    }
+  }
+
   getClient(): WhatsAppClient {
     return this.client;
   }
+}
+
+// ── Singleton accessor ──
+let _whatsappService: WhatsAppService | null = null;
+
+export function getWhatsAppService(): WhatsAppService | null {
+  if (!_whatsappService) {
+    try {
+      _whatsappService = new WhatsAppService();
+      if (!_whatsappService.isConfigured()) {
+        _whatsappService = null;
+        return null;
+      }
+    } catch {
+      return null;
+    }
+  }
+  return _whatsappService;
 }
