@@ -54,6 +54,26 @@ interface PendingMatchDraft extends ParsedTelegramMatchResult {
   createdAt: number;
 }
 
+interface PendingGroupVerification {
+  matchId: string;
+  homeSquadId: string;
+  awaySquadId: string;
+  homeSquadName: string;
+  awaySquadName: string;
+  homeScore: number;
+  awayScore: number;
+  homeMessageId?: number;
+  awayMessageId?: number;
+  homeChatId?: string;
+  awayChatId?: string;
+  confirms: Set<string>;   // userId set
+  disputes: Set<string>;   // userId set
+  createdAt: number;
+  totalMembers: number;    // combined squad member count for threshold
+}
+
+const GROUP_VERIFICATION_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
+
 type LinkedSquadGroup = NonNullable<
   Awaited<ReturnType<typeof findSquadGroupByChatId>>
 >;
@@ -102,6 +122,7 @@ export class TelegramService {
   private bot: TelegramBot;
   private redisService: TelegramRedisStore | null;
   private pendingMatchDrafts = new Map<string, PendingMatchDraft>();
+  private pendingGroupVerifications = new Map<string, PendingGroupVerification>();
   private generalChatMemory = new Map<number, GeneralChatMessage[]>();
 
   constructor(redisService: TelegramRedisStore | null = null) {
@@ -795,6 +816,312 @@ export class TelegramService {
     }
   }
 
+  private pruneExpiredGroupVerifications(): void {
+    const cutoff = Date.now() - GROUP_VERIFICATION_TTL_MS;
+    for (const [matchId, verification] of this.pendingGroupVerifications.entries()) {
+      if (verification.createdAt < cutoff) {
+        this.pendingGroupVerifications.delete(matchId);
+      }
+    }
+  }
+
+  /**
+   * Get the confirm threshold for group verification based on squad size.
+   * Small squads (<=4 members) need fewer confirms.
+   */
+  private getGroupVerificationThreshold(totalMembers: number): number {
+    if (totalMembers <= 4) return Math.max(2, Math.ceil(totalMembers * 0.5));
+    return 3;
+  }
+
+  /**
+   * Post verification buttons to both squad group chats after a match is logged.
+   * Players confirm/dispute via inline buttons instead of individual captain verification.
+   */
+  public async sendGroupVerification(
+    matchId: string,
+    homeSquadId: string,
+    awaySquadId: string,
+    homeScore: number,
+    awayScore: number,
+    submittedByName: string,
+  ): Promise<void> {
+    this.pruneExpiredGroupVerifications();
+
+    const squads = await prisma.squad.findMany({
+      where: { id: { in: [homeSquadId, awaySquadId] } },
+      include: {
+        groups: { where: { platform: 'telegram' } },
+        members: { where: { role: { not: 'inactive' } }, select: { id: true } },
+      },
+    });
+
+    const homeSquad = squads.find(s => s.id === homeSquadId);
+    const awaySquad = squads.find(s => s.id === awaySquadId);
+
+    if (!homeSquad || !awaySquad) return;
+
+    const totalMembers = (homeSquad.members?.length ?? 0) + (awaySquad.members?.length ?? 0);
+
+    const verification: PendingGroupVerification = {
+      matchId,
+      homeSquadId,
+      awaySquadId,
+      homeSquadName: homeSquad.name,
+      awaySquadName: awaySquad.name,
+      homeScore,
+      awayScore,
+      confirms: new Set(),
+      disputes: new Set(),
+      createdAt: Date.now(),
+      totalMembers,
+    };
+
+    const threshold = this.getGroupVerificationThreshold(totalMembers);
+    const messageText = [
+      `⚽ *Match Result Submitted*`,
+      ``,
+      `*${homeSquad.name}* ${homeScore} - ${awayScore} *${awaySquad.name}*`,
+      `Submitted by ${submittedByName}`,
+      ``,
+      `Tap to verify (${threshold} confirms needed):`,
+    ].join('\n');
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          { text: '✅ Confirm (0)', callback_data: `verify_match_confirm:${matchId}` },
+          { text: '❌ Dispute (0)', callback_data: `verify_match_dispute:${matchId}` },
+        ],
+      ],
+    };
+
+    // Send to home squad group
+    const homeTgGroup = homeSquad.groups[0];
+    if (homeTgGroup?.chatId) {
+      try {
+        const msg = await this.bot.sendMessage(Number(homeTgGroup.chatId), messageText, {
+          parse_mode: 'Markdown',
+          reply_markup: keyboard,
+        });
+        verification.homeChatId = homeTgGroup.chatId;
+        verification.homeMessageId = msg.message_id;
+      } catch (err) {
+        console.error('Failed to send group verification to home squad:', err);
+      }
+    }
+
+    // Send to away squad group
+    const awayTgGroup = awaySquad.groups[0];
+    if (awayTgGroup?.chatId) {
+      try {
+        const msg = await this.bot.sendMessage(Number(awayTgGroup.chatId), messageText, {
+          parse_mode: 'Markdown',
+          reply_markup: keyboard,
+        });
+        verification.awayChatId = awayTgGroup.chatId;
+        verification.awayMessageId = msg.message_id;
+      } catch (err) {
+        console.error('Failed to send group verification to away squad:', err);
+      }
+    }
+
+    this.pendingGroupVerifications.set(matchId, verification);
+  }
+
+  /**
+   * Handle a group verification button press (confirm or dispute).
+   */
+  private async handleGroupVerificationCallback(
+    query: TelegramBot.CallbackQuery,
+    action: 'confirm' | 'dispute',
+    matchId: string,
+  ): Promise<void> {
+    const chatId = query.message?.chat.id;
+
+    // Resolve the user pressing the button
+    const identity = await findPlatformIdentityByChatId(prisma, String(query.from.id));
+    if (!identity?.userId) {
+      await this.bot.answerCallbackQuery(query.id, {
+        text: 'Link your account first (/account)',
+        show_alert: true,
+      });
+      return;
+    }
+
+    const verification = this.pendingGroupVerifications.get(matchId);
+    if (!verification) {
+      await this.bot.answerCallbackQuery(query.id, {
+        text: 'This verification has expired.',
+        show_alert: false,
+      });
+      return;
+    }
+
+    // Verify the user is a member of one of the two squads
+    const membership = await prisma.squadMember.findFirst({
+      where: {
+        userId: identity.userId,
+        squadId: { in: [verification.homeSquadId, verification.awaySquadId] },
+        role: { not: 'inactive' },
+      },
+    });
+
+    if (!membership) {
+      await this.bot.answerCallbackQuery(query.id, {
+        text: 'Only squad members can verify.',
+        show_alert: true,
+      });
+      return;
+    }
+
+    // Toggle behavior: remove from the other set if present
+    if (action === 'confirm') {
+      verification.disputes.delete(identity.userId);
+      verification.confirms.add(identity.userId);
+    } else {
+      verification.confirms.delete(identity.userId);
+      verification.disputes.add(identity.userId);
+    }
+
+    // Update button counts on both messages
+    const threshold = this.getGroupVerificationThreshold(verification.totalMembers);
+    const updatedKeyboard = {
+      inline_keyboard: [
+        [
+          { text: `✅ Confirm (${verification.confirms.size})`, callback_data: `verify_match_confirm:${matchId}` },
+          { text: `❌ Dispute (${verification.disputes.size})`, callback_data: `verify_match_dispute:${matchId}` },
+        ],
+      ],
+    };
+
+    // Edit both messages (home and away groups)
+    for (const [msgChatId, msgId] of [
+      [verification.homeChatId, verification.homeMessageId],
+      [verification.awayChatId, verification.awayMessageId],
+    ] as [string | undefined, number | undefined][]) {
+      if (msgChatId && msgId) {
+        try {
+          await this.bot.editMessageReplyMarkup(
+            { inline_keyboard: updatedKeyboard.inline_keyboard },
+            { chat_id: Number(msgChatId), message_id: msgId },
+          );
+        } catch {
+          // Message may have been deleted or is too old to edit
+        }
+      }
+    }
+
+    await this.bot.answerCallbackQuery(query.id, {
+      text: action === 'confirm' ? '✅ Confirmed' : '❌ Disputed',
+    });
+
+    // Check if thresholds are met
+    if (verification.confirms.size >= threshold && verification.disputes.size === 0) {
+      await this.resolveGroupVerification(matchId, 'verified');
+    } else if (verification.disputes.size >= 2) {
+      await this.resolveGroupVerification(matchId, 'disputed');
+    }
+  }
+
+  /**
+   * Resolve a group verification by updating the match status and editing the messages.
+   */
+  private async resolveGroupVerification(
+    matchId: string,
+    resolution: 'verified' | 'disputed',
+  ): Promise<void> {
+    const verification = this.pendingGroupVerifications.get(matchId);
+    if (!verification) return;
+
+    // Use the first confirmer as the synthetic verifier
+    const verifierIds = resolution === 'verified'
+      ? Array.from(verification.confirms)
+      : Array.from(verification.disputes);
+
+    if (verifierIds.length === 0) return;
+
+    try {
+      const { verifyMatchResult } = await import('../match-workflow');
+      // Submit verifications from each unique user to reach threshold
+      for (const verifierId of verifierIds) {
+        try {
+          await verifyMatchResult({
+            prisma,
+            matchId,
+            verifierId,
+            verified: resolution === 'verified',
+          });
+        } catch {
+          // May throw CONFLICT if already verified - that's fine
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to resolve group verification for match ${matchId}:`, err);
+    }
+
+    // Edit messages to show resolved status
+    const statusEmoji = resolution === 'verified' ? '✅' : '⚠️';
+    const statusText = resolution === 'verified' ? 'Verified' : 'Disputed';
+    const resolvedMessage = [
+      `⚽ *Match Result ${statusText}* ${statusEmoji}`,
+      ``,
+      `*${verification.homeSquadName}* ${verification.homeScore} - ${verification.awayScore} *${verification.awaySquadName}*`,
+      ``,
+      resolution === 'verified'
+        ? `Confirmed by ${verification.confirms.size} players. Peer rating window is now open!`
+        : `This result has been disputed. Captains will need to resolve.`,
+    ].join('\n');
+
+    for (const [msgChatId, msgId] of [
+      [verification.homeChatId, verification.homeMessageId],
+      [verification.awayChatId, verification.awayMessageId],
+    ] as [string | undefined, number | undefined][]) {
+      if (msgChatId && msgId) {
+        try {
+          await this.bot.editMessageText(resolvedMessage, {
+            chat_id: Number(msgChatId),
+            message_id: msgId,
+            parse_mode: 'Markdown',
+          });
+        } catch {
+          // Message too old or deleted
+        }
+      }
+    }
+
+    this.pendingGroupVerifications.delete(matchId);
+  }
+
+  /**
+   * Get all pending group verifications that have expired (for the cron to auto-verify).
+   */
+  public getExpiredGroupVerifications(): PendingGroupVerification[] {
+    const cutoff = Date.now() - GROUP_VERIFICATION_TTL_MS;
+    const expired: PendingGroupVerification[] = [];
+    for (const [, verification] of this.pendingGroupVerifications.entries()) {
+      if (verification.createdAt < cutoff) {
+        expired.push(verification);
+      }
+    }
+    return expired;
+  }
+
+  /**
+   * Resolve a group verification externally (called by the expiry cron).
+   */
+  public async resolveGroupVerificationExternal(matchId: string): Promise<void> {
+    const verification = this.pendingGroupVerifications.get(matchId);
+    if (!verification) return;
+
+    // If no disputes, auto-verify (silence = consent)
+    if (verification.disputes.size < 2) {
+      await this.resolveGroupVerification(matchId, 'verified');
+    } else {
+      await this.resolveGroupVerification(matchId, 'disputed');
+    }
+  }
+
   private createDraftId(): string {
     return randomBytes(6).toString("hex");
   }
@@ -1304,6 +1631,7 @@ export class TelegramService {
     id: string;
     shareSlug: string | null;
     opponentName: string;
+    awaySquadId: string;
     isSoftVerified: boolean;
   }> {
     const membership = await getSquadMembership(
@@ -1356,6 +1684,7 @@ export class TelegramService {
       id: match.id,
       shareSlug: match.shareSlug ?? null,
       opponentName: opponent.name,
+      awaySquadId: opponent.id,
       isSoftVerified: match.status === 'verified',
     };
   }
@@ -2379,6 +2708,14 @@ export class TelegramService {
       return;
     }
 
+    // Group verification button presses
+    if (data.startsWith("verify_match_confirm:") || data.startsWith("verify_match_dispute:")) {
+      const [callbackAction, verifyMatchId] = data.split(":");
+      const verifyType = callbackAction === "verify_match_confirm" ? "confirm" : "dispute";
+      await this.handleGroupVerificationCallback(query, verifyType, verifyMatchId);
+      return;
+    }
+
     const [action, draftId] = data.split(":");
 
     // Handle squad selection for multi-squad users
@@ -2429,7 +2766,7 @@ export class TelegramService {
       const result = await this.processMatchLog(draft);
       const statusMessage = result.isSoftVerified
         ? "✅ *Verified!* (Trusted matchup history detected)"
-        : "⏳ *Pending Verification*";
+        : "⏳ *Pending* — your squad is confirming";
 
       await this.bot.editMessageText(
         [
@@ -2441,7 +2778,7 @@ export class TelegramService {
           "",
           result.isSoftVerified
             ? "Your match history has automatically verified this result. Legacy updated! 🥂"
-            : "We've notified the team to verify this result."
+            : "Verification buttons sent to both group chats."
         ].join("\n"),
         {
           chat_id: chatId,
@@ -2450,6 +2787,19 @@ export class TelegramService {
         },
       );
       await this.bot.answerCallbackQuery(query.id, { text: "Match submitted" });
+
+      // For non-social-trust matches, post group verification buttons
+      if (!result.isSoftVerified) {
+        const submitterName = query.from.first_name || 'Captain';
+        await this.sendGroupVerification(
+          result.id,
+          draft.squadId,
+          result.awaySquadId,
+          draft.teamScore,
+          draft.opponentScore,
+          submitterName,
+        );
+      }
     } catch (error) {
       const message =
         error instanceof Error
@@ -2567,6 +2917,96 @@ export class TelegramService {
         },
       },
     );
+  }
+
+  /**
+   * Generate and send a match result card image to a Telegram group chat.
+   * Called after peer consensus closes to deliver the post-match summary visually.
+   */
+  public async sendMatchCard(
+    chatId: string | number,
+    matchId: string,
+    squadId: string,
+    squadName: string,
+  ): Promise<void> {
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_CLIENT_URL || process.env.CLIENT_URL;
+      const secret = process.env.CRON_SECRET;
+
+      if (!baseUrl) {
+        console.warn('Cannot generate match card: no CLIENT_URL configured');
+        return;
+      }
+
+      const cardUrl = `${baseUrl}/api/og/match-card?matchId=${matchId}&squadId=${squadId}`;
+      const response = await fetch(cardUrl, {
+        headers: secret ? { Authorization: `Bearer ${secret}` } : {},
+      });
+
+      if (!response.ok) {
+        console.error(`Match card generation failed (${response.status}): ${await response.text()}`);
+        // Fall back to text-only notification
+        await this.sendConsensusResults(chatId, matchId, squadName);
+        return;
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const caption = await this.buildMatchCardCaption(matchId, squadName);
+
+      await this.bot.sendPhoto(chatId, buffer, {
+        caption,
+        parse_mode: 'Markdown',
+      });
+    } catch (err) {
+      console.error('Failed to send match card, falling back to text:', err);
+      await this.sendConsensusResults(chatId, matchId, squadName);
+    }
+  }
+
+  private async buildMatchCardCaption(matchId: string, squadName: string): Promise<string> {
+    try {
+      const match = await prisma.match.findUnique({
+        where: { id: matchId },
+        include: {
+          homeSquad: { select: { name: true } },
+          awaySquad: { select: { name: true } },
+          motmVotes: {
+            select: { targetId: true },
+          },
+        },
+      });
+
+      if (!match) return `Match report for *${squadName}*`;
+
+      // Find MOTM (most voted)
+      const voteCounts = new Map<string, number>();
+      for (const vote of match.motmVotes) {
+        voteCounts.set(vote.targetId, (voteCounts.get(vote.targetId) ?? 0) + 1);
+      }
+      let motmName: string | null = null;
+      if (voteCounts.size > 0) {
+        const topCandidateId = [...voteCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+        const motmProfile = await prisma.playerProfile.findUnique({
+          where: { id: topCandidateId },
+          include: { user: { select: { name: true } } },
+        });
+        motmName = motmProfile?.user?.name ?? null;
+      }
+
+      const lines = [
+        `*${match.homeSquad?.name}* ${match.homeScore} - ${match.awayScore} *${match.awaySquad?.name}*`,
+      ];
+
+      if (motmName) {
+        lines.push(`Man of the Match: ${motmName}`);
+      }
+
+      lines.push('', `XP awarded. Your legacy grows.`);
+
+      return lines.join('\n');
+    } catch {
+      return `Match report for *${squadName}*. XP awarded!`;
+    }
   }
 
   public async sendConsensusResults(chatId: string | number, matchId: string, squadName: string): Promise<void> {

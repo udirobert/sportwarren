@@ -16,6 +16,7 @@ import { createPendingMatchSubmission } from './match-submission';
 import { PEER_RATING } from '@/lib/match/constants';
 import { getDigitalTwinService } from './ai/digital-twin';
 import { getPlayerTwinService } from './ai/twin';
+import { applyMatchXP } from './match-xp';
 
 export type MatchWorkflowErrorCode =
   | 'NOT_FOUND'
@@ -407,6 +408,13 @@ export async function submitMatchResult({
           homeScore
         );
 
+        // Apply match XP (base stats: participation, goals, assists, clean sheet)
+        try {
+          await applyMatchXP(prisma, match.id);
+        } catch (xpErr) {
+          console.warn('applyMatchXP failed during social trust verification:', xpErr);
+        }
+
         // Player Twin attestations — record each player's match performance
         try {
           const twinService = getPlayerTwinService();
@@ -715,6 +723,13 @@ export async function verifyMatchResult({
             awayFinalScore,
             homeFinalScore
           );
+
+          // Apply match XP (base stats: participation, goals, assists, clean sheet)
+          try {
+            await applyMatchXP(prisma, matchId);
+          } catch (xpErr) {
+            console.warn('applyMatchXP failed during standard verification:', xpErr);
+          }
         }
       } catch (error) {
         console.error(
