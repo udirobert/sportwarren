@@ -187,9 +187,9 @@ export const squadRouter = createTRPCRouter({
     }))
     .mutation(async ({ ctx, input }) => {
       try {
-        // Check if short name is taken
+        // Check if short name is taken (by non-placeholder squads)
         const existing = await ctx.prisma.squad.findFirst({
-          where: { shortName: input.shortName },
+          where: { shortName: input.shortName, isPlaceholder: false },
         });
 
         if (existing) {
@@ -197,6 +197,37 @@ export const squadRouter = createTRPCRouter({
             code: 'CONFLICT',
             message: 'Short name is already taken',
           });
+        }
+
+        // Check if a placeholder squad with a matching name exists (auto-created from match logging)
+        const placeholder = await ctx.prisma.squad.findFirst({
+          where: {
+            isPlaceholder: true,
+            OR: [
+              { name: { equals: input.name, mode: 'insensitive' } },
+              { name: { contains: input.name, mode: 'insensitive' } },
+            ],
+          },
+          orderBy: { createdAt: 'asc' },
+        });
+
+        if (placeholder) {
+          // Claim the placeholder: mark as real squad, add user as captain
+          const claimed = await ctx.prisma.squad.update({
+            where: { id: placeholder.id },
+            data: {
+              isPlaceholder: false,
+              shortName: input.shortName,
+              homeGround: input.homeGround,
+              members: {
+                create: {
+                  userId: ctx.userId!,
+                  role: 'captain',
+                },
+              },
+            },
+          });
+          return claimed;
         }
 
         const squad = await ctx.prisma.squad.create({

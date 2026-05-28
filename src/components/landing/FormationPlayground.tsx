@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/Button";
 import { PitchCanvas } from "@/components/squad/PitchCanvas";
 import { MatchEnginePreview } from "@/components/dashboard/MatchEnginePreview";
 import { usePitchPersonalization } from "@/hooks/pitch/usePitchPersonalization";
+import { useSquadDetails } from "@/hooks/squad/useSquad";
+import { useActiveSquad } from "@/contexts/ActiveSquadContext";
 import { FORMATIONS, getFormationsBySquadSize, getDefaultFormationForSize, PLAY_STYLE_LABELS } from "@/lib/formations";
 import { POSITIONS_BY_SQUAD_SIZE, DEFAULT_PLAYER_NAMES, SQUAD_SIZES, PLAY_STYLES, SQUAD_COLORS } from "@/lib/pitch.constants";
 import { decodeFormationFromUrl, syncStateToUrl, suggestCounterFormation, encodeChallengeUrl } from "@/lib/pitch/shareUrl";
@@ -64,6 +66,11 @@ export const FormationPlayground: React.FC = () => {
 
   // ── Personalization hook (shared across modes) ──
   const personalization = usePitchPersonalization(formation);
+
+  // ── Real squad data (when logged in) ──
+  const { activeSquadId } = useActiveSquad();
+  const { members: realMembers } = useSquadDetails(activeSquadId);
+  const hasRealMembers = realMembers.length > 0;
 
   // ── Inject URL names on first mount ──
   const urlNamesApplied = useRef(false);
@@ -211,9 +218,37 @@ export const FormationPlayground: React.FC = () => {
     [personalization]
   );
 
-  // ── Mock players for PitchCanvas ──
-  const mockPlayers = useMemo(() => {
+  // ── Players for PitchCanvas (real squad data when logged in, mock for guests) ──
+  const pitchPlayers = useMemo(() => {
     const positions = POSITIONS_BY_SQUAD_SIZE[squadSize];
+
+    if (hasRealMembers) {
+      // Use real squad members, filling remaining slots with defaults
+      const defaults = [...DEFAULT_PLAYER_NAMES];
+      return Array.from({ length: squadSize }, (_, i) => {
+        const member = realMembers[i];
+        if (member) {
+          return {
+            id: member.id,
+            name: personalization.names[i] || member.name,
+            avatar: personalization.avatars[i] || member.avatar || undefined,
+            position: (member.position || positions[i]) as any,
+            status: "available" as const,
+            address: member.id,
+          };
+        }
+        return {
+          id: `default-${i}`,
+          name: personalization.names[i] || defaults[i] || `Player ${i + 1}`,
+          avatar: personalization.avatars[i] || undefined,
+          position: positions[i] as any,
+          status: "available" as const,
+          address: `0x${i + 1}`,
+        };
+      });
+    }
+
+    // Guest / no squad — use personalization names + defaults
     return [...DEFAULT_PLAYER_NAMES].slice(0, squadSize).map((name, i) => ({
       id: String(i + 1),
       name: personalization.names[i] || name,
@@ -222,7 +257,7 @@ export const FormationPlayground: React.FC = () => {
       status: "available" as const,
       address: `0x${i + 1}`,
     }));
-  }, [squadSize, personalization.names, personalization.avatars]);
+  }, [squadSize, personalization.names, personalization.avatars, hasRealMembers, realMembers]);
 
   const lineup = useMemo(
     () =>
@@ -232,10 +267,15 @@ export const FormationPlayground: React.FC = () => {
     [formation]
   );
 
-  // ── Player names for simulation (filter out empty/GK-only) ──
+  // ── Player names for simulation (real members when available, else personalization) ──
   const simulationPlayerNames = useMemo(() => {
+    if (hasRealMembers) {
+      return realMembers
+        .slice(0, squadSize)
+        .map((m, i) => personalization.names[i] || m.name.split(" ")[0]);
+    }
     return personalization.names.filter((n) => n && n !== "GK");
-  }, [personalization.names]);
+  }, [hasRealMembers, realMembers, personalization.names, squadSize]);
 
   // ── Mode toggle ──
   const switchToMode = useCallback(
@@ -397,7 +437,7 @@ export const FormationPlayground: React.FC = () => {
                   <PitchCanvas
                     formation={formation}
                     lineup={lineup}
-                    players={mockPlayers}
+                    players={pitchPlayers}
                     readOnly
                     showPlayerNames={personalization.showNames}
                     showExport={false}
@@ -437,6 +477,7 @@ export const FormationPlayground: React.FC = () => {
                     playerNames={simulationPlayerNames}
                     awayPlayerNames={opponent?.names}
                     onMatchEnd={isCounterMode ? handleSimResult : undefined}
+                    squadId={hasRealMembers ? activeSquadId : undefined}
                   />
                 </motion.div>
               )}

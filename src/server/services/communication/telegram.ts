@@ -131,6 +131,7 @@ export class TelegramService {
   private redisService: TelegramRedisStore | null;
   private pendingMatchDrafts = new Map<string, PendingMatchDraft>();
   private pendingGroupVerifications = new Map<string, PendingGroupVerification>();
+  private aiParseRateLimit = new Map<string, number[]>();
   private generalChatMemory = new Map<number, GeneralChatMessage[]>();
 
   constructor(redisService: TelegramRedisStore | null = null) {
@@ -673,17 +674,30 @@ export class TelegramService {
 
     // Only try AI parser for messages that might contain score-like patterns
     // (numbers present, reasonable length) to avoid wasting inference on greetings.
+    // Rate-limited: max 3 AI parse attempts per chat per minute to control costs.
     const looksLikeScore = /\d/.test(text) && text.length >= 5 && text.length <= 120;
     if (looksLikeScore) {
-      try {
-        const aiParsed = await parseNaturalLanguageMatch(text);
-        if (aiParsed && aiParsed.confidence >= 0.75) {
-          await this.handleMatchLog(chatId, text);
-          return;
+      const aiParseKey = `ai-parse:${chatId}`;
+      const recent = this.aiParseRateLimit.get(aiParseKey) || [];
+      const now = Date.now();
+      const windowMs = 60_000;
+      const recentInWindow = recent.filter((t) => now - t < windowMs);
+
+      if (recentInWindow.length < 3) {
+        recentInWindow.push(now);
+        this.aiParseRateLimit.set(aiParseKey, recentInWindow);
+
+        try {
+          const aiParsed = await parseNaturalLanguageMatch(text);
+          if (aiParsed && aiParsed.confidence >= 0.75) {
+            await this.handleMatchLog(chatId, text);
+            return;
+          }
+        } catch {
+          // AI parser failed — fall through to normal chat
         }
-      } catch {
-        // AI parser failed — fall through to normal chat
       }
+      // else: rate limited, skip AI parser and fall through to normal chat
     }
 
     // ── Normal AI chat ────────────────────────────────────────────────
