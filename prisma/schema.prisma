@@ -1376,3 +1376,66 @@ model Notification {
   @@index([userId, read, createdAt])
   @@map("notifications")
 }
+
+// ============================================================================
+// TOURNAMENTS
+// ============================================================================
+
+model Tournament {
+  id          String   @id @default(cuid())
+  name        String
+  type        String   // 'squad' or 'individual'
+  status      String   @default("open") // 'open', 'active', 'completed'
+  maxEntries  Int      @default(8) @map("max_entries")
+  createdBy   String?  @map("created_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+  completedAt DateTime? @map("completed_at")
+
+  entries TournamentEntry[]
+  matches TournamentMatch[]
+
+  @@index([status, createdAt])
+  @@map("tournaments")
+}
+
+model TournamentEntry {
+  id           String   @id @default(cuid())
+  tournamentId String   @map("tournament_id")
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  userId       String?  @map("user_id")
+  squadId      String?  @map("squad_id")
+  seedNumber   Int      @map("seed_number") // Position in bracket (1-8)
+  formation    String
+  playStyle    String   @default("balanced") @map("play_style")
+  color        String   @default("#3b82f6")
+  playerNames  Json?    @map("player_names") // string[] for simulation
+  enteredAt    DateTime @default(now()) @map("entered_at")
+
+  homeMatches TournamentMatch[] @relation("TournamentHomeEntry")
+  awayMatches TournamentMatch[] @relation("TournamentAwayEntry")
+
+  @@unique([tournamentId, seedNumber])
+  @@index([tournamentId])
+  @@map("tournament_entries")
+}
+
+model TournamentMatch {
+  id           String   @id @default(cuid())
+  tournamentId String   @map("tournament_id")
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round        String   // 'quarter', 'semi', 'final'
+  position     Int      // Position within the round (1-4 for QF, 1-2 for SF, 1 for F)
+  homeEntryId  String   @map("home_entry_id")
+  homeEntry    TournamentEntry @relation("TournamentHomeEntry", fields: [homeEntryId], references: [id])
+  awayEntryId  String   @map("away_entry_id")
+  awayEntry    TournamentEntry @relation("TournamentAwayEntry", fields: [awayEntryId], references: [id])
+  homeScore    Int?
+  awayScore    Int?
+  events       Json?    // Goal events, possession, etc.
+  status       String   @default("pending") // 'pending', 'in_progress', 'completed'
+  playedAt     DateTime? @map("played_at")
+
+  @@unique([tournamentId, round, position])
+  @@index([tournamentId, round])
+  @@map("tournament_matches")
+}
