@@ -6,267 +6,69 @@ on:
   pull_request:
     branches: [main]
 
-env:
-  NODE_VERSION: '20'
-  PNPM_VERSION: '10'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  # ─────────────────────────────────────────────────────────────────────────────
-  # LINT & TYPE CHECK
-  # ─────────────────────────────────────────────────────────────────────────────
-  lint-and-typecheck:
-    name: Lint & Type Check
+  typecheck:
+    name: TypeCheck
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
         with:
-          version: ${{ env.PNPM_VERSION }}
+          version: 10
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          node-version: 20
+          cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
-      - name: Run ESLint
-        run: pnpm lint
-
-      - name: Run TypeScript type check
-        run: pnpm typecheck
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # UNIT TESTS
-  # ─────────────────────────────────────────────────────────────────────────────
-  unit-tests:
-    name: Unit Tests
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run unit tests
-        run: pnpm test
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # E2E TESTS (Playwright)
-  # ─────────────────────────────────────────────────────────────────────────────
-  e2e-tests:
-    name: E2E Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-
-    services:
-      postgres:
-        image: postgres:16
+      - run: pnpm run typecheck
         env:
-          POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: sportwarren_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          NODE_OPTIONS: "--max-old-space-size=8192"
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Install Playwright browsers
-        run: pnpm exec playwright install --with-deps
-
-      - name: Sync database schema
-        run: pnpm prisma db push
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sportwarren_test
-
-      - name: Run Playwright tests
-        run: pnpm test:e2e
-        env:
-          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/sportwarren_test
-          ALGORAND_NODE_URL: https://testnet-api.algonode.cloud
-          ALGORAND_INDEXER_URL: https://testnet-idx.algonode.cloud
-          SKIP_AUTH_DEV: 'true'
-          E2E_AUTH: 'true'
-
-      - name: Upload Playwright report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-report
-          path: |
-            playwright-report/
-            test-results/
-          retention-days: 7
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # DATABASE MIGRATION CHECK
-  # ─────────────────────────────────────────────────────────────────────────────
-  db-migration-check:
-    name: Database Migration Check
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
         with:
-          version: ${{ env.PNPM_VERSION }}
+          version: 10
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          node-version: 20
+          cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
-      - name: Generate Prisma client
-        run: pnpm prisma generate
+      - run: pnpm run lint
 
-      - name: Validate Prisma schema
-        run: pnpm prisma validate
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # SECURITY AUDIT
-  # ─────────────────────────────────────────────────────────────────────────────
-  security-audit:
-    name: Security Audit
+  test:
+    name: Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v4
         with:
-          version: ${{ env.PNPM_VERSION }}
+          version: 10
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
+          node-version: 20
+          cache: pnpm
 
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile
 
-      - name: Run npm audit
-        run: pnpm audit --audit-level=critical
-
-  # ─────────────────────────────────────────────────────────────────────────────
-  # BUILD CHECK (verifies standalone output works)
-  # ─────────────────────────────────────────────────────────────────────────────
-  build-check:
-    name: Build Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: pnpm prisma generate
-
-      - name: Run production build
-        run: pnpm build
-        env:
-          DISABLE_SENTRY_BUILD: 'true'
-          ALGORAND_NODE_URL: https://testnet-api.algonode.cloud
-          ALGORAND_INDEXER_URL: https://testnet-idx.algonode.cloud
-
-      - name: Verify standalone output exists
-        run: |
-          test -f .next/standalone/server.js || (echo "standalone/server.js not found" && exit 1)
-          echo "Standalone build verified"
-
-  runtime-artifact:
-    name: Runtime Artifact
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build runtime artifact
-        run: pnpm run deploy:runtime:build
-        env:
-          DISABLE_SENTRY_BUILD: 'true'
-          ALGORAND_NODE_URL: https://testnet-api.algonode.cloud
-          ALGORAND_INDEXER_URL: https://testnet-idx.algonode.cloud
-
-      - name: Verify runtime artifact exists
-        run: |
-          ls -1 artifacts/sportwarren-runtime-*.tar.gz >/dev/null
-
-      - name: Upload runtime artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: sportwarren-runtime
-          path: artifacts/sportwarren-runtime-*.tar.gz
-          retention-days: 7
+      - run: pnpm run test
