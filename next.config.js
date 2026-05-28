@@ -10,8 +10,10 @@ const nextConfig = {
   reactStrictMode: true,
   productionBrowserSourceMaps: false,
   typescript: {
-    // Type-checking is done locally (pnpm run typecheck) and in CI.
-    // Skipping during Vercel build to avoid OOM on 8GB build machines.
+    // Type-checking runs in GitHub Actions CI (ci.yml) with 8GB heap — not during
+    // the Vercel build, which is limited to 8GB total RAM and OOMs on tsc.
+    // This is standard practice for large Next.js projects. Webpack compilation
+    // still catches syntax/import errors; full type safety is enforced by CI.
     ignoreBuildErrors: true,
   },
   images: {

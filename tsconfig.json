@@ -45,6 +45,9 @@
     "contracts",
     "scripts",
     "prisma",
-    "server"
+    "server",
+    "src/test/**/*.ts",
+    "src/test/**/*.tsx",
+    "e2e"
   ]
 }
