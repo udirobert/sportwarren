@@ -1,28 +1,35 @@
 import React from 'react';
-import { Cpu, TrendingUp, CheckCircle2 } from 'lucide-react';
+import { Target, Swords, CheckCircle2, Trophy } from 'lucide-react';
 import { ScrollReveal } from '@/components/landing/ScrollReveal';
 
 const steps = [
   {
-    icon: Cpu,
-    title: 'Simulate Tactics',
-    description: 'Run our advanced match engine. Test formations and playstyles against any opponent.',
+    icon: Target,
+    title: 'Set Your Formation',
+    description: 'Pick your formation, play style, and squad. Use real teammates or test with synthetic players.',
     color: 'from-blue-500 to-blue-600',
     hoverBorder: 'hover:border-blue-500/50',
   },
   {
-    icon: TrendingUp,
-    title: 'Watch Stats Grow',
-    description: 'Shooting, passing, defending — all evolve with every game.',
-    color: 'from-blue-500 to-blue-600',
-    hoverBorder: 'hover:border-blue-500/50',
+    icon: Swords,
+    title: 'Challenge Opponents',
+    description: 'Share a challenge link. Opponents see your formation and pick a counter. The simulation runs head-to-head.',
+    color: 'from-orange-500 to-orange-600',
+    hoverBorder: 'hover:border-orange-500/50',
   },
   {
     icon: CheckCircle2,
-    title: 'Confirm Results',
-    description: 'Log your real match. XP and reputation are awarded automatically upon verification.',
+    title: 'Log & Verify',
+    description: 'After your real match, log the result. Squadmates confirm or dispute via group verification — on Telegram or WhatsApp.',
     color: 'from-green-500 to-green-600',
     hoverBorder: 'hover:border-green-500/50',
+  },
+  {
+    icon: Trophy,
+    title: 'Compete & Grow',
+    description: 'Enter tournaments, climb brackets, earn XP, and build your squad\'s reputation. Every match counts.',
+    color: 'from-amber-500 to-amber-600',
+    hoverBorder: 'hover:border-amber-500/50',
   },
 ];
 
@@ -32,19 +39,19 @@ export const HowItWorksSection: React.FC = () => (
       <div className="text-center mb-10 sm:mb-20">
         <ScrollReveal>
           <div className="inline-flex items-center space-x-2 bg-blue-500/10 border border-blue-500/20 text-blue-400 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium mb-4 sm:mb-6">
-            <Cpu className="w-3 h-3 sm:w-4 sm:h-4" aria-hidden="true" />
+            <Target className="w-3 h-3 sm:w-4 sm:h-4" aria-hidden="true" />
             <span>How It Works</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 sm:mb-6">
-            Experience the <span className="text-blue-400">Match Day</span>
+            From <span className="text-blue-400">Formation</span> to <span className="text-amber-400">Trophy</span>
           </h2>
           <p className="text-sm sm:text-base lg:text-xl text-gray-300 max-w-2xl mx-auto">
-            Simulate matches. Optimize your squad. Prove your results on-chain.
+            Four steps. Every match verified. Every stat permanent.
           </p>
         </ScrollReveal>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 max-w-5xl mx-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8 max-w-6xl mx-auto">
         {steps.map((step, i) => (
           <ScrollReveal key={step.title} delay={i * 150}>
             <div className={`group relative bg-white/5 backdrop-blur-xl rounded-2xl lg:rounded-3xl p-4 sm:p-6 lg:p-8 border border-white/10 ${step.hoverBorder} transition-all duration-500 hover:scale-105 h-full`}>

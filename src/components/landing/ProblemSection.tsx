@@ -11,8 +11,8 @@ const problems = [
     bg: 'bg-red-500/10',
   },
   {
-    title: 'No Progression',
-    description: "Unlike video games, your real football skills don't translate into stats, levels, or achievements.",
+    title: 'No Competition',
+    description: "You play the same local teams every week. No way to challenge squads across cities or prove you're the best.",
     icon: TrendingDown,
     color: 'text-orange-400',
     bg: 'bg-orange-500/10',
