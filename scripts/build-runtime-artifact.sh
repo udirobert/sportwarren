@@ -33,9 +33,16 @@ cp -R .next/standalone "$BUILD_DIR/.next/standalone"
 cp -R .next/static "$BUILD_DIR/.next/static"
 cp -R public "$BUILD_DIR/public"
 cp -R prisma "$BUILD_DIR/prisma"
+[ -f prisma.config.ts ] && cp prisma.config.ts "$BUILD_DIR/prisma.config.ts"
 mkdir -p "$BUILD_DIR/scripts"
 cp scripts/deploy-runtime-release.sh "$BUILD_DIR/scripts/deploy-runtime-release.sh"
 cp package.json "$BUILD_DIR/package.json"
+
+# Regenerate Prisma client inside standalone bundle so it matches the schema
+cp prisma/schema.prisma "$BUILD_DIR/.next/standalone/"
+(cd "$BUILD_DIR/.next/standalone" && npx prisma generate 2>/dev/null)
+rm -f "$BUILD_DIR/.next/standalone/schema.prisma"
+
 cp ecosystem.config.cjs "$BUILD_DIR/ecosystem.config.cjs"
 
 find "$BUILD_DIR" -name '.DS_Store' -delete
