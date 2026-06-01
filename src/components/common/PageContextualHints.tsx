@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Lightbulb, X } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useJourneyState } from "@/hooks/useJourneyState";
@@ -141,6 +141,8 @@ function saveDismissedHint(key: string) {
 
 export function PageContextualHints() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const isTokenAuth = searchParams.has('rt');
   const { journeyStage } = useJourneyState();
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [mounted, setMounted] = useState(false);
@@ -152,6 +154,8 @@ export function PageContextualHints() {
   }, []);
 
   if (!mounted) return null;
+  // Suppress hints for token-auth (WhatsApp) users — they don't have wallets
+  if (isTokenAuth) return null;
 
   const hint = getHintForPath(pathname, journeyStage);
 

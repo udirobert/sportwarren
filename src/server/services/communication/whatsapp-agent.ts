@@ -88,7 +88,21 @@ OUTPUT MODE — pick exactly one, never mix:
     "how do i use this" → "I run your squad's on-chain agent on Kite. Link this number with \`link WA-XXXXXX\` (get a code from /linkwhatsapp on our Telegram bot) and you'll unlock scout, hire, pay and status."
     "how do i top up" → "Open Telegram and run \`/treasury view\` to top up or manage squad funds in the Mini App. Then come back here and run \`budget\`."`;
 
-export type Reply = string;
+export type Reply = string | {
+  text: string;
+  list?: {
+    title: string;
+    buttonText: string;
+    sections: Array<{
+      title: string;
+      rows: Array<{
+        id: string;
+        title: string;
+        description?: string;
+      }>;
+    }>;
+  };
+};
 
 export type CommanderSendText = (to: string, text: string) => Promise<void>;
 
@@ -517,19 +531,34 @@ export async function dispatchWhatsAppCommand(
 
       const dataSources = report.dataSources;
       const dataSourceLine = dataSources?.length
-        ? `📊 Data: ${dataSources.join(" · ")}`
-        : "📊 Data: AI-generated (no stored match data)";
-      const lines = [
-        `🛰️ *Scouting Report · ${opponent}*`,
-        report.summary ? `\n${report.summary}` : "\n(Report data is available via the attestation.)",
-        "",
-        scoutSettlementLine(report.simulated, report.txHash),
-        dataSourceLine,
-        userLimit > 0
-          ? `Budget: ${remaining.remaining.toFixed(2)} left today. \`scouts\` → all reports.`
-          : "`scouts` → all reports.",
-      ];
-      return lines.join("\n");
+        ? `Data: ${dataSources.join(" · ")}`
+        : "Data: AI-generated (no stored match data)";
+
+      // Return as interactive list message for premium feel
+      const reportSections = [];
+      if (report.summary) {
+        reportSections.push({
+          title: "Report",
+          rows: [{ id: `scout_summary_${Date.now()}`, title: report.summary.slice(0, 72), description: report.summary.slice(72, 200) || undefined }],
+        });
+      }
+      reportSections.push({
+        title: "Details",
+        rows: [
+          { id: `scout_settle_${Date.now()}`, title: scoutSettlementLine(report.simulated, report.txHash).replace(/[*_`]/g, ''), description: "On-chain attestation" },
+          { id: `scout_data_${Date.now()}`, title: dataSourceLine, description: "Data sources used" },
+          ...(userLimit > 0 ? [{ id: `scout_budget_${Date.now()}`, title: `Budget: ${remaining.remaining.toFixed(2)} left today`, description: "Daily scout spend remaining" }] : []),
+        ],
+      });
+
+      return {
+        text: `Scouting Report - ${opponent}`,
+        list: {
+          title: `Scouting Report - ${opponent}`,
+          buttonText: "View Report",
+          sections: reportSections,
+        },
+      };
     }
 
     case "kite-proof":

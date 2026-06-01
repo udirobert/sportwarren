@@ -130,8 +130,13 @@ export class WhatsAppService implements MessagingProvider {
   /**
    * Sends a match availability template to a player.
    * Requires a pre-approved template 'match_availability' on Meta/Kapso.
+   * Also stores the matchId in Redis so text-based RSVP (in/out/maybe) works.
    */
   async sendAvailabilityRequest(to: string, request: MatchAvailabilityRequest): Promise<void> {
+    // Track pending availability so text replies work
+    try {
+      await redisService.set(`wa:avail:${to}`, request.matchId, 7 * 24 * 60 * 60); // 7 days
+    } catch {/* redis optional */}
     await this.sendAvailabilityTemplate(to, request.matchDetails, request.matchId);
   }
 
@@ -229,11 +234,71 @@ export class WhatsAppService implements MessagingProvider {
 
     if (type === 'text') {
       const text: string = message.text?.body ?? '';
+      const senderNumber = message.from_user ?? from;
+
+      // ── Text-based RSVP (in/out/maybe) ────────────────────────
+      const rsvpMatch = text.trim().toLowerCase().match(/^(in|out|maybe|yes|no|nah|yep|yeah|nah|cant|can'?t)$/i);
+      if (rsvpMatch && !from.endsWith('@g.us')) {
+        const rsvpWord = rsvpMatch[1].toLowerCase();
+        const rsvpStatus = ['in', 'yes', 'yep', 'yeah'].includes(rsvpWord)
+          ? 'available'
+          : ['out', 'no', 'nah', "can't", 'cant'].includes(rsvpWord)
+            ? 'unavailable'
+            : 'maybe';
+
+        let matchId: string | null = null;
+        try {
+          matchId = await redisService.get(`wa:avail:${senderNumber}`);
+        } catch {/* redis optional */}
+
+        if (matchId) {
+          void this.handleRsvp(senderNumber, matchId, rsvpStatus).then(async () => {
+            try {
+              await redisService.del(`wa:avail:${senderNumber}`);
+            } catch {/* swallow */}
+          }).catch((err) => {
+            console.error('[WHATSAPP] Text RSVP handler failed', err);
+          });
+          return; // Don't dispatch to agent
+        }
+      }
+
       // Fire-and-forget so we return 200 immediately and Kapso doesn't retry.
       void (async () => {
         try {
-          const reply = await dispatchWhatsAppCommand(text, from);
-          if (reply) await this.sendText(from, reply);
+          // ── Auto-link group to squad on first message ──────────────
+          if (from.endsWith('@g.us')) {
+            await this.autoLinkGroupIfNeeded(from, senderNumber);
+          }
+
+          const reply = await dispatchWhatsAppCommand(text, senderNumber);
+          if (reply) {
+            // In groups, send reply to the group; in DMs, send to the user
+            const replyTo = from.endsWith('@g.us') ? from : senderNumber;
+
+            if (typeof reply === 'string') {
+              await this.sendText(replyTo, reply);
+            } else {
+              // Structured response — send text first, then interactive list if present
+              if (reply.text) {
+                await this.sendText(replyTo, reply.text);
+              }
+              if (reply.list) {
+                try {
+                  await this.sendList(
+                    replyTo,
+                    reply.text,
+                    reply.list.buttonText,
+                    reply.list.sections,
+                    reply.list.title,
+                  );
+                } catch (listErr) {
+                  // Fallback: send as plain text if list fails (e.g., in groups)
+                  console.warn('[WHATSAPP] List message failed, falling back to text:', listErr);
+                }
+              }
+            }
+          }
         } catch (err) {
           console.error('[WHATSAPP] agent dispatch failed', err);
           try {
@@ -604,6 +669,76 @@ export class WhatsAppService implements MessagingProvider {
 
   getClient(): WhatsAppClient {
     return this.client;
+  }
+
+  // ── Auto-link group to squad ───────────────────────────────────────
+
+  /**
+   * When a linked user sends a message in an unlinked WhatsApp group,
+   * auto-link the group to the sender's squad. This enables the
+   * "Champion adds Marcus to group → group auto-links" flow.
+   */
+  private async autoLinkGroupIfNeeded(groupJid: string, senderNumber: string): Promise<void> {
+    // 1. Already linked?
+    const existing = await prisma.squadGroup.findFirst({
+      where: { platform: 'whatsapp', chatId: groupJid },
+    });
+    if (existing) return;
+
+    // 2. Is the sender linked to a user with a squad?
+    const identity = await prisma.platformIdentity.findUnique({
+      where: {
+        platform_platformUserId: {
+          platform: 'whatsapp',
+          platformUserId: senderNumber,
+        },
+      },
+      include: {
+        user: {
+          include: {
+            squads: {
+              where: { status: 'active' },
+              take: 1,
+              include: { squad: { include: { groups: { where: { platform: 'whatsapp' } } } } },
+            },
+          },
+        },
+      },
+    });
+
+    if (!identity?.user?.squads[0]) return;
+
+    const squadMember = identity.user.squads[0];
+    const squad = squadMember.squad;
+
+    // 3. Only auto-link if this squad has NO WhatsApp group yet
+    if (squad.groups.length > 0) return;
+
+    // 4. Link this group to the squad
+    await prisma.squadGroup.create({
+      data: {
+        squadId: squad.id,
+        platform: 'whatsapp',
+        chatId: groupJid,
+        linkedAt: new Date(),
+      },
+    });
+
+    console.log(`[WHATSAPP] Auto-linked group ${groupJid} to squad ${squad.name} (${squad.id}) via ${senderNumber}`);
+
+    // 5. Confirm to the group
+    try {
+      await this.sendText(groupJid, [
+        `🔗 *Group linked to ${squad.name}!*`,
+        '',
+        'I now know which squad this is. You can:',
+        '• `we won 3-1` — log a match result',
+        '• `scout <opponent>` — get a scouting report',
+        '• `help` — see all commands',
+      ].join('\n'));
+    } catch (err) {
+      console.error('[WHATSAPP] Failed to send auto-link confirmation:', err);
+    }
   }
 
   // ── Personalized rate DMs ────────────────────────────────────────────
