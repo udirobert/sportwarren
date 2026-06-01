@@ -2,10 +2,11 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { PEER_RATING } from '@/lib/match/constants';
 import { generateRateToken } from '@/lib/auth/rate-token';
+import { redisService } from '@/server/services/redis';
 
 /**
  * Cron endpoint to send rating reminder DMs to players who haven't rated yet.
- * Frequency: Every 2 hours (schedule: 15 *#2 * * *)
+ * Frequency: Every 2 hours (crontab: 0 &#42;/2 * * *)
  *
  * Finds verified matches where the rating window is still open and the match
  * was verified 6-20 hours ago. Sends a WhatsApp DM with a personalized rate
@@ -122,7 +123,12 @@ export async function GET(request: Request) {
         const whatsappNumber = member.user.platformIdentities[0]?.platformUserId;
         if (!whatsappNumber) continue;
 
+        // Dedup: only remind once per player per match
+        const reminderKey = `rating-reminder:${match.id}:${member.userId}`;
         try {
+          const alreadySent = await redisService.get(reminderKey);
+          if (alreadySent) continue;
+
           const token = generateRateToken(match.id, member.userId);
           const rateUrl = `${baseUrl}/match/${match.id}/rate?rt=${token}`;
 
@@ -138,6 +144,8 @@ export async function GET(request: Request) {
 
           if (whatsappService) {
             await whatsappService.sendText(whatsappNumber, dm);
+            // Mark as reminded (7-day TTL — well past the rating window)
+            await redisService.set(reminderKey, '1', 7 * 24 * 60 * 60);
             totalReminded++;
           }
         } catch (err) {
