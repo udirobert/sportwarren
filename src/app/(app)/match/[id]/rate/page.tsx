@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { trpc } from '@/lib/trpc-client';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -11,6 +12,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 export default function RateTeammatesPage({ params }: { params: { id: string } }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isTokenAuth = searchParams.has('rt');
   const matchId = params.id;
   const [step, setStep] = useState(0); // 0: Welcome, 1: Rate Teammates, 2: MOTM, 3: Success
   const [teammateIndex, setTeammateIndex] = useState(0);
@@ -270,9 +273,15 @@ export default function RateTeammatesPage({ params }: { params: { id: string } }
                   Teammate attributes will update once the rating window closes in 24 hours.
                 </p>
                 <div className="pt-6">
-                  <Button className="px-12 h-12 text-lg font-bold" onClick={() => router.push('/dashboard')}>
-                    Return to Dashboard
-                  </Button>
+                  {isTokenAuth ? (
+                    <p className="text-muted-foreground text-sm">
+                      You can close this page now. Thanks for rating!
+                    </p>
+                  ) : (
+                    <Button className="px-12 h-12 text-lg font-bold" onClick={() => router.push('/dashboard')}>
+                      Return to Dashboard
+                    </Button>
+                  )}
                 </div>
               </div>
             </Card>

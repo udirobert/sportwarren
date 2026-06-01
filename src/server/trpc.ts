@@ -9,6 +9,7 @@ import {
   generateAuthMessage,
   isSupportedWalletChain,
 } from '@/lib/auth/wallet';
+import { verifyRateToken } from '@/lib/auth/rate-token';
 
 // Re-export for API routes
 export { generateAuthMessage };
@@ -20,6 +21,8 @@ export interface TRPCContext {
   walletAddress?: string;
   chain?: WalletChain;
   ip?: string;
+  /** Set when the request carries a valid rate-token (WhatsApp → Web). */
+  rateTokenMatchId?: string;
 }
 
 // Context for tRPC with wallet signature verification
@@ -32,42 +35,40 @@ export const createTRPCContext = cache(async (opts?: {
   const walletInfo = extractWalletFromHeaders(headers);
   const chain = walletInfo.chain?.toLowerCase();
   
-  // If no wallet address, return unauthenticated context
-  if (!walletInfo.address || !chain || !isSupportedWalletChain(chain)) {
-    return { prisma, ip };
+  // ── Wallet-based auth (primary) ──────────────────────────────────────
+  if (walletInfo.address && chain && isSupportedWalletChain(chain)) {
+    const skipVerification = process.env.SKIP_AUTH_DEV === 'true' && !walletInfo.signature;
+    let verified = false;
+
+    if (skipVerification) {
+      console.warn('[Auth] SKIP_AUTH_DEV enabled — skipping signature verification');
+      verified = true;
+    } else if (walletInfo.signature && walletInfo.message && walletInfo.timestamp) {
+      const verification = await verifyWalletSignature({
+        address: walletInfo.address,
+        chain,
+        signature: walletInfo.signature,
+        message: walletInfo.message,
+        timestamp: parseInt(walletInfo.timestamp, 10),
+      });
+      verified = verification.verified;
+    }
+
+    if (verified) {
+      return { prisma, walletAddress: walletInfo.address, chain, ip };
+    }
   }
 
-  // Auth bypass requires explicit opt-in via SKIP_AUTH_DEV=true
-  // This prevents accidental auth skipping in development
-  const skipVerification = process.env.SKIP_AUTH_DEV === 'true' && !walletInfo.signature;
-
-  let verified = false;
-
-  if (skipVerification) {
-    console.warn('[Auth] SKIP_AUTH_DEV enabled — skipping signature verification');
-    verified = true;
-  } else if (walletInfo.signature && walletInfo.message && walletInfo.timestamp) {
-    // Verify the signature
-    const verification = await verifyWalletSignature({
-      address: walletInfo.address,
-      chain,
-      signature: walletInfo.signature,
-      message: walletInfo.message,
-      timestamp: parseInt(walletInfo.timestamp, 10),
-    });
-    verified = verification.verified;
+  // ── Rate-token auth (WhatsApp → Web fallback) ────────────────────────
+  const rateToken = headers.get('x-rate-token');
+  if (rateToken) {
+    const payload = verifyRateToken(rateToken);
+    if (payload) {
+      return { prisma, userId: payload.userId, ip, rateTokenMatchId: payload.matchId };
+    }
   }
 
-  if (!verified) {
-    return { prisma, ip };
-  }
-
-  return { 
-    prisma,
-    walletAddress: walletInfo.address,
-    chain,
-    ip,
-  };
+  return { prisma, ip };
 });
 
 // Initialize tRPC with typed context
@@ -88,8 +89,20 @@ export const publicProcedure = t.procedure.use(async ({ ctx, next }) => {
   return next({ ctx });
 });
 
-// Protected procedure - requires wallet authentication
+// Protected procedure - requires wallet authentication OR rate-token
 export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+  // ── Rate-token path (WhatsApp → Web): userId already resolved ──
+  if (ctx.userId) {
+    await enforceRateLimit(`user:${ctx.userId}`, {
+      windowMs: 60 * 1000,
+      max: 60,
+      keyPrefix: 'trpc:rl',
+    });
+
+    return next({ ctx: { ...ctx, userId: ctx.userId } });
+  }
+
+  // ── Wallet path ──────────────────────────────────────────────────
   if (!ctx.walletAddress) {
     throw new TRPCError({
       code: 'UNAUTHORIZED',

@@ -48,6 +48,19 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
               if (sig) headers['x-wallet-signature'] = sig;
               if (msg) headers['x-auth-message'] = msg;
               if (ts) headers['x-auth-timestamp'] = ts;
+
+              // Rate-token auth (WhatsApp → Web): read from URL param on first
+              // load and cache in sessionStorage so subsequent tRPC calls still
+              // carry the token even after client-side navigation drops the param.
+              const params = new URLSearchParams(window.location.search);
+              const rt = params.get('rt');
+              if (rt) {
+                try { sessionStorage.setItem('sw_rate_token', rt); } catch {}
+              }
+              const cached = rt || (() => {
+                try { return sessionStorage.getItem('sw_rate_token'); } catch { return null; }
+              })();
+              if (cached) headers['x-rate-token'] = cached;
             }
 
             return headers;
