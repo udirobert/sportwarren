@@ -8,6 +8,7 @@ import type {
 } from './provider-types.js';
 import { dispatchWhatsAppCommand } from './whatsapp-agent';
 import { redisService } from '../redis';
+import { generateRateToken } from '@/lib/auth/rate-token';
 
 export interface WhatsAppConfig {
   apiKey?: string;
@@ -240,6 +241,20 @@ export class WhatsAppService implements MessagingProvider {
           } catch {/* swallow secondary send error */}
         }
       })();
+    }
+
+    // ── Group system events (join / leave / create) ──────────────────
+    if (type === 'system') {
+      const system = message.system;
+      const systemType = system?.type;
+      // When the bot is added to a group, send a welcome message
+      if (systemType === 'user_added' || systemType === 'group_created') {
+        // The group JID is the `from` field for group messages
+        const groupJid = from;
+        void this.handleGroupJoin(groupJid).catch((err) => {
+          console.error('[WHATSAPP] group join handler failed', err);
+        });
+      }
     }
   }
 
@@ -515,6 +530,9 @@ export class WhatsAppService implements MessagingProvider {
 
       // Send match card to both groups
       await this.sendMatchCardIfPossible(pending);
+
+      // Send personalized rate DMs to each squad member
+      await this.sendRateDMs(pending);
     } catch (err) {
       console.error(`Failed to resolve WA verification for match ${matchId}:`, err);
     }
@@ -532,6 +550,8 @@ export class WhatsAppService implements MessagingProvider {
       ``,
       `*${pending.homeSquadName}* ${pending.homeScore} - ${pending.awayScore} *${pending.awaySquadName}*`,
       `Full stats: ${baseUrl}/match/${pending.matchId}`,
+      ``,
+      `⭐ Rate your teammates — check your DMs for your personal link!`,
     ].join('\n');
 
     const imageUrl = `${baseUrl}/api/og/match-card?matchId=${pending.matchId}&squadId=${pending.homeSquadId}`;
@@ -584,6 +604,92 @@ export class WhatsAppService implements MessagingProvider {
 
   getClient(): WhatsAppClient {
     return this.client;
+  }
+
+  // ── Personalized rate DMs ────────────────────────────────────────────
+
+  /**
+   * Send a personalized rate-link DM to every squad member who has a
+   * WhatsApp identity. Each link carries a signed JWT so the rate page
+   * works without a wallet / Privy session.
+   */
+  private async sendRateDMs(pending: PendingWhatsAppVerification): Promise<void> {
+    const baseUrl = process.env.NEXT_PUBLIC_CLIENT_URL || process.env.CLIENT_URL;
+    if (!baseUrl) return;
+
+    // Collect unique member userIds from both squads
+    const [homeMembers, awayMembers] = await Promise.all([
+      prisma.squadMember.findMany({
+        where: { squadId: pending.homeSquadId },
+        select: { userId: true },
+      }),
+      prisma.squadMember.findMany({
+        where: { squadId: pending.awaySquadId },
+        select: { userId: true },
+      }),
+    ]);
+
+    const allUserIds = new Set([
+      ...homeMembers.map((m) => m.userId),
+      ...awayMembers.map((m) => m.userId),
+    ]);
+
+    // Look up WhatsApp identities for these users
+    const identities = await prisma.platformIdentity.findMany({
+      where: {
+        platform: 'whatsapp',
+        userId: { in: Array.from(allUserIds) },
+      },
+      select: { userId: true, platformUserId: true },
+    });
+
+    const rateHours = 24;
+    for (const identity of identities) {
+      try {
+        const token = generateRateToken(pending.matchId, identity.userId);
+        const rateUrl = `${baseUrl}/match/${pending.matchId}/rate?rt=${token}`;
+        const dm = [
+          `⭐ *Time to rate your teammates!*`,
+          ``,
+          `*${pending.homeSquadName}* ${pending.homeScore} - ${pending.awayScore} *${pending.awaySquadName}*`,
+          ``,
+          `Your objective feedback earns you Scout XP and helps your teammates level up.`,
+          `Rating window closes in ${rateHours}h.`,
+          ``,
+          rateUrl,
+        ].join('\n');
+        await this.sendText(identity.platformUserId, dm);
+      } catch (err) {
+        console.error(`[WHATSAPP] Failed to send rate DM to ${identity.platformUserId}:`, err);
+      }
+    }
+  }
+
+  // ── Group welcome handler ────────────────────────────────────────────
+
+  /**
+   * When the bot is added to a WhatsApp group, introduce itself and
+   * attempt to match the group to an existing squad.
+   */
+  private async handleGroupJoin(groupJid: string): Promise<void> {
+    const welcome = [
+      "👋 *Hey! I'm Marcus, Academy Director at SportWarren.*",
+      "",
+      "I'm here to help your squad track matches, rate performances, and scout opponents — all from this group chat.",
+      "",
+      "Quick commands:",
+      "• `help` — see everything I can do",
+      "• `squad` — view your squad info",
+      "• `link WA-XXXXXX` — link your account (get code from Telegram)",
+      "",
+      "Once you've linked your account, just tell me a result like \"we won 3-1\" and I'll handle the rest!",
+    ].join('\n');
+
+    try {
+      await this.sendText(groupJid, welcome);
+    } catch (err) {
+      console.error(`[WHATSAPP] Failed to send group welcome to ${groupJid}:`, err);
+    }
   }
 }
 
