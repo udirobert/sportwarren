@@ -20,6 +20,10 @@ export function buildHelpText(): string {
 /account link - Link Telegram to SportWarren
 /account unlink - Unlink Telegram
 
+*Match Intelligence*
+/history - Last 5 match results
+/scout <opponent> - AI scout report on opponent
+
 *AI Staff*
 /ask <question> - Ask AI Staff
 
@@ -43,6 +47,8 @@ export function buildWelcomeMessage(): string {
     "/squad fixtures — Upcoming Matches",
     "/account app — Open Mini App",
     "/account profile — Your Stats",
+    "/scout Red Lions — AI Scout Report",
+    "/history — Recent Match Results",
     "/ask coach — AI Analysis",
     "/treasury — Squad Economy",
     "/help — Show all commands",

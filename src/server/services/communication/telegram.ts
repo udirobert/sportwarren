@@ -134,6 +134,7 @@ export class TelegramService {
   private aiParseRateLimit = new Map<string, number[]>();
   private pendingSquadSelectText = new Map<string, { text: string; expiresAt: number }>();
   private generalChatMemory = new Map<number, GeneralChatMessage[]>();
+  private pendingCasualMatches = new Map<string, { chatId: number; matchText: string; expiresAt: number }>();
 
   constructor(redisService: TelegramRedisStore | null = null) {
     const token = process.env.TELEGRAM_BOT_TOKEN;
@@ -192,6 +193,10 @@ export class TelegramService {
       ask: {
         handleAiStaffQuery: this.handleAiStaffQuery.bind(this),
         handleGeneralAiQuery: this.handleGeneralAiQuery.bind(this),
+        sendMarkdown: (chatId: number, text: string) => this.sendMarkdown(chatId, text),
+      },
+      scout: {
+        handleScoutRequest: this.handleScoutRequest.bind(this),
         sendMarkdown: (chatId: number, text: string) => this.sendMarkdown(chatId, text),
       },
     });
@@ -330,8 +335,37 @@ export class TelegramService {
           return;
         }
 
-        await this.sendMarkdown(chatId, this.buildHelpMessage());
-        console.log(`[TELEGRAM] /start sent help chatId=${chatId}`);
+        const onboardingUrl = buildTelegramMiniAppUrl({ mode: "onboarding" });
+        const keyboard: TelegramBot.InlineKeyboardMarkup = onboardingUrl
+          ? {
+              inline_keyboard: [
+                [
+                  {
+                    text: "Create Squad",
+                    web_app: { url: onboardingUrl },
+                  },
+                ],
+                [
+                  {
+                    text: "Join a Squad",
+                    web_app: { url: onboardingUrl },
+                  },
+                ],
+                [
+                  {
+                    text: "View Commands",
+                    callback_data: "show_help",
+                  },
+                ],
+              ],
+            }
+          : { inline_keyboard: [] };
+
+        await this.bot.sendMessage(chatId, this.buildHelpMessage(), {
+          parse_mode: "Markdown",
+          reply_markup: keyboard,
+        });
+        console.log(`[TELEGRAM] /start sent onboarding buttons chatId=${chatId}`);
       } catch (error) {
         console.error(`[TELEGRAM] /start failed chatId=${chatId}:`, error);
         await this.bot.sendMessage(
@@ -384,6 +418,81 @@ export class TelegramService {
 
     this.bot.on("callback_query", async (query) => {
       await this.handleCallbackQuery(query);
+    });
+
+    this.bot.on("new_chat_members", async (msg) => {
+      const newMembers = msg.new_chat_members ?? [];
+      const botInfo = await this.bot.getMe().catch(() => null);
+      const botWasAdded = botInfo && newMembers.some((m) => m.id === botInfo.id);
+      if (!botWasAdded) return;
+
+      const addedByUserId = msg.from?.id?.toString();
+      if (!addedByUserId) return;
+
+      const groupChatId = String(msg.chat.id);
+
+      // Already linked?
+      const existing = await findSquadGroupByChatId(prisma, groupChatId);
+      if (existing) return;
+
+      // Find the user's PlatformIdentity
+      const identity = await prisma.platformIdentity.findFirst({
+        where: { platform: "telegram", platformUserId: addedByUserId },
+      });
+      if (!identity) return;
+
+      // Find squads where user is captain and has an unlinked Telegram SquadGroup
+      const memberships = await prisma.squadMember.findMany({
+        where: { userId: identity.userId, role: "captain" },
+        select: { squadId: true, squad: { select: { name: true } } },
+      });
+
+      const squadIds = memberships.map((m) => m.squadId);
+      const unlinkedGroups = await prisma.squadGroup.findMany({
+        where: {
+          platform: "telegram",
+          squadId: { in: squadIds },
+          chatId: null,
+        },
+        include: { squad: { select: { name: true } } },
+      });
+
+      if (unlinkedGroups.length === 0) return;
+
+      if (unlinkedGroups.length === 1) {
+        const group = unlinkedGroups[0];
+        await prisma.squadGroup.update({
+          where: { id: group.id },
+          data: {
+            chatId: groupChatId,
+            platformUserId: addedByUserId,
+            username: msg.from?.username ?? null,
+            linkedAt: new Date(),
+          },
+        });
+
+        const keyboard = {
+          inline_keyboard: [
+            [
+              { text: "✓ Keep Linked", callback_data: `autolink_confirm:${group.squadId}` },
+              { text: "✗ Unlink", callback_data: `autolink_dismiss:${group.squadId}` },
+            ],
+          ],
+        };
+
+        await this.bot.sendMessage(
+          msg.chat.id,
+          `🔗 *Auto-linked to ${group.squad.name}*\n\nThis group is now connected to your squad. Members can use squad commands here.`,
+          { parse_mode: "Markdown", reply_markup: keyboard },
+        );
+      } else {
+        const squadNames = unlinkedGroups.map((g) => `• ${g.squad.name}`).join("\n");
+        await this.bot.sendMessage(
+          msg.chat.id,
+          `👋 *SportWarren Bot added!*\n\nYou captain multiple squads:\n${squadNames}\n\nUse /start with a link token from Settings > Connections > Telegram to link this group to a specific squad.`,
+          { parse_mode: "Markdown" },
+        );
+      }
     });
   }
 
@@ -715,7 +824,8 @@ export class TelegramService {
       const linkedChat = await this.requireLinkedChat(chatId);
       const history = this.getGeneralChatHistory(chatId);
       const guidanceRules = [
-        "You are the SportWarren assistant.",
+        "You are Marcus, Academy Director at SportWarren.",
+        "Always speak as Marcus. Never mention AI, LLMs, models, OpenAI, Anthropic, Venice, Llama or any provider. If asked who you are: \"I'm Marcus, Academy Director at SportWarren.\"",
         "Tone: direct, punchy, football-first. No corporate phrasing.",
         "Never call the user \"Boss\".",
         "Keep replies short (2-4 sentences).",
@@ -1401,6 +1511,7 @@ export class TelegramService {
   private async handleNaturalLanguageMatchLog(
     chatId: number,
     matchText: string,
+    msg?: any,
   ): Promise<boolean> {
     const trimmed = matchText.trim();
     if (trimmed.length < 6) {
@@ -1408,14 +1519,43 @@ export class TelegramService {
     }
 
     const parsed = parseTelegramMatchResult(trimmed);
-    if (parsed) {
-      await this.handleMatchLog(chatId, trimmed);
-      return true;
+    const aiParsed = parsed ? null : await parseNaturalLanguageMatch(trimmed);
+
+    if (!parsed && (!aiParsed || aiParsed.confidence <= 0.7)) {
+      return false;
     }
 
-    const aiParsed = await parseNaturalLanguageMatch(trimmed);
-    if (!aiParsed || aiParsed.confidence <= 0.7) {
-      return false;
+    const isGroup = msg?.chat?.type === "group" || msg?.chat?.type === "supergroup";
+
+    if (isGroup) {
+      const casualKey = randomBytes(4).toString("hex");
+      this.pendingCasualMatches.set(casualKey, {
+        chatId,
+        matchText: trimmed,
+        expiresAt: Date.now() + 10 * 60 * 1000,
+      });
+
+      const preview = parsed
+        ? `${parsed.teamScore}-${parsed.opponentScore} vs ${parsed.opponent}`
+        : aiParsed
+          ? `${aiParsed.homeScore}-${aiParsed.awayScore} (${aiParsed.opponent})`
+          : trimmed;
+
+      const keyboard = {
+        inline_keyboard: [
+          [
+            { text: "✓ Log Match", callback_data: `casual_match_confirm:${casualKey}` },
+            { text: "✗ Not a Match", callback_data: `casual_match_dismiss:${casualKey}` },
+          ],
+        ],
+      };
+
+      await this.bot.sendMessage(
+        chatId,
+        `⚽ Detected match: *${preview}*\n\nLog this result?`,
+        { parse_mode: "Markdown", reply_markup: keyboard },
+      );
+      return true;
     }
 
     await this.handleMatchLog(chatId, trimmed);
@@ -1810,6 +1950,74 @@ export class TelegramService {
       return false;
     } catch {
       return false;
+    }
+  }
+
+  async handleScoutRequest(
+    chatId: number,
+    opponent: string,
+    userId: string,
+    squadId: string,
+  ): Promise<void> {
+    const { createScoutReport } = await import("../ai/scout-report");
+    const { createPlatformSettlement } = await import("../blockchain/x402-client");
+    const { kiteAIService } = await import("../ai/kite");
+
+    const SCOUT_PRICE = Number(process.env.KITE_SCOUT_PRICE_USDC || "0.005");
+
+    const userLimit = kiteAIService.getScoutUserDailyLimit(userId);
+    const userSpending = await kiteAIService.getUserSpending(userId, userLimit);
+    if (userLimit > 0 && userSpending.remaining < SCOUT_PRICE) {
+      await this.sendMarkdown(chatId,
+        `⚠️ *Daily scout limit reached.*\n\nSpent: $${userSpending.spent.toFixed(2)} · Remaining: $${userSpending.remaining.toFixed(2)}`
+      );
+      return;
+    }
+
+    const squadLimit = kiteAIService.getScoutSquadDailyLimit(squadId);
+    const squadSpending = await kiteAIService.getSquadSpending(squadId, squadLimit);
+    if (squadLimit > 0 && squadSpending.remaining < SCOUT_PRICE) {
+      await this.sendMarkdown(chatId,
+        `⚠️ *Squad daily scout limit reached.*\n\nSpent: $${squadSpending.spent.toFixed(2)} · Remaining: $${squadSpending.remaining.toFixed(2)}`
+      );
+      return;
+    }
+
+    await this.bot.sendChatAction(chatId, "typing");
+
+    const settlement = await createPlatformSettlement(SCOUT_PRICE);
+
+    try {
+      const report = await createScoutReport({
+        opponent,
+        requestedBy: userId,
+        priceUsdc: SCOUT_PRICE,
+        settlement,
+        enforceUserLimit: true,
+        enforceSquadLimit: true,
+      });
+
+      const remaining = await kiteAIService.getUserSpending(userId, userLimit);
+      const dataSourceLine = report.dataSources.length
+        ? `📊 _${report.dataSources.join(" · ")}_`
+        : "📊 _AI-generated (no stored match data)_";
+
+      const explorerBase = process.env.KITE_EXPLORER_URL || "https://testnet.kitescan.ai";
+      const txLine = report.txHash
+        ? `[View on explorer](${explorerBase}/tx/${report.txHash})`
+        : "";
+
+      await this.sendMarkdown(chatId, [
+        `🔍 *Scout Report: ${report.opponent}*`,
+        "",
+        report.summary,
+        "",
+        dataSourceLine,
+        `💰 Cost: $${report.priceUsdc.toFixed(3)} · Budget left: $${remaining.remaining.toFixed(2)}`,
+        txLine,
+      ].filter(Boolean).join("\n"));
+    } catch (err) {
+      await this.sendMarkdown(chatId, `❌ Scout failed: ${(err as Error).message}`);
     }
   }
 
@@ -2814,6 +3022,59 @@ export class TelegramService {
       const [callbackAction, verifyMatchId] = data.split(":");
       const verifyType = callbackAction === "verify_match_confirm" ? "confirm" : "dispute";
       await this.handleGroupVerificationCallback(query, verifyType, verifyMatchId);
+      return;
+    }
+
+    if (data === "show_help") {
+      const { buildHelpText } = await import("./telegram/commands/help-text");
+      await this.bot.answerCallbackQuery(query.id);
+      await this.bot.sendMessage(chatId, buildHelpText(), { parse_mode: "Markdown" });
+      return;
+    }
+
+    if (data.startsWith("autolink_confirm:")) {
+      await this.bot.answerCallbackQuery(query.id, { text: "Group linked!" });
+      await this.bot.editMessageReplyMarkup({ inline_keyboard: [] }, { chat_id: chatId, message_id: messageId });
+      return;
+    }
+
+    if (data.startsWith("autolink_dismiss:")) {
+      const squadId = data.split(":")[1];
+      await prisma.squadGroup.updateMany({
+        where: { platform: "telegram", squadId, chatId: String(chatId) },
+        data: { chatId: null, platformUserId: null, username: null, linkedAt: null },
+      });
+      await this.bot.answerCallbackQuery(query.id, { text: "Group unlinked." });
+      await this.bot.editMessageText("Group unlinked. Use /start with a link token to reconnect.", {
+        chat_id: chatId,
+        message_id: messageId,
+      });
+      return;
+    }
+
+    if (data.startsWith("casual_match_confirm:")) {
+      const casualKey = data.split(":")[1];
+      const pending = this.pendingCasualMatches.get(casualKey);
+      if (!pending || pending.expiresAt < Date.now()) {
+        this.pendingCasualMatches.delete(casualKey);
+        await this.bot.answerCallbackQuery(query.id, { text: "This detection expired." });
+        return;
+      }
+      this.pendingCasualMatches.delete(casualKey);
+      await this.bot.answerCallbackQuery(query.id, { text: "Logging match..." });
+      await this.bot.editMessageReplyMarkup({ inline_keyboard: [] }, { chat_id: chatId, message_id: messageId });
+      await this.handleMatchLog(chatId, pending.matchText);
+      return;
+    }
+
+    if (data.startsWith("casual_match_dismiss:")) {
+      const casualKey = data.split(":")[1];
+      this.pendingCasualMatches.delete(casualKey);
+      await this.bot.answerCallbackQuery(query.id, { text: "Match dismissed." });
+      await this.bot.editMessageText("Match detection dismissed.", {
+        chat_id: chatId,
+        message_id: messageId,
+      });
       return;
     }
 
