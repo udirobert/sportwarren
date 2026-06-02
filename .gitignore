@@ -39,6 +39,7 @@ next-env.d.ts
 # Build output
 /dist
 /build
+.pnpm
 
 # Logs
 dev.log
@@ -71,11 +72,20 @@ dev.log
 /.blackboxcli/
 /.junie/
 /.claude/
+/.antigravitycli/
+/.commandcode/
+/.openclaude/
+/.qoder/
+/.qwen/
+/.pnpm/
 # Locally installed agent skills (re-installable via `npx skills install`)
 .agents/
 
 # Runtime build artifacts (large tarballs)
 /artifacts/
+contracts/**/artifacts/
+contracts/**/cache/
+contracts/**/.openzeppelin/
 docs/DEPLOY_HETZNER_RUNTIME.md
 
 .kite-passport/
