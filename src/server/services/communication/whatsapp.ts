@@ -137,7 +137,22 @@ export class WhatsAppService implements MessagingProvider {
     try {
       await redisService.set(`wa:avail:${to}`, request.matchId, 7 * 24 * 60 * 60); // 7 days
     } catch {/* redis optional */}
-    await this.sendAvailabilityTemplate(to, request.matchDetails, request.matchId);
+
+    // Send plain text prompting for inline reply
+    const msg = [
+      `⚽ *Match availability check*`,
+      '',
+      request.matchDetails,
+      '',
+      `Reply with your status:`,
+      `• *in* — I'm playing`,
+      `• *out* — Can't make it`,
+      `• *maybe* — Not sure yet`,
+      '',
+      `_Just type your reply below — no link needed._`,
+    ].join('\n');
+
+    await this.sendText(to, msg);
   }
 
   async sendAvailabilityTemplate(to: string, matchDetails: string, matchId: string): Promise<void> {
@@ -226,6 +241,14 @@ export class WhatsAppService implements MessagingProvider {
           void this.handleVerificationCallback(from, 'dispute', matchId).catch((err) => {
             console.error('[WHATSAPP] Verification dispute handler failed', err);
           });
+        } else if (typeof id === 'string' && id.startsWith('squad_confirm_')) {
+          const squadId = id.replace('squad_confirm_', '');
+          void this.sendText(from, `✅ Squad link confirmed for ${squadId.slice(0, 8)}. Commands:\n• \`we won 3-1\` — log a result\n• \`scout <opponent>\` — scouting report`).catch(() => {});
+        } else if (typeof id === 'string' && id.startsWith('squad_unlink_')) {
+          const squadId = id.replace('squad_unlink_', '');
+          void prisma.squadGroup.deleteMany({ where: { squadId, platform: 'whatsapp' } })
+            .then(() => this.sendText(from, '❌ Group unlinked. Use `link` to connect a different squad.'))
+            .catch(() => {});
         }
       }
       // list_reply intentionally unhandled for now
@@ -626,13 +649,48 @@ export class WhatsAppService implements MessagingProvider {
       try {
         await this.sendImage(groupJid, imageUrl, caption);
       } catch {
-        // Fallback to text-only
         try {
           await this.sendText(groupJid, caption);
-        } catch {
-          // Give up
+        } catch {}
+      }
+    }
+
+    // Send MOTM player card
+    try {
+      const match = await prisma.match.findUnique({
+        where: { id: pending.matchId },
+        include: { motmVotes: { select: { targetId: true } } },
+      });
+
+      if (match?.motmVotes.length) {
+        const voteCounts = new Map<string, number>();
+        for (const v of match.motmVotes) {
+          voteCounts.set(v.targetId, (voteCounts.get(v.targetId) ?? 0) + 1);
+        }
+        const motmProfileId = [...voteCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+        const motmProfile = await prisma.playerProfile.findUnique({
+          where: { id: motmProfileId },
+          include: { user: { select: { name: true } } },
+        });
+
+        if (motmProfile) {
+          const cardUrl = `${baseUrl}/api/og/player-card?profileId=${motmProfileId}&matchId=${pending.matchId}`;
+          const motmCaption = `🏆 *Man of the Match: ${motmProfile.user?.name ?? 'Player'}*`;
+
+          for (const groupJid of [pending.homeGroupJid, pending.awayGroupJid]) {
+            if (!groupJid) continue;
+            try {
+              await this.sendImage(groupJid, cardUrl, motmCaption);
+            } catch {
+              try {
+                await this.sendText(groupJid, motmCaption);
+              } catch {}
+            }
+          }
         }
       }
+    } catch (err) {
+      console.error('[WHATSAPP] Failed to send MOTM player card:', err);
     }
   }
 
@@ -699,7 +757,17 @@ export class WhatsAppService implements MessagingProvider {
             squads: {
               where: { status: 'active' },
               take: 1,
-              include: { squad: { include: { groups: { where: { platform: 'whatsapp' } } } } },
+              include: {
+                squad: {
+                  include: {
+                    groups: { where: { platform: 'whatsapp' } },
+                    members: {
+                      include: { user: { select: { name: true } } },
+                      take: 12,
+                    },
+                  },
+                },
+              },
             },
           },
         },
@@ -726,16 +794,29 @@ export class WhatsAppService implements MessagingProvider {
 
     console.log(`[WHATSAPP] Auto-linked group ${groupJid} to squad ${squad.name} (${squad.id}) via ${senderNumber}`);
 
-    // 5. Confirm to the group
+    // 5. Confirm with roster and ask Champion to verify
+    const rosterLines = squad.members
+      .map((m) => `• ${m.user.name ?? 'Player'}`)
+      .join('\n');
+
+    const confirmMsg = [
+      `🔗 *Group linked to ${squad.name}!*`,
+      '',
+      '*Current roster:*',
+      rosterLines || '_No players yet_',
+      '',
+      'Is this the right squad? Tap below to confirm, or `unlink` to undo.',
+    ].join('\n');
+
     try {
-      await this.sendText(groupJid, [
-        `🔗 *Group linked to ${squad.name}!*`,
-        '',
-        'I now know which squad this is. You can:',
-        '• `we won 3-1` — log a match result',
-        '• `scout <opponent>` — get a scouting report',
-        '• `help` — see all commands',
-      ].join('\n'));
+      await this.sendButtons(
+        groupJid,
+        confirmMsg,
+        [
+          { id: `squad_confirm_${squad.id}`, title: '✅ Correct' },
+          { id: `squad_unlink_${squad.id}`, title: '❌ Wrong squad' },
+        ],
+      );
     } catch (err) {
       console.error('[WHATSAPP] Failed to send auto-link confirmation:', err);
     }
