@@ -147,7 +147,14 @@ export class TelegramService {
 
     this.bot = new TelegramBot(token, { polling: !useWebhook });
 
-    if (!useWebhook) {
+    if (useWebhook) {
+      // Self-register webhook with Telegram (fire-and-forget)
+      const webhookPath = `/api/telegram/webhook/${token.slice(-8)}`;
+      const fullWebhookUrl = `${useWebhook.replace(/\/$/, '')}${webhookPath}`;
+      this.setWebhook(fullWebhookUrl).catch((err) => {
+        console.warn('⚠️ Failed to set Telegram webhook, falling back to polling:', (err as Error).message);
+      });
+    } else {
       this.bot.on("polling_error", (error: Error) => {
         if (!error.message.includes("409 Conflict")) {
           console.error("Telegram polling error:", error.message);
