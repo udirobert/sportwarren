@@ -15,12 +15,14 @@ import { PaidCommand } from './paid';
 import { RosterCommand } from './roster';
 import { HelpCommand } from './help';
 import { LinkWhatsAppCommand } from './linkwhatsapp';
+import { HistoryCommand } from './history';
 
 // Grouped commands (complex routing)
 import { SquadCommand } from './squad';
 import { AccountCommand } from './account';
 import { TreasuryCommand } from './treasury-cmd';
 import { AskCommand } from './ask';
+import { scoutCommand } from './scout';
 
 // Singleton command instances for handler wiring
 export const squadCommand = new SquadCommand();
@@ -41,12 +43,14 @@ export const COMMANDS: TelegramCommand[] = [
   new RosterCommand(),
   new HelpCommand(),
   new LinkWhatsAppCommand(),
+  new HistoryCommand(),
 
   // Grouped commands (route to subcommands, handlers wired via wireCommandHandlers)
   squadCommand,
   accountCommand,
   treasuryCommand,
   askCommand,
+  scoutCommand,
 ];
 
 /**
@@ -80,11 +84,16 @@ export function wireCommandHandlers(handlers: {
     handleGeneralAiQuery: (chatId: number, text: string) => Promise<void>;
     sendMarkdown: (chatId: number, text: string) => Promise<unknown>;
   };
+  scout: {
+    handleScoutRequest: (chatId: number, opponent: string, userId: string, squadId: string) => Promise<void>;
+    sendMarkdown: (chatId: number, text: string) => Promise<unknown>;
+  };
 }): void {
   squadCommand.setHandlers(handlers.squad);
   accountCommand.setHandlers(handlers.account);
   treasuryCommand.setHandlers(handlers.treasury);
   askCommand.setHandlers(handlers.ask);
+  scoutCommand.setHandlers(handlers.scout);
 }
 
 /**
