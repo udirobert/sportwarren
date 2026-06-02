@@ -274,35 +274,14 @@ export class TelegramService {
     // Telegram supports hierarchical commands: /group shows children in menu
     this.bot
       .setMyCommands([
-        // === PRIMARY COMMANDS (always visible) ===
-        {
-          command: "start",
-          description: "Link or view your squad",
-        },
-        {
-          command: "help",
-          description: "Show all commands",
-        },
-        // === SQUAD GROUP ===
-        { command: "squad", description: "Squad commands" }, // Parent
-        { command: "squad log", description: "Submit match result" },
-        { command: "squad stats", description: "View squad stats" },
-        { command: "squad available", description: "Set availability" },
-        { command: "squad roster", description: "View availability" },
-        { command: "squad fixtures", description: "View fixtures" },
-        // === ACCOUNT GROUP ===
-        { command: "account", description: "Account commands" }, // Parent
-        { command: "account app", description: "Open Mini App" },
-        { command: "account profile", description: "View profile" },
-        { command: "account myteams", description: "View all squads" },
-        { command: "account link", description: "Link Telegram to SportWarren" },
-        { command: "account unlink", description: "Unlink Telegram from SportWarren" },
-        // === AI GROUP ===
-        { command: "ask", description: "Ask AI Staff (e.g. /ask Coach)" }, // Single command
-        // === TREASURY GROUP (captains only) ===
-        { command: "treasury", description: "Treasury commands" }, // Parent
-        { command: "treasury view", description: "Open treasury" },
-        { command: "treasury fee", description: "Propose match fee" },
+        { command: "start", description: "Link or view your squad" },
+        { command: "help", description: "Show all commands" },
+        { command: "scout", description: "AI scouting report on opponent" },
+        { command: "history", description: "Recent match results" },
+        { command: "squad", description: "Squad commands" },
+        { command: "account", description: "Account commands" },
+        { command: "ask", description: "Ask AI Staff" },
+        { command: "treasury", description: "Treasury commands" },
       ])
       .catch((error: Error) => {
         console.warn("Failed to register Telegram commands:", error.message);
