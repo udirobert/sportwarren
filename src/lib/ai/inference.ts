@@ -6,7 +6,7 @@ import { inferenceGuard, InferenceTier } from '@/server/services/ai/inference-gu
 
 /**
  * Shared AI Inference Orchestrator - Single Source of Truth
- * Priority: kilocode (Primary) → Venice (First Fallback) → OpenAI (Second Fallback)
+ * Priority: Venice (Primary) → OpenAI (Fallback) → kilocode (Last resort, free tier expired)
  */
 
 export type AIMessageContent = string | Array<{ type: 'text'; text: string } | { type: 'image_url'; image_url: { url: string; detail?: string } }>;
@@ -44,11 +44,6 @@ export interface InferenceOptions {
 export function getAllAvailableProviders(): AIProvider[] {
     const providers: AIProvider[] = [];
 
-    const kilocode = getKilocodeClient();
-    if (kilocode) {
-        providers.push({ name: 'kilocode', client: kilocode, model: KILOCODE_MODEL_ID });
-    }
-
     const venice = getVeniceClient();
     if (venice) {
         providers.push({ name: 'venice', client: venice, model: VENICE_MODEL_ID });
@@ -57,6 +52,11 @@ export function getAllAvailableProviders(): AIProvider[] {
     const openai = getOpenAIClient();
     if (openai) {
         providers.push({ name: 'openai', client: openai, model: OPENAI_MODEL_ID });
+    }
+
+    const kilocode = getKilocodeClient();
+    if (kilocode) {
+        providers.push({ name: 'kilocode', client: kilocode, model: KILOCODE_MODEL_ID });
     }
 
     return providers;
