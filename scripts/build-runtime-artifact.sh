@@ -38,9 +38,11 @@ mkdir -p "$BUILD_DIR/scripts"
 cp scripts/deploy-runtime-release.sh "$BUILD_DIR/scripts/deploy-runtime-release.sh"
 cp package.json "$BUILD_DIR/package.json"
 
-# Regenerate Prisma client inside standalone bundle so it matches the schema
+# Regenerate Prisma client inside standalone bundle so it matches the schema.
+# Non-fatal: the main `pnpm prisma generate` above already produced a working
+# client; this step only refreshes platform-specific engine binaries.
 cp prisma/schema.prisma "$BUILD_DIR/.next/standalone/"
-(cd "$BUILD_DIR/.next/standalone" && npx prisma generate 2>/dev/null)
+(cd "$BUILD_DIR/.next/standalone" && npx prisma generate 2>/dev/null) || true
 rm -f "$BUILD_DIR/.next/standalone/schema.prisma"
 
 cp ecosystem.config.cjs "$BUILD_DIR/ecosystem.config.cjs"
