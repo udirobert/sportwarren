@@ -39,6 +39,15 @@ The Telegram bot implements a fully automated post-match pipeline:
 
 **Auto-Created Opponents:** When logging against an unknown squad, a placeholder `Squad` record is created with `isPlaceholder: true` so the match proceeds. The opponent can claim it later via the Mini App.
 
+### WhatsApp Match Lifecycle (Group-Native)
+
+WhatsApp mirrors the Telegram flow but lives entirely inside the squad group chat:
+
+1. **Auto-link** — Marcus joins a group, matches the Champion's phone number to a squad record, and links automatically.
+2. **Detection** — Regex + AI parser catches results from casual chat; posts confirm/dispute buttons to the group.
+3. **Rating** — After consensus closes, Marcus DMs each player a signed rate link (no login required). A 2-hour cron nudges anyone who hasn't rated.
+4. **Cards** — FIFA-style player cards posted back to the group once ratings are submitted.
+
 ### Rating Mechanics
 - **Consensus Logic:** Uses **Median** scores to neutralize outliers and trolling.
 - **Scout XP:** Raters earn "Scout XP" when their ratings align with the squad consensus — inaccurate raters lose influence over time.
@@ -157,6 +166,7 @@ User B clicks "Challenge Back" → new URL copied → loop restarts
 | **Phase 1** | **Core Loop:** Match logging, Algorand verification, XP system. | ✅ 100% |
 | **Phase 2** | **Agents & Economy:** Kite AI x402, Staff Office, Squad DAOs. | ✅ 100% |
 | **Phase 3** | **Viral Features:** Formation playground, counter-play loop, Lens Social, Derby tracking. | ✅ 95% |
+| **Phase 3b** | **WhatsApp Engagement:** Auto-link, RSVP reply, scout lists, rating reminders DM, rate-token auth, player cards. | ✅ 100% |
 | **Phase 4** | **Immersive Evolution:** 3D Broadcast Engine, "Digital Twin" sim. | 🚀 Future |
 
 ---

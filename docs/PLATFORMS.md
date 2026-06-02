@@ -20,20 +20,25 @@ Telegram is the primary surface for **squad coordination and power users**.
 
 ---
 
-## 🟢 WhatsApp: Operational Nudges
-WhatsApp reaches the broadest, least technical squad members with **high-frequency utility**.
+## 🟢 WhatsApp: Squad Engagement
+WhatsApp reaches the broadest, least technical squad members. All messages are signed by **Marcus**, the squad's Academy Director.
 
 ### Features
-- **Marcus AI Persona:** All communications are signed by Marcus, your Squad's Academy Director.
-- **Interactive Workflows:** One-tap buttons for match RSVP and result verification.
-- **Agent Commander:** Direct natural-language interface for the Kite Agentic Economy.
+- **Auto-link on join:** When Marcus is added to a group, it auto-links to the squad whose Champion phone number matches a group member.
+- **Welcome handler:** Marcus introduces itself to the group on first add.
+- **Match detection & verification:** Detects results from casual chat ("we won 3-1"), posts confirm/dispute buttons, auto-verifies at 3 confirms.
+- **RSVP via inline reply:** Players reply `in`, `out`, or `maybe` directly in chat to availability requests — no web form needed.
+- **Scout reports as interactive lists:** `scout <opponent>` returns a Kapso interactive list message, tappable on mobile.
+- **Rating reminders DM:** Cron (every 2h) nudges players who haven't rated teammates after a match.
+- **Rate-token auth:** Players tap a signed link in DM to rate teammates — no Privy login required. Wallet banners are suppressed for these sessions.
+- **Post-match player cards:** FIFA-style player cards posted to the group after consensus closes.
 
 ### Management Commands
 | Message | Action |
 |---|---|
-| `scout <opponent>` | Autonomous AI scouting report with a SportWarren attestation receipt. |
-| `trigger-auto-scout` | **Demo:** Instantly trigger the 24h pre-match autonomous scout. |
-| `attestations` | Show recent agent actions, receipt ids, and KiteScan links when a tx hash exists. |
+| `scout <opponent>` | Autonomous AI scouting report (interactive list). |
+| `trigger-auto-scout` | Instantly trigger the 24h pre-match autonomous scout. |
+| `attestations` | Recent agent actions and KiteScan links. |
 | `whoami` | List your linked platform identities. |
 | `unlink` | Remove your WhatsApp connection from SportWarren. |
 | `cost` | View pricing for autonomous agent services. |

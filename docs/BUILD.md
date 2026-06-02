@@ -14,16 +14,16 @@
 ```bash
 git clone https://github.com/udirobert/sportwarren.git
 cd sportwarren
-npm install
+pnpm install
 cp .env.example .env.local
 
 # Database Setup
 brew services start postgresql@14
 psql postgres -c "CREATE DATABASE sportwarren;"
-psql sportwarren < prisma/migrations/001_init.sql
-npx prisma generate
+pnpm prisma migrate deploy
+pnpm prisma generate
 
-npm run dev
+pnpm run dev
 ```
 
 **Local URLs:** Frontend: http://localhost:3000 | API: http://localhost:3000/api/trpc
@@ -39,6 +39,17 @@ SportWarren uses a role-specific multi-chain system. Fallback **Simulation Mode*
 - `WEB3_PRIVATE_KEY`: Platform wallet for x402 settlements on Kite.
 - `TELEGRAM_BOT_TOKEN`: Token from BotFather.
 - `KAPSO_API_KEY`: For WhatsApp delivery.
+- `CRON_SECRET`: Bearer token for `/api/cron/*` endpoints. Required.
+- `RATE_TOKEN_SECRET`: Signs WhatsApp rate links. Falls back to `CRON_SECRET` if unset.
+
+### Cron Endpoints
+| Endpoint | Schedule | Purpose |
+|----------|----------|---------|
+| `/api/cron/verification-expiry` | Every 15 min | Expires unverified pending matches |
+| `/api/cron/consensus` | Every 15 min | Closes expired rating windows |
+| `/api/cron/rating-reminders` | Every 2h | DMs players who haven't rated teammates |
+
+All require `Authorization: Bearer <CRON_SECRET>`.
 
 ### Chain Responsibility Matrix
 | Network | Responsibility | Key Variables |
@@ -63,7 +74,7 @@ For the long-term production API, we use a lean **runtime-only artifact** on Het
 
 #### 1. Build Artifact
 ```bash
-npm run deploy:runtime:build
+pnpm run deploy:runtime:build
 # Produces artifacts/sportwarren-runtime-TIMESTAMP.tar.gz
 ```
 
@@ -72,7 +83,7 @@ Upload the artifact to the server and run the deploy script:
 ```bash
 bash scripts/deploy-runtime-release.sh /path/to/sportwarren-runtime-*.tar.gz
 ```
-The script unpacks the release, symlinks shared `.env` and `storage`, and restarts PM2.
+The script unpacks the release, symlinks shared `.env` and `storage`, runs pending Prisma migrations, regenerates the Prisma client in the standalone bundle, and restarts PM2.
 
 #### 3. PM2 Management
 The `ecosystem.config.cjs` runs the Next.js standalone server on port `5200`. Use `pm2 status` and `pm2 logs` for monitoring.
@@ -83,10 +94,10 @@ The `ecosystem.config.cjs` runs the Next.js standalone server on port `5200`. Us
 
 ```bash
 # Unit & Integration
-npm run test
+pnpm run test
 
 # Production Build Check
-npm run build
+pnpm run build
 ```
 
 **Known Warnings:** Deprecated `punycode` and missing Redis are non-fatal; the system handles them gracefully.
