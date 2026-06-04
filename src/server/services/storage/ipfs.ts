@@ -1,4 +1,4 @@
-import type { StoredObject } from './types';
+import type { SaveBase64Opts, StoredObject } from './types';
 
 function cfg() {
   const uploadUrl = (process.env.IPFS_GATEWAY_UPLOAD_URL || '').trim();
@@ -10,13 +10,7 @@ function cfg() {
   return { uploadUrl, readUrl, apiKey };
 }
 
-export async function saveBase64ToIpfs(opts: {
-  base64Data: string;
-  squadId: string;
-  mediaId: string;
-  extension: string;
-  mimeType: string;
-}): Promise<StoredObject> {
+export async function saveBase64ToIpfs(opts: SaveBase64Opts): Promise<StoredObject> {
   const { uploadUrl, apiKey } = cfg();
   const blob = Buffer.from(opts.base64Data, 'base64');
 
@@ -25,8 +19,12 @@ export async function saveBase64ToIpfs(opts: {
     headers: {
       'Content-Type': opts.mimeType,
       ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
-      'X-Squad-Id': opts.squadId,
-      'X-Media-Id': opts.mediaId,
+      'X-Owner-Type': opts.ownerType,
+      'X-Owner-Id': opts.ownerId,
+      'X-Kind': opts.kind,
+      ...(opts.mediaId ? { 'X-Media-Id': opts.mediaId } : {}),
+      ...(opts.variantId ? { 'X-Variant-Id': opts.variantId } : {}),
+      ...(opts.momentId ? { 'X-Moment-Id': opts.momentId } : {}),
     },
     body: blob,
   });
@@ -49,4 +47,3 @@ export async function readIpfsByKey(key: string): Promise<Buffer> {
   const arrayBuffer = await res.arrayBuffer();
   return Buffer.from(arrayBuffer);
 }
-

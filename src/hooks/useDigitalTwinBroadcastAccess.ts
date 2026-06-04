@@ -28,9 +28,9 @@ export function useDigitalTwinBroadcastAccess({
       Boolean(avatarRecentUnlock) ||
       totalMatches >= 5 ||
       (twinQuery.data?.digitalTwin3dTier === 'streak_reward') ||
-      (twinQuery.data?.seasonPoints ?? 0) >= 12 ||
-      (twinQuery.data?.squadEnergy ?? 0) >= 85,
-  }), [avatarRecentUnlock, preferences, totalMatches, twinQuery.data?.digitalTwin3dEnabled, twinQuery.data?.digitalTwin3dTier, twinQuery.data?.seasonPoints, twinQuery.data?.squadEnergy]);
+      (twinQuery.data?.prestige ?? 0) >= 12 ||
+      (twinQuery.data?.energy ?? 0) >= 85,
+  }), [avatarRecentUnlock, preferences, totalMatches, twinQuery.data?.digitalTwin3dEnabled, twinQuery.data?.digitalTwin3dTier, twinQuery.data?.prestige, twinQuery.data?.energy]);
 
   return {
     twin: twinQuery.data,

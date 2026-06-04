@@ -215,9 +215,24 @@ export const matchRouter = createTRPCRouter({
             });
 
             if (membership) {
-              const { getDigitalTwinService } = await import('@/server/services/ai/digital-twin');
-              const dtService = getDigitalTwinService(ctx.prisma);
-              await dtService.processPaymentImpact(membership.squadId, input.amountPaid);
+              const { getTwinService } = await import('@/server/services/personalization/twin-service');
+              const twinService = getTwinService();
+              const squadTwin = await twinService.getOrCreateSquadTwin(membership.squadId);
+              const prestigeGain = Math.floor(input.amountPaid / 100);
+              const passingGain = 0.2;
+              await twinService.recordEvent({
+                kind: 'attestation',
+                twinId: squadTwin.id,
+                attestor: 'self',
+                payload: {
+                  attributeDeltas: { passing: passingGain },
+                  xpDelta: prestigeGain,
+                  reputationDelta: prestigeGain,
+                  reason: 'rsvp_payment',
+                  matchId: input.matchId,
+                  signWithAgent: false,
+                },
+              });
             }
           }
         } catch (error) {

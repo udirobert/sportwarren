@@ -490,7 +490,6 @@ async function resolveOpponentSquad(prisma: PrismaClient, squadId: string, oppon
       name: `${opponentName} (Casual)`,
       shortName,
       founded: new Date(),
-      isDigitalTwinActive: false,
     },
   });
 

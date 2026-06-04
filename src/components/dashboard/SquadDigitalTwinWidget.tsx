@@ -34,7 +34,7 @@ export const SquadDigitalTwinWidget: React.FC<SquadDigitalTwinWidgetProps> = ({ 
         access: immersive3DAccess,
         source: 'digital_twin_widget',
       });
-      if ((twin?.seasonPoints ?? 0) >= 12 || (twin?.squadEnergy ?? 0) >= 85 || twin?.digitalTwin3dEnabled) {
+      if ((twin?.prestige ?? 0) >= 12 || (twin?.energy ?? 0) >= 85 || twin?.digitalTwin3dEnabled) {
         unlockFeature(DIGITAL_TWIN_3D_UNLOCK_KEY);
       }
     }
@@ -97,7 +97,7 @@ export const SquadDigitalTwinWidget: React.FC<SquadDigitalTwinWidgetProps> = ({ 
         </div>
         <div className="flex items-center gap-2 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
           <Trophy className="w-3 h-3 text-emerald-400" />
-          <span className="text-xs font-bold text-emerald-400">{twin.seasonPoints} pts</span>
+          <span className="text-xs font-bold text-emerald-400">{twin.prestige} prestige</span>
         </div>
       </div>
 
@@ -105,18 +105,18 @@ export const SquadDigitalTwinWidget: React.FC<SquadDigitalTwinWidgetProps> = ({ 
         <div>
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight flex items-center gap-1">
-              <Zap className={`w-2.5 h-2.5 ${twin.squadEnergy > 70 ? 'text-emerald-400' : 'text-amber-400'}`} />
+              <Zap className={`w-2.5 h-2.5 ${twin.energy > 70 ? 'text-emerald-400' : 'text-amber-400'}`} />
               Squad Energy
             </span>
-            <span className={`text-[10px] font-bold ${twin.squadEnergy > 70 ? 'text-emerald-400' : twin.squadEnergy > 30 ? 'text-amber-400' : 'text-rose-400'}`}>
-              {twin.squadEnergy}%
+            <span className={`text-[10px] font-bold ${twin.energy > 70 ? 'text-emerald-400' : twin.energy > 30 ? 'text-amber-400' : 'text-rose-400'}`}>
+              {twin.energy}%
             </span>
           </div>
           <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
-              animate={{ width: `${twin.squadEnergy}%` }}
-              className={`h-full ${twin.squadEnergy > 70 ? 'bg-emerald-500' : twin.squadEnergy > 30 ? 'bg-amber-500' : 'bg-rose-500'}`}
+              animate={{ width: `${twin.energy}%` }}
+              className={`h-full ${twin.energy > 70 ? 'bg-emerald-500' : twin.energy > 30 ? 'bg-amber-500' : 'bg-rose-500'}`}
             />
           </div>
         </div>
@@ -217,9 +217,9 @@ export const SquadDigitalTwinWidget: React.FC<SquadDigitalTwinWidgetProps> = ({ 
       <div className="mb-6">
         <button
           onClick={() => simulate.mutate({ squadId })}
-          disabled={isSimulating || (twin.squadEnergy || 0) < 40}
+          disabled={isSimulating || (twin.energy || 0) < 40}
           className={`w-full py-2.5 rounded-lg border flex items-center justify-center gap-2 transition-all ${
-            (twin.squadEnergy || 0) >= 40
+            (twin.energy || 0) >= 40
             ? 'bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20 text-emerald-400'
             : 'bg-slate-800/50 border-slate-700 text-slate-500 cursor-not-allowed'
           }`}

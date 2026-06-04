@@ -185,15 +185,8 @@ model Squad {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Digital Twin & Seasonality
-  level                Int      @default(1)
-  xp                   Int      @default(0)
-  digitalAttributes    Json?    @map("digital_attributes") // { attack, defense, midfield, teamwork, prestige }
-  seasonPoints         Int      @default(0) @map("season_points")
-  squadEnergy          Int      @default(100) @map("squad_energy") // 0-100, affected by IRL commitment
-  lastSeasonSync       DateTime @default(now()) @map("last_season_sync")
-  isDigitalTwinActive  Boolean  @default(true) @map("is_digital_twin_active")
-  digitalTwin3dEnabled Boolean  @default(false) @map("digital_twin_3d_enabled")
-  digitalTwin3dTier    String?  @map("digital_twin_3d_tier") // premium, streak_reward, partner, internal
+  digitalTwin3dEnabled Boolean @default(false) @map("digital_twin_3d_enabled")
+  digitalTwin3dTier    String? @map("digital_twin_3d_tier") // premium, streak_reward, partner, internal
 
   // Relations
   members            SquadMember[]
@@ -1018,6 +1011,47 @@ model CoachingEffect {
   @@map("coaching_effects")
 }
 
+// ============================================================================
+// WHATSAPP NOTIFICATIONS — 3/twin/day cap for milestone-tier delivery
+// Each row is one outbound milestone message. Counted via 24h rolling window
+// in `notify.ts`. Persisted so we can audit and tune caps later.
+// ============================================================================
+
+model WhatsAppNotification {
+  id        String   @id @default(cuid())
+  twinId    String   @map("twin_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([twinId, createdAt])
+  @@map("whats_app_notifications")
+}
+
+// ============================================================================
+// MOMENTS — declarative records of personalisation events with optional
+// rendered image. Single row per event; render is lazy + idempotent.
+// ============================================================================
+
+model Moment {
+  id String @id @default(cuid())
+
+  subjectType String @map("subject_type") // 'player' | 'squad'
+  subjectId   String @map("subject_id")
+
+  kind   String // 'twin_created' | 'level_up' | 'sim_complete' | 'achievement' | 'coaching_hired' | 'coaching_expired' | 'attestation_milestone' | 'season_end' | 'record_broken'
+  tier   String // 'standard' | 'premium' | 'streak_reward' | 'partner' | 'internal'
+  label  String
+  detail String?
+
+  sourceEventId String?   @map("source_event_id") // attestation id
+  renderedKey   String?   @map("rendered_key") // storage key of rendered PNG
+  renderedAt    DateTime? @map("rendered_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([subjectType, subjectId, createdAt])
+  @@map("moments")
+}
+
 model AiMemory {
   id     String @id @default(cuid())
   userId String @map("user_id")
@@ -1281,11 +1315,14 @@ model SquadTwin {
   xp       Int @default(0)
   prestige Int @default(0)
 
-  baseAttributes Json    @default("{}") @map("base_attributes") // { pace: 50, shooting: 50, ... }
-  energy         Int     @default(100) // 0-100, drains with ghost matches
-  energyMax      Int     @default(100) @map("energy_max")
-  consensusTags  Json?   @map("consensus_tags") // { "Clutch": 5, "Engine": 3 }
-  twinActive     Boolean @default(true) @map("twin_active")
+  baseAttributes   Json    @default("{}") @map("base_attributes") // { pace: 50, shooting: 50, ... }
+  energy           Int     @default(100) // 0-100, drains with ghost matches
+  energyMax        Int     @default(100) @map("energy_max")
+  consensusTags    Json?   @map("consensus_tags") // { "Clutch": 5, "Engine": 3 }
+  twinActive       Boolean @default(true) @map("twin_active")
+  // PR 2 — squad twin milestones (mirrors player_twins)
+  reputation       Int     @default(0)
+  attestationCount Int     @default(0) @map("attestation_count")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

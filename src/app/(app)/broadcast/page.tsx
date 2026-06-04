@@ -38,20 +38,13 @@ export default function DigitalTwinBroadcastPage() {
   );
 }
 
-function extractDigitalAttributes(attrs: unknown): any {
-  if (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) {
-    return attrs as any;
-  }
-  return undefined;
-}
-
 interface SimpleBroadcastTwinData {
   level?: number;
-  squadEnergy?: number;
-  seasonPoints?: number;
+  energy?: number;
+  prestige?: number;
   nextLevelXp?: number;
   xp?: number;
-  digitalAttributes?: any;
+  baseAttributes?: Record<string, number>;
   narrative?: string | null;
 }
 
@@ -92,11 +85,11 @@ function DigitalTwinBroadcastPageContent() {
 
   const broadcastTwin: SimpleBroadcastTwinData | null = twin ? {
     level: twin.level,
-    squadEnergy: twin.squadEnergy,
-    seasonPoints: twin.seasonPoints,
+    energy: twin.energy,
+    prestige: twin.prestige,
     nextLevelXp: twin.nextLevelXp,
     xp: twin.xp,
-    digitalAttributes: extractDigitalAttributes((twin as any).digitalAttributes),
+    baseAttributes: ((twin as any).baseAttributes ?? {}) as Record<string, number>,
     narrative: twin.narrative,
   } : null;
 
