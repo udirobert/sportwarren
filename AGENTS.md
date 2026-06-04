@@ -33,3 +33,10 @@ are the source of truth.
 ### Known gotchas
 - `STORAGE_ROOT` env var for custom storage location (defaults to `./storage`)
 - Rate limiting via `src/proxy.ts` (replaces middleware in Next 16)
+
+### Personalization domain
+- Single source of truth for skin + brain lives in `src/server/services/personalization/`
+  - `twin-types.ts` (TwinState, TwinEvent, TwinDiff), `twin-appliers.ts` (pure), `twin-service.ts` (TwinService.recordEvent — the only public mutation entry point), `notify.ts` (channel-tiered delivery), `moments.ts`, `image.ts`, `identity.ts` (getPlayerIdentity / getSquadIdentity)
+- Player identity surface is `src/components/identity/PlayerIdentityCard.tsx` (one card, variant-driven)
+- All twin state mutations go through `TwinService.recordEvent({ kind, ... })` — no direct Prisma writes to PlayerTwin or Squad twin fields from call sites
+- `User.avatar` is a storage key (not base64); image variants generated at upload

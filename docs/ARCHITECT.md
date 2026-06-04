@@ -19,7 +19,7 @@ Match Scheduled → Pre-Match Preview → Live Match → Post-Match Ratings → 
 | **Pre-Match** | AI generates win probabilities, tactical breakdowns, and head-to-head comparisons. Autonomous squad agent may procure external intelligence on opponents. | WhatsApp + Telegram preview card |
 | **Live Match** | Real-time commentary delivered to squad WhatsApp groups. Match events (goals, cards, subs) logged through chat commands or Telegram Mini App. | WhatsApp group chat |
 | **Post-Match** | Teammates rate each other's FIFA-style attributes. Consensus logic deduplicates and weights ratings. Result verified through Algorand attestation. | WhatsApp prompts + Telegram dashboard |
-| **Progression** | Player attributes evolve based on peer consensus and match history. XP earned for accurate ratings. Squad stats aggregate into season-long narratives. | Squad profile + player cards |
+| **Progression** | Player attributes evolve based on peer consensus and match history. XP earned for accurate ratings. Squad stats aggregate into season-long narratives. | PlayerIdentityCard (skin + twin, one component) |
 
 ---
 
@@ -167,7 +167,7 @@ User B clicks "Challenge Back" → new URL copied → loop restarts
 | **Phase 2** | **Agents & Economy:** Kite AI x402, Staff Office, Squad DAOs. | ✅ 100% |
 | **Phase 3** | **Viral Features:** Formation playground, counter-play loop, Lens Social, Derby tracking. | ✅ 95% |
 | **Phase 3b** | **WhatsApp Engagement:** Auto-link, RSVP reply, scout lists, rating reminders DM, rate-token auth, player cards. | ✅ 100% |
-| **Phase 4** | **Immersive Evolution:** 3D Broadcast Engine, "Digital Twin" sim. | 🚀 Future |
+| **Phase 4** | **Immersive Evolution:** Unified player identity (avatar = skin, twin = brain), moment renders, 3D broadcast tier. | 🚀 In progress |
 
 ---
 
