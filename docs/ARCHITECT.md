@@ -167,7 +167,7 @@ User B clicks "Challenge Back" → new URL copied → loop restarts
 | **Phase 2** | **Agents & Economy:** Kite AI x402, Staff Office, Squad DAOs. | ✅ 100% |
 | **Phase 3** | **Viral Features:** Formation playground, counter-play loop, Lens Social, Derby tracking. | ✅ 95% |
 | **Phase 3b** | **WhatsApp Engagement:** Auto-link, RSVP reply, scout lists, rating reminders DM, rate-token auth, player cards. | ✅ 100% |
-| **Phase 4** | **Immersive Evolution:** Unified player identity (avatar = skin, twin = brain), moment renders, 3D broadcast tier. | 🚀 In progress |
+| **Phase 4** | **Immersive Evolution:** Unified player identity (avatar = skin, twin = brain), moment renders, 3D broadcast tier. | 🟡 PR 1+2 done (schema, appliers, TwinService orchestrator, notify, moments, image, storage adapter); PR 3-7 pending |
 
 ---
 

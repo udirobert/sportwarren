@@ -1,10 +1,12 @@
 # Phase 4: 3D Broadcast Engine & Digital Twin
 
-**Date:** 2026-05-19 (re-scoped 2026-06-04)
+**Date:** 2026-05-19 (re-scoped 2026-06-04, PR 2 update 2026-06-04)
 **Status:** Planning
 **Based on:** Codebase audit of existing simulation, twin, and broadcast infrastructure
 
 > **Re-scope (2026-06-04):** The 3D broadcast view is reframed as a **moment-render tier**, not a free-roam destination. The player identity story is unified: avatar = skin, twin = brain, one `PlayerIdentityCard` everywhere. See `AGENTS.md` (Personalization domain) for the canonical architecture. The 3D scene becomes one render mode behind `MomentRender`; the 2D share card is the default; entitled users (premium / streak_reward / partner) get the 3D tier. The `/broadcast` route is renamed to `/moments` and becomes the player's moment gallery.
+>
+> **PR 2 update (2026-06-04):** The legacy `PlayerTwinService` and `DigitalTwinService` are replaced by `TwinService` in `src/server/services/personalization/twin-service.ts` — single mutation entry point for both player and squad twins. `SquadTwin` is now the single source of truth (replaces `Squad.digitalAttributes / squadEnergy / seasonPoints / level / xp / isDigitalTwinActive / lastSeasonSync` which are dropped). The `/api/twin/simulate` route is removed; team/overnight sims move to PR 5.
 
 ---
 
@@ -13,12 +15,17 @@
 ### What Works
 | Component | Status | Notes |
 |-----------|--------|-------|
-| Player Twin Service | ✅ Complete | Kite Passport, attestations, coaching effects, simulations |
-| Squad Digital Twin | ✅ Complete | XP sync, ghost matches, AI narratives |
+| TwinService orchestrator | ✅ Complete (PR 2) | `recordEvent({ kind, ... })` is the single public mutation entry point; pure appliers + tx-persisted diff + Kite signing + moment row + channel-tiered notify |
+| SquadTwin schema | ✅ Complete (PR 2) | `level / xp / prestige / baseAttributes (6 keys) / energy / energyMax / consensusTags / twinActive / reputation / attestationCount` — replaces legacy Squad columns |
+| Player Twin (Kite Passport) | ✅ Complete (PR 2 refactor) | Agent identity, attestations, coaching effects, milestones. Simulations split out to PR 5. |
 | Match Simulation Engine | ✅ Complete | Role-based AI, ball physics, 90-min tick simulation |
 | PitchCanvas (2D) | ✅ Complete | Drag-and-drop, formation viz, export as PNG |
 | MatchEnginePreview (2D) | ✅ Complete | Real-time animated sim, tempo control, commentary |
-| /api/twin/simulate | ✅ Complete | Round-robin tournaments, prize distribution |
+| Notify service | ✅ Complete (PR 2) | In-app bus + WhatsApp (3/twin/day, milestone-tier only) + Telegram stub |
+| Moments service | ✅ Complete (PR 2) | Row per event with `momentHint`; render is deferred to PR 4 |
+| Image service | ✅ Complete (PR 2) | Avatar upload + storage key resolution; variant generation in PR 4 |
+| Storage adapter | ✅ Complete (PR 2 clean break) | Owner-typed: `players/<id>/avatar/<variant>`, `squads/<id>/media/<mediaId>`, `moments/<ownerType>/<id>/<momentId>`; IPFS via `ipfs/<cid>` |
+| ~~/api/twin/simulate~~ | ❌ Removed (PR 2) | Team/overnight sims move to PR 5 (moment-tiered, not a free-roam surface) |
 | Access Control | ✅ Complete | 4-tier entitlement system, feature flags |
 | Analytics | ✅ Complete | Full event tracking for broadcast funnel |
 
