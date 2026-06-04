@@ -29,19 +29,19 @@ model User {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  playerProfile    PlayerProfile?
-  squads           SquadMember[]
+  playerProfile      PlayerProfile?
+  squads             SquadMember[]
   platformIdentities PlatformIdentity[]
-  telegramLinkCodes TelegramLinkCode[]
-  matchesSubmitted Match[]             @relation("MatchSubmitter")
-  verifications    MatchVerification[]
-  aiMemory         AiMemory?
-  squadContexts    SquadPlayerContext[]
-  squadMedia       SquadMedia[]
-  
+  telegramLinkCodes  TelegramLinkCode[]
+  matchesSubmitted   Match[]              @relation("MatchSubmitter")
+  verifications      MatchVerification[]
+  aiMemory           AiMemory?
+  squadContexts      SquadPlayerContext[]
+  squadMedia         SquadMedia[]
+
   // Availability (Multi-squad support)
-  availabilities  SquadAvailability[]
-  matchRsvps      MatchRsvp[]
+  availabilities SquadAvailability[]
+  matchRsvps     MatchRsvp[]
 
   @@map("users")
 }
@@ -84,14 +84,14 @@ model PlayerProfile {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  attributes  PlayerAttribute[]
-  matchStats  PlayerMatchStats[]
-  formHistory FormEntry[]
-  activities  PhysicalActivity[]
-  ratingsGiven    PeerRating[] @relation("RatingGiven")
-  ratingsReceived PeerRating[] @relation("RatingReceived")
-  motmVotesGiven    MotmVote[] @relation("MotmVoteGiven")
-  motmVotesReceived MotmVote[] @relation("MotmVoteReceived")
+  attributes        PlayerAttribute[]
+  matchStats        PlayerMatchStats[]
+  formHistory       FormEntry[]
+  activities        PhysicalActivity[]
+  ratingsGiven      PeerRating[]       @relation("RatingGiven")
+  ratingsReceived   PeerRating[]       @relation("RatingReceived")
+  motmVotesGiven    MotmVote[]         @relation("MotmVoteGiven")
+  motmVotesReceived MotmVote[]         @relation("MotmVoteReceived")
   sessionsAttended  SessionAttendee[]
   twin              PlayerTwin?
 
@@ -162,9 +162,9 @@ model FormEntry {
 // ============================================================================
 
 model Squad {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   name      String
-  shortName String @map("short_name")
+  shortName String  @map("short_name")
   logo      String?
 
   // Squad details
@@ -185,36 +185,37 @@ model Squad {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Digital Twin & Seasonality
-  level            Int      @default(1)
-  xp               Int      @default(0)
-  digitalAttributes Json?    @map("digital_attributes") // { attack, defense, midfield, teamwork, prestige }
-  seasonPoints     Int      @default(0) @map("season_points")
-  squadEnergy      Int      @default(100) @map("squad_energy") // 0-100, affected by IRL commitment
-  lastSeasonSync   DateTime @default(now()) @map("last_season_sync")
-  isDigitalTwinActive Boolean @default(true) @map("is_digital_twin_active")
-  digitalTwin3dEnabled Boolean @default(false) @map("digital_twin_3d_enabled")
-  digitalTwin3dTier    String? @map("digital_twin_3d_tier") // premium, streak_reward, partner, internal
+  level                Int      @default(1)
+  xp                   Int      @default(0)
+  digitalAttributes    Json?    @map("digital_attributes") // { attack, defense, midfield, teamwork, prestige }
+  seasonPoints         Int      @default(0) @map("season_points")
+  squadEnergy          Int      @default(100) @map("squad_energy") // 0-100, affected by IRL commitment
+  lastSeasonSync       DateTime @default(now()) @map("last_season_sync")
+  isDigitalTwinActive  Boolean  @default(true) @map("is_digital_twin_active")
+  digitalTwin3dEnabled Boolean  @default(false) @map("digital_twin_3d_enabled")
+  digitalTwin3dTier    String?  @map("digital_twin_3d_tier") // premium, streak_reward, partner, internal
 
   // Relations
-  members       SquadMember[]
-  groups        SquadGroup[]
-  squadContexts SquadPlayerContext[]
-  matchesHome        Match[]          @relation("MatchHomeSquad")
-  matchesAway        Match[]          @relation("MatchAwaySquad")
+  members            SquadMember[]
+  groups             SquadGroup[]
+  squadContexts      SquadPlayerContext[]
+  squadTwin          SquadTwin?
+  matchesHome        Match[]              @relation("MatchHomeSquad")
+  matchesAway        Match[]              @relation("MatchAwaySquad")
   tactics            SquadTactics?
   treasury           SquadTreasury?
-  transferOffersFrom TransferOffer[]  @relation("TransferFromSquad")
-  transferOffersTo   TransferOffer[]  @relation("TransferToSquad")
-  challengesFrom     MatchChallenge[] @relation("ChallengeFromSquad")
-  challengesTo       MatchChallenge[] @relation("ChallengeToSquad")
+  transferOffersFrom TransferOffer[]      @relation("TransferFromSquad")
+  transferOffersTo   TransferOffer[]      @relation("TransferToSquad")
+  challengesFrom     MatchChallenge[]     @relation("ChallengeFromSquad")
+  challengesTo       MatchChallenge[]     @relation("ChallengeToSquad")
   sessions           Session[]
-  
+
   // Availability & Scheduling (Multi-squad support)
-  availabilities     SquadAvailability[]
-  schedule           SquadSchedule?
+  availabilities SquadAvailability[]
+  schedule       SquadSchedule?
 
   // Media (private/squad/public)
-  media SquadMedia[]
+  media   SquadMedia[]
   secrets SquadSecret[]
 
   // On-chain Governance
@@ -238,7 +239,7 @@ model SquadMember {
 
   // Temporal membership tracking for multi-squad support
   validFrom DateTime? @map("valid_from") // When membership started
-  validTo   DateTime? @map("valid_to")   // When membership ended (null = active)
+  validTo   DateTime? @map("valid_to") // When membership ended (null = active)
   status    String    @default("active") // active, inactive, paused
 
   // Reverse relation for match submissions
@@ -253,49 +254,49 @@ model SquadMember {
 // ============================================================================
 
 model SquadPlayerContext {
-  id            String  @id @default(cuid())
-  userId        String  @map("user_id")
-  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  squadId       String  @map("squad_id")
-  squad         Squad   @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  squadId String @map("squad_id")
+  squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
 
   // Position in THIS squad (can differ from global preference)
-  position      String? // GK, DF, MF, ST, WG
+  position String? // GK, DF, MF, ST, WG
 
   // Role in this squad
-  role          String  @default("player") // captain, vice_captain, player
+  role String @default("player") // captain, vice_captain, player
 
   // Per-squad XP (separate from global career XP)
-  squadXP       Int     @default(0) @map("squad_xp")
+  squadXP Int @default(0) @map("squad_xp")
 
   // Contextual stats (varies by squad)
-  sharpness     Int     @default(50) // 0-100, contextual fitness
-  form          String  @default("neutral") // hot, neutral, cold
+  sharpness Int    @default(50) // 0-100, contextual fitness
+  form      String @default("neutral") // hot, neutral, cold
 
   // Per-squad match stats
-  matchesPlayed Int     @default(0) @map("matches_played")
-  goals         Int     @default(0)
-  assists       Int     @default(0)
+  matchesPlayed Int @default(0) @map("matches_played")
+  goals         Int @default(0)
+  assists       Int @default(0)
 
   // Timestamps
-  joinedAt      DateTime @default(now()) @map("joined_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  joinedAt  DateTime @default(now()) @map("joined_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@unique([userId, squadId])
   @@map("squad_player_context")
 }
 
 model SquadGroup {
-  id            String    @id @default(cuid())
-  squadId       String    @map("squad_id")
-  squad         Squad     @relation(fields: [squadId], references: [id], onDelete: Cascade)
-  platform      String
-  chatId        String?   @map("chat_id")
-  platformUserId String?  @map("platform_user_id")
-  username      String?
-  linkToken     String?   @unique @map("link_token")
-  linkedAt      DateTime? @map("linked_at")
+  id             String    @id @default(cuid())
+  squadId        String    @map("squad_id")
+  squad          Squad     @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  platform       String
+  chatId         String?   @map("chat_id")
+  platformUserId String?   @map("platform_user_id")
+  username       String?
+  linkToken      String?   @unique @map("link_token")
+  linkedAt       DateTime? @map("linked_at")
 
   @@unique([platform, chatId])
   @@map("squad_groups")
@@ -306,21 +307,21 @@ model SquadGroup {
 // ============================================================================
 
 model PlatformIdentity {
-  id             String   @id @default(cuid())
-  userId         String   @map("user_id")
-  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  platform       String   // telegram, discord
-  platformUserId String   @map("platform_user_id") // Telegram user ID (stable)
-  chatId         String?  @map("chat_id") // Last group chat context
+  platform       String // telegram, discord
+  platformUserId String  @map("platform_user_id") // Telegram user ID (stable)
+  chatId         String? @map("chat_id") // Last group chat context
   username       String?
-  firstName      String?  @map("first_name") // Telegram first name
-  photoUrl       String?  @map("photo_url") // Telegram profile photo URL
+  firstName      String? @map("first_name") // Telegram first name
+  photoUrl       String? @map("photo_url") // Telegram profile photo URL
 
   // Session fields (moved from PlatformConnection)
-  miniAppToken         String?   @unique @map("mini_app_token")
+  miniAppToken          String?   @unique @map("mini_app_token")
   miniAppTokenExpiresAt DateTime? @map("mini_app_token_expires_at")
-  activeSquadId        String?   @map("active_squad_id") // Last-used squad context
+  activeSquadId         String?   @map("active_squad_id") // Last-used squad context
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -331,13 +332,13 @@ model PlatformIdentity {
 
 // Telegram link codes for self-service linking
 model TelegramLinkCode {
-  id        String   @id @default(cuid())
-  code      String   @unique
-  chatId    String   @map("chat_id") // Telegram chat ID
-  userId    String   @map("user_id")  // User to link to
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id     String @id @default(cuid())
+  code   String @unique
+  chatId String @map("chat_id") // Telegram chat ID
+  userId String @map("user_id") // User to link to
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  expiresAt DateTime @map("expires_at")
+  expiresAt DateTime  @map("expires_at")
   usedAt    DateTime? @map("used_at")
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -390,8 +391,8 @@ model SquadTreasury {
   squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
 
   // Balance in smallest unit (e.g., microALGO)
-  balance Int @default(0)
-  yellowSessionId String? @map("yellow_session_id")
+  balance          Int     @default(0)
+  yellowSessionId  String? @map("yellow_session_id")
   tonWalletAddress String? @map("ton_wallet_address")
 
   // Budgets (JSON)
@@ -440,21 +441,21 @@ model TreasuryTransaction {
 // ============================================================================
 
 model SquadMedia {
-  id        String @id @default(cuid())
+  id String @id @default(cuid())
 
-  squadId   String @map("squad_id")
-  squad     Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  squadId String @map("squad_id")
+  squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
 
   uploaderId String @map("uploader_id")
   uploader   User   @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
 
   // Title/caption
-  title     String?
+  title String?
 
   // Media details
-  kind      String  @default("image") // image, video
-  mimeType  String  @map("mime_type")
-  size      Int     // bytes
+  kind       String @default("image") // image, video
+  mimeType   String @map("mime_type")
+  size       Int // bytes
   storageKey String @map("storage_key") // opaque key/path, not public URL
 
   // Optional thumbnail
@@ -481,13 +482,13 @@ model SquadMedia {
 // ============================================================================
 
 model SquadSecret {
-  id        String @id @default(cuid())
+  id String @id @default(cuid())
 
-  squadId   String @map("squad_id")
-  squad     Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+  squadId String @map("squad_id")
+  squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
 
-  kind      String  // 'media_enc'
-  keyEnc    String  @map("key_enc") // base64 of encrypted key material
+  kind   String // 'media_enc'
+  keyEnc String @map("key_enc") // base64 of encrypted key material
 
   createdAt DateTime @default(now()) @map("created_at")
 
@@ -517,7 +518,7 @@ model TransferOffer {
   loanDuration Int?   @map("loan_duration") // months, if loan
 
   // Status
-  status String @default("pending") // pending, accepted, rejected, cancelled
+  status          String  @default("pending") // pending, accepted, rejected, cancelled
   yellowSessionId String? @map("yellow_session_id")
 
   // Timestamps
@@ -567,7 +568,7 @@ model Pitch {
   // History
   challenges MatchChallenge[]
   matches    Match[]
-  
+
   // Squad scheduling
   squadSchedules SquadSchedule[]
 
@@ -605,7 +606,7 @@ model Match {
 
   // Membership context - which squad membership was active when submitted
   // Enables historical attribution for multi-squad players
-  submittedByMembershipId String? @map("submitted_by_membership_id")
+  submittedByMembershipId String?      @map("submitted_by_membership_id")
   submittedByMembership   SquadMember? @relation("MatchSubmitterMembership", fields: [submittedByMembershipId], references: [id])
 
   // Status
@@ -636,8 +637,8 @@ model Match {
   session   Session? @relation(fields: [sessionId], references: [id])
 
   // Blockchain
-  txId String? @map("tx_id") // Algorand transaction ID
-  yellowFeeSessionId String? @map("yellow_fee_session_id")
+  txId               String?   @map("tx_id") // Algorand transaction ID
+  yellowFeeSessionId String?   @map("yellow_fee_session_id")
   yellowFeeSettledAt DateTime? @map("yellow_fee_settled_at")
 
   // Peer Rating Window
@@ -672,8 +673,8 @@ model PeerRating {
   target   PlayerProfile @relation("RatingReceived", fields: [targetId], references: [id])
 
   attribute String // "pace", "shooting", "passing", "dribbling", "defending", "physical"
-  score     Int    // 1-10
-  hypeTags  Json?  @map("hype_tags") // ["Clutch", "Engine"]
+  score     Int // 1-10
+  hypeTags  Json?   @map("hype_tags") // ["Clutch", "Engine"]
   weighted  Boolean @default(false)
 
   // Consensus result (populated after window closes)
@@ -830,22 +831,22 @@ model PlayerAchievement {
 // ============================================================================
 
 model Session {
-  id        String   @id @default(cuid())
-  squadId   String   @map("squad_id")
-  squad     Squad    @relation(fields: [squadId], references: [id], onDelete: Cascade)
-  
-  name      String   // e.g. "Wednesday Night Football"
-  date      DateTime @default(now())
-  
+  id      String @id @default(cuid())
+  squadId String @map("squad_id")
+  squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  name String // e.g. "Wednesday Night Football"
+  date DateTime @default(now())
+
   // Attendance (pool of players available for this session)
   attendees SessionAttendee[]
 
   // Matches generated from this session (Bibs vs No Bibs)
-  matches   Match[]
+  matches Match[]
 
   // Status: open (collecting players), balanced (teams picked), completed
-  status    String   @default("open")
-  
+  status String @default("open")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -853,17 +854,17 @@ model Session {
 }
 
 model SessionAttendee {
-  id        String        @id @default(cuid())
-  sessionId String        @map("session_id")
-  session   Session       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  
+  id        String  @id @default(cuid())
+  sessionId String  @map("session_id")
+  session   Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
   profileId String        @map("profile_id")
   profile   PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   // Preferred color/team for this session
   teamPreference String? @map("team_preference") // "bibs", "no_bibs"
 
-  createdAt DateTime      @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([sessionId, profileId])
   @@map("session_attendees")
@@ -884,25 +885,25 @@ model AiAgent {
   capabilities String[]
 
   // Kite Passport ownership / scope
-  ownerType    String?  @map("owner_type") // 'player' | 'squad' | 'platform' | 'external'
-  ownerId      String?  @map("owner_id")
+  ownerType     String? @map("owner_type") // 'player' | 'squad' | 'platform' | 'external'
+  ownerId       String? @map("owner_id")
   walletAddress String? @map("wallet_address") // Kite chain address controlled by this agent
 
   // Service-provider mode (this agent sells an x402 service to other agents)
-  serviceUrl     String? @map("service_url")
-  servicePrice   String? @map("service_price")   // e.g. "0.10"
-  serviceAsset   String? @map("service_asset") @default("USDC")
-  serviceActive  Boolean @default(false) @map("service_active")
+  serviceUrl    String? @map("service_url")
+  servicePrice  String? @map("service_price") // e.g. "0.10"
+  serviceAsset  String? @default("USDC") @map("service_asset")
+  serviceActive Boolean @default(false) @map("service_active")
 
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  sessions       KiteSession[]
-  attestations   Attestation[]    @relation("AttestationSigner")
-  coachingGiven  CoachingEffect[] @relation("CoachingEffectCoach")
-  playerTwin     PlayerTwin?
+  sessions      KiteSession[]
+  attestations  Attestation[]    @relation("AttestationSigner")
+  coachingGiven CoachingEffect[] @relation("CoachingEffectCoach")
+  playerTwin    PlayerTwin?
 
   @@index([ownerType, ownerId])
   @@map("ai_agents")
@@ -915,27 +916,27 @@ model AiAgent {
 // ============================================================================
 
 model KiteSession {
-  id           String   @id @default(cuid())
-  agentId      String   @map("agent_id")
-  agent        AiAgent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  id      String  @id @default(cuid())
+  agentId String  @map("agent_id")
+  agent   AiAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
-  taskSummary  String   @map("task_summary")
-  scope        Json?    // free-form scope hints (service categories, allowlisted urls)
-  asset        String   @default("USDC")
+  taskSummary     String @map("task_summary")
+  scope           Json? // free-form scope hints (service categories, allowlisted urls)
+  asset           String @default("USDC")
   paymentApproach String @default("x402_http") @map("payment_approach")
 
-  maxPerTx     Float    @map("max_per_tx")
-  maxTotal     Float    @map("max_total")
-  spent        Float    @default(0)
-  txCount      Int      @default(0) @map("tx_count")
+  maxPerTx Float @map("max_per_tx")
+  maxTotal Float @map("max_total")
+  spent    Float @default(0)
+  txCount  Int   @default(0) @map("tx_count")
 
-  status       String   @default("pending") // pending | active | expired | exhausted | revoked
-  approvedBy   String?  @map("approved_by") // user id (passkey approval)
-  requestId    String?  @unique @map("request_id") // kpass session request id when human-approved
+  status     String  @default("pending") // pending | active | expired | exhausted | revoked
+  approvedBy String? @map("approved_by") // user id (passkey approval)
+  requestId  String? @unique @map("request_id") // kpass session request id when human-approved
 
-  expiresAt    DateTime @map("expires_at")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   attestations Attestation[]
 
@@ -950,29 +951,29 @@ model KiteSession {
 // ============================================================================
 
 model Attestation {
-  id           String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  subjectType  String   @map("subject_type") // 'player' | 'squad' | 'match' | 'agent'
-  subjectId    String   @map("subject_id")
+  subjectType String @map("subject_type") // 'player' | 'squad' | 'match' | 'agent'
+  subjectId   String @map("subject_id")
 
-  kind         String   // 'match_result' | 'peer_rating' | 'activity_sync' | 'coaching_effect' | 'motm' | 'rsvp_compliance'
-  payload      Json     // canonicalized data that was signed
+  kind    String // 'match_result' | 'peer_rating' | 'activity_sync' | 'coaching_effect' | 'motm' | 'rsvp_compliance'
+  payload Json // canonicalized data that was signed
 
   signerAgentId String?  @map("signer_agent_id")
   signerAgent   AiAgent? @relation("AttestationSigner", fields: [signerAgentId], references: [id])
-  signature     String?  // hex EIP-712 / personal_sign
+  signature     String? // hex EIP-712 / personal_sign
 
   // Kite-chain settlement
-  network      String   @default("kite-testnet")
-  txHash       String?  @map("tx_hash")
-  facilitator  String?  // pieverse address used
-  amountUsdc   Float?   @map("amount_usdc") // amount paid for this attestation, if any
+  network     String  @default("kite-testnet")
+  txHash      String? @map("tx_hash")
+  facilitator String? // pieverse address used
+  amountUsdc  Float?  @map("amount_usdc") // amount paid for this attestation, if any
 
   // Optional link back to the spending session that paid for this attestation
-  sessionId    String?  @map("session_id")
-  session      KiteSession? @relation(fields: [sessionId], references: [id])
+  sessionId String?      @map("session_id")
+  session   KiteSession? @relation(fields: [sessionId], references: [id])
 
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([subjectType, subjectId, kind])
   @@index([txHash])
@@ -987,31 +988,31 @@ model Attestation {
 // ============================================================================
 
 model CoachingEffect {
-  id            String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // who is being coached
-  targetType    String   @map("target_type") // 'player' | 'squad'
-  targetId      String   @map("target_id")
+  targetType String @map("target_type") // 'player' | 'squad'
+  targetId   String @map("target_id")
 
   // who provided the coaching
-  coachAgentId  String   @map("coach_agent_id")
-  coachAgent    AiAgent  @relation("CoachingEffectCoach", fields: [coachAgentId], references: [id])
+  coachAgentId String  @map("coach_agent_id")
+  coachAgent   AiAgent @relation("CoachingEffectCoach", fields: [coachAgentId], references: [id])
 
   // what the buff is
-  attribute     String   // e.g. 'shooting' | 'attack' | 'sharpness' | 'teamwork'
-  modifier      Float    // additive, can be negative (e.g. fatigue from over-training)
-  reason        String?
+  attribute String // e.g. 'shooting' | 'attack' | 'sharpness' | 'teamwork'
+  modifier  Float // additive, can be negative (e.g. fatigue from over-training)
+  reason    String?
 
   // proof
-  attestationId String?  @map("attestation_id")
-  amountUsdc    Float?   @map("amount_usdc")
+  attestationId String? @map("attestation_id")
+  amountUsdc    Float?  @map("amount_usdc")
 
   // lifetime
-  startsAt      DateTime @default(now()) @map("starts_at")
-  expiresAt     DateTime @map("expires_at")
-  active        Boolean  @default(true)
+  startsAt  DateTime @default(now()) @map("starts_at")
+  expiresAt DateTime @map("expires_at")
+  active    Boolean  @default(true)
 
-  createdAt     DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([targetType, targetId, active, expiresAt])
   @@map("coaching_effects")
@@ -1041,85 +1042,85 @@ model AiMemory {
 // ============================================================================
 
 model PredictionMarket {
-  id          String   @id @default(cuid())
-  question    String   // "Who will win the match?"
-  description String?  // Additional context
-  category    String   // 'sports', 'politics', 'entertainment', 'crypto'
-  sportType   String?  // 'football', 'basketball', 'tennis', etc.
-  
+  id          String  @id @default(cuid())
+  question    String // "Who will win the match?"
+  description String? // Additional context
+  category    String // 'sports', 'politics', 'entertainment', 'crypto'
+  sportType   String? // 'football', 'basketball', 'tennis', etc.
+
   // Market metadata
-  creatorId   String   @map("creator_id")
-  creatorName String?  @map("creator_name") // Telegram username
-  
+  creatorId   String  @map("creator_id")
+  creatorName String? @map("creator_name") // Telegram username
+
   // Timing
-  deadline    DateTime // When betting closes
-  settleBy    DateTime @map("settle_by") // When AI must resolve
-  
+  deadline DateTime // When betting closes
+  settleBy DateTime @map("settle_by") // When AI must resolve
+
   // Status
-  status      String   @default("active") // 'active', 'settled', 'cancelled', 'disputed'
-  result      String?  // The winning option ID
-  
+  status String  @default("active") // 'active', 'settled', 'cancelled', 'disputed'
+  result String? // The winning option ID
+
   // Payout tracking
-  totalPool   Int      @default(0) @map("total_pool") // Total TON staked
-  creatorFee  Int      @default(0) @map("creator_fee") // Creator's share
-  
+  totalPool  Int @default(0) @map("total_pool") // Total TON staked
+  creatorFee Int @default(0) @map("creator_fee") // Creator's share
+
   // AI verification
-  aiVerified  Boolean  @default(false) @map("ai_verified")
-  aiReasoning String?  @map("ai_reasoning")
-  
+  aiVerified  Boolean @default(false) @map("ai_verified")
+  aiReasoning String? @map("ai_reasoning")
+
   // Timestamps
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   // Relations
-  options     PredictionOption[]
-  bets        PredictionBet[]
-  
+  options PredictionOption[]
+  bets    PredictionBet[]
+
   @@map("prediction_markets")
 }
 
 model PredictionOption {
-  id        String           @id @default(cuid())
-  marketId  String           @map("market_id")
-  market    PredictionMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
-  
-  text      String           // "Team A wins", "Draw", "Team B wins"
-  odds      Float            @default(2.0) // Payout multiplier
-  totalBet  Int              @default(0)   @map("total_bet") // Total staked on this option
-  
+  id       String           @id @default(cuid())
+  marketId String           @map("market_id")
+  market   PredictionMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
+
+  text     String // "Team A wins", "Draw", "Team B wins"
+  odds     Float  @default(2.0) // Payout multiplier
+  totalBet Int    @default(0) @map("total_bet") // Total staked on this option
+
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
-  
+
   // Relations
-  bets      PredictionBet[]
-  
+  bets PredictionBet[]
+
   @@unique([marketId, text])
   @@map("prediction_options")
 }
 
 model PredictionBet {
-  id        String           @id @default(cuid())
-  marketId  String           @map("market_id")
-  market    PredictionMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
-  
-  optionId  String           @map("option_id")
-  option    PredictionOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
-  
-  userId    String           @map("user_id")
-  userName  String?          @map("user_name") // Telegram username
-  
-  amount    Int              // Amount in nanoTON
-  potentialWin Int           @map("potential_win") // If they win
-  
+  id       String           @id @default(cuid())
+  marketId String           @map("market_id")
+  market   PredictionMarket @relation(fields: [marketId], references: [id], onDelete: Cascade)
+
+  optionId String           @map("option_id")
+  option   PredictionOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+
+  userId   String  @map("user_id")
+  userName String? @map("user_name") // Telegram username
+
+  amount       Int // Amount in nanoTON
+  potentialWin Int @map("potential_win") // If they win
+
   // Status
-  status    String   @default("pending") // 'pending', 'won', 'lost', 'refunded'
-  
+  status String @default("pending") // 'pending', 'won', 'lost', 'refunded'
+
   // Telegram message for dispute
-  messageId String?  @map("message_id")
-  
+  messageId String? @map("message_id")
+
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
-  
+
   @@map("prediction_bets")
 }
 
@@ -1129,44 +1130,44 @@ model PredictionBet {
 
 // Recurring weekly availability - "I play every Tuesday"
 model SquadAvailability {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  squadId   String   @map("squad_id")
-  squad     Squad    @relation(fields: [squadId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  squadId String @map("squad_id")
+  squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
   // Day of week (ISO: 1=Monday, 7=Sunday)
-  dayOfWeek Int      @map("day_of_week") // 1-7
-  
+  dayOfWeek Int @map("day_of_week") // 1-7
+
   // Time preference
-  timeSlot  String?  // "morning", "afternoon", "evening", "any"
-  
+  timeSlot String? // "morning", "afternoon", "evening", "any"
+
   // Availability status
   isAvailable Boolean @default(true) @map("is_available")
-  
+
   // Notes (e.g., "only if home game", "after 6pm")
-  notes     String?
-  
+  notes String?
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
-  
+
   @@unique([userId, squadId, dayOfWeek])
   @@map("squad_availabilities")
 }
 
 // One-off match RSVP - "I'm playing this Saturday"
 model MatchRsvp {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
-  matchId   String   @map("match_id")
-  match     Match    @relation(fields: [matchId], references: [id], onDelete: Cascade)
-  
+  id     String @id @default(cuid())
+  userId String @map("user_id")
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  matchId String @map("match_id")
+  match   Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
   // Response status
-  status    String   @default("pending") // "available", "unavailable", "maybe"
-  
+  status String @default("pending") // "available", "unavailable", "maybe"
+
   // Payment tracking for informal games (subs/pitch fees)
   isPaid      Boolean   @default(false) @map("is_paid")
   paidAt      DateTime? @map("paid_at")
@@ -1174,46 +1175,46 @@ model MatchRsvp {
   paymentType String?   @map("payment_type") // 'cash', 'transfer', 'crypto'
 
   // Position preference for this match
-  position  String?  // GK, DF, MF, ST, WG, any
-  
+  position String? // GK, DF, MF, ST, WG, any
+
   // Notes (e.g., "might be late", "bringing a friend")
-  notes     String?
-  
+  notes String?
+
   respondedAt DateTime? @map("responded_at")
-  createdAt   DateTime   @default(now()) @map("created_at")
-  
+  createdAt   DateTime  @default(now()) @map("created_at")
+
   @@unique([userId, matchId])
   @@map("match_rsvps")
 }
 
 // Squad's default schedule - "We play every Saturday 2pm at XYZ"
 model SquadSchedule {
-  id          String   @id @default(cuid())
-  squadId     String   @unique @map("squad_id")
-  squad       Squad    @relation(fields: [squadId], references: [id], onDelete: Cascade)
-  
+  id      String @id @default(cuid())
+  squadId String @unique @map("squad_id")
+  squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
   // Day of week (ISO: 1=Monday, 7=Sunday)
-  dayOfWeek   Int      @map("day_of_week") // 1-7
-  
+  dayOfWeek Int @map("day_of_week") // 1-7
+
   // Default time
-  time        String?  // "14:00", "2pm"
-  
+  time String? // "14:00", "2pm"
+
   // Default location
-  locationId  String?  @map("location_id")
-  location    Pitch?   @relation(fields: [locationId], references: [id])
-  
+  locationId String? @map("location_id")
+  location   Pitch?  @relation(fields: [locationId], references: [id])
+
   // Recurrence
-  isRecurring Boolean  @default(true) @map("is_recurring")
-  
+  isRecurring Boolean @default(true) @map("is_recurring")
+
   // Active/inactive
-  isActive    Boolean  @default(true) @map("is_active")
-  
+  isActive Boolean @default(true) @map("is_active")
+
   // Notes
-  notes       String?
-  
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  
+  notes String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
   @@map("squad_schedules")
 }
 
@@ -1226,35 +1227,70 @@ model SquadSchedule {
 // ============================================================================
 
 model PlayerTwin {
-  id            String   @id @default(cuid())
-  profileId     String   @unique @map("profile_id")
-  profile       PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  id        String        @id @default(cuid())
+  profileId String        @unique @map("profile_id")
+  profile   PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
   // Kite Passport identity
-  agentId       String   @unique @map("agent_id") // AiAgent.id
-  agent         AiAgent  @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agentId String  @unique @map("agent_id") // AiAgent.id
+  agent   AiAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
 
   // Twin state
-  level         Int      @default(1)
-  xp            Int      @default(0)
-  prestige      Int      @default(0) // earned through wins, coaching, attestations
+  level    Int @default(1)
+  xp       Int @default(0)
+  prestige Int @default(0) // earned through wins, coaching, attestations
 
   // Autonomous config (what the twin is allowed to do within its session budget)
-  autoHireCoaches    Boolean @default(false) @map("auto_hire_coaches")
-  autoCompete        Boolean @default(false) @map("auto_compete")
-  weeklyBudgetUsdc   Float   @default(5.0) @map("weekly_budget_usdc")
+  autoHireCoaches  Boolean @default(false) @map("auto_hire_coaches")
+  autoCompete      Boolean @default(false) @map("auto_compete")
+  weeklyBudgetUsdc Float   @default(5.0) @map("weekly_budget_usdc")
 
   // Stats snapshot (denormalized from attestations for fast reads)
-  baseAttributes    Json    @default("{}") @map("base_attributes") // { pace: 50, shooting: 50, ... }
-  activeModifiers   Json    @default("[]") @map("active_modifiers") // CoachingEffect[] with expiry
+  baseAttributes    Json      @default("{}") @map("base_attributes") // { pace: 50, shooting: 50, ... }
+  activeModifiers   Json      @default("[]") @map("active_modifiers") // CoachingEffect[] with expiry
   lastAttestationAt DateTime? @map("last_attestation_at")
 
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  // TwinService-driven metrics (added 2026-06-04, see migration
+  // 20260604_unify_twin_schema). Reputation 0-1000, attestationCount is the
+  // total twin has ever received (drives milestone detection).
+  reputation       Int @default(0)
+  attestationCount Int @default(0) @map("attestation_count")
 
-  simulations   TwinSimulationParticipant[]
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  simulations TwinSimulationParticipant[]
 
   @@map("player_twins")
+}
+
+// ============================================================================
+// SQUAD TWINS — squad-level brain (skin + twin, unified with PlayerTwin)
+// Distinct row from player_twins: a squad has no PlayerProfile, so a squad
+// twin is its own state container. The appliers in
+// `src/server/services/personalization/twin-appliers.ts` are scope-agnostic
+// and consume either shape via the unified `TwinState` type.
+// ============================================================================
+
+model SquadTwin {
+  id      String @id @default(cuid())
+  squadId String @unique @map("squad_id")
+  squad   Squad  @relation(fields: [squadId], references: [id], onDelete: Cascade)
+
+  level    Int @default(1)
+  xp       Int @default(0)
+  prestige Int @default(0)
+
+  baseAttributes Json    @default("{}") @map("base_attributes") // { pace: 50, shooting: 50, ... }
+  energy         Int     @default(100) // 0-100, drains with ghost matches
+  energyMax      Int     @default(100) @map("energy_max")
+  consensusTags  Json?   @map("consensus_tags") // { "Clutch": 5, "Engine": 3 }
+  twinActive     Boolean @default(true) @map("twin_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("squad_twins")
 }
 
 // ============================================================================
@@ -1262,68 +1298,68 @@ model PlayerTwin {
 // ============================================================================
 
 model TwinSimulation {
-  id            String   @id @default(cuid())
-  name          String   // "Week 14 Round-Robin"
-  format        String   @default("round_robin") // round_robin | knockout | league
-  status        String   @default("pending") // pending | running | completed | settled
+  id     String @id @default(cuid())
+  name   String // "Week 14 Round-Robin"
+  format String @default("round_robin") // round_robin | knockout | league
+  status String @default("pending") // pending | running | completed | settled
 
   // Prize pool funded by entry fees (x402 settled)
-  entryFeeUsdc  Float    @default(0)
-  totalPrizeUsdc Float   @default(0)
+  entryFeeUsdc    Float   @default(0)
+  totalPrizeUsdc  Float   @default(0)
   prizePoolTxHash String? @map("prize_pool_tx_hash")
 
   // Kite-chain settlement
-  network       String   @default("kite-testnet")
-  attestationId String?  @map("attestation_id") // master attestation for the whole simulation
+  network       String  @default("kite-testnet")
+  attestationId String? @map("attestation_id") // master attestation for the whole simulation
 
-  startedAt     DateTime?
-  completedAt   DateTime?
-  createdAt     DateTime @default(now()) @map("created_at")
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now()) @map("created_at")
 
-  participants  TwinSimulationParticipant[]
-  matches       TwinSimulationMatch[]
+  participants TwinSimulationParticipant[]
+  matches      TwinSimulationMatch[]
 
   @@map("twin_simulations")
 }
 
 model TwinSimulationParticipant {
-  id            String   @id @default(cuid())
-  simulationId  String   @map("simulation_id")
-  simulation    TwinSimulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
-  twinId        String   @map("twin_id")
-  twin          PlayerTwin @relation(fields: [twinId], references: [id], onDelete: Cascade)
+  id           String         @id @default(cuid())
+  simulationId String         @map("simulation_id")
+  simulation   TwinSimulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  twinId       String         @map("twin_id")
+  twin         PlayerTwin     @relation(fields: [twinId], references: [id], onDelete: Cascade)
 
   // Tournament standing
-  wins          Int      @default(0)
-  draws         Int      @default(0)
-  losses        Int      @default(0)
-  goalsFor      Int      @default(0) @map("goals_for")
-  goalsAgainst  Int      @default(0) @map("goals_against")
-  points        Int      @default(0)
-  prizeUsdc     Float    @default(0) @map("prize_usdc")
+  wins         Int   @default(0)
+  draws        Int   @default(0)
+  losses       Int   @default(0)
+  goalsFor     Int   @default(0) @map("goals_for")
+  goalsAgainst Int   @default(0) @map("goals_against")
+  points       Int   @default(0)
+  prizeUsdc    Float @default(0) @map("prize_usdc")
 
-  createdAt     DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([simulationId, twinId])
   @@map("twin_simulation_participants")
 }
 
 model TwinSimulationMatch {
-  id            String   @id @default(cuid())
-  simulationId  String   @map("simulation_id")
-  simulation    TwinSimulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
+  id           String         @id @default(cuid())
+  simulationId String         @map("simulation_id")
+  simulation   TwinSimulation @relation(fields: [simulationId], references: [id], onDelete: Cascade)
 
-  homeTwinId    String   @map("home_twin_id")
-  awayTwinId    String   @map("away_twin_id")
-  homeScore     Int?
-  awayScore     Int?
-  round         Int      @default(1)
+  homeTwinId String @map("home_twin_id")
+  awayTwinId String @map("away_twin_id")
+  homeScore  Int?
+  awayScore  Int?
+  round      Int    @default(1)
 
   // Each simulated match produces an attestation
-  attestationId String?  @map("attestation_id")
+  attestationId String? @map("attestation_id")
 
-  playedAt      DateTime?
-  createdAt     DateTime @default(now()) @map("created_at")
+  playedAt  DateTime?
+  createdAt DateTime  @default(now()) @map("created_at")
 
   @@map("twin_simulation_matches")
 }
@@ -1382,13 +1418,13 @@ model Notification {
 // ============================================================================
 
 model Tournament {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   name        String
-  type        String   // 'squad' or 'individual'
-  status      String   @default("open") // 'open', 'active', 'completed'
-  maxEntries  Int      @default(8) @map("max_entries")
-  createdBy   String?  @map("created_by")
-  createdAt   DateTime @default(now()) @map("created_at")
+  type        String // 'squad' or 'individual'
+  status      String    @default("open") // 'open', 'active', 'completed'
+  maxEntries  Int       @default(8) @map("max_entries")
+  createdBy   String?   @map("created_by")
+  createdAt   DateTime  @default(now()) @map("created_at")
   completedAt DateTime? @map("completed_at")
 
   entries TournamentEntry[]
@@ -1399,17 +1435,17 @@ model Tournament {
 }
 
 model TournamentEntry {
-  id           String   @id @default(cuid())
-  tournamentId String   @map("tournament_id")
+  id           String     @id @default(cuid())
+  tournamentId String     @map("tournament_id")
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  userId       String?  @map("user_id")
-  squadId      String?  @map("squad_id")
-  seedNumber   Int      @map("seed_number") // Position in bracket (1-8)
+  userId       String?    @map("user_id")
+  squadId      String?    @map("squad_id")
+  seedNumber   Int        @map("seed_number") // Position in bracket (1-8)
   formation    String
-  playStyle    String   @default("balanced") @map("play_style")
-  color        String   @default("#3b82f6")
-  playerNames  Json?    @map("player_names") // string[] for simulation
-  enteredAt    DateTime @default(now()) @map("entered_at")
+  playStyle    String     @default("balanced") @map("play_style")
+  color        String     @default("#3b82f6")
+  playerNames  Json?      @map("player_names") // string[] for simulation
+  enteredAt    DateTime   @default(now()) @map("entered_at")
 
   homeMatches TournamentMatch[] @relation("TournamentHomeEntry")
   awayMatches TournamentMatch[] @relation("TournamentAwayEntry")
@@ -1420,20 +1456,20 @@ model TournamentEntry {
 }
 
 model TournamentMatch {
-  id           String   @id @default(cuid())
-  tournamentId String   @map("tournament_id")
-  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
-  round        String   // 'quarter', 'semi', 'final'
-  position     Int      // Position within the round (1-4 for QF, 1-2 for SF, 1 for F)
-  homeEntryId  String   @map("home_entry_id")
+  id           String          @id @default(cuid())
+  tournamentId String          @map("tournament_id")
+  tournament   Tournament      @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  round        String // 'quarter', 'semi', 'final'
+  position     Int // Position within the round (1-4 for QF, 1-2 for SF, 1 for F)
+  homeEntryId  String          @map("home_entry_id")
   homeEntry    TournamentEntry @relation("TournamentHomeEntry", fields: [homeEntryId], references: [id])
-  awayEntryId  String   @map("away_entry_id")
+  awayEntryId  String          @map("away_entry_id")
   awayEntry    TournamentEntry @relation("TournamentAwayEntry", fields: [awayEntryId], references: [id])
   homeScore    Int?
   awayScore    Int?
-  events       Json?    // Goal events, possession, etc.
-  status       String   @default("pending") // 'pending', 'in_progress', 'completed'
-  playedAt     DateTime? @map("played_at")
+  events       Json? // Goal events, possession, etc.
+  status       String          @default("pending") // 'pending', 'in_progress', 'completed'
+  playedAt     DateTime?       @map("played_at")
 
   @@unique([tournamentId, round, position])
   @@index([tournamentId, round])
