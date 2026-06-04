@@ -1,8 +1,10 @@
 # Phase 4: 3D Broadcast Engine & Digital Twin
 
-**Date:** 2026-05-19
+**Date:** 2026-05-19 (re-scoped 2026-06-04)
 **Status:** Planning
 **Based on:** Codebase audit of existing simulation, twin, and broadcast infrastructure
+
+> **Re-scope (2026-06-04):** The 3D broadcast view is reframed as a **moment-render tier**, not a free-roam destination. The player identity story is unified: avatar = skin, twin = brain, one `PlayerIdentityCard` everywhere. See `AGENTS.md` (Personalization domain) for the canonical architecture. The 3D scene becomes one render mode behind `MomentRender`; the 2D share card is the default; entitled users (premium / streak_reward / partner) get the 3D tier. The `/broadcast` route is renamed to `/moments` and becomes the player's moment gallery.
 
 ---
 
