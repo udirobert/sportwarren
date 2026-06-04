@@ -36,7 +36,26 @@ are the source of truth.
 
 ### Personalization domain
 - Single source of truth for skin + brain lives in `src/server/services/personalization/`
-  - `twin-types.ts` (TwinState, TwinEvent, TwinDiff), `twin-appliers.ts` (pure), `twin-service.ts` (TwinService.recordEvent — the only public mutation entry point), `notify.ts` (channel-tiered delivery), `moments.ts`, `image.ts`, `identity.ts` (getPlayerIdentity / getSquadIdentity)
-- Player identity surface is `src/components/identity/PlayerIdentityCard.tsx` (one card, variant-driven)
-- All twin state mutations go through `TwinService.recordEvent({ kind, ... })` — no direct Prisma writes to PlayerTwin or Squad twin fields from call sites
-- `User.avatar` is a storage key (not base64); image variants generated at upload
+  - `twin-types.ts` (TwinState, TwinEvent 9-variant union, TwinDiff, MilestoneHint, MomentHint)
+  - `twin-appliers.ts` (pure `applyEvent` + `computeLevel` / `xpToNext` / `clampAttributeDeltas` / `buildInitialTwinState` / `dropExpiredModifiers`; no Prisma, no clock injection, table-tested)
+  - `twin-service.ts` (`TwinService.recordEvent` — the only public mutation entry point; hydrates state, delegates to `applyEvent`, persists diff + attestation in one tx, signs via Kite, creates moment, dispatches notifications)
+  - `notify.ts` (channel-tiered delivery: in-app bus + WhatsApp 3/twin/day cap + Telegram stub; milestone whitelisting per channel)
+  - `moments.ts` (Moment row CRUD; render is a no-op stub — PR 4 wires satori/resvg)
+  - `image.ts` (avatar upload + key resolution; writes storage key to `User.avatar`)
+  - `squad-energy.ts` (bypasses `TwinService` — energy is a squad-level operational metric, not a twin brain mutation)
+  - `narrative.ts` (stub; PR 3 wires LLM prompt)
+  - `identity.ts` (PR 3: `getPlayerIdentity` / `getSquadIdentity` — one read API for the identity card)
+- Player identity surface is `src/components/identity/PlayerIdentityCard.tsx` (one card, variant-driven; PR 4)
+- All twin state mutations go through `TwinService.recordEvent({ kind, ... })` — no direct Prisma writes to `PlayerTwin` or `SquadTwin` fields from call sites
+- `User.avatar` is a storage key (not base64); image variants generated at upload (PR 4)
+- Schema single source of truth: `SquadTwin` (level, xp, prestige, baseAttributes on 6 keys, energy, reputation, attestationCount) replaces the legacy `Squad.digitalAttributes/squadEnergy/seasonPoints/level/xp/isDigitalTwinActive/lastSeasonSync` columns dropped in PR 2
+- `Squad.digitalTwin3dEnabled` and `Squad.digitalTwin3dTier` are kept (3D entitlement feature independent of the twin brain)
+- `WhatsAppNotification` table tracks milestone-tier WhatsApp sends for the 24h rolling cap
+- `Moment` table is the in-app gallery read model; one row per `TwinEvent` with a `momentHint`
+- `TelegramChannel` in `notify.ts` is a stub; per-event opt-in lives in PR 7 (signals + onboarding)
+
+### Storage adapter
+- `src/server/services/storage/` is owner-typed: `saveBase64({ ownerType, ownerId, kind, base64Data, ext, mimeType, mediaId?, variantId?, momentId? })`
+- Path layouts: `players/<id>/avatar/<variant>.<ext>`, `squads/<id>/media/<mediaId>.<ext>`, `moments/<ownerType>/<id>/<momentId>.<ext>`
+- IPFS adapter stores opaque `ipfs/<cid>` keys; local adapter uses the layout above under `STORAGE_ROOT` (defaults `./storage`)
+- Legacy `squadId, mediaId` interface was removed in PR 2 (clean break; no users on greenfield)
