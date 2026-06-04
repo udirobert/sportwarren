@@ -1,17 +1,12 @@
-import type { StorageAdapter, StoredObject } from './types';
+import type { SaveBase64Opts, StorageAdapter, StoredObject } from './types';
 import { saveBase64ToLocal, readLocalByKey, removeLocalByKey } from './local';
 import { saveBase64ToIpfs, readIpfsByKey } from './ipfs';
 
 const MODE = (process.env.MEDIA_STORAGE || 'local').trim().toLowerCase();
 
 class LocalAdapter implements StorageAdapter {
-  async saveBase64(opts: { base64Data: string; squadId: string; mediaId: string; extension: string; mimeType: string }): Promise<StoredObject> {
-    const saved = await saveBase64ToLocal({
-      base64Data: opts.base64Data,
-      squadId: opts.squadId,
-      mediaId: opts.mediaId,
-      extension: opts.extension,
-    });
+  async saveBase64(opts: SaveBase64Opts): Promise<StoredObject> {
+    const saved = await saveBase64ToLocal(opts);
     return { key: saved.key, size: saved.size };
   }
   readByKey(key: string): Promise<Buffer> {
@@ -23,7 +18,7 @@ class LocalAdapter implements StorageAdapter {
 }
 
 class IpfsAdapter implements StorageAdapter {
-  saveBase64(opts: { base64Data: string; squadId: string; mediaId: string; extension: string; mimeType: string }): Promise<StoredObject> {
+  saveBase64(opts: SaveBase64Opts): Promise<StoredObject> {
     return saveBase64ToIpfs(opts);
   }
   readByKey(key: string): Promise<Buffer> {

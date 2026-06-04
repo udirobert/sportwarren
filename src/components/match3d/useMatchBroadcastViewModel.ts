@@ -4,16 +4,17 @@ import type { MatchSimulationSnapshot } from '@/lib/match/matchSimulation';
 
 export interface MatchBroadcastTwinData {
   level?: number;
-  squadEnergy?: number;
-  seasonPoints?: number;
+  energy?: number;
+  prestige?: number;
   nextLevelXp?: number;
   xp?: number;
-  digitalAttributes?: Partial<{
-    attack: number;
-    defense: number;
-    midfield: number;
-    teamwork: number;
-    prestige: number;
+  baseAttributes?: Partial<{
+    pace: number;
+    shooting: number;
+    passing: number;
+    dribbling: number;
+    defending: number;
+    physical: number;
   }>;
   narrative?: string | null;
 }
@@ -48,19 +49,19 @@ export function useMatchBroadcastViewModel({ squadId, access, snapshot, twin }: 
     const score = snapshot?.score ?? { home: 0, away: 0 };
     const phaseLabel = formatPhase(snapshot?.matchPhase);
     const commentary = snapshot?.commentary?.slice(-3).map(item => item.text) ?? [];
-    const squadEnergy = twin?.squadEnergy ?? 0;
-    const attack = Math.round(twin?.digitalAttributes?.attack ?? 50);
-    const defense = Math.round(twin?.digitalAttributes?.defense ?? 50);
-    const teamwork = Math.round(twin?.digitalAttributes?.teamwork ?? 50);
+    const energy = twin?.energy ?? 0;
+    const attack = Math.round(twin?.baseAttributes?.shooting ?? 50);
+    const defense = Math.round(twin?.baseAttributes?.defending ?? 50);
+    const teamwork = Math.round(twin?.baseAttributes?.passing ?? 50);
     const statusTone = access.canLaunch ? 'live' : access.canSeeEntryPoint ? 'paused' : 'locked';
     const hasSnapshot = Boolean(snapshot);
     const hasTwin = Boolean(twin);
 
-    const momentumLabel = squadEnergy >= 80
+    const momentumLabel = energy >= 80
       ? 'Surging'
-      : squadEnergy >= 60
+      : energy >= 60
         ? 'Stable'
-        : squadEnergy >= 40
+        : energy >= 40
           ? 'Managing load'
           : 'Recovery needed';
 
@@ -70,13 +71,13 @@ export function useMatchBroadcastViewModel({ squadId, access, snapshot, twin }: 
         ? 'Balanced attacking rhythm'
         : 'Controlled, low-risk build-up';
 
-    const conditionLabel = squadEnergy >= 75
+    const conditionLabel = energy >= 75
       ? 'Sharp'
-      : squadEnergy >= 50
+      : energy >= 50
         ? 'Match-ready'
         : 'Fatigue visible';
 
-    const highlightTone: MatchBroadcastViewModel['highlightTone'] = squadEnergy >= 80
+    const highlightTone: MatchBroadcastViewModel['highlightTone'] = energy >= 80
       ? 'surge'
       : attack >= 70
         ? 'pressure'
@@ -97,8 +98,8 @@ export function useMatchBroadcastViewModel({ squadId, access, snapshot, twin }: 
     const keyMetrics = [
       { label: 'Squad', value: squadId || 'No active squad' },
       { label: 'Access', value: access.state },
-      { label: 'Energy', value: `${squadEnergy}%` },
-      { label: 'Season points', value: `${twin?.seasonPoints ?? 0}` },
+      { label: 'Energy', value: `${energy}%` },
+      { label: 'Prestige', value: `${twin?.prestige ?? 0}` },
       { label: 'Teamwork', value: `${teamwork}` },
       { label: 'Feed', value: hasSnapshot ? 'Live simulation' : hasTwin ? 'Twin baseline only' : 'Awaiting twin sync' },
     ];

@@ -84,9 +84,11 @@ export async function uploadTelegramMiniAppMedia(
     }
   }
   const stored = await storage.saveBase64({
-    base64Data: encryptedBuffer.toString('base64'),
-    squadId,
+    ownerType: 'squad',
+    ownerId: squadId,
+    kind: 'media',
     mediaId: media.id,
+    base64Data: encryptedBuffer.toString('base64'),
     extension: ext,
     mimeType: 'application/octet-stream',
   });
@@ -101,9 +103,11 @@ export async function uploadTelegramMiniAppMedia(
     const tEncrypted = encryptMedia(tPlain, mediaKey);
     const tExt = extensionFromMime(input.thumbMimeType);
     const tStored = await storage.saveBase64({
-      base64Data: tEncrypted.toString('base64'),
-      squadId,
+      ownerType: 'squad',
+      ownerId: squadId,
+      kind: 'media',
       mediaId: `${media.id}_thumb`,
+      base64Data: tEncrypted.toString('base64'),
       extension: tExt,
       mimeType: 'application/octet-stream',
     });

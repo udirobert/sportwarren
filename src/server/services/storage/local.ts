@@ -1,11 +1,6 @@
 import { promises as fs } from 'fs';
 import path from 'path';
-
-export interface StoredObject {
-  key: string; // opaque storage key
-  size: number;
-  absolutePath: string;
-}
+import type { SaveBase64Opts, StoredObject } from './types';
 
 const DEFAULT_STORAGE_ROOT = path.join(/* turbopackIgnore: true */ process.cwd(), 'storage');
 
@@ -17,25 +12,36 @@ export async function ensureDir(dirPath: string) {
   await fs.mkdir(dirPath, { recursive: true });
 }
 
-export async function saveBase64ToLocal(
-  opts: {
-    base64Data: string;
-    squadId: string;
-    mediaId: string;
-    extension: string; // e.g., 'jpg'
-  }
-): Promise<StoredObject> {
+function pathForOwner(opts: SaveBase64Opts): { dir: string; fileName: string } {
   const root = storageRoot();
-  const dir = path.join(root, 'squads', opts.squadId);
+  const ownerSegment = opts.ownerType === 'player' ? 'players' : 'squads';
+  switch (opts.kind) {
+    case 'avatar': {
+      const variant = opts.variantId ?? 'main';
+      return { dir: path.join(root, ownerSegment, opts.ownerId, 'avatar'), fileName: `${variant}.${opts.extension}` };
+    }
+    case 'badge': {
+      const variant = opts.variantId ?? 'main';
+      return { dir: path.join(root, ownerSegment, opts.ownerId, 'badge'), fileName: `${variant}.${opts.extension}` };
+    }
+    case 'media': {
+      if (!opts.mediaId) throw new Error('mediaId is required for storage kind=media');
+      return { dir: path.join(root, ownerSegment, opts.ownerId, 'media'), fileName: `${opts.mediaId}.${opts.extension}` };
+    }
+    case 'moment-render': {
+      if (!opts.momentId) throw new Error('momentId is required for storage kind=moment-render');
+      return { dir: path.join(root, 'moments', opts.ownerType, opts.ownerId), fileName: `${opts.momentId}.${opts.extension}` };
+    }
+  }
+}
+
+export async function saveBase64ToLocal(opts: SaveBase64Opts): Promise<StoredObject & { absolutePath: string }> {
+  const { dir, fileName } = pathForOwner(opts);
   await ensureDir(dir);
-
-  const fileName = `${opts.mediaId}.${opts.extension}`;
   const absolutePath = path.join(dir, fileName);
-  const key = path.posix.join('squads', opts.squadId, fileName);
-
   const buffer = Buffer.from(opts.base64Data, 'base64');
   await fs.writeFile(absolutePath, buffer);
-
+  const key = path.posix.join(path.relative(storageRoot(), dir), fileName).split(path.sep).join(path.posix.sep);
   return { key, size: buffer.length, absolutePath };
 }
 
@@ -51,7 +57,7 @@ export async function removeLocalByKey(key: string): Promise<void> {
   try {
     await fs.unlink(absolutePath);
   } catch (e: any) {
-    if (e && e.code === 'ENOENT') return; // already gone
+    if (e && e.code === 'ENOENT') return;
     throw e;
   }
 }

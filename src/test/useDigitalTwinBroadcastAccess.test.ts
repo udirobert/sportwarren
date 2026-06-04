@@ -75,8 +75,8 @@ describe('useDigitalTwinBroadcastAccess', () => {
       data: {
         digitalTwin3dEnabled: true,
         digitalTwin3dTier: 'premium',
-        seasonPoints: 0,
-        squadEnergy: 20,
+        prestige: 0,
+        energy: 20,
       },
       isLoading: false,
     } as never);
@@ -95,8 +95,8 @@ describe('useDigitalTwinBroadcastAccess', () => {
       data: {
         digitalTwin3dEnabled: false,
         digitalTwin3dTier: 'streak_reward',
-        seasonPoints: 0,
-        squadEnergy: 20,
+        prestige: 0,
+        energy: 20,
       },
       isLoading: false,
     } as never);
@@ -114,8 +114,8 @@ describe('useDigitalTwinBroadcastAccess', () => {
       data: {
         digitalTwin3dEnabled: false,
         digitalTwin3dTier: null,
-        seasonPoints: 12,
-        squadEnergy: 90,
+        prestige: 12,
+        energy: 90,
       },
       isLoading: false,
     } as never);

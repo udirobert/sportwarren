@@ -3,6 +3,7 @@ import { TRPCError } from '@trpc/server';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
 import { PEER_RATING } from '@/lib/match/constants';
 import { getSquadMembership } from '../services/permissions';
+import { getTwinService } from '../services/personalization/twin-service';
 
 export const peerRatingRouter = createTRPCRouter({
   /**
@@ -107,13 +108,11 @@ export const peerRatingRouter = createTRPCRouter({
 
       await Promise.all(ratingPromises);
 
-      // 5. Trigger Digital Twin Sync
+      // 5. Sync peer rating consensus to twin
       try {
-        const { getDigitalTwinService } = await import('@/server/services/ai/digital-twin');
-        const dtService = getDigitalTwinService(ctx.prisma);
-        await dtService.syncPeerRatings(matchId);
+        await syncPeerRatingsToTwins(ctx.prisma, matchId);
       } catch (e) {
-        console.error('Failed to sync peer ratings to digital twin:', e);
+        console.error('Failed to sync peer ratings to twin:', e);
       }
 
       return { success: true };
@@ -327,3 +326,76 @@ export const peerRatingRouter = createTRPCRouter({
       return { count: unrated.length };
     }),
 });
+
+/**
+ * Aggregates peer ratings for a match and emits a `peer_rating_consensus`
+ * event to each target player twin. Mirrors the legacy
+ * `DigitalTwinService.syncPeerRatings` write to `PlayerAttribute` and
+ * `PlayerProfile.hypeTags` — but those are now read by the unified identity
+ * card (PR 4) via PlayerTwin/SquadTwin, so legacy writes are dropped.
+ *
+ * The hype tag roll-up also lands on `SquadTwin.consensusTags` via the
+ * twin event's consensus payload (the orchestrator writes the diff back to
+ * SquadTwin in the same transaction).
+ */
+async function syncPeerRatingsToTwins(
+  prisma: import('@prisma/client').PrismaClient,
+  matchId: string,
+): Promise<void> {
+  const ratings = await prisma.peerRating.findMany({
+    where: { matchId, weighted: false },
+  });
+  if (ratings.length === 0) return;
+
+  // Group by targetId
+  const targetGroups: Record<string, typeof ratings> = {};
+  for (const r of ratings) {
+    if (!targetGroups[r.targetId]) targetGroups[r.targetId] = [];
+    targetGroups[r.targetId].push(r);
+  }
+
+  const twinService = getTwinService();
+  for (const [targetId, playerRatings] of Object.entries(targetGroups)) {
+    const attributeGains: Record<string, { sum: number; count: number }> = {};
+    const allHypeTags: string[] = [];
+    for (const r of playerRatings) {
+      if (!attributeGains[r.attribute]) attributeGains[r.attribute] = { sum: 0, count: 0 };
+      attributeGains[r.attribute].sum += r.score;
+      attributeGains[r.attribute].count += 1;
+      if (r.hypeTags && Array.isArray(r.hypeTags)) {
+        allHypeTags.push(...(r.hypeTags as string[]));
+      }
+    }
+
+    const attributeDeltas: Record<string, number> = {};
+    for (const [attr, data] of Object.entries(attributeGains)) {
+      const avg = data.sum / data.count;
+      // Map 1-10 score to a small attribute delta (0.5 - 1.5).
+      attributeDeltas[attr] = Math.max(0.1, (avg - 5) * 0.3);
+    }
+
+    const consensus = Array.from(new Set(allHypeTags));
+    const reputationDelta = Math.min(50, playerRatings.length * 2);
+
+    try {
+      const twin = await twinService.getOrCreatePlayerTwin(targetId, 'Player');
+      await twinService.recordEvent({
+        kind: 'peer_rating_consensus',
+        twinId: twin.id,
+        matchId,
+        consensus: {
+          attributeDeltas,
+          hypeTags: consensus,
+          reputationDelta,
+        },
+      });
+    } catch (err) {
+      console.warn(`Twin sync failed for profile ${targetId}:`, err);
+    }
+  }
+
+  await prisma.peerRating.updateMany({
+    where: { matchId, id: { in: ratings.map((r) => r.id) } },
+    data: { weighted: true },
+  });
+}

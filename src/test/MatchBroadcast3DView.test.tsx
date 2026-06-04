@@ -27,9 +27,9 @@ describe('MatchBroadcast3DView', () => {
         squadId="squad-1"
         access={unlockedAccess}
         twin={{
-          squadEnergy: 91,
-          seasonPoints: 18,
-          digitalAttributes: { attack: 82, defense: 71, teamwork: 77 },
+          energy: 91,
+          prestige: 18,
+          baseAttributes: { pace: 75, shooting: 82, passing: 77, defending: 71, dribbling: 73, physical: 70 },
         }}
       />
     );

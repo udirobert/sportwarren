@@ -13,9 +13,9 @@ describe('useMatchBroadcastViewModel', () => {
         reason: 'eligible',
       },
       twin: {
-        squadEnergy: 90,
-        seasonPoints: 18,
-        digitalAttributes: { attack: 82, defense: 72, teamwork: 79 },
+        energy: 90,
+        prestige: 18,
+        baseAttributes: { pace: 75, shooting: 82, passing: 79, defending: 72, dribbling: 70, physical: 68 },
       },
     }));
 
@@ -34,9 +34,9 @@ describe('useMatchBroadcastViewModel', () => {
         reason: 'capability_limited',
       },
       twin: {
-        squadEnergy: 55,
-        seasonPoints: 7,
-        digitalAttributes: { attack: 58, defense: 66, teamwork: 63 },
+        energy: 55,
+        prestige: 7,
+        baseAttributes: { pace: 60, shooting: 58, passing: 63, defending: 66, dribbling: 59, physical: 62 },
       },
     }));
 

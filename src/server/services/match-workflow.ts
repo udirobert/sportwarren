@@ -14,9 +14,9 @@ import {
 } from './economy/treasury-ledger';
 import { createPendingMatchSubmission } from './match-submission';
 import { PEER_RATING } from '@/lib/match/constants';
-import { getDigitalTwinService } from './ai/digital-twin';
-import { getPlayerTwinService } from './ai/twin';
+import { getTwinService } from './personalization/twin-service';
 import { applyMatchXP } from './match-xp';
+import { refreshSquadEnergy } from './personalization/squad-energy';
 
 export type MatchWorkflowErrorCode =
   | 'NOT_FOUND'
@@ -379,17 +379,27 @@ export async function submitMatchResult({
           hasKeeper: match.hasKeeper,
         });
 
-        // Sync Digital Twin progress
-        const dtService = getDigitalTwinService(prisma);
-        await dtService.syncMatchResult(
-          homeSquadId,
-          homeScore > awayScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss',
-          homeScore,
-          awayScore
-        );
-        
-        await dtService.updateSquadEnergy(homeSquadId, match.id);
-        await dtService.updateSquadEnergy(awaySquadId, match.id);
+        // Sync squad twin progress (home)
+        const homeResult = homeScore > awayScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
+        const homeTwin = await getTwinService().getOrCreateSquadTwin(homeSquadId);
+        const homeAttributeDeltas = computeSquadMatchAttributeDeltas(homeResult, homeScore, awayScore);
+        await getTwinService().recordEvent({
+          kind: 'attestation',
+          twinId: homeTwin.id,
+          attestor: 'referee',
+          payload: {
+            attributeDeltas: homeAttributeDeltas,
+            xpDelta: 100 + homeScore * 10,
+            reputationDelta: 50,
+            matchStatsDelta: { matches: 1, goals: homeScore },
+            reason: 'match_result',
+            matchId: match.id,
+            signWithAgent: false,
+          },
+        });
+
+        await refreshSquadEnergy(homeSquadId, match.id, prisma);
+        await refreshSquadEnergy(awaySquadId, match.id, prisma);
 
         await distributeMatchRewards({
           prisma,
@@ -401,12 +411,22 @@ export async function submitMatchResult({
           hasKeeper: match.hasKeeper,
         });
 
-        await dtService.syncMatchResult(
-          awaySquadId,
-          awayScore > homeScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss',
-          awayScore,
-          homeScore
-        );
+        const awayResult = awayScore > homeScore ? 'win' : homeScore === awayScore ? 'draw' : 'loss';
+        const awayTwin = await getTwinService().getOrCreateSquadTwin(awaySquadId);
+        await getTwinService().recordEvent({
+          kind: 'attestation',
+          twinId: awayTwin.id,
+          attestor: 'referee',
+          payload: {
+            attributeDeltas: computeSquadMatchAttributeDeltas(awayResult, awayScore, homeScore),
+            xpDelta: awayResult === 'win' ? 100 + awayScore * 10 : awayResult === 'draw' ? 50 + awayScore * 5 : 20 + awayScore * 5,
+            reputationDelta: awayResult === 'win' ? 50 : awayResult === 'draw' ? 20 : 5,
+            matchStatsDelta: { matches: 1, goals: awayScore },
+            reason: 'match_result',
+            matchId: match.id,
+            signWithAgent: false,
+          },
+        });
 
         // Apply match XP (base stats: participation, goals, assists, clean sheet)
         try {
@@ -417,7 +437,7 @@ export async function submitMatchResult({
 
         // Player Twin attestations — record each player's match performance
         try {
-          const twinService = getPlayerTwinService();
+          const twinService = getTwinService();
           for (const stat of seededStats) {
             try {
               const profile = await prisma.playerProfile.findUnique({
@@ -425,7 +445,7 @@ export async function submitMatchResult({
                 include: { user: { select: { name: true } } },
               });
               const displayName = profile?.user?.name ?? 'Player';
-              await twinService.getOrCreateTwin(stat.profileId, displayName);
+              const playerTwin = await twinService.getOrCreatePlayerTwin(stat.profileId, displayName);
               const deltas: Record<string, number> = {};
               if (stat.goals > 0) deltas.shooting = Math.min(2, stat.goals * 0.5);
               if (stat.assists > 0) deltas.passing = Math.min(1.5, stat.assists * 0.5);
@@ -433,19 +453,24 @@ export async function submitMatchResult({
               if (stat.minutesPlayed > 60) deltas.physical = 0.3;
               deltas.pace = 0.1; // participation baseline
 
-              await twinService.recordAttestation({
-                profileId: stat.profileId,
-                kind: 'match_result',
+              await twinService.recordEvent({
+                kind: 'attestation',
+                twinId: playerTwin.id,
+                attestor: 'referee',
                 payload: {
+                  attributeDeltas: deltas,
+                  xpDelta: 20 + stat.goals * 15 + stat.assists * 10,
+                  reputationDelta: stat.goals * 5,
+                  matchStatsDelta: {
+                    matches: 1,
+                    goals: stat.goals,
+                    assists: stat.assists,
+                    mvp: 0,
+                  },
+                  reason: 'match_result',
                   matchId: match.id,
-                  goals: stat.goals,
-                  assists: stat.assists,
-                  cleanSheet: stat.cleanSheet,
-                  minutes: stat.minutesPlayed,
-                  result: stat.goals > 0 ? 'played' : 'sub',
+                  signWithAgent: true,
                 },
-                attributeDeltas: deltas,
-                xpGain: 20 + stat.goals * 15 + stat.assists * 10,
               });
             } catch (twinErr) {
               console.warn(`Player twin attestation failed for ${stat.profileId}:`, twinErr);
@@ -642,21 +667,48 @@ export async function verifyMatchResult({
     });
 
     if (newStatus === 'verified') {
-      // 1. Digital Twin Sync
+      // 1. Twin Sync (squad-level)
       try {
-        const dtService = getDigitalTwinService(prisma);
-        
-        const homeWinner = resultMatch.homeScore! > resultMatch.awayScore! ? 'win' : 
+        const homeResult = resultMatch.homeScore! > resultMatch.awayScore! ? 'win' :
                            resultMatch.homeScore! < resultMatch.awayScore! ? 'loss' : 'draw';
-        const awayWinner = homeWinner === 'win' ? 'loss' : homeWinner === 'loss' ? 'win' : 'draw';
+        const awayResult = homeResult === 'win' ? 'loss' : homeResult === 'loss' ? 'win' : 'draw';
 
-        await dtService.syncMatchResult(resultMatch.homeSquadId, homeWinner, resultMatch.homeScore!, resultMatch.awayScore!);
-        await dtService.syncMatchResult(resultMatch.awaySquadId, awayWinner, resultMatch.awayScore!, resultMatch.homeScore!);
-        
-        await dtService.updateSquadEnergy(resultMatch.homeSquadId, matchId);
-        await dtService.updateSquadEnergy(resultMatch.awaySquadId, matchId);
+        const homeTwin = await getTwinService().getOrCreateSquadTwin(resultMatch.homeSquadId);
+        await getTwinService().recordEvent({
+          kind: 'attestation',
+          twinId: homeTwin.id,
+          attestor: 'referee',
+          payload: {
+            attributeDeltas: computeSquadMatchAttributeDeltas(homeResult, resultMatch.homeScore!, resultMatch.awayScore!),
+            xpDelta: homeResult === 'win' ? 100 + resultMatch.homeScore! * 10 : homeResult === 'draw' ? 50 + resultMatch.homeScore! * 5 : 20 + resultMatch.homeScore! * 5,
+            reputationDelta: homeResult === 'win' ? 50 : homeResult === 'draw' ? 20 : 5,
+            matchStatsDelta: { matches: 1, goals: resultMatch.homeScore! },
+            reason: 'match_result',
+            matchId,
+            signWithAgent: false,
+          },
+        });
+
+        const awayTwin = await getTwinService().getOrCreateSquadTwin(resultMatch.awaySquadId);
+        await getTwinService().recordEvent({
+          kind: 'attestation',
+          twinId: awayTwin.id,
+          attestor: 'referee',
+          payload: {
+            attributeDeltas: computeSquadMatchAttributeDeltas(awayResult, resultMatch.awayScore!, resultMatch.homeScore!),
+            xpDelta: awayResult === 'win' ? 100 + resultMatch.awayScore! * 10 : awayResult === 'draw' ? 50 + resultMatch.awayScore! * 5 : 20 + resultMatch.awayScore! * 5,
+            reputationDelta: awayResult === 'win' ? 50 : awayResult === 'draw' ? 20 : 5,
+            matchStatsDelta: { matches: 1, goals: resultMatch.awayScore! },
+            reason: 'match_result',
+            matchId,
+            signWithAgent: false,
+          },
+        });
+
+        await refreshSquadEnergy(resultMatch.homeSquadId, matchId, prisma);
+        await refreshSquadEnergy(resultMatch.awaySquadId, matchId, prisma);
       } catch (e) {
-        console.error('Failed to sync digital twin after verification:', e);
+        console.error('Failed to sync twin after verification:', e);
       }
     }
 
@@ -699,14 +751,25 @@ export async function verifyMatchResult({
             playerStats: seededStats, // Using seeded participation stats
           });
 
-          // Sync Digital Twin progress
-          const dtService = getDigitalTwinService(prisma);
-          await dtService.syncMatchResult(
-            resultMatch.homeSquadId,
-            homeFinalScore > awayFinalScore ? 'win' : isDraw ? 'draw' : 'loss',
-            homeFinalScore,
-            awayFinalScore
-          );
+          // Sync SquadTwin progress (post-rewards)
+          const finalHomeResult = homeFinalScore > awayFinalScore ? 'win' : isDraw ? 'draw' : 'loss';
+          const finalAwayResult = awayFinalScore > homeFinalScore ? 'win' : isDraw ? 'draw' : 'loss';
+
+          const finalHomeTwin = await getTwinService().getOrCreateSquadTwin(resultMatch.homeSquadId);
+          await getTwinService().recordEvent({
+            kind: 'attestation',
+            twinId: finalHomeTwin.id,
+            attestor: 'referee',
+            payload: {
+              attributeDeltas: computeSquadMatchAttributeDeltas(finalHomeResult, homeFinalScore, awayFinalScore),
+              xpDelta: finalHomeResult === 'win' ? 100 + homeFinalScore * 10 : finalHomeResult === 'draw' ? 50 + homeFinalScore * 5 : 20 + homeFinalScore * 5,
+              reputationDelta: finalHomeResult === 'win' ? 50 : finalHomeResult === 'draw' ? 20 : 5,
+              matchStatsDelta: { matches: 1, goals: homeFinalScore },
+              reason: 'match_result',
+              matchId: resultMatch.id,
+              signWithAgent: false,
+            },
+          });
 
           await distributeMatchRewards({
             prisma,
@@ -717,12 +780,21 @@ export async function verifyMatchResult({
             playerStats: seededStats, // Using seeded participation stats
           });
 
-          await dtService.syncMatchResult(
-            resultMatch.awaySquadId,
-            awayFinalScore > homeFinalScore ? 'win' : isDraw ? 'draw' : 'loss',
-            awayFinalScore,
-            homeFinalScore
-          );
+          const finalAwayTwin = await getTwinService().getOrCreateSquadTwin(resultMatch.awaySquadId);
+          await getTwinService().recordEvent({
+            kind: 'attestation',
+            twinId: finalAwayTwin.id,
+            attestor: 'referee',
+            payload: {
+              attributeDeltas: computeSquadMatchAttributeDeltas(finalAwayResult, awayFinalScore, homeFinalScore),
+              xpDelta: finalAwayResult === 'win' ? 100 + awayFinalScore * 10 : finalAwayResult === 'draw' ? 50 + awayFinalScore * 5 : 20 + awayFinalScore * 5,
+              reputationDelta: finalAwayResult === 'win' ? 50 : finalAwayResult === 'draw' ? 20 : 5,
+              matchStatsDelta: { matches: 1, goals: awayFinalScore },
+              reason: 'match_result',
+              matchId: resultMatch.id,
+              signWithAgent: false,
+            },
+          });
 
           // Apply match XP (base stats: participation, goals, assists, clean sheet)
           try {
@@ -753,4 +825,22 @@ export async function verifyMatchResult({
       && Boolean(updatedMatch.yellowFeeSessionId)
       && !yellowSettled,
   };
+}
+
+/**
+ * Maps a squad match result to attribute deltas for `SquadTwin.baseAttributes`.
+ * Mirrors the legacy `digitalAttributes` logic from the now-removed
+ * `ai/digital-twin.ts` but lives on the canonical 6-key attribute set.
+ */
+function computeSquadMatchAttributeDeltas(
+  result: 'win' | 'loss' | 'draw',
+  goalsFor: number,
+  goalsAgainst: number,
+): Record<string, number> {
+  const deltas: Record<string, number> = {};
+  if (goalsFor > 2) deltas.shooting = 1;
+  if (goalsAgainst === 0) deltas.defending = 1;
+  deltas.passing = 0.5; // teamwork proxy
+  if (result === 'win') deltas.physical = 0.2;
+  return deltas;
 }

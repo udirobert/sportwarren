@@ -19,6 +19,9 @@ import { getSquadMembership, isSquadLeader } from '../services/permissions';
 import { kiteAIService } from '../services/ai/kite';
 import { autonomyPolicy } from '../services/ai/autonomy-policy';
 import { algorandService } from '../services/blockchain/algorand';
+import { getTwinService } from '../services/personalization/twin-service';
+import { generateSquadNarrative } from '../services/personalization/narrative';
+import { computeLevel, xpToNext } from '../services/personalization/twin-appliers';
 import {
   squadIdSchema,
   squadNameSchema,
@@ -368,45 +371,39 @@ export const squadRouter = createTRPCRouter({
   getDigitalTwin: publicProcedure
     .input(z.object({ squadId: squadIdSchema }))
     .query(async ({ ctx, input }) => {
-      const squad = await ctx.prisma.squad.findUnique({
-        where: { id: input.squadId },
-        select: {
-          id: true,
-          name: true,
-          level: true,
-          xp: true,
-          digitalAttributes: true,
-          seasonPoints: true,
-          squadEnergy: true,
-          isDigitalTwinActive: true,
-          digitalTwin3dEnabled: true,
-          digitalTwin3dTier: true,
-          lastSeasonSync: true,
-          members: {
-            select: {
-              user: {
-                select: {
-                  playerProfile: {
-                    select: { hypeTags: true }
-                  }
-                }
-              }
-            }
-          }
-        },
-      });
+      const [squad, twin, hypeTagRows] = await Promise.all([
+        ctx.prisma.squad.findUnique({
+          where: { id: input.squadId },
+          select: {
+            id: true,
+            name: true,
+            digitalTwin3dEnabled: true,
+            digitalTwin3dTier: true,
+          },
+        }),
+        ctx.prisma.squadTwin.findUnique({
+          where: { squadId: input.squadId },
+        }),
+        ctx.prisma.playerMatchStats.findMany({
+          where: { match: { OR: [{ homeSquadId: input.squadId }, { awaySquadId: input.squadId }], status: 'verified' } },
+          select: { hypeTags: true },
+        }),
+      ]);
 
       if (!squad) {
         throw new TRPCError({ code: 'NOT_FOUND', message: 'Squad not found' });
       }
 
-      // Aggregate top 5 Hype Tags from members
+      // Aggregate hype tags from SquadTwin.consensusTags + match stats
       const squadHypeTags: Record<string, number> = {};
-      const members = squad.members || [];
-      for (const member of members) {
-        const tags = member.user?.playerProfile?.hypeTags || {};
-        for (const [tag, count] of Object.entries(tags)) {
-          squadHypeTags[tag] = (squadHypeTags[tag] || 0) + count;
+      const consensus = (twin?.consensusTags ?? {}) as Record<string, number>;
+      for (const [tag, count] of Object.entries(consensus)) {
+        squadHypeTags[tag] = (squadHypeTags[tag] || 0) + count;
+      }
+      for (const row of hypeTagRows) {
+        const tags = (row.hypeTags as string[] | null) ?? [];
+        for (const tag of tags) {
+          squadHypeTags[tag] = (squadHypeTags[tag] || 0) + 1;
         }
       }
 
@@ -415,24 +412,26 @@ export const squadRouter = createTRPCRouter({
         .slice(0, 5)
         .reduce((acc, [tag, count]) => ({ ...acc, [tag]: count }), {});
 
-      // Generate AI narrative if needed
-      const { getDigitalTwinService } = await import('../services/ai/digital-twin');
-      const dtService = getDigitalTwinService(ctx.prisma);
-      const narrative = await dtService.generateSeasonNarrative(input.squadId);
+      const narrative = await generateSquadNarrative(input.squadId);
+
+      const level = twin?.level ?? 1;
+      const nextLevelXp = xpToNext(twin?.xp ?? 0);
 
       return {
         id: squad.id,
         name: squad.name,
-        level: squad.level,
-        xp: squad.xp,
-        digitalAttributes: squad.digitalAttributes,
-        seasonPoints: squad.seasonPoints,
-        squadEnergy: squad.squadEnergy,
-        isDigitalTwinActive: squad.isDigitalTwinActive,
+        level,
+        xp: twin?.xp ?? 0,
+        prestige: twin?.prestige ?? 0,
+        baseAttributes: twin?.baseAttributes ?? {},
+        energy: twin?.energy ?? 100,
+        energyMax: twin?.energyMax ?? 100,
+        twinActive: twin?.twinActive ?? true,
+        reputation: twin?.reputation ?? 0,
+        attestationCount: twin?.attestationCount ?? 0,
         digitalTwin3dEnabled: squad.digitalTwin3dEnabled,
         digitalTwin3dTier: squad.digitalTwin3dTier,
-        lastSeasonSync: squad.lastSeasonSync,
-        nextLevelXp: squad.level * 1000,
+        nextLevelXp,
         squadHypeTags: topTags,
         narrative,
       };
@@ -442,7 +441,6 @@ export const squadRouter = createTRPCRouter({
   simulateGhostMatch: protectedProcedure
     .input(z.object({ squadId: squadIdSchema }))
     .mutation(async ({ ctx, input }) => {
-      // Check if user is a member of the squad
       const membership = await ctx.prisma.squadMember.findUnique({
         where: { squadId_userId: { squadId: input.squadId, userId: ctx.userId! } }
       });
@@ -451,15 +449,26 @@ export const squadRouter = createTRPCRouter({
         throw new TRPCError({ code: 'FORBIDDEN', message: 'Must be a member to simulate matches' });
       }
 
-      const { getDigitalTwinService } = await import('../services/ai/digital-twin');
-      const dtService = getDigitalTwinService(ctx.prisma);
-      
-       try {
-         return await dtService.simulateGhostMatch(input.squadId);
-       } catch (e) {
-         const message = e instanceof Error ? e.message : 'Ghost match simulation failed';
-         throw new TRPCError({ code: 'BAD_REQUEST', message });
-       }
+      const twin = await ctx.prisma.squadTwin.findUnique({ where: { squadId: input.squadId } });
+      if (!twin) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Squad twin not found' });
+      }
+      if (twin.energy < 40) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Insufficient energy (min 40%)' });
+      }
+
+      const attributes = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'] as const;
+      const attributeImproved = attributes[Math.floor(Math.random() * attributes.length)];
+      const xpGain = 40 + Math.floor(Math.random() * 30);
+
+      const twinService = getTwinService();
+      const result = await twinService.recordEvent({
+        kind: 'ghost_match',
+        twinId: twin.id,
+        result: { attributeImproved, energySpent: 40 },
+      });
+
+      return { xpGain, newLevel: result.diff.newLevel, energyConsumed: 40, focus: attributeImproved };
     }),
 
   setDigitalTwin3dEntitlement: protectedProcedure
