@@ -4,7 +4,7 @@
  */
 
 import { z } from 'zod';
-import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
+import { createTRPCRouter, protectedProcedure, publicProcedure, adminProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 import {
   simulateTournamentMatch,
@@ -458,6 +458,35 @@ export const tournamentRouter = createTRPCRouter({
         include: {
           _count: { select: { participants: true, matches: true } },
         },
+      });
+    }),
+
+  // ── Seasons ──────────────────────────────────────────────────────────────
+
+  createSeason: adminProcedure
+    .input(z.object({
+      name: z.string().min(2).max(80),
+      startDate: z.coerce.date(),
+      endDate: z.coerce.date(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { createSeason } = await import('@/server/services/personalization/season');
+      return createSeason(input.name, input.startDate, input.endDate, ctx.prisma);
+    }),
+
+  getActiveSeason: publicProcedure.query(async ({ ctx }) => {
+    return ctx.prisma.season.findFirst({
+      where: { status: 'active' },
+      orderBy: { startDate: 'desc' },
+    });
+  }),
+
+  listSeasons: publicProcedure
+    .input(z.object({ limit: z.number().min(1).max(50).default(10) }))
+    .query(async ({ ctx, input }) => {
+      return ctx.prisma.season.findMany({
+        orderBy: { startDate: 'desc' },
+        take: input.limit,
       });
     }),
 });

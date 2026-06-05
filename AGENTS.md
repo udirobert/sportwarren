@@ -46,12 +46,15 @@ are the source of truth.
   - `squad-energy.ts` (bypasses `TwinService` — energy is a squad-level operational metric, not a twin brain mutation)
   - `twin-sim.ts` (`createRoundRobin` / `runSimulation` / `settleResults` — overnight round-robin tournaments between player twins; derives team strength from baseAttributes, uses `simulateTournamentMatch` engine, settles via `TwinService.recordEvent({ kind: 'sim_completed' })`)
   - `coaching.ts` (`hireCoach` / `cancelEffect` / `getActiveEffects` / `listAvailableCoaches` — coaching marketplace; creates CoachingEffect rows, fires coaching_hired/coaching_expired events via TwinService; coach agents are AiAgent rows with type 'coach_external')
+  - `season.ts` (`createSeason` / `endSeason` — season lifecycle; endSeason iterates all active twins, fires season_end events via TwinService granting +1 prestige + partner-tier moment; tRPC: `tournament.createSeason`/`getActiveSeason`/`listSeasons`)
   - `narrative.ts` (two-tier: fast sync stubs `generatePlayerNarrative`/`generateSquadNarrative` for hot paths + LLM-driven `buildRichPlayerNarrative`/`buildRichSquadNarrative` with Redis 1h cache keyed on content hash; consumes `generateInference` from `@/lib/ai/inference`)
   - `identity.ts` (`IdentityService.getPlayerIdentity` / `getSquadIdentity` — single read API joining skin (User/Squad) + brain (PlayerTwin/SquadTwin) + moments + attestations + match stats + sync narrative; tRPC: `player.getIdentity`/`player.getMyIdentity`, `squad.getIdentity`)
 - Player identity surface: `src/components/identity/PlayerIdentityCard.tsx` + `SquadIdentityCard.tsx` — Tailwind + lucide-react cards consuming `PlayerIdentity`/`SquadIdentity` from `identity.ts`; profile page at `src/app/(app)/profile/page.tsx` calls `player.getMyIdentity`
 - Moment render cron: `src/app/api/cron/moment-render/route.ts` — picks up unrendered moments, generates PNGs every 6h
 - Twin sim cron: `src/app/api/cron/twin-sim/route.ts` — runs pending overnight sims daily; tRPC: `tournament.createTwinSim`/`enterTwinSim`/`getTwinSimResults`/`listTwinSims`
 - Coaching expiry: `src/app/api/cron/digital-twin/route.ts` — sweeps expired CoachingEffect rows for both player and squad twins, fires coaching_expired events; tRPC: `coaching.listCoaches`/`hireCoach`/`getActiveEffects`/`cancelEffect`
+- Season end cron: `src/app/api/cron/season/route.ts` — auto-ends seasons past endDate, fires season_end for all active twins
+- Admin twin adjustment: `player.adminAdjustTwin` — admin-only pass-through to TwinService for manual attribute/XP/reputation fixes
 - All twin state mutations go through `TwinService.recordEvent({ kind, ... })` — no direct Prisma writes to `PlayerTwin` or `SquadTwin` fields from call sites
 - `User.avatar` is a storage key (not base64); sharp generates square/thumb/wide variants at upload
 - Schema single source of truth: `SquadTwin` (level, xp, prestige, baseAttributes on 6 keys, energy, reputation, attestationCount) replaces the legacy `Squad.digitalAttributes/squadEnergy/seasonPoints/level/xp/isDigitalTwinActive/lastSeasonSync` columns dropped in PR 2
