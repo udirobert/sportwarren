@@ -222,22 +222,6 @@ export const FormationPlayground: React.FC = () => {
     [personalization]
   );
 
-  const handleLineupChange = useCallback(
-    (newLineup: string[]) => {
-      // Update personalization names based on new lineup order
-      const newNames = newLineup.map((playerId) => {
-        const player = pitchPlayers.find(p => p.id === playerId);
-        return player?.name || '';
-      });
-      personalization.setNames(newNames);
-      trackFeatureUsed("tactics_preview_change", {
-        type: "lineup",
-        value: "reordered",
-      });
-    },
-    [pitchPlayers, personalization]
-  );
-
   // ── Players for PitchCanvas (real squad data when logged in, mock for guests) ──
   const pitchPlayers = useMemo(() => {
     const positions = POSITIONS_BY_SQUAD_SIZE[squadSize];
@@ -278,6 +262,22 @@ export const FormationPlayground: React.FC = () => {
       address: `0x${i + 1}`,
     }));
   }, [squadSize, personalization.names, personalization.avatars, hasRealMembers, realMembers]);
+
+  const handleLineupChange = useCallback(
+    (newLineup: string[]) => {
+      // Update personalization names based on new lineup order
+      const newNames = newLineup.map((playerId) => {
+        const player = pitchPlayers.find(p => p.id === playerId);
+        return player?.name || '';
+      });
+      personalization.setNames(newNames);
+      trackFeatureUsed("tactics_preview_change", {
+        type: "lineup",
+        value: "reordered",
+      });
+    },
+    [pitchPlayers, personalization]
+  );
 
   const lineup = useMemo(
     () =>
