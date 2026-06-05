@@ -54,7 +54,11 @@ export const FormationPlayground: React.FC = () => {
   const [formation, setFormation] = useState<Formation>((urlState.formation as Formation) || "4-4-2");
   const [playStyle, setPlayStyle] = useState<PlayStyle>((urlState.style as PlayStyle) || "balanced");
   const [primaryColor, setPrimaryColor] = useState(urlState.color || "#10b981");
-  const [pitchTheme, setPitchTheme] = useState("premier-league");
+  const [pitchTheme, setPitchTheme] = useState<'premier-league' | 'sunday-league' | 'night-match' | 'easy-on-eyes'>('premier-league');
+  const [enablePlayerMovement, setEnablePlayerMovement] = useState(false);
+  const [drawArrows, setDrawArrows] = useState(false);
+  const [arrows, setArrows] = useState<Array<{ x1: number; y1: number; x2: number; y2: number }>>([]);
+  const [drawingArrow, setDrawingArrow] = useState<{ x1: number; y1: number; x2: number; y2: number } | null>(null);
 
   // ── Mode toggle ──
   const [mode, setMode] = useState<PlaygroundMode>("tactics");
@@ -218,6 +222,22 @@ export const FormationPlayground: React.FC = () => {
     [personalization]
   );
 
+  const handleLineupChange = useCallback(
+    (newLineup: string[]) => {
+      // Update personalization names based on new lineup order
+      const newNames = newLineup.map((playerId) => {
+        const player = pitchPlayers.find(p => p.id === playerId);
+        return player?.name || '';
+      });
+      personalization.setNames(newNames);
+      trackFeatureUsed("tactics_preview_change", {
+        type: "lineup",
+        value: "reordered",
+      });
+    },
+    [pitchPlayers, personalization]
+  );
+
   // ── Players for PitchCanvas (real squad data when logged in, mock for guests) ──
   const pitchPlayers = useMemo(() => {
     const positions = POSITIONS_BY_SQUAD_SIZE[squadSize];
@@ -338,7 +358,7 @@ export const FormationPlayground: React.FC = () => {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-2 sm:px-0">
-      <Card className="relative bg-gray-950/95 border-white/10 backdrop-blur-xl overflow-hidden shadow-2xl shadow-green-500/5">
+      <Card className="relative bg-gray-950/95 dark:bg-gray-950/95 border-white/10 backdrop-blur-xl overflow-hidden shadow-2xl shadow-green-500/5">
         {/* Top accent */}
         <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent ${isCounterMode ? "via-amber-500/60" : "via-green-500/60"} to-transparent`} />
 
@@ -422,9 +442,9 @@ export const FormationPlayground: React.FC = () => {
         </div>
 
         {/* ── Main Content ── */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-0">
+        <div className={`grid grid-cols-1 ${mode === 'simulation' ? 'lg:grid-cols-1' : 'lg:grid-cols-[1fr_280px]'} gap-0`}>
           {/* Pitch area */}
-          <div ref={pitchRef} className="p-3 sm:p-5">
+          <div ref={pitchRef} className="p-3 sm:p-5 relative">
             <AnimatePresence mode="wait">
               {mode === "tactics" ? (
                 <motion.div
@@ -433,19 +453,21 @@ export const FormationPlayground: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.2 }}
+                  className="relative"
                 >
                   <PitchCanvas
                     formation={formation}
                     lineup={lineup}
                     players={pitchPlayers}
-                    readOnly
+                    readOnly={!enablePlayerMovement}
+                    onLineupChange={handleLineupChange}
                     showPlayerNames={personalization.showNames}
                     showExport={false}
                     primaryColor={primaryColor}
                     playStyle={playStyle}
                     theme="hero"
                     size="md"
-                    pitchTheme={pitchTheme as any}
+                    pitchTheme={pitchTheme}
                     blurAvatars={personalization.blurFaces}
                     blurRadius={
                       personalization.blurLevel === "low"
@@ -455,6 +477,83 @@ export const FormationPlayground: React.FC = () => {
                         : 8
                     }
                   />
+                  
+                  {/* Arrow Drawing Overlay */}
+                  {drawArrows && (
+                    <svg
+                      className="absolute inset-0 w-full h-full pointer-events-auto cursor-crosshair z-10"
+                      style={{ background: 'transparent' }}
+                      onMouseDown={(e) => {
+                        if (!drawArrows) return;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = ((e.clientX - rect.left) / rect.width) * 100;
+                        const y = ((e.clientY - rect.top) / rect.height) * 100;
+                        setDrawingArrow({ x1: x, y1: y, x2: x, y2: y });
+                      }}
+                      onMouseMove={(e) => {
+                        if (!drawingArrow) return;
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        const x = ((e.clientX - rect.left) / rect.width) * 100;
+                        const y = ((e.clientY - rect.top) / rect.height) * 100;
+                        setDrawingArrow({ ...drawingArrow, x2: x, y2: y });
+                      }}
+                      onMouseUp={() => {
+                        if (drawingArrow) {
+                          setArrows([...arrows, drawingArrow]);
+                          setDrawingArrow(null);
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        if (drawingArrow) {
+                          setArrows([...arrows, drawingArrow]);
+                          setDrawingArrow(null);
+                        }
+                      }}
+                    >
+                      {/* Existing arrows */}
+                      {arrows.map((arrow, i) => (
+                        <g key={i}>
+                          <line
+                            x1={`${arrow.x1}%`}
+                            y1={`${arrow.y1}%`}
+                            x2={`${arrow.x2}%`}
+                            y2={`${arrow.y2}%`}
+                            stroke="#fbbf24"
+                            strokeWidth="2"
+                            markerEnd="url(#arrowhead)"
+                          />
+                        </g>
+                      ))}
+                      
+                      {/* Arrow being drawn */}
+                      {drawingArrow && (
+                        <line
+                          x1={`${drawingArrow.x1}%`}
+                          y1={`${drawingArrow.y1}%`}
+                          x2={`${drawingArrow.x2}%`}
+                          y2={`${drawingArrow.y2}%`}
+                          stroke="#fbbf24"
+                          strokeWidth="2"
+                          strokeDasharray="5,5"
+                          markerEnd="url(#arrowhead)"
+                        />
+                      )}
+                      
+                      {/* Arrow marker definition */}
+                      <defs>
+                        <marker
+                          id="arrowhead"
+                          markerWidth="10"
+                          markerHeight="10"
+                          refX="9"
+                          refY="3"
+                          orient="auto"
+                        >
+                          <path d="M0,0 L0,6 L9,3 z" fill="#fbbf24" />
+                        </marker>
+                      </defs>
+                    </svg>
+                  )}
                 </motion.div>
               ) : (
                 <motion.div
@@ -484,7 +583,8 @@ export const FormationPlayground: React.FC = () => {
             </AnimatePresence>
           </div>
 
-          {/* Side controls */}
+          {/* Side controls - only show in tactics mode */}
+          {mode === 'tactics' && (
           <div className="border-t lg:border-t-0 lg:border-l border-white/[0.06] p-4 space-y-4 bg-gray-950/50">
             {/* Squad Size */}
             <div>
@@ -553,6 +653,78 @@ export const FormationPlayground: React.FC = () => {
               </div>
             </div>
 
+            {/* Pitch Theme */}
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-1.5 block">
+                Pitch Style
+              </label>
+              <div className="grid grid-cols-2 gap-1">
+                {(['premier-league', 'sunday-league', 'night-match', 'easy-on-eyes'] as const).map((theme) => (
+                  <button
+                    key={theme}
+                    onClick={() => setPitchTheme(theme)}
+                    className={`px-2 py-1.5 rounded-md text-[10px] font-bold text-center transition-all capitalize ${
+                      pitchTheme === theme
+                        ? "bg-green-500/25 text-green-300"
+                        : "bg-gray-800 text-gray-400 hover:text-green-300"
+                    }`}
+                  >
+                    {theme.replace(/-/g, ' ')}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Player Movement Toggle */}
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enablePlayerMovement}
+                  onChange={(e) => setEnablePlayerMovement(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded accent-green-500"
+                />
+                <span className="text-[11px] font-bold text-gray-300">
+                  Move Players
+                </span>
+              </label>
+              {enablePlayerMovement && (
+                <p className="text-[9px] text-gray-500 mt-1 ml-5">
+                  Drag players to reposition
+                </p>
+              )}
+            </div>
+
+            {/* Arrow Drawing Toggle */}
+            <div>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={drawArrows}
+                  onChange={(e) => setDrawArrows(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded accent-green-500"
+                />
+                <span className="text-[11px] font-bold text-gray-300">
+                  Draw Arrows
+                </span>
+              </label>
+              {drawArrows && (
+                <div className="mt-1 ml-5 space-y-1">
+                  <p className="text-[9px] text-gray-500">
+                    Click & drag to draw
+                  </p>
+                  {arrows.length > 0 && (
+                    <button
+                      onClick={() => setArrows([])}
+                      className="text-[9px] text-red-400 hover:text-red-300 font-bold uppercase"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Show Names Toggle */}
             <div>
               <label className="flex items-center gap-2 cursor-pointer">
@@ -606,6 +778,7 @@ export const FormationPlayground: React.FC = () => {
               </button>
             )}
           </div>
+          )}
         </div>
 
         {/* Copied toast */}
