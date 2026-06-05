@@ -115,6 +115,27 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
     };
   }
 
+  if (stage === 'pending_member') {
+    return {
+      id: 'pending_member',
+      eyebrow: 'Squad Joined',
+      headline: 'You\'re on the roster!',
+      description: 'Connect a wallet to unlock tactics, transfers, match verification, and start building your player record.',
+      primaryAction: { intent: 'open_wallet', label: 'Connect Wallet', href: '/settings?tab=wallet' },
+      secondaryAction: { intent: 'preview_match', label: 'Preview Squad', href: '/squad' },
+      surfaceLabel: 'Pending',
+      queueLabel: 'Wallet not connected',
+      identityLabel: 'Email verified',
+      squadLabel: 'Squad joined (pending)',
+      isNewUser: true,
+      steps: [
+        { number: 1, label: 'Join squad', completed: true },
+        { number: 2, label: 'Connect wallet', completed: false, href: '/settings?tab=wallet' },
+        { number: 3, label: 'Log first match', completed: false, href: '/match?mode=capture' },
+      ],
+    };
+  }
+
   if (stage === 'wallet_unverified') {
     return {
       id: 'wallet_unverified',

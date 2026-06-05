@@ -12,7 +12,8 @@ export function useJourneyState() {
   const { memberships, refresh } = useActiveSquad();
   const { completedCount, totalCount } = useOnboarding();
 
-  const squadCount = memberships.length;
+  const squadCount = memberships.filter((m) => m.status === 'active').length;
+  const hasPendingMembership = memberships.some((m) => m.status === 'pending');
 
   const journeyStage = useMemo(() => getJourneyStage({
     isGuest,
@@ -20,12 +21,14 @@ export function useJourneyState() {
     hasWallet,
     authState: authStatus.state,
     squadCount,
+    hasPendingMembership,
     completedChecklistCount: completedCount,
     totalChecklistCount: totalCount,
   }), [
     authStatus.state,
     completedCount,
     hasAccount,
+    hasPendingMembership,
     hasWallet,
     isGuest,
     squadCount,

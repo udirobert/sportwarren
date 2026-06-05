@@ -3,22 +3,26 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { AlertCircle, ArrowLeft, CheckCircle2, Shield, UserPlus, Users } from "lucide-react";
+import { AlertCircle, ArrowLeft, CheckCircle2, Shield, UserPlus, Users, Wallet } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { useWallet } from "@/contexts/WalletContext";
 import { useMySquads, useSquadDetails } from "@/hooks/squad/useSquad";
+import { trpc } from "@/lib/trpc-client";
+import { usePrivy } from "@privy-io/react-auth";
 
 export default function PublicSquadInvitePage() {
   const params = useParams();
   const router = useRouter();
   const squadId = params?.squadId as string;
   const { hasAccount, hasWallet, isGuest, isVerified } = useWallet();
+  const { authenticated, login } = usePrivy();
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [pendingJoin, setPendingJoin] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
   const [joinedNow, setJoinedNow] = useState(false);
+  const [joinedPending, setJoinedPending] = useState(false);
 
   const {
     squad,
@@ -30,10 +34,21 @@ export default function PublicSquadInvitePage() {
   } = useSquadDetails(squadId);
   const { memberships, loading: _membershipsLoading } = useMySquads();
 
+  const joinPendingMutation = trpc.squad.joinPending.useMutation({
+    onSuccess: () => {
+      setJoinedPending(true);
+      setJoinedNow(true);
+    },
+    onError: (err) => {
+      setJoinError(err.message);
+    },
+  });
+
   const existingMembership = useMemo(
     () => memberships.find((membership) => membership.squad.id === squadId),
     [memberships, squadId],
   );
+  const isPendingMember = existingMembership?.status === 'pending';
   const captain = useMemo(
     () => members.find((member) => member.role === "captain") ?? null,
     [members],
@@ -70,12 +85,26 @@ export default function PublicSquadInvitePage() {
   const handleJoin = async () => {
     setJoinError(null);
 
-    if (!hasWallet || !isVerified || isGuest || !hasAccount) {
+    // Not authenticated at all — trigger Privy login (email or social)
+    if (!authenticated && !hasAccount) {
+      login();
+      return;
+    }
+
+    // Has account but no wallet — join as pending member
+    if (hasAccount && !hasWallet) {
+      joinPendingMutation.mutate({ squadId });
+      return;
+    }
+
+    // Has wallet but not verified — show wallet modal
+    if (!isVerified || isGuest) {
       setPendingJoin(true);
       setShowWalletModal(true);
       return;
     }
 
+    // Fully verified — join as active member
     try {
       await joinSquad();
       setJoinedNow(true);
@@ -85,7 +114,9 @@ export default function PublicSquadInvitePage() {
   };
 
   const statusLabel = existingMembership || joinedNow
-    ? "You are in this squad"
+    ? isPendingMember || joinedPending
+      ? "Joined (pending wallet)"
+      : "You are in this squad"
     : loading
       ? "Loading squad"
       : "Open squad invite";
@@ -114,6 +145,8 @@ export default function PublicSquadInvitePage() {
       </div>
     );
   }
+
+  const isLoading = isJoining || pendingJoin || joinPendingMutation.isPending;
 
   return (
     <>
@@ -176,13 +209,13 @@ export default function PublicSquadInvitePage() {
                   1. Open this invite link.
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-                  2. Sign in and connect a wallet to unlock protected squad actions.
+                  2. Sign in with email or wallet to join the squad.
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
                   3. Join the squad so tonight&apos;s match can count toward their player progression.
                 </div>
                 <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-                  4. Claim their name and preferred position so they show up properly in squad tactics and match records.
+                  4. Connect a wallet later to unlock full features like tactics and match verification.
                 </div>
               </div>
 
@@ -194,34 +227,65 @@ export default function PublicSquadInvitePage() {
 
               {(existingMembership || joinedNow) ? (
                 <div className="mt-6 space-y-3">
-                  <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
-                    <CheckCircle2 className="w-4 h-4" />
-                    You are ready for tonight&apos;s match flow.
-                  </div>
-                  <p className="text-sm text-gray-300">
-                    One more useful step: claim your name and preferred position before the lineup is set.
-                  </p>
-                  <div className="flex gap-3">
-                    <Button onClick={() => router.push("/settings?tab=profile")} variant="secondary">
-                      Claim profile
-                    </Button>
-                    <Button onClick={() => router.push("/squad")} variant="secondary">
-                      Open squad
-                    </Button>
-                  </div>
+                  {(isPendingMember || joinedPending) ? (
+                    <>
+                      <div className="flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                        <CheckCircle2 className="w-4 h-4" />
+                        You&apos;re on the roster! Connect a wallet to unlock full features.
+                      </div>
+                      <p className="text-sm text-gray-300">
+                        Tactics, transfers, match verification, and XP tracking all require a connected wallet. You can do this anytime from settings.
+                      </p>
+                      <div className="flex gap-3">
+                        <Link href="/settings?tab=wallet">
+                          <Button variant="secondary">
+                            <Wallet className="w-4 h-4 mr-2" />
+                            Connect Wallet
+                          </Button>
+                        </Link>
+                        <Button onClick={() => router.push("/squad")} variant="outline">
+                          Open squad
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+                        <CheckCircle2 className="w-4 h-4" />
+                        You are ready for tonight&apos;s match flow.
+                      </div>
+                      <p className="text-sm text-gray-300">
+                        One more useful step: claim your name and preferred position before the lineup is set.
+                      </p>
+                      <div className="flex gap-3">
+                        <Button onClick={() => router.push("/settings?tab=profile")} variant="secondary">
+                          Claim profile
+                        </Button>
+                        <Button onClick={() => router.push("/squad")} variant="secondary">
+                          Open squad
+                        </Button>
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div className="mt-6 flex flex-col gap-3 sm:flex-row">
                   <Button
                     onClick={handleJoin}
-                    loading={isJoining || pendingJoin}
+                    loading={isLoading}
                     variant="secondary"
                   >
-                    {hasWallet && isVerified ? "Join squad now" : "Connect wallet and join"}
+                    {hasWallet && isVerified
+                      ? "Join squad now"
+                      : hasAccount
+                        ? "Join squad"
+                        : "Sign in and join"}
                   </Button>
-                  <Link href="/settings?tab=wallet">
-                    <Button variant="outline">Review wallet setup</Button>
-                  </Link>
+                  {hasWallet && (
+                    <Link href="/settings?tab=wallet">
+                      <Button variant="outline">Review wallet setup</Button>
+                    </Link>
+                  )}
                 </div>
               )}
             </Card>
@@ -233,9 +297,10 @@ export default function PublicSquadInvitePage() {
               </div>
               <div className="mt-4 space-y-4 text-sm text-gray-300">
                 <p>
-                  The match should become more than a chat message. Joining the squad links the player to the result, the squad story, and future progression.                </p>
+                  The match should become more than a chat message. Joining the squad links the player to the result, the squad story, and future progression.
+                </p>
                 <p>
-                  The protected join flow is wallet-backed because squad actions are authenticated. For tonight, the fastest path is Algorand if the player only cares about profile, XP, and recorded match history.
+                  You can join with just an email — connect a wallet later when you want your stats to count on the leaderboard. The fastest path for tonight is to sign in and join now.
                 </p>
                 <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
                   <div className="flex items-center gap-2 text-white">
