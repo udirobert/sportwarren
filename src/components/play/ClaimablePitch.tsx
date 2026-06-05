@@ -174,23 +174,29 @@ export function ClaimablePitch({
   const [claims, setClaims] = useState<ShareClaimRecord[]>(initialClaims);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
   const [loadingSlot, setLoadingSlot] = useState<number | null>(null);
+  // Fix 5: once the user dismisses the auto-opened sheet, don't reopen it on polls.
+  const [autoOpenDismissed, setAutoOpenDismissed] = useState(false);
   const [confirmation, setConfirmation] = useState<{
     displayName: string;
     role: string;
     remixUrl: string;
   } | null>(null);
+  // Fix 1 UI: show a "slot taken" message when the API returns 409.
+  const [takenBy, setTakenBy] = useState<{ positionIndex: number; name: string } | null>(null);
 
   // Auto-open claim sheet if ?me= is in the URL and not already claimed
   useEffect(() => {
-    if (meIndex !== null) {
+    if (meIndex !== null && !autoOpenDismissed) {
       const alreadyClaimed = claims.some((c) => c.positionIndex === meIndex);
       if (!alreadyClaimed) {
         setActiveSlot(meIndex);
       }
     }
-  }, [meIndex, claims]);
+  // Only run on mount (meIndex and autoOpenDismissed intentionally excluded from dep array)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  // Poll for new claims every 15s (simple, no websocket needed at this scale)
+  // Poll for new claims every 15s
   useEffect(() => {
     const interval = setInterval(async () => {
       try {
@@ -218,10 +224,24 @@ export function ClaimablePitch({
         const data = await res.json() as {
           ok: boolean;
           claim: ShareClaimRecord;
-          remixUrl: string;
-          alreadyClaimed: boolean;
+          remixUrl?: string;
+          alreadyClaimed?: boolean;
+          claimedBy?: string;
         };
-        if (data.ok) {
+
+        if (res.status === 409 || data.alreadyClaimed) {
+          // Fix 1: slot was taken between render and submit — show the real claimant.
+          setClaims((prev) => {
+            const updated = prev.filter((c) => c.positionIndex !== positionIndex);
+            if (data.claim) updated.push(data.claim);
+            return updated;
+          });
+          setActiveSlot(null);
+          setTakenBy({ positionIndex, name: data.claimedBy ?? data.claim?.displayName ?? "someone else" });
+          return;
+        }
+
+        if (data.ok && data.claim) {
           setClaims((prev) => {
             const updated = prev.filter((c) => c.positionIndex !== positionIndex);
             updated.push(data.claim);
@@ -231,7 +251,7 @@ export function ClaimablePitch({
           setConfirmation({
             displayName,
             role: slots[positionIndex]?.role ?? "this position",
-            remixUrl: data.remixUrl,
+            remixUrl: data.remixUrl ?? `${window.location.origin}/play/${encodeURIComponent(slug)}?me=${positionIndex}`,
           });
         }
       } finally {
@@ -316,8 +336,48 @@ export function ClaimablePitch({
           slot={slots[activeSlot]}
           loading={loadingSlot === activeSlot}
           onClaim={(name) => handleClaim(activeSlot, name)}
-          onClose={() => setActiveSlot(null)}
+          onClose={() => {
+            setActiveSlot(null);
+            // Fix 5: mark dismissed so the 15s poll can't reopen it
+            setAutoOpenDismissed(true);
+          }}
         />
+      )}
+
+      {/* Already-claimed notification — slot was taken between render and submit */}
+      {takenBy !== null && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setTakenBy(null)}
+            aria-hidden="true"
+          />
+          <div className="relative z-10 w-full max-w-sm rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl">
+            <button
+              type="button"
+              onClick={() => setTakenBy(null)}
+              className="absolute right-4 top-4 rounded-full p-1 text-slate-400 transition hover:text-slate-700"
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-rose-600">
+              Slot taken
+            </p>
+            <h3 className="mt-2 text-xl font-black text-slate-950">
+              {takenBy.name} already claimed {slots[takenBy.positionIndex]?.role ?? "this spot"}
+            </h3>
+            <p className="mt-2 text-sm text-slate-500">
+              Pick a different position or ask the organiser to reassign this slot.
+            </p>
+            <button
+              type="button"
+              onClick={() => setTakenBy(null)}
+              className="mt-5 w-full rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 transition hover:border-emerald-500 hover:text-emerald-700"
+            >
+              Choose another spot
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Confirmation sheet */}

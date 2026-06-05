@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { FORMATIONS } from "@/lib/formations";
 import {
   getTacticalPlanShare,
   claimSharePosition,
@@ -27,8 +28,10 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
 /**
  * POST /api/tactics/share/[slug]/claim
  * Body: { positionIndex: number; displayName: string }
- * Claims a slot for the caller. Upserts on conflict (re-claim with new name).
- * Returns the claim record + a personalised remix URL.
+ *
+ * Returns:
+ *   200 { ok: true, claim, alreadyClaimed: false, remixUrl }  — slot claimed
+ *   409 { ok: false, alreadyClaimed: true, claim, claimedBy }  — slot already taken
  */
 export async function POST(request: NextRequest, { params }: RouteContext) {
   const { slug } = await params;
@@ -55,15 +58,34 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ ok: false, error: "Share not found" }, { status: 404 });
   }
 
-  // Guard: positionIndex must be within the formation's slot count
-  if (positionIndex >= record.plan.size) {
-    return NextResponse.json({ ok: false, error: "Position index out of range for this formation" }, { status: 400 });
+  // Fix 4: validate against the actual rendered slot count for this formation,
+  // not plan.size — these can diverge if size and formation were set independently.
+  const formationSlots = FORMATIONS[record.plan.formation] ?? [];
+  if (positionIndex >= formationSlots.length) {
+    return NextResponse.json(
+      { ok: false, error: "Position index out of range for this formation" },
+      { status: 400 },
+    );
   }
 
   try {
     const { claim, alreadyClaimed } = await claimSharePosition(record.id, positionIndex, displayName);
 
-    const base = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+    if (alreadyClaimed) {
+      // Fix 1: return 409 with the actual claimant's name so the UI can show it.
+      return NextResponse.json(
+        {
+          ok: false,
+          alreadyClaimed: true,
+          claim,
+          claimedBy: claim.displayName,
+        },
+        { status: 409 },
+      );
+    }
+
+    // Fix 3: derive base URL from the incoming request, with env override.
+    const base = process.env.NEXT_PUBLIC_APP_URL ?? request.nextUrl.origin;
     const remixUrl = claim.remixSlug
       ? `${base}/play/${encodeURIComponent(slug)}?me=${positionIndex}&remix=${encodeURIComponent(claim.remixSlug)}`
       : `${base}/play/${encodeURIComponent(slug)}?me=${positionIndex}`;
@@ -71,7 +93,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     return NextResponse.json({
       ok: true,
       claim,
-      alreadyClaimed,
+      alreadyClaimed: false,
       remixUrl,
     });
   } catch (error) {
