@@ -18,7 +18,7 @@ mkdir -p "$BUILD_DIR/.next" "$ARTIFACTS_DIR"
 
 # Use direct binary call instead of `pnpm build` to work around shell snapshot
 # issue where `2>&1` stderr redirect gets parsed as a positional argument by Next.js
-DISABLE_SENTRY_BUILD=true NODE_OPTIONS='--max-old-space-size=8192' node_modules/.bin/next build .
+DISABLE_SENTRY_BUILD=true NODE_OPTIONS='--max-old-space-size=8192' node_modules/.bin/next build . --webpack
 pnpm prisma generate
 
 if [ ! -d .next/standalone ]; then
