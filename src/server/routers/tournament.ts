@@ -377,4 +377,87 @@ export const tournamentRouter = createTRPCRouter({
         ],
       };
     }),
+
+  // ── Twin Simulations ────────────────────────────────────────────────────
+
+  createTwinSim: protectedProcedure
+    .input(z.object({
+      name: z.string().min(2).max(80),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const eligibleTwins = await ctx.prisma.playerTwin.findMany({
+        where: { level: { gte: 3 } },
+        take: 8,
+        select: { id: true },
+      });
+
+      if (eligibleTwins.length < 4) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Not enough eligible twins (need 4+ with level >= 3)',
+        });
+      }
+
+      const { createRoundRobin } = await import('@/server/services/personalization/twin-sim');
+      return createRoundRobin(input.name, eligibleTwins.map((t) => t.id));
+    }),
+
+  enterTwinSim: protectedProcedure
+    .input(z.object({
+      simulationId: z.string().min(1),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const profile = await ctx.prisma.playerProfile.findUnique({
+        where: { userId: ctx.userId! },
+        include: { twin: true },
+      });
+      if (!profile?.twin) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'No player twin found' });
+      }
+
+      const sim = await ctx.prisma.twinSimulation.findUnique({
+        where: { id: input.simulationId },
+      });
+      if (!sim || sim.status !== 'pending') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Simulation not open for entries' });
+      }
+
+      const existing = await ctx.prisma.twinSimulationParticipant.findUnique({
+        where: { simulationId_twinId: { simulationId: input.simulationId, twinId: profile.twin.id } },
+      });
+      if (existing) {
+        throw new TRPCError({ code: 'CONFLICT', message: 'Already entered this simulation' });
+      }
+
+      return ctx.prisma.twinSimulationParticipant.create({
+        data: { simulationId: input.simulationId, twinId: profile.twin.id },
+      });
+    }),
+
+  getTwinSimResults: publicProcedure
+    .input(z.object({ simulationId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      return ctx.prisma.twinSimulation.findUnique({
+        where: { id: input.simulationId },
+        include: {
+          participants: {
+            orderBy: { points: 'desc' },
+            include: { twin: { include: { profile: { include: { user: { select: { name: true } } } } } } },
+          },
+          matches: { orderBy: { createdAt: 'asc' } },
+        },
+      });
+    }),
+
+  listTwinSims: publicProcedure
+    .input(z.object({ limit: z.number().min(1).max(50).default(10) }))
+    .query(async ({ ctx, input }) => {
+      return ctx.prisma.twinSimulation.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: input.limit,
+        include: {
+          _count: { select: { participants: true, matches: true } },
+        },
+      });
+    }),
 });
