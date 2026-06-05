@@ -50,6 +50,9 @@ are the source of truth.
   - `narrative.ts` (two-tier: fast sync stubs `generatePlayerNarrative`/`generateSquadNarrative` for hot paths + LLM-driven `buildRichPlayerNarrative`/`buildRichSquadNarrative` with Redis 1h cache keyed on content hash; consumes `generateInference` from `@/lib/ai/inference`)
   - `identity.ts` (`IdentityService.getPlayerIdentity` / `getSquadIdentity` — single read API joining skin (User/Squad) + brain (PlayerTwin/SquadTwin) + moments + attestations + match stats + sync narrative; tRPC: `player.getIdentity`/`player.getMyIdentity`, `squad.getIdentity`)
 - Player identity surface: `src/components/identity/PlayerIdentityCard.tsx` + `SquadIdentityCard.tsx` — Tailwind + lucide-react cards consuming `PlayerIdentity`/`SquadIdentity` from `identity.ts`; profile page at `src/app/(app)/profile/page.tsx` calls `player.getMyIdentity`
+- Coaching marketplace: `src/app/(app)/coaching/page.tsx` — coach listing grid + hire modal + active effects with cancel; consumes `coaching.listCoaches`/`getActiveEffects`/`hireCoach`/`cancelEffect`
+- Signal preferences: `src/app/(app)/settings/page.tsx` — Twin Signals card in notifications tab (visible when Telegram connected); consumes `communication.getSignalPreferences`/`setSignalPreference`
+- Season overview: `src/app/(app)/stats/page.tsx` — SeasonOverviewCard showing active season progress + history; consumes `tournament.getActiveSeason`/`listSeasons`
 - Moment render cron: `src/app/api/cron/moment-render/route.ts` — picks up unrendered moments, generates PNGs every 6h
 - Twin sim cron: `src/app/api/cron/twin-sim/route.ts` — runs pending overnight sims daily; tRPC: `tournament.createTwinSim`/`enterTwinSim`/`getTwinSimResults`/`listTwinSims`
 - Coaching expiry: `src/app/api/cron/digital-twin/route.ts` — sweeps expired CoachingEffect rows for both player and squad twins, fires coaching_expired events; tRPC: `coaching.listCoaches`/`hireCoach`/`getActiveEffects`/`cancelEffect`
