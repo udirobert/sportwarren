@@ -44,6 +44,7 @@ import { CoachKiteWidget } from '@/components/dashboard/CoachKiteWidget';
 import { SharpnessStreakWidget } from '@/components/dashboard/SharpnessStreakWidget';
 import { TwinHeroCard } from '@/components/dashboard/TwinHeroCard';
 import { DailyDrillWidget } from '@/components/dashboard/DailyDrillWidget';
+import { PostMatchReaction } from '@/components/dashboard/PostMatchReaction';
 import { WeeklyChallengesWidget } from '@/components/dashboard/WeeklyChallengesWidget';
 import { PrestigeWidget } from '@/components/dashboard/PrestigeWidget';
 import { ReferralWidget } from '@/components/dashboard/ReferralWidget';
@@ -275,6 +276,16 @@ export const AdaptiveDashboard: React.FC = () => {
         category: 'stats',
         component: <TwinHeroCard />,
       });
+
+      if (hasOperationalSquad) {
+        widgets.push({
+          id: 'post-match-reaction',
+          priority: 997,
+          requiredLevel: 'basic',
+          category: 'stats',
+          component: <PostMatchReaction />,
+        });
+      }
 
       widgets.push({
         id: 'daily-drill',

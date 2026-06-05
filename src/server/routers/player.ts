@@ -976,4 +976,94 @@ export const playerRouter = createTRPCRouter({
         });
       }
     }),
+
+  getRecentMatchReaction: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        // Get user's squads
+        const memberships = await ctx.prisma.squadMember.findMany({
+          where: { userId: ctx.userId!, status: 'active' },
+          select: { squadId: true },
+        });
+
+        if (memberships.length === 0) {
+          return null;
+        }
+
+        const squadIds = memberships.map(m => m.squadId);
+        const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+        // Find latest verified match within 24h
+        const match = await ctx.prisma.match.findFirst({
+          where: {
+            status: 'verified',
+            updatedAt: { gte: twentyFourHoursAgo },
+            OR: [
+              { homeSquadId: { in: squadIds } },
+              { awaySquadId: { in: squadIds } },
+            ],
+          },
+          include: {
+            homeSquad: { select: { name: true } },
+            awaySquad: { select: { name: true } },
+          },
+          orderBy: { updatedAt: 'desc' },
+        });
+
+        if (!match) {
+          return null;
+        }
+
+        // Determine result for user's squad
+        const isHome = squadIds.includes(match.homeSquadId);
+        const userSquadScore = isHome ? (match.homeScore || 0) : (match.awayScore || 0);
+        const opponentScore = isHome ? (match.awayScore || 0) : (match.homeScore || 0);
+        const opponentName = isHome ? match.awaySquad.name : match.homeSquad.name;
+
+        let result: 'win' | 'loss' | 'draw';
+        if (userSquadScore > opponentScore) result = 'win';
+        else if (userSquadScore < opponentScore) result = 'loss';
+        else result = 'draw';
+
+        // Get attestation for this match
+        const attestation = await ctx.prisma.attestation.findFirst({
+          where: {
+            subjectType: 'match',
+            subjectId: match.id,
+            kind: 'match_result',
+          },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        const payload = attestation?.payload as Record<string, unknown> | undefined;
+
+        const twinDiff = attestation ? {
+          xpDelta: (payload?.xpDelta as number) || 0,
+          attributeDeltas: Object.entries((payload?.attributeDeltas as Record<string, number>) || {}).map(([key, delta]) => ({
+            key,
+            delta,
+          })),
+          levelUp: (payload?.levelUp as boolean) || false,
+          newLevel: payload?.newLevel as number | undefined,
+          reputationDelta: (payload?.reputationDelta as number) || 0,
+        } : null;
+
+        return {
+          match: {
+            id: match.id,
+            opponent: opponentName,
+            score: `${userSquadScore}-${opponentScore}`,
+            result,
+            verifiedAt: match.updatedAt.toISOString(),
+          },
+          twinDiff,
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch recent match reaction',
+          cause: error,
+        });
+      }
+    }),
 });
