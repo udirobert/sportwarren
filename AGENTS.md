@@ -39,7 +39,7 @@ are the source of truth.
   - `twin-types.ts` (TwinState, TwinEvent 9-variant union, TwinDiff, MilestoneHint, MomentHint)
   - `twin-appliers.ts` (pure `applyEvent` + `computeLevel` / `xpToNext` / `clampAttributeDeltas` / `buildInitialTwinState` / `dropExpiredModifiers`; no Prisma, no clock injection, table-tested)
   - `twin-service.ts` (`TwinService.recordEvent` — the only public mutation entry point; hydrates state, delegates to `applyEvent`, persists diff + attestation in one tx, signs via Kite, creates moment, dispatches notifications)
-  - `notify.ts` (channel-tiered delivery: in-app bus + WhatsApp 3/twin/day cap + Telegram stub; milestone whitelisting per channel)
+  - `notify.ts` (channel-tiered delivery: in-app bus + WhatsApp 3/twin/day cap + Telegram per-kind opt-in via `TwinSignalPreference`; Telegram resolves chatId from PlatformIdentity/SquadGroup, sends via TelegramService bot; signal preferences: tRPC `communication.getSignalPreferences`/`setSignalPreference`)
   - `moments.ts` (Moment row CRUD; `render` delegates to `moment-render.ts` which generates PNG via satori/resvg)
   - `image.ts` (avatar upload + sharp variant generation (square 256×256, thumb 64×64, wide 512×288) + key/variant URL resolution; writes storage key to `User.avatar`)
   - `moment-render.ts` (satori HTML→SVG + @resvg/resvg-js SVG→PNG; `renderMoment` for single, `renderPendingBatch` for cron; font fetched from Google Fonts CDN and cached in-memory)
@@ -58,7 +58,7 @@ are the source of truth.
 - `Squad.digitalTwin3dEnabled` and `Squad.digitalTwin3dTier` are kept (3D entitlement feature independent of the twin brain)
 - `WhatsAppNotification` table tracks milestone-tier WhatsApp sends for the 24h rolling cap
 - `Moment` table is the in-app gallery read model; one row per `TwinEvent` with a `momentHint`
-- `TelegramChannel` in `notify.ts` is a stub; per-event opt-in lives in PR 7 (signals + onboarding)
+- `TelegramChannel` in `notify.ts` delivers milestones/moments via Telegram bot; per-kind opt-in via `TwinSignalPreference` table; defaults seeded on twin creation (twin_created, level_up, sim_win, record_broken)
 
 ### Storage adapter
 - `src/server/services/storage/` is owner-typed: `saveBase64({ ownerType, ownerId, kind, base64Data, ext, mimeType, mediaId?, variantId?, momentId? })`

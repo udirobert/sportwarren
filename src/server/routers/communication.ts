@@ -118,4 +118,50 @@ export const communicationRouter = createTRPCRouter({
       
       return { success: true };
     }),
+
+  getSignalPreferences: protectedProcedure
+    .query(async ({ ctx }) => {
+      const allKinds = [
+        'twin_created', 'level_up', 'sim_podium', 'sim_win',
+        'record_broken', 'attestation_100', 'attestation_500',
+        'attestation_1000', 'attestation_milestone',
+        'coaching_expired', 'season_end', 'achievement_unlocked',
+      ];
+
+      const prefs = await ctx.prisma.twinSignalPreference.findMany({
+        where: { userId: ctx.userId!, channel: 'telegram' },
+      });
+
+      const prefMap = new Map(prefs.map((p) => [p.kind, p.enabled]));
+      return allKinds.map((kind) => ({
+        kind,
+        channel: 'telegram' as const,
+        enabled: prefMap.get(kind) ?? false,
+      }));
+    }),
+
+  setSignalPreference: protectedProcedure
+    .input(z.object({
+      channel: z.literal('telegram'),
+      kind: z.string().min(1),
+      enabled: z.boolean(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.prisma.twinSignalPreference.upsert({
+        where: {
+          userId_channel_kind: {
+            userId: ctx.userId!,
+            channel: input.channel,
+            kind: input.kind,
+          },
+        },
+        create: {
+          userId: ctx.userId!,
+          channel: input.channel,
+          kind: input.kind,
+          enabled: input.enabled,
+        },
+        update: { enabled: input.enabled },
+      });
+    }),
 });
