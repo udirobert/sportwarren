@@ -43,6 +43,7 @@ import { DigitalTwinUpgradeGate } from '@/components/dashboard/DigitalTwinUpgrad
 import { CoachKiteWidget } from '@/components/dashboard/CoachKiteWidget';
 import { SharpnessStreakWidget } from '@/components/dashboard/SharpnessStreakWidget';
 import { TwinHeroCard } from '@/components/dashboard/TwinHeroCard';
+import { DailyDrillWidget } from '@/components/dashboard/DailyDrillWidget';
 import { WeeklyChallengesWidget } from '@/components/dashboard/WeeklyChallengesWidget';
 import { PrestigeWidget } from '@/components/dashboard/PrestigeWidget';
 import { ReferralWidget } from '@/components/dashboard/ReferralWidget';
@@ -273,6 +274,14 @@ export const AdaptiveDashboard: React.FC = () => {
         requiredLevel: 'basic',
         category: 'stats',
         component: <TwinHeroCard />,
+      });
+
+      widgets.push({
+        id: 'daily-drill',
+        priority: 460,
+        requiredLevel: 'basic',
+        category: 'stats',
+        component: <DailyDrillWidget />,
       });
     }
 
