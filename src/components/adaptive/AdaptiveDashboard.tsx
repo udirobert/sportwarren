@@ -42,6 +42,7 @@ import { SquadDigitalTwinWidget } from '@/components/dashboard/SquadDigitalTwinW
 import { DigitalTwinUpgradeGate } from '@/components/dashboard/DigitalTwinUpgradeGate';
 import { CoachKiteWidget } from '@/components/dashboard/CoachKiteWidget';
 import { SharpnessStreakWidget } from '@/components/dashboard/SharpnessStreakWidget';
+import { TwinHeroCard } from '@/components/dashboard/TwinHeroCard';
 import { WeeklyChallengesWidget } from '@/components/dashboard/WeeklyChallengesWidget';
 import { PrestigeWidget } from '@/components/dashboard/PrestigeWidget';
 import { ReferralWidget } from '@/components/dashboard/ReferralWidget';
@@ -262,6 +263,16 @@ export const AdaptiveDashboard: React.FC = () => {
             }}
           />
         ),
+      });
+    }
+
+    if (isVerified && currentUserId) {
+      widgets.push({
+        id: 'twin-hero',
+        priority: 998,
+        requiredLevel: 'basic',
+        category: 'stats',
+        component: <TwinHeroCard />,
       });
     }
 
