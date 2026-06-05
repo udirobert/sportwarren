@@ -247,29 +247,42 @@ export async function claimSharePosition(
     return { claim: rowToClaim(existing[0]), alreadyClaimed: true };
   }
 
-  // Generate a remix slug — shorter than the share slug, but still URL-safe
-  const remixSlug = randomBytes(4).toString("base64url");
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    const remixSlug = randomBytes(6).toString("base64url");
 
-  const rows = await prisma.$queryRaw<ShareClaimRow[]>`
-    INSERT INTO share_claims (id, share_id, position_index, display_name, remix_slug, updated_at)
-    VALUES (${randomUUID()}, ${shareId}, ${positionIndex}, ${cleanName}, ${remixSlug}, CURRENT_TIMESTAMP)
-    ON CONFLICT (share_id, position_index) DO NOTHING
-    RETURNING id, share_id, position_index, display_name, remix_slug, claimed_at
-  `;
+    try {
+      const rows = await prisma.$queryRaw<ShareClaimRow[]>`
+        INSERT INTO share_claims (id, share_id, position_index, display_name, remix_slug, updated_at)
+        VALUES (${randomUUID()}, ${shareId}, ${positionIndex}, ${cleanName}, ${remixSlug}, CURRENT_TIMESTAMP)
+        ON CONFLICT (share_id, position_index) DO NOTHING
+        RETURNING id, share_id, position_index, display_name, remix_slug, claimed_at
+      `;
 
-  // If DO NOTHING fired, someone else claimed this slot between our check and insert.
-  // Re-select the winning row so we can return the actual claimant's name.
-  if (!rows[0]) {
-    const winner = await prisma.$queryRaw<ShareClaimRow[]>`
-      SELECT id, share_id, position_index, display_name, remix_slug, claimed_at
-      FROM share_claims
-      WHERE share_id = ${shareId} AND position_index = ${positionIndex}
-      LIMIT 1
-    `;
-    return { claim: rowToClaim(winner[0]), alreadyClaimed: true };
+      // If DO NOTHING fired, someone else claimed this slot between our check and insert.
+      // Re-select the winning row so we can return the actual claimant's name.
+      if (!rows[0]) {
+        const winner = await prisma.$queryRaw<ShareClaimRow[]>`
+          SELECT id, share_id, position_index, display_name, remix_slug, claimed_at
+          FROM share_claims
+          WHERE share_id = ${shareId} AND position_index = ${positionIndex}
+          LIMIT 1
+        `;
+        return { claim: rowToClaim(winner[0]), alreadyClaimed: true };
+      }
+
+      return { claim: rowToClaim(rows[0]), alreadyClaimed: false };
+    } catch (error) {
+      const code = typeof error === "object" && error !== null && "code" in error
+        ? String((error as { code?: unknown }).code)
+        : "";
+
+      if (code !== "23505" || attempt === 3) {
+        throw error;
+      }
+    }
   }
 
-  return { claim: rowToClaim(rows[0]), alreadyClaimed: false };
+  throw new Error("Failed to create share claim");
 }
 
 export async function getShareClaims(shareId: string): Promise<ShareClaimRecord[]> {
