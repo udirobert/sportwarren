@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { MatchCapture } from "@/components/match/MatchCapture";
 import { MatchConsensusPanel } from "@/components/match/MatchConsensus";
@@ -41,6 +41,8 @@ import { useJourneyState } from "@/hooks/useJourneyState";
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { trackCoreGrowthEvent, trackFeatureUsed, trackMatchSubmission } from "@/lib/analytics";
 import { useCurrentPlayerAttributes } from "@/hooks/player/usePlayerAttributes";
+import { buildTacticalPlanQuery, parseTacticalPlanSearchParams, type ImportedTacticalPlan } from "@/lib/pitch/tacticalPlan";
+import { PLAY_STYLE_LABELS } from "@/lib/formations";
 
 type ViewMode = "preview" | "capture" | "verify" | "detail" | "xp-summary" | "history";
 type XPResultState = "idle" | "pending" | "available";
@@ -56,6 +58,7 @@ export default function MatchPage() {
   const [selectedOpponentId, setSelectedOpponentId] = useState<string>("");
   const [lastSubmittedMatchId, setLastSubmittedMatchId] = useState<string | null>(null);
   const [inviteShareState, setInviteShareState] = useState<"idle" | "copied" | "shared" | "error">("idle");
+  const [importedPlan, setImportedPlan] = useState<ImportedTacticalPlan | null>(null);
   const { chain, hasAccount, hasWallet, isVerified } = useWallet();
   const { journeyStage, memberships } = useJourneyState();
   const { attributes: currentPlayerAttributes } = useCurrentPlayerAttributes(isVerified);
@@ -107,6 +110,11 @@ export default function MatchPage() {
         : null
     : null;
   const hasOpponent = Boolean(selectedOpponentId);
+  const importedPlanQuery = useMemo(
+    () => importedPlan ? buildTacticalPlanQuery(importedPlan) : "",
+    [importedPlan],
+  );
+  const tacticsHref = importedPlanQuery ? `/squad?tab=tactics&${importedPlanQuery}` : "/squad?tab=tactics";
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -118,6 +126,16 @@ export default function MatchPage() {
     setRequestedMatchId(params.get("matchId"));
     const opponentId = params.get("opponentSquadId");
     if (opponentId) setSelectedOpponentId(opponentId);
+    const plan = parseTacticalPlanSearchParams(params);
+    if (plan) {
+      setImportedPlan(plan);
+      trackFeatureUsed("match_capture_plan_imported", {
+        source: "playground",
+        formation: plan.formation,
+        style: plan.style,
+        size: plan.size,
+      });
+    }
   }, []);
 
   useEffect(() => {
@@ -219,11 +237,19 @@ export default function MatchPage() {
     trackFeatureUsed("first_match_submitted", {
       match_id: submittedMatchId,
       opponent: opponentName,
+      imported_plan: Boolean(importedPlan),
+      formation: importedPlan?.formation ?? null,
+      style: importedPlan?.style ?? null,
+      size: importedPlan?.size ?? null,
     });
     trackCoreGrowthEvent("first_match_submitted", {
       match_id: submittedMatchId,
       opponent: opponentName,
       source: "match_capture",
+      imported_plan: Boolean(importedPlan),
+      formation: importedPlan?.formation ?? null,
+      style: importedPlan?.style ?? null,
+      size: importedPlan?.size ?? null,
     });
 
     // Auto-copy share link
@@ -300,7 +326,25 @@ export default function MatchPage() {
 
   if (matchCenterGate.status === "blocked") {
     return (
-      <PageShell maxWidth="4xl">
+      <PageShell maxWidth="4xl" className="space-y-4">
+        {importedPlan && (
+          <Card className="border-emerald-200 bg-emerald-50/80 py-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="font-semibold text-emerald-900">Your match plan is ready</p>
+                <p className="mt-1 text-sm text-emerald-700">
+                  Start your season, then save {importedPlan.size}v{importedPlan.size} · {importedPlan.formation} · {PLAY_STYLE_LABELS[importedPlan.style]?.name ?? importedPlan.style} as your first setup.
+                </p>
+              </div>
+              <Link
+                href={tacticsHref}
+                className="inline-flex min-h-[40px] items-center justify-center rounded-lg border-2 border-gray-300 bg-transparent px-3 py-2 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-green-500 hover:bg-green-50 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              >
+                Review setup
+              </Link>
+            </div>
+          </Card>
+        )}
         <JourneyGateCard
           icon={Trophy}
           eyebrow={matchCenterGate.eyebrow}
@@ -327,7 +371,7 @@ export default function MatchPage() {
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href="/squad?tab=tactics">
+            <Link href={tacticsHref}>
               <Button>Customize Lineup</Button>
             </Link>
             <Link href="/match/preview/next">
@@ -419,7 +463,7 @@ export default function MatchPage() {
                 ))}
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Link href="/squad?tab=tactics">
+                <Link href={tacticsHref}>
                   <Button size="sm">Set your formation</Button>
                 </Link>
                 {!firstMatchSubmitted && (
@@ -464,6 +508,30 @@ export default function MatchPage() {
         </Card>
       )}
 
+      {importedPlan && (
+        <Card className="border-emerald-200 bg-emerald-50/80 py-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="font-semibold text-emerald-900">Match plan loaded from playground</p>
+              <p className="mt-1 text-sm text-emerald-700">
+                {importedPlan.size}v{importedPlan.size} · {importedPlan.formation} · {PLAY_STYLE_LABELS[importedPlan.style]?.name ?? importedPlan.style} will be attached to this session&apos;s analytics.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Link href={tacticsHref}>
+                <Button size="sm" variant="outline">Adjust tactics</Button>
+              </Link>
+              <Button
+                size="sm"
+                onClick={() => setViewMode("capture")}
+              >
+                Submit result
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
       {viewMode === "preview" && (
         <MatchPreviewView squadId={activeSquadId} />
       )}
@@ -482,6 +550,15 @@ export default function MatchPage() {
                   <p className="mt-1 text-sm text-gray-600">
                     Use your active squad and pick the opponent before you start tracking the match.
                   </p>
+                  {importedPlan && (
+                    <div className="mt-3 inline-flex flex-wrap items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
+                      <span>{importedPlan.size}v{importedPlan.size}</span>
+                      <span>·</span>
+                      <span>{importedPlan.formation}</span>
+                      <span>·</span>
+                      <span>{PLAY_STYLE_LABELS[importedPlan.style]?.name ?? importedPlan.style}</span>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">Opponent Squad</label>

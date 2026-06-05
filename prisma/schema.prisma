@@ -373,6 +373,59 @@ model SquadTactics {
   @@map("squad_tactics")
 }
 
+model TacticalPlanShare {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  fingerprint String   @unique
+
+  formation String
+  playStyle String @map("play_style")
+  squadSize Int    @map("squad_size")
+  color     String?
+
+  names Json @default("[]")
+  plan  Json
+
+  source          String  @default("playground")
+  createdByUserId String? @map("created_by_user_id")
+
+  viewCount    Int       @default(0) @map("view_count")
+  copyCount    Int       @default(0) @map("copy_count")
+  lastViewedAt DateTime? @map("last_viewed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  claims ShareClaim[]
+
+  @@index([createdAt])
+  @@index([formation, playStyle, squadSize])
+  @@map("tactical_plan_shares")
+}
+
+model ShareClaim {
+  id             String   @id @default(cuid())
+  shareId        String   @map("share_id")
+  share          TacticalPlanShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+
+  positionIndex  Int      @map("position_index")
+  displayName    String   @map("display_name")
+
+  // Optional: remix slug so the claimant can share a personalised link
+  remixSlug      String?  @unique @map("remix_slug")
+
+  // Optional: authenticated user id if they later sign up
+  userId         String?  @map("user_id")
+
+  claimedAt      DateTime @default(now()) @map("claimed_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // One claim per position per share
+  @@unique([shareId, positionIndex], name: "share_position_unique")
+  @@index([shareId])
+  @@map("share_claims")
+}
+
 // DAO GOVERNANCE (PROPOSALS & VOTING) - Moved to Avalanche Smart Contracts
 
 // ============================================================================

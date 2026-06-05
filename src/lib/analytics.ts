@@ -25,6 +25,8 @@ export const CORE_GROWTH_EVENTS = {
   tactics_customized: { stage: 'activation' as GrowthStage },
   first_match_submitted: { stage: 'activation' as GrowthStage },
   opponent_verification_invite_shared: { stage: 'viral' as GrowthStage },
+  playground_plan_shared: { stage: 'viral' as GrowthStage },
+  playground_setup_saved: { stage: 'conversion' as GrowthStage },
   channel_connected: { stage: 'retention' as GrowthStage },
   identity_connected: { stage: 'conversion' as GrowthStage },
   verification_queue_reviewed: { stage: 'retention' as GrowthStage },

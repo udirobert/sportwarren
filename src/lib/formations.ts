@@ -238,6 +238,30 @@ export const TACTICAL_PRESETS: Array<{
   instructions: TeamInstructions;
 }> = [
   {
+    id: 'small_one_stays',
+    name: 'One Stays',
+    description: '5-a-side safety valve: one protects, two show short.',
+    formation: '1-2-1',
+    style: 'balanced',
+    instructions: { width: 'normal', tempo: 'fast', passing: 'short', pressing: 'medium', defensiveLine: 'normal' },
+  },
+  {
+    id: 'box_press',
+    name: 'Box Press',
+    description: 'Small-sided pressure trap for 5s and 6s.',
+    formation: '1-1-2',
+    style: 'high_press',
+    instructions: { width: 'narrow', tempo: 'fast', passing: 'mixed', pressing: 'high', defensiveLine: 'high' },
+  },
+  {
+    id: 'counter_lanes',
+    name: 'Counter Lanes',
+    description: '7-a-side shape with fast outlets wide of midfield.',
+    formation: '1-3-2',
+    style: 'counter',
+    instructions: { width: 'wide', tempo: 'fast', passing: 'mixed', pressing: 'low', defensiveLine: 'deep' },
+  },
+  {
     id: 'pressure',
     name: 'Pressure Lock',
     description: 'Suffocate build-up, win the ball early.',
