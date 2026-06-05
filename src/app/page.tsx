@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { MessageSquare } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
+import { decodePendingClaim, storePendingClaim } from "@/lib/claims/context";
 
 export default function Home() {
   const { hasAccount } = useWallet();
@@ -20,6 +21,11 @@ export default function Home() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
+    const claimCtx = params.get('claimContext');
+    if (claimCtx) {
+      const parsed = decodePendingClaim(claimCtx);
+      if (parsed) storePendingClaim(parsed);
+    }
     if (params.get('connect') === '1') {
       setShowWalletModal(true);
       setPendingRedirect(true);

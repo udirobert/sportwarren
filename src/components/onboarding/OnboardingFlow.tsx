@@ -19,8 +19,15 @@ import {
   type OnboardingPhase,
   type OnboardingStep,
 } from '@/lib/onboarding/flow';
+import { getPendingClaim, clearPendingClaim, roleToPosition } from '@/lib/claims/context';
 
 const FORMATION_OPTIONS = [
+  { id: '1-2-1', label: '5s 1-2-1', description: 'One stays, two support, one finishes' },
+  { id: '1-1-2', label: '5s 1-1-2', description: 'Aggressive two-forward small-sided shape' },
+  { id: '1-3-1', label: '6s 1-3-1', description: 'Compact base with one central outlet' },
+  { id: '1-2-2', label: '6s 1-2-2', description: 'Two banks with quick counter lanes' },
+  { id: '1-3-2', label: '7s 1-3-2', description: 'Three-player base with two advanced runners' },
+  { id: '2-3-1', label: '7s 2-3-1', description: 'Wide midfield support behind a focal point' },
   { id: '4-4-2', label: 'Classic 4-4-2', description: 'Balanced and structured' },
   { id: '4-3-3', label: 'Attacking 4-3-3', description: 'Wide play and high pressure' },
   { id: '5-3-2', label: 'Solid 5-3-2', description: 'Counter-attacking depth' },
@@ -73,9 +80,51 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
   
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const updateProfile = trpc.player.updateProfile.useMutation();
+  const linkShareClaim = trpc.player.linkShareClaim.useMutation();
   
   const hasCompletedPersonalization = preferences.onboardingCompleted;
   
+  // Claim-context pre-fill
+  const [pendingClaimPosition, setPendingClaimPosition] = useState<PlayerPosition | null>(null);
+  const [pendingClaimToken, setPendingClaimToken] = useState<string | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
+  const autoLinkAttemptedRef = React.useRef(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const claim = getPendingClaim();
+    if (claim) {
+      setPlayerName(claim.displayName);
+      setFormation(claim.formation);
+      setPendingClaimPosition(roleToPosition(claim.role));
+      setPendingClaimToken(claim.claimToken);
+      // Skip tour — user already claimed a spot, they know the product
+      setHasCompletedTour(true);
+      setPhase('personalize');
+      setShowBanner(false);
+      localStorage.setItem(ONBOARDING_STORAGE_KEYS.TOUR_COMPLETED, 'true');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!preferences.onboardingCompleted || !pendingClaimToken || autoLinkAttemptedRef.current) return;
+    autoLinkAttemptedRef.current = true;
+
+    linkShareClaim.mutate(
+      { claimToken: pendingClaimToken },
+      {
+        onSuccess: () => {
+          clearPendingClaim();
+          setPendingClaimToken(null);
+          setPendingClaimPosition(null);
+        },
+        onError: (error) => {
+          setProfileError(error.message || 'Could not save your claimed player card.');
+        },
+      },
+    );
+  }, [linkShareClaim, pendingClaimToken, preferences.onboardingCompleted]);
+
   // Show banner for guests who haven't seen tour
   const [showBanner, setShowBanner] = useState(false);
   
@@ -136,27 +185,37 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
     reader.readAsDataURL(file);
   };
   
-  const handleCompletePersonalization = useCallback(() => {
+  const handleCompletePersonalization = useCallback(async () => {
     setIsCompleting(true);
-    updateProfile.mutate({
-      name: playerName.trim(),
-      position: 'MF' as PlayerPosition,
-      avatar: avatarPreview || undefined,
-    });
-    savePreferences({
-      onboardingCompleted: true,
-      squadBranding: {
-        primaryColor,
-        secondaryColor: '#ffffff',
-        nickname: nickname || 'The Warriors',
-        formation: formation || '4-4-2',
-      },
-    });
-    setTimeout(() => {
+    setProfileError(null);
+    try {
+      await updateProfile.mutateAsync({
+        name: playerName.trim(),
+        position: pendingClaimPosition ?? ('MF' as PlayerPosition),
+        avatar: avatarPreview || undefined,
+        claimToken: pendingClaimToken ?? undefined,
+      });
+
+      clearPendingClaim();
+      setPendingClaimToken(null);
+      setPendingClaimPosition(null);
+      savePreferences({
+        onboardingCompleted: true,
+        squadBranding: {
+          primaryColor,
+          secondaryColor: '#ffffff',
+          nickname: nickname || 'The Warriors',
+          formation: formation || '4-4-2',
+        },
+      });
       setPhase('checklist');
+      onComplete?.();
+    } catch (error) {
+      setProfileError(error instanceof Error ? error.message : 'Could not save your player profile.');
+    } finally {
       setIsCompleting(false);
-    }, 800);
-  }, [playerName, avatarPreview, primaryColor, nickname, formation, updateProfile, savePreferences]);
+    }
+  }, [playerName, avatarPreview, primaryColor, nickname, formation, updateProfile, savePreferences, pendingClaimPosition, pendingClaimToken, onComplete]);
   
   // Skip if already completed
   if (preferences.onboardingCompleted && hasCompletedTour) {
@@ -220,6 +279,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
           nickname={nickname}
           setNickname={setNickname}
           isCompleting={isCompleting}
+          error={profileError}
           onComplete={handleCompletePersonalization}
           onBack={() => setPhase('checklist')}
         />
@@ -357,6 +417,7 @@ interface PersonalizationCardProps {
   nickname: string;
   setNickname: (n: string) => void;
   isCompleting: boolean;
+  error: string | null;
   onComplete: () => void;
   onBack: () => void;
 }
@@ -364,7 +425,7 @@ interface PersonalizationCardProps {
 function PersonalizationCard({
   step, setStep, playerName, setPlayerName, avatarPreview, fileInputRef, onAvatarFile,
   formation, setFormation, primaryColor, setPrimaryColor, nickname, setNickname,
-  isCompleting, onComplete, onBack
+  isCompleting, error, onComplete, onBack
 }: PersonalizationCardProps) {
   return (
     <Card className="bg-gradient-to-br from-gray-900 to-black border-gray-800 text-white overflow-hidden relative shadow-2xl max-w-lg mx-auto">
@@ -373,6 +434,11 @@ function PersonalizationCard({
       </div>
       
       <div className="p-8">
+        {error && (
+          <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200">
+            {error}
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {step === 'identity' ? (
             <motion.div key="identity" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>

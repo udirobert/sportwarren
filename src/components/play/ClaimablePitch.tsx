@@ -1,7 +1,14 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { CheckCircle2, UserPlus, X } from "lucide-react";
+import { CheckCircle2, Share2, UserPlus, X } from "lucide-react";
+import { ROLE_LABELS } from "@/lib/formations";
+import {
+  encodePendingClaim,
+  getPendingClaim,
+  storePendingClaim,
+  type PendingClaimContext,
+} from "@/lib/claims/context";
 import type { ShareClaimRecord } from "@/server/services/tactical-plan-share";
 
 interface SlotData {
@@ -17,17 +24,175 @@ interface ClaimablePitchProps {
   color: string;
   meIndex: number | null; // pre-selected from ?me= query param
   initialClaims: ShareClaimRecord[];
+  formation: string;
+  remixSlug: string | null;
 }
 
 interface ClaimSheetProps {
   slot: SlotData;
+  slotIndex: number;
+  plannedName: string;
+  color: string;
+  formatLabel: string;
   onClaim: (name: string) => Promise<void>;
   onClose: () => void;
   loading: boolean;
 }
 
-function ClaimSheet({ slot, onClaim, onClose, loading }: ClaimSheetProps) {
+type StarterAttribute = {
+  label: string;
+  value: number;
+  tone: string;
+};
+
+function roleGroup(role: string): "keeper" | "defender" | "midfielder" | "attacker" {
+  if (role === "GK") return "keeper";
+  if (role.includes("B") || role === "CDM") return "defender";
+  if (role.includes("M")) return "midfielder";
+  return "attacker";
+}
+
+function buildStarterProfile(role: string): { archetype: string; trait: string; attributes: StarterAttribute[] } {
+  const group = roleGroup(role);
+  if (group === "keeper") {
+    return {
+      archetype: "Last line",
+      trait: "Shot-stopper profile",
+      attributes: [
+        { label: "Reflexes", value: 72, tone: "bg-sky-400" },
+        { label: "Handling", value: 66, tone: "bg-emerald-400" },
+        { label: "Kicking", value: 61, tone: "bg-amber-400" },
+      ],
+    };
+  }
+  if (group === "defender") {
+    return {
+      archetype: role === "CDM" ? "Screen" : "Anchor",
+      trait: "Stops counters early",
+      attributes: [
+        { label: "Defending", value: 74, tone: "bg-emerald-400" },
+        { label: "Physical", value: 69, tone: "bg-orange-400" },
+        { label: "Passing", value: 58, tone: "bg-sky-400" },
+      ],
+    };
+  }
+  if (group === "midfielder") {
+    return {
+      archetype: role === "CAM" ? "Creator" : "Engine",
+      trait: "Keeps the shape alive",
+      attributes: [
+        { label: "Passing", value: 73, tone: "bg-sky-400" },
+        { label: "Dribbling", value: 66, tone: "bg-amber-400" },
+        { label: "Defending", value: 59, tone: "bg-emerald-400" },
+      ],
+    };
+  }
+  return {
+    archetype: role.includes("W") ? "Outlet" : "Finisher",
+    trait: "Attacks the decisive space",
+    attributes: [
+      { label: "Pace", value: 72, tone: "bg-emerald-400" },
+      { label: "Shooting", value: 71, tone: "bg-rose-400" },
+      { label: "Dribbling", value: 65, tone: "bg-amber-400" },
+    ],
+  };
+}
+
+function initialsFor(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "SW";
+  return parts.slice(0, 2).map((part) => part[0]?.toUpperCase()).join("");
+}
+
+function StarterPlayerCard({
+  name,
+  role,
+  color,
+  formatLabel,
+  compact = false,
+}: {
+  name: string;
+  role: string;
+  color: string;
+  formatLabel: string;
+  compact?: boolean;
+}) {
+  const profile = buildStarterProfile(role);
+  const displayName = name.trim() || "Your name";
+  const roleLabel = ROLE_LABELS[role] ?? role;
+
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-800 bg-slate-950 text-white shadow-xl shadow-slate-950/20">
+      <div className="relative p-4">
+        <div
+          className="absolute inset-x-0 top-0 h-24 opacity-25"
+          style={{ background: `linear-gradient(135deg, ${color}, transparent 70%)` }}
+          aria-hidden="true"
+        />
+        <div className="relative flex items-start gap-3">
+          <div
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-white/20 text-xl font-black text-white shadow-lg"
+            style={{ backgroundColor: color }}
+          >
+            {initialsFor(displayName)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">
+              Starter player card
+            </p>
+            <h4 className="mt-1 truncate text-xl font-black tracking-normal text-white">{displayName}</h4>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <span className="rounded-md bg-white/10 px-2 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-white">
+                {role}
+              </span>
+              <span className="rounded-md bg-emerald-400/15 px-2 py-1 text-[10px] font-bold text-emerald-200">
+                {profile.archetype}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="relative mt-4 grid grid-cols-3 gap-2">
+          <div className="rounded-lg border border-white/10 bg-white/[0.06] p-2">
+            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">Format</p>
+            <p className="mt-1 text-xs font-bold text-white">{formatLabel}</p>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/[0.06] p-2">
+            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">Role</p>
+            <p className="mt-1 truncate text-xs font-bold text-white">{roleLabel}</p>
+          </div>
+          <div className="rounded-lg border border-white/10 bg-white/[0.06] p-2">
+            <p className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-400">Status</p>
+            <p className="mt-1 text-xs font-bold text-emerald-200">Claiming</p>
+          </div>
+        </div>
+
+        {!compact && (
+          <div className="relative mt-4 space-y-2">
+            {profile.attributes.map((attribute) => (
+              <div key={attribute.label} className="flex items-center gap-3">
+                <div className="w-20 text-[10px] font-bold uppercase tracking-[0.1em] text-slate-400">
+                  {attribute.label}
+                </div>
+                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
+                  <div className={`h-full rounded-full ${attribute.tone}`} style={{ width: `${attribute.value}%` }} />
+                </div>
+                <div className="w-6 text-right text-xs font-black tabular-nums text-white">{attribute.value}</div>
+              </div>
+            ))}
+            <p className="pt-1 text-xs font-medium leading-5 text-slate-300">
+              {profile.trait}. Verified matches, ratings, and squad activity turn this starter card into a real profile.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ClaimSheet({ slot, slotIndex, plannedName, color, formatLabel, onClaim, onClose, loading }: ClaimSheetProps) {
   const [name, setName] = useState("");
+  const previewName = name.trim() || plannedName || `Player ${slotIndex + 1}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +208,7 @@ function ClaimSheet({ slot, onClaim, onClose, loading }: ClaimSheetProps) {
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-10 w-full max-w-sm rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl">
+      <div className="relative z-10 max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl">
         <button
           type="button"
           onClick={onClose}
@@ -52,14 +217,17 @@ function ClaimSheet({ slot, onClaim, onClose, loading }: ClaimSheetProps) {
           <X className="h-5 w-5" />
         </button>
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-700">
-          Claim position
+          Claim your spot
         </p>
         <h3 className="mt-2 text-xl font-black text-slate-950">
-          You&apos;re taking {slot.role}
+          Become the {ROLE_LABELS[slot.role] ?? slot.role}
         </h3>
         <p className="mt-1 text-sm text-slate-500">
-          Enter your name so the organiser sees you&apos;ve confirmed.
+          Your name creates a starter player card for this setup. Save it later to turn it into your SportWarren profile.
         </p>
+        <div className="mt-5">
+          <StarterPlayerCard name={previewName} role={slot.role} color={color} formatLabel={formatLabel} />
+        </div>
         <form onSubmit={handleSubmit} className="mt-5 flex flex-col gap-3">
           <input
             type="text"
@@ -75,7 +243,7 @@ function ClaimSheet({ slot, onClaim, onClose, loading }: ClaimSheetProps) {
             disabled={loading || !name.trim()}
             className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-500 disabled:opacity-50"
           >
-            {loading ? "Claiming…" : "Confirm spot"}
+            {loading ? "Claiming..." : "Claim spot and card"}
           </button>
         </form>
       </div>
@@ -86,12 +254,32 @@ function ClaimSheet({ slot, onClaim, onClose, loading }: ClaimSheetProps) {
 interface ConfirmationSheetProps {
   displayName: string;
   role: string;
+  color: string;
+  formatLabel: string;
   remixUrl: string;
   onClose: () => void;
+  slug: string;
+  formation: string;
+  positionIndex: number;
+  remixSlug: string;
+  claimToken: string;
 }
 
-function ConfirmationSheet({ displayName, role, remixUrl, onClose }: ConfirmationSheetProps) {
+function buildSavePlayerCardHref(ctx: PendingClaimContext): string {
+  return `/?connect=1&claimContext=${encodeURIComponent(encodePendingClaim(ctx))}`;
+}
+
+function ConfirmationSheet({ displayName, role, color, formatLabel, remixUrl, onClose, slug, formation, positionIndex, remixSlug, claimToken }: ConfirmationSheetProps) {
   const [copied, setCopied] = useState(false);
+  const claimContext: PendingClaimContext = {
+    shareSlug: slug,
+    positionIndex,
+    role,
+    displayName,
+    formation,
+    remixSlug,
+    claimToken,
+  };
 
   const handleShare = async () => {
     const text = `I've claimed ${role} in this SportWarren setup. Here's my spot: ${remixUrl}`;
@@ -119,7 +307,7 @@ function ConfirmationSheet({ displayName, role, remixUrl, onClose }: Confirmatio
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-10 w-full max-w-sm rounded-t-2xl bg-white p-6 shadow-2xl sm:rounded-2xl">
+      <div className="relative z-10 max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-white p-5 shadow-2xl sm:rounded-2xl">
         <button
           type="button"
           onClick={onClose}
@@ -138,8 +326,11 @@ function ConfirmationSheet({ displayName, role, remixUrl, onClose }: Confirmatio
             <h3 className="text-lg font-black text-slate-950">{displayName}, you&apos;re in!</h3>
           </div>
         </div>
+        <div className="mt-5">
+          <StarterPlayerCard name={displayName} role={role} color={color} formatLabel={formatLabel} compact />
+        </div>
         <p className="mt-4 text-sm leading-6 text-slate-600">
-          Share your personalised link so everyone knows you&apos;ve confirmed.
+          Share your personalised link so teammates see you in the shape. Save the card when you want verified stats, avatar upgrades, and squad history to stick.
         </p>
         <div className="mt-5 flex flex-col gap-2">
           <button
@@ -147,6 +338,7 @@ function ConfirmationSheet({ displayName, role, remixUrl, onClose }: Confirmatio
             onClick={handleShare}
             className="flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-500"
           >
+            <Share2 className="h-4 w-4" />
             {copied ? "Copied!" : "Share my spot"}
           </button>
           <a
@@ -156,6 +348,12 @@ function ConfirmationSheet({ displayName, role, remixUrl, onClose }: Confirmatio
             className="flex items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100"
           >
             Share on WhatsApp
+          </a>
+          <a
+            href={buildSavePlayerCardHref(claimContext)}
+            className="flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-900 transition hover:border-emerald-500 hover:text-emerald-700"
+          >
+            Save player card
           </a>
         </div>
       </div>
@@ -170,6 +368,8 @@ export function ClaimablePitch({
   color,
   meIndex,
   initialClaims,
+  formation,
+  remixSlug,
 }: ClaimablePitchProps) {
   const [claims, setClaims] = useState<ShareClaimRecord[]>(initialClaims);
   const [activeSlot, setActiveSlot] = useState<number | null>(null);
@@ -180,9 +380,27 @@ export function ClaimablePitch({
     displayName: string;
     role: string;
     remixUrl: string;
+    remixSlug: string;
+    positionIndex: number;
+    claimToken: string;
   } | null>(null);
   // Fix 1 UI: show a "slot taken" message when the API returns 409.
   const [takenBy, setTakenBy] = useState<{ positionIndex: number; name: string } | null>(null);
+  const [pendingSaveContext, setPendingSaveContext] = useState<PendingClaimContext | null>(null);
+  const formatLabel = `${slots.length}v${slots.length}`;
+
+  useEffect(() => {
+    if (meIndex === null || !remixSlug) return;
+    const claim = getPendingClaim();
+    if (
+      claim &&
+      claim.shareSlug === slug &&
+      claim.positionIndex === meIndex &&
+      claim.remixSlug === remixSlug
+    ) {
+      setPendingSaveContext(claim);
+    }
+  }, [meIndex, remixSlug, slug]);
 
   // Auto-open claim sheet if ?me= is in the URL and not already claimed
   useEffect(() => {
@@ -225,6 +443,7 @@ export function ClaimablePitch({
           ok: boolean;
           claim: ShareClaimRecord;
           remixUrl?: string;
+          claimToken?: string | null;
           alreadyClaimed?: boolean;
           claimedBy?: string;
         };
@@ -242,23 +461,42 @@ export function ClaimablePitch({
         }
 
         if (data.ok && data.claim) {
+          const newRemixSlug = data.claim?.remixSlug ?? "";
+          const claimToken = data.claimToken ?? "";
+          const role = slots[positionIndex]?.role ?? "this position";
+          const pendingClaim = newRemixSlug && claimToken ? {
+            shareSlug: slug,
+            positionIndex,
+            role,
+            displayName,
+            formation,
+            remixSlug: newRemixSlug,
+            claimToken,
+          } satisfies PendingClaimContext : null;
           setClaims((prev) => {
             const updated = prev.filter((c) => c.positionIndex !== positionIndex);
             updated.push(data.claim);
             return updated;
           });
+          if (pendingClaim) {
+            storePendingClaim(pendingClaim);
+            setPendingSaveContext(pendingClaim);
+          }
           setActiveSlot(null);
           setConfirmation({
             displayName,
-            role: slots[positionIndex]?.role ?? "this position",
+            role,
             remixUrl: data.remixUrl ?? `${window.location.origin}/play/${encodeURIComponent(slug)}?me=${positionIndex}`,
+            remixSlug: newRemixSlug,
+            positionIndex,
+            claimToken,
           });
         }
       } finally {
         setLoadingSlot(null);
       }
     },
-    [slug, slots],
+    [formation, slug, slots],
   );
 
   const claimMap = new Map(claims.map((c) => [c.positionIndex, c]));
@@ -266,6 +504,10 @@ export function ClaimablePitch({
   return (
     <>
       <div className="relative aspect-[3/4] overflow-hidden rounded-md border border-white/30 bg-[linear-gradient(180deg,#197047,#116036)]">
+        <div className="absolute left-3 top-3 z-10 rounded-lg border border-white/15 bg-black/35 px-3 py-2 text-left text-white shadow-lg backdrop-blur-sm">
+          <p className="text-[9px] font-black uppercase tracking-[0.18em] text-emerald-200">Claim to create</p>
+          <p className="mt-0.5 text-xs font-black">Your player card</p>
+        </div>
         {/* Pitch markings */}
         <div className="absolute inset-4 rounded border border-white/25" />
         <div className="absolute left-1/2 top-1/2 h-28 w-28 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/25" />
@@ -297,7 +539,7 @@ export function ClaimablePitch({
                   opacity: isClaimed && !isMe ? 0.8 : 1,
                 }}
               >
-                {slot.role}
+                {isClaimed ? initialsFor(displayName) : slot.role}
                 {!isClaimed && (
                   <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-white text-emerald-700">
                     <UserPlus className="h-2.5 w-2.5" />
@@ -330,10 +572,33 @@ export function ClaimablePitch({
         )}
       </div>
 
+      {pendingSaveContext && !confirmation && (
+        <div className="mt-3 rounded-lg border border-emerald-300/30 bg-emerald-950/40 p-3 text-white">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-200">
+            Your card is ready
+          </p>
+          <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs font-medium leading-5 text-emerald-50/80">
+              Save {pendingSaveContext.displayName}&apos;s {pendingSaveContext.role} card to keep the claimed spot attached to your profile.
+            </p>
+            <a
+              href={buildSavePlayerCardHref(pendingSaveContext)}
+              className="inline-flex min-h-9 items-center justify-center rounded-md bg-white px-3 py-2 text-xs font-black text-emerald-950 transition hover:bg-emerald-100"
+            >
+              Save player card
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Claim sheet */}
       {activeSlot !== null && (
         <ClaimSheet
           slot={slots[activeSlot]}
+          slotIndex={activeSlot}
+          plannedName={names[activeSlot] ?? ""}
+          color={color}
+          formatLabel={formatLabel}
           loading={loadingSlot === activeSlot}
           onClaim={(name) => handleClaim(activeSlot, name)}
           onClose={() => {
@@ -385,8 +650,15 @@ export function ClaimablePitch({
         <ConfirmationSheet
           displayName={confirmation.displayName}
           role={confirmation.role}
+          color={color}
+          formatLabel={formatLabel}
           remixUrl={confirmation.remixUrl}
           onClose={() => setConfirmation(null)}
+          slug={slug}
+          formation={formation}
+          positionIndex={confirmation.positionIndex}
+          remixSlug={confirmation.remixSlug}
+          claimToken={confirmation.claimToken}
         />
       )}
     </>

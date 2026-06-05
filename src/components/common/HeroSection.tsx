@@ -125,15 +125,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
 
         <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-12 sm:py-20 text-center">
           <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black mb-3 sm:mb-4 leading-tight">
-            <span className="block text-white">Your Sunday League,</span>
+            <span className="block text-white">Claim Your Spot.</span>
             <span className="block bg-gradient-to-r from-green-400 via-emerald-500 to-green-600 bg-clip-text text-transparent">
-              Now a Championship Manager Season
+              Build Your Player Card.
             </span>
           </h1>
 
           <p className="text-sm sm:text-base text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto">
-            Log real match results, earn XP, level up your attributes, and outthink opponents with AI-powered tactics.
-            <span className="hidden md:inline"> Your rec football stats finally matter.</span>
+            Start with a 5s, 6s, or 7s setup. Put yourself in the team, share the card to the group, then turn matchdays into verified stats, XP, and squad history.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
@@ -145,6 +144,20 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               {journeyContent.hero.primaryCtaLabel}
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
             </button>
+          </div>
+
+          <div className="mx-auto mb-6 grid max-w-3xl gap-2 text-left sm:grid-cols-3">
+            {[
+              { icon: Target, label: "Pick a role", detail: "Small-sided shapes first, 11v11 when the squad grows." },
+              { icon: Sparkles, label: "See yourself", detail: "Your claimed spot becomes a starter player card." },
+              { icon: Users, label: "Bring the squad", detail: "Every teammate gets a native spot to claim and share." },
+            ].map(({ icon: Icon, label, detail }) => (
+              <div key={label} className="rounded-xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
+                <Icon className="h-4 w-4 text-emerald-300" aria-hidden="true" />
+                <div className="mt-2 text-xs font-black uppercase tracking-[0.14em] text-white">{label}</div>
+                <p className="mt-1 text-xs leading-5 text-gray-400">{detail}</p>
+              </div>
+            ))}
           </div>
 
           <div className="mb-6">
