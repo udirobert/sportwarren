@@ -21,6 +21,7 @@ import { autonomyPolicy } from '../services/ai/autonomy-policy';
 import { algorandService } from '../services/blockchain/algorand';
 import { getTwinService } from '../services/personalization/twin-service';
 import { generateSquadNarrative } from '../services/personalization/narrative';
+import { identityService } from '../services/personalization/identity';
 import { computeLevel, xpToNext } from '../services/personalization/twin-appliers';
 import {
   squadIdSchema,
@@ -412,7 +413,22 @@ export const squadRouter = createTRPCRouter({
         .slice(0, 5)
         .reduce((acc, [tag, count]) => ({ ...acc, [tag]: count }), {});
 
-      const narrative = await generateSquadNarrative(input.squadId);
+      const narrative = generateSquadNarrative({
+        name: squad.name,
+        twin: twin
+          ? {
+              level: twin.level,
+              xp: twin.xp,
+              prestige: twin.prestige,
+              baseAttributes: (twin.baseAttributes as Record<string, number> | null) ?? {},
+              energy: twin.energy,
+              energyMax: twin.energyMax,
+              reputation: twin.reputation,
+            }
+          : null,
+        matches: hypeTagRows.length, // matches considered; full count not needed for the stub
+        consensusTags: topTags,
+      });
 
       const level = twin?.level ?? 1;
       const nextLevelXp = xpToNext(twin?.xp ?? 0);
@@ -435,6 +451,21 @@ export const squadRouter = createTRPCRouter({
         squadHypeTags: topTags,
         narrative,
       };
+    }),
+
+  getIdentity: publicProcedure
+    .input(z.object({ squadId: squadIdSchema }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await identityService.getSquadIdentity(input.squadId);
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch squad identity',
+          cause: error,
+        });
+      }
     }),
 
   // Simulate a Ghost Match (Digital Twin progression)
