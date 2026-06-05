@@ -1,49 +1,48 @@
 # SportWarren
 
-**Turn every grassroots match into a Championship Manager experience.** Stats, commentary, player progression, and peer-vetted reputation — all through WhatsApp.
+**Your football journey, powered by AI.** Every match, every drill, every rating builds your digital twin — a living record of your football career that grows with you.
 
-SportWarren brings the depth of a football management sim to amateur football. Players get pre-match previews with win probabilities, live commentary, post-match peer ratings that drive FIFA-style attribute growth, and AI-generated tactical analysis. No app installs, no crypto wallets — just play, and SportWarren builds your football legacy match by match.
-
-Every squad gets its own autonomous AI agent that handles data, intelligence, and on-chain payments in the background. The platform serves Web, Telegram, and WhatsApp.
+SportWarren transforms grassroots football into a progression system. Players earn XP, develop FIFA-style attributes through peer consensus, complete daily drills, and compete in seasons. Squads get their own AI twin that learns from match history, builds tactical identity, and unlocks coaching intelligence. No crypto complexity, no app installs — just play, and your twin evolves.
 
 ---
 
-## 🎯 Vision
+## 🎯 The Platform
 
-SportWarren gives amateur footballers what pros take for granted:
+**Player Twins** — Every player gets a digital brain that tracks their journey. Attributes (Pace, Shooting, Passing, Dribbling, Defending, Physical) grow through match performance and peer ratings. XP accumulates, levels unlock, and reputation builds over time.
 
-- **Pre-Match Previews** — Win probabilities, tactical breakdowns, and head-to-head stats before kickoff.
-- **Live Match Commentary** — AI-generated play-by-play that brings every Sunday league game to life.
-- **Peer-Vetted Reputation** — Post-match player ratings where teammates rate each other's FIFA-style attributes (Pace, Shooting, Passing). Consensus logic weeds out trolls and rewards accurate scouts.
-- **Player Progression** — Attributes grow over time through real match performance and peer consensus, just like Championship Manager.
-- **AI-Powered Analysis** — Tactical insights, squad optimization, and scouting reports — generated and delivered to your WhatsApp.
-- **No Apps Required** — Everything works through WhatsApp. Telegram Mini App for power users who want the full dashboard.
+**Squad Twins** — Your team develops its own identity. Tactical preferences, match history, and collective performance shape a squad twin that evolves with every game. Hire AI coaches from the marketplace to unlock tactical buffs and strategic insights.
 
----
+**Match Day Experience** — Log matches, verify results with teammates, and watch your twin react. Post-match reactions show XP gains, attribute changes, and level-up celebrations. Every verified match leaves a permanent mark on your football legacy.
 
-## ⚡ Powered by the Kite Agentic Economy
+**Daily Rituals** — Complete training drills to boost your twin's stats. Build streaks, earn XP, and watch your attributes grow even between matches.
 
-Under the hood, every squad is managed by an autonomous Kite Passport AI agent that scouts opponents, discovers paid intelligence services, negotiates payments on-chain via x402, and operates within user-delegated budgets. Players never touch a wallet or a DEX — the agent handles everything.
+**Peer Consensus** — Teammates rate each other's performance after every match. Consensus logic filters noise and rewards accurate scouts. Your attributes reflect what your squad actually sees on the pitch.
 
-**Kite AI Hackathon:** See **[docs/HACKATHON.md](docs/HACKATHON.md)** for our agent autonomy implementation, x402 commerce flow, and verifiable on-chain transaction proofs.
+**Seasons & Competition** — Compete in structured seasons, climb leaderboards, and earn prestige. Every season ends with moments that capture your squad's journey.
 
 ---
 
-## 🛰️ Try It Live
+## 🚀 Key Features
 
-Text **+1 (201) 534-5384** on WhatsApp:
+- **Interactive Dashboard** — See your twin's level, XP progress, top attributes, and active coaching effects at a glance.
+- **Post-Match Reactions** — Animated feedback showing XP gains, attribute changes, and level-up celebrations after verified matches.
+- **Daily Drills** — Training exercises that boost your twin's stats and build streaks.
+- **Coaching Marketplace** — Hire AI coaches to unlock time-limited tactical buffs and strategic insights.
+- **Formation Playground** — Set tactics, simulate matchups, and share challenge links with opponents.
+- **Peer Rating System** — Post-match player ratings that drive attribute progression.
+- **Multi-Channel Access** — Full dashboard on web, Telegram Mini App for power users, WhatsApp for casual updates.
+- **Squad Management** — Invite teammates, coordinate matches, and build your squad's collective twin.
+- **On-Chain Reputation** — Soulbound tokens track your football legacy (abstracted away, no wallet required).
 
-| Command | What You Get |
-|---------|--------------|
-| `hi` | Meet Marcus, your squad's AI director |
-| `scout Liverpool` | AI-generated tactical scouting report |
-| `whoami` | Your linked platform identities |
-| `attestations` | Recent agent actions and settlement receipts |
-| `help` | Full command reference |
+---
 
-**Telegram:** [@SportWarrenBot](https://t.me/SportWarrenBot) — full Mini App dashboard.
+## 🛰️ Try It
 
-**Web:** [api.sportwarren.com](https://api.sportwarren.com)
+**Web:** [api.sportwarren.com](https://api.sportwarren.com) — Full dashboard with twin visualization, match logging, and squad management.
+
+**Telegram:** [@SportWarrenBot](https://t.me/SportWarrenBot) — Mini App with match coordination, ratings, and squad chat.
+
+**WhatsApp:** Text **+1 (201) 534-5384** — Casual match logging and squad updates.
 
 ---
 
@@ -51,26 +50,10 @@ Text **+1 (201) 534-5384** on WhatsApp:
 
 | Document | Purpose |
 |----------|---------|
-| **[HACKATHON.md](docs/HACKATHON.md)** | Kite AI Hackathon: agent autonomy, x402 payments, on-chain proofs. |
-| **[ARCHITECT.md](docs/ARCHITECT.md)** | Technical blueprint: multi-chain design, match lifecycle, peer consensus engine. |
-| **[PLATFORMS.md](docs/PLATFORMS.md)** | Channel guides for Telegram, WhatsApp, and Lens Protocol. |
-| **[BUILD.md](docs/BUILD.md)** | Development guide, deployment flow, and testing instructions. |
-| **[DEPLOY_HETZNER_RUNTIME.md](docs/DEPLOY_HETZNER_RUNTIME.md)** | Standalone PM2 runtime operations on Hetzner. |
-
----
-
-## 🚀 Key Features
-
-- **Formation Playground** — Interactive tactics editor with static pitch and animated simulation. Toggle between setting formations and watching them play out. Share challenge links that invite opponents to counter your setup.
-- **Counter-Play Viral Loop** — Share a formation, receive a counter-formation, simulate the match, get a result card. Every share generates a second interaction.
-- **Match Preview Engine** — Interactive pitch visualization with win probabilities and tactical breakdowns.
-- **Live Commentary** — AI-generated play-by-play during matches directly in WhatsApp group chats.
-- **Peer Consensus Engine** — Post-match player ratings that drive FIFA-style attribute progression.
-- **Proactive Match Detection** — The Telegram bot detects match results from casual chat ("we won 3-1") without requiring commands.
-- **Zero-Friction Logging** — Any squad member can log matches (not just captains). Opponent squads are auto-created if they don't exist on the platform.
-- **Player & Squad Progression** — Stats, attributes, and reputation that grow with every match.
-- **Autonomous Squad Agents** — Kite Passport AI agents that manage scouting, intelligence procurement, and on-chain payments in the background.
-- **Multi-Chain Architecture** — Purpose-built roles for Algorand (verification), GOAT Network (governance), Kite (agents), TON (Telegram wallet), and Lens (social identity).
+| **[ARCHITECT.md](docs/ARCHITECT.md)** | Technical blueprint: twin brain system, match lifecycle, peer consensus engine. |
+| **[PLATFORMS.md](docs/PLATFORMS.md)** | Channel guides for Telegram, WhatsApp, and web dashboard. |
+| **[BUILD.md](docs/BUILD.md)** | Development setup, deployment flow, and testing instructions. |
+| **[DEPLOY_HETZNER_RUNTIME.md](docs/DEPLOY_HETZNER_RUNTIME.md)** | Production deployment and operations guide. |
 
 ---
 
@@ -84,7 +67,8 @@ cp .env.example .env.local
 pnpm run dev
 ```
 
-**Frontend:** http://localhost:3000 | **API:** http://localhost:3000/api/trpc
+**Web Dashboard:** http://localhost:3000  
+**API:** http://localhost:3000/api/trpc
 
 ---
 
