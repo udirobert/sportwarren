@@ -235,7 +235,7 @@ export const FormationPlayground: React.FC = () => {
 
   const handleSharePlan = useCallback(async () => {
     const fallbackUrl = `${window.location.origin}${window.location.pathname}?${planQuery}`;
-    const shareText = `${squadSize}v${squadSize} ${formation} ${PLAY_STYLE_LABELS[playStyle].name} setup. Claim your spot.`;
+    const shareText = `${squadSize}v${squadSize} ${formation} ${PLAY_STYLE_LABELS[playStyle].name} setup. Claim your spot and build your player card.`;
     let shareUrl = fallbackUrl;
     let shareSource = "playground_query_link";
 
@@ -270,12 +270,12 @@ export const FormationPlayground: React.FC = () => {
           text: shareText,
           url: shareUrl,
         });
-        setToastMessage("Setup shared — keep the squad on the same plan.");
+        setToastMessage("Claim link shared — bring the squad into the shape.");
       } else {
         await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
         setToastMessage(shareSource === "playground_short_link"
-          ? "Short setup link copied — send it to the squad."
-          : "Setup link copied — keep the squad on the same plan.");
+          ? "Claimable setup link copied — send it to the squad."
+          : "Claim link copied — bring the squad into the shape.");
       }
       trackFeatureUsed("setup_link_copied", { formation, style: playStyle, size: squadSize, source: shareSource });
       trackCoreGrowthEvent("playground_plan_shared", {
@@ -698,7 +698,7 @@ export const FormationPlayground: React.FC = () => {
                       </span>
                     </div>
                     <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-300/80">
-                      Small-sided first. Full XI when you need it.
+                      Claim spots first. Full XI when you need it.
                     </div>
                   </div>
                   <MatchEnginePreview
@@ -762,7 +762,7 @@ export const FormationPlayground: React.FC = () => {
                             className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-bold text-gray-100 transition hover:bg-white/[0.1]"
                           >
                             <Share2 className="h-4 w-4" />
-                            {isSharingPlan ? "Preparing..." : "Share plan"}
+                            {isSharingPlan ? "Preparing..." : "Share claim link"}
                           </button>
                         )}
                         <a
@@ -979,7 +979,7 @@ export const FormationPlayground: React.FC = () => {
                 onClick={() => personalization.setUnlocked(true)}
                 className="w-full text-[10px] text-green-400 hover:text-green-300 font-bold uppercase tracking-wider py-1.5 border border-green-500/20 rounded-lg hover:bg-green-500/10 transition-all"
               >
-                Customize Player Names
+                Create Player Cards
               </button>
             )}
           </div>

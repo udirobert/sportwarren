@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ClipboardList, Shield, Users } from "lucide-react";
-import { FORMATIONS, PLAY_STYLE_LABELS } from "@/lib/formations";
+import { ClipboardList, Shield, Sparkles, UserRound, Users } from "lucide-react";
+import { FORMATIONS, PLAY_STYLE_LABELS, ROLE_LABELS } from "@/lib/formations";
 import { buildTacticalPlanQuery } from "@/lib/pitch/tacticalPlan";
 import {
   getTacticalPlanShare,
@@ -86,7 +86,7 @@ export async function generateMetadata({ params, searchParams }: PlaySharePagePr
 
 export default async function PlaySharePage({ params, searchParams }: PlaySharePageProps) {
   const { slug } = await params;
-  const { me: meParam } = await searchParams;
+  const { me: meParam, remix: remixParam } = await searchParams;
 
   const [record, initialClaims] = await Promise.all([
     getTacticalPlanShare(slug, { incrementView: true }),
@@ -111,6 +111,11 @@ export default async function PlaySharePage({ params, searchParams }: PlayShareP
     meParam !== undefined && /^\d+$/.test(meParam) && Number(meParam) < slots.length
       ? Number(meParam)
       : null;
+  const selectedRole = meIndex !== null ? slots[meIndex]?.role : null;
+  const selectedRoleLabel = selectedRole ? ROLE_LABELS[selectedRole] ?? selectedRole : "your spot";
+  const remixSlug = typeof remixParam === "string" && /^[a-zA-Z0-9_-]{6,64}$/.test(remixParam)
+    ? remixParam
+    : null;
 
   return (
     <main className="min-h-screen bg-[#f7faf7] text-slate-950">
@@ -121,10 +126,12 @@ export default async function PlaySharePage({ params, searchParams }: PlayShareP
               SportWarren
             </Link>
             <h1 className="mt-5 max-w-3xl text-4xl font-black leading-tight tracking-normal md:text-6xl">
-              {plan.size}v{plan.size} / {plan.formation}
+              {meIndex !== null
+                ? `Claim ${selectedRoleLabel}`
+                : "Claim your spot. Build your player card."}
             </h1>
             <p className="mt-4 max-w-2xl text-base font-medium leading-7 text-emerald-50/80">
-              {styleLabel.name} setup for small-sided football. Tap a slot to claim your position.
+              {plan.size}v{plan.size} {styleLabel.name.toLowerCase()} setup. Tap a position to put yourself in the shape, then share the card back to the group.
             </p>
           </div>
           <div className="flex gap-4">
@@ -150,6 +157,8 @@ export default async function PlaySharePage({ params, searchParams }: PlayShareP
             color={plan.color || "#10b981"}
             meIndex={meIndex}
             initialClaims={initialClaims}
+            formation={plan.formation}
+            remixSlug={remixSlug}
           />
         </div>
 
@@ -177,11 +186,35 @@ export default async function PlaySharePage({ params, searchParams }: PlayShareP
             </div>
           </div>
 
+          <div className="overflow-hidden rounded-lg border border-slate-900 bg-slate-950 p-5 text-white shadow-sm">
+            <div className="flex items-start gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-400/15 text-emerald-300">
+                <UserRound className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-300">Player-first loop</p>
+                <h2 className="mt-2 text-xl font-black text-white">The tactic gets stronger as real players claim it.</h2>
+              </div>
+            </div>
+            <div className="mt-5 grid gap-3">
+              {[
+                "Claimed spots become starter player cards.",
+                "Saved profiles can replace placeholders with avatars and verified stats.",
+                "Every share gives the next teammate a native role to step into.",
+              ].map((item) => (
+                <div key={item} className="flex items-start gap-3 rounded-md border border-white/10 bg-white/[0.04] p-3">
+                  <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+                  <p className="text-sm font-medium leading-5 text-slate-200">{item}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
           <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Next action</p>
-            <h2 className="mt-3 text-xl font-black text-slate-950">Turn this group-chat plan into a team record.</h2>
+            <h2 className="mt-3 text-xl font-black text-slate-950">Turn this group-chat plan into player profiles and a team record.</h2>
             <p className="mt-2 text-sm font-medium leading-6 text-slate-600">
-              Small-sided squads usually start with one setup, one result, and one shared link. This page keeps those three steps together.
+              Small-sided squads usually start with one setup, one result, and one shared link. SportWarren keeps the plan, the player card, and the match record together.
             </p>
             <div className="mt-5">
               <TacticShareActions

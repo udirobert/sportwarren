@@ -5,6 +5,7 @@ import {
   claimSharePosition,
   getShareClaims,
 } from "@/server/services/tactical-plan-share";
+import { signShareClaimToken } from "@/server/services/tactical-claim-token";
 
 export const runtime = "nodejs";
 
@@ -89,12 +90,21 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     const remixUrl = claim.remixSlug
       ? `${base}/play/${encodeURIComponent(slug)}?me=${positionIndex}&remix=${encodeURIComponent(claim.remixSlug)}`
       : `${base}/play/${encodeURIComponent(slug)}?me=${positionIndex}`;
+    const claimToken = claim.remixSlug
+      ? signShareClaimToken({
+          claimId: claim.id,
+          shareId: claim.shareId,
+          positionIndex,
+          remixSlug: claim.remixSlug,
+        })
+      : null;
 
     return NextResponse.json({
       ok: true,
       claim,
       alreadyClaimed: false,
       remixUrl,
+      claimToken,
     });
   } catch (error) {
     console.error("[tactics/share/claim] POST failed", error);

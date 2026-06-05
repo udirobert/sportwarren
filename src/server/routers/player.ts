@@ -9,6 +9,7 @@ import { getAvatarPresentation } from '../services/avatar/avatar-presentation';
 import { generateAiAvatar } from '../services/avatar/avatar-generator';
 import { generateTacticalInsights } from '../../lib/ai/tactical-insights';
 import { identityService } from '../services/personalization/identity';
+import { verifyShareClaimToken } from '../services/tactical-claim-token';
 
 const AttributeType = z.enum([
   'pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical',
@@ -78,6 +79,43 @@ async function ensurePlayerProfile(prisma: PrismaClient, userId: string) {
     },
     include: playerProfileInclude,
   });
+}
+
+async function linkShareClaimToUser(prisma: PrismaClient, userId: string, claimToken: string) {
+  const payload = verifyShareClaimToken(claimToken);
+  if (!payload) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'Claim token is invalid or expired',
+    });
+  }
+
+  const existing = await prisma.shareClaim.findUnique({
+    where: { id: payload.claimId },
+    select: { userId: true },
+  });
+
+  if (existing?.userId === userId) {
+    return;
+  }
+
+  const result = await prisma.shareClaim.updateMany({
+    where: {
+      id: payload.claimId,
+      shareId: payload.shareId,
+      positionIndex: payload.positionIndex,
+      remixSlug: payload.remixSlug,
+      userId: null,
+    },
+    data: { userId },
+  });
+
+  if (result.count === 0) {
+    throw new TRPCError({
+      code: 'CONFLICT',
+      message: 'Claim is already linked or no longer available',
+    });
+  }
 }
 
 export const playerRouter = createTRPCRouter({
@@ -229,6 +267,7 @@ export const playerRouter = createTRPCRouter({
       name: z.string().trim().min(2, 'Name must be at least 2 characters').max(40, 'Name must be 40 characters or fewer'),
       position: z.enum(['GK', 'DF', 'MF', 'ST', 'WG']),
       avatar: z.string().max(1_000_000, 'Avatar data too large').optional(),
+      claimToken: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -253,6 +292,10 @@ export const playerRouter = createTRPCRouter({
           },
         });
 
+        if (input.claimToken) {
+          await linkShareClaimToUser(ctx.prisma, ctx.userId!, input.claimToken);
+        }
+
         return {
           success: true,
           user,
@@ -262,6 +305,24 @@ export const playerRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to update player profile',
+          cause: error,
+        });
+      }
+    }),
+
+  linkShareClaim: protectedProcedure
+    .input(z.object({
+      claimToken: z.string().min(20).max(512),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await linkShareClaimToUser(ctx.prisma, ctx.userId!, input.claimToken);
+        return { success: true };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to link share claim',
           cause: error,
         });
       }
