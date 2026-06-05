@@ -40,6 +40,8 @@ export interface PlayerPuck {
     history: Array<{ x: number; y: number }>;
     intent?: { x: number; y: number };
     cooldownUntil?: number;
+    lastPasserId?: string;
+    lastPassReceivedTick?: number;
 }
 
 export interface EngineContext {
@@ -140,6 +142,15 @@ export const ROLE_PROFILES: Record<string, RoleProfile> = {
     ATT: { narrowness: 0.3, lineHeight: 0.8, stepOutThreshold: 25, maxDrift: 25, chaseAggression: 0.6, supportWidth: 0.7 },
 };
 
+const ROLE_ALIASES: Record<string, keyof typeof ROLE_PROFILES> = {
+    CDM: 'DM',
+    CAM: 'AM',
+    LWB: 'FB',
+    RWB: 'FB',
+    LM: 'MID',
+    RM: 'MID',
+};
+
 export const SIM_PARAMS = {
     looseBallRecoveryRadius: 2.2,
     looseBallRecoveryCooldown: 3,
@@ -172,9 +183,34 @@ export const PASS_WEIGHTS = {
         ST: 8, LW: 6, RW: 6, AM: 5,
         CM: 4, DM: 3, MID: 3,
         CB: 2, FB: 2, LB: 2, RB: 2,
+        CDM: 3, CAM: 5, LM: 3, RM: 3, LWB: 2, RWB: 2,
         GK: 0,
     },
 };
+
+// Play-style modifiers applied to player stats and steering.
+// These translate the Tactics "Style" selection into simulation behavior.
+export const PLAY_STYLE_MODIFIERS: Record<string, {
+    pace: number;
+    passing: number;
+    shooting: number;
+    strength: number;
+    lineShift: number;     // shifts non-GK home-position x toward attack (+) or defense (-)
+    pressAggression: number; // multiplier on chase/step-out thresholds
+    passForwardBias: number; // added to progressiveForward weight
+    widthBonus: number;    // added to wide-switch weight
+}> = {
+    balanced:   { pace: 0,  passing: 0,  shooting: 0,  strength: 0,  lineShift: 0,   pressAggression: 1.0, passForwardBias: 0,    widthBonus: 0 },
+    direct:     { pace: 5,  passing: -3, shooting: 7,  strength: 2,  lineShift: 5,   pressAggression: 1.1, passForwardBias: 0.18, widthBonus: -0.03 },
+    counter:    { pace: 8,  passing: -5, shooting: 5,  strength: 0,  lineShift: -4,  pressAggression: 0.9, passForwardBias: 0.2,  widthBonus: 0.1 },
+    possession: { pace: -2, passing: 8,  shooting: -3, strength: -2, lineShift: 3,   pressAggression: 1.1, passForwardBias: -0.05,widthBonus: 0.1 },
+    high_press: { pace: 6,  passing: 0,  shooting: 3,  strength: 3,  lineShift: 8,   pressAggression: 1.6, passForwardBias: 0.1,  widthBonus: 0 },
+    low_block:  { pace: -4, passing: 5,  shooting: -5, strength: 6,  lineShift: -10, pressAggression: 0.6, passForwardBias: -0.15,widthBonus: 0 },
+};
+
+export function getPlayStyleModifiers(style?: string) {
+    return PLAY_STYLE_MODIFIERS[style || 'balanced'] || PLAY_STYLE_MODIFIERS.balanced;
+}
 
 export const COMMENTARY_PARAMS = {
     maxEvents: 6,
@@ -216,7 +252,7 @@ export function buildFormation(n: number, hasKeeper: boolean): Array<[number, nu
 // ── Role-dispatch tick functions ───────────────────────────────────────────────
 
 export function getRoleProfile(role: string): RoleProfile {
-    const cleanRole = role.replace(/^(LB|RB)$/, 'FB');
+    const cleanRole = ROLE_ALIASES[role] || role.replace(/^(LB|RB)$/, 'FB');
     return ROLE_PROFILES[cleanRole] || ROLE_PROFILES.DEF;
 }
 
@@ -340,9 +376,10 @@ export function tickAttacker(p: PlayerPuck, ctx: EngineContext): { targetX: numb
 }
 
 export function tickPlayer(p: PlayerPuck, ctx: EngineContext): { targetX: number; targetY: number } {
-    switch (p.role) {
+    const role = ROLE_ALIASES[p.role] || p.role;
+    switch (role) {
         case 'GK': return tickGoalkeeper(p, ctx);
-        case 'CB': case 'LB': case 'RB': case 'DEF': return tickDefender(p, ctx);
+        case 'CB': case 'LB': case 'RB': case 'FB': case 'DEF': return tickDefender(p, ctx);
         case 'CM': case 'DM': case 'AM': case 'MID': return tickMidfielder(p, ctx);
         case 'ST': case 'LW': case 'RW': case 'ATT': return tickAttacker(p, ctx);
         default: return { targetX: p.homePos.x, targetY: p.homePos.y };
@@ -419,17 +456,37 @@ export function selectPassTarget(
     owner: PlayerPuck,
     teammates: PlayerPuck[],
     opponents: PlayerPuck[],
-    support?: SupportOptions
+    support?: SupportOptions,
+    currentTick?: number,
+    playStyleBias?: { forwardBias: number; widthBonus: number }
 ): PlayerPuck | null {
-    const targets = teammates.filter((t) => t.id !== owner.id && t.role !== 'GK');
+    const RETURN_PASS_COOLDOWN = 18;
+    const tick = currentTick ?? 0;
+    const targets = teammates.filter((t) => {
+        if (t.id === owner.id || t.role === 'GK') return false;
+        // Prevent immediate return pass to whoever just passed us the ball
+        if (
+            owner.lastPasserId &&
+            t.id === owner.lastPasserId &&
+            owner.lastPassReceivedTick !== undefined &&
+            tick - owner.lastPassReceivedTick < RETURN_PASS_COOLDOWN
+        ) {
+            return false;
+        }
+        return true;
+    });
     if (targets.length === 0) return null;
+
+    const forwardWeight = Math.max(0.05, Math.min(0.7, PASS_WEIGHTS.progressiveForward + (playStyleBias?.forwardBias ?? 0)));
+    const wideWeight = Math.max(0.05, Math.min(0.5, PASS_WEIGHTS.wideSwitch + (playStyleBias?.widthBonus ?? 0)));
+    const safeWeight = Math.max(0.05, 1 - forwardWeight - wideWeight);
 
     const passTypeRoll = Math.random();
     let preferredDirection: 'back' | 'side' | 'forward' | 'wide' = 'forward';
 
-    if (passTypeRoll < PASS_WEIGHTS.safeRecycle) {
+    if (passTypeRoll < safeWeight) {
         preferredDirection = 'back';
-    } else if (passTypeRoll < PASS_WEIGHTS.safeRecycle + PASS_WEIGHTS.progressiveForward) {
+    } else if (passTypeRoll < safeWeight + forwardWeight) {
         preferredDirection = 'forward';
     } else {
         preferredDirection = 'wide';

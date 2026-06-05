@@ -319,6 +319,7 @@ function getRolePosition(role: string): string {
             <MatchEnginePreview
               squadId={activeSquadId}
               formation={selectedFormation}
+              playStyle={selectedPlayStyle}
               playersPerSide={11}
             />
           ) : (

@@ -36,6 +36,8 @@ import { buildSquadInviteUrl } from "@/lib/squad/invite";
 import { PlayerAvatar } from "@/components/ui/PlayerAvatar";
 import { buildAvatarPresentationFromSummary } from "@/lib/avatar/adapters";
 import type { AvatarPresentation } from "@/lib/avatar/types";
+import { buildTacticalPlanQuery, parseTacticalPlanSearchParams, tacticalPlanToTactics, type ImportedTacticalPlan } from "@/lib/pitch/tacticalPlan";
+import { trackCoreGrowthEvent, trackFeatureUsed } from "@/lib/analytics";
 
 type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance" | "settings";
 
@@ -113,6 +115,25 @@ function buildSquadMemberAvatar(member: {
   });
 }
 
+function buildPersistedTactics(tacticsData: unknown): Tactics | undefined {
+  if (!tacticsData) return undefined;
+  const data = tacticsData as Record<string, unknown>;
+  const f = String(data.formation ?? '');
+  const validSet = new Set([
+    '4-4-2', '4-3-3', '4-2-3-1', '4-5-1', '4-1-4-1',
+    '3-5-2', '3-4-3', '5-3-2', '5-4-1', '4-3-1-2',
+    '1-2-1', '1-1-2', '1-3-1', '1-2-2', '1-2-1-1',
+    '1-4-1', '1-3-2', '1-3-1-1', '2-3-1',
+  ]);
+  if (!validSet.has(f)) return undefined;
+  return {
+    formation: f as Formation,
+    style: (typeof data.playStyle === 'string' ? data.playStyle : 'balanced') as PlayStyle,
+    instructions: (data.instructions as TeamInstructions) ?? { width: 'normal', tempo: 'normal', passing: 'mixed', pressing: 'medium', defensiveLine: 'normal' },
+    setPieces: (data.setPieces as Tactics['setPieces']) ?? { corners: 'near_post', freeKicks: 'shoot', penalties: '' },
+  };
+}
+
 export default function SquadPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<SquadTab>("overview");
@@ -120,6 +141,7 @@ export default function SquadPage() {
   const [showJoinSquadFlow, setShowJoinSquadFlow] = useState(false);
   const [showSample, setShowSample] = useState(false);
   const [inviteShareState, setInviteShareState] = useState<"idle" | "copied" | "shared" | "error">("idle");
+  const [importedPlan, setImportedPlan] = useState<ImportedTacticalPlan | null>(null);
   const { chain, hasAccount, hasWallet, isVerified } = useWallet();
   const { journeyStage, memberships, refreshSquads } = useJourneyState();
 
@@ -198,24 +220,12 @@ export default function SquadPage() {
     }));
   }, [members, activeSquad]);
 
-  const initialTactics: Tactics | undefined = useMemo((): Tactics | undefined => {
-    if (!tacticsData) return undefined;
-    const f = String(tacticsData.formation ?? '');
-    const validSet = new Set([
-      '4-4-2', '4-3-3', '4-2-3-1', '4-5-1', '4-1-4-1',
-      '3-5-2', '3-4-3', '5-3-2', '5-4-1', '4-3-1-2',
-      '1-2-1', '1-1-2', '1-3-1', '1-2-2', '1-2-1-1',
-      '1-4-1', '1-3-2', '1-3-1-1', '2-3-1',
-    ]);
-    if (!validSet.has(f)) return undefined;
-    const data: Record<string, unknown> = tacticsData as Record<string, unknown>;
-    return {
-      formation: f as Formation,
-      style: (typeof data.playStyle === 'string' ? data.playStyle : 'balanced') as PlayStyle,
-      instructions: (data.instructions as TeamInstructions) ?? { width: 'normal', tempo: 'normal', passing: 'mixed', pressing: 'medium', defensiveLine: 'normal' },
-      setPieces: (data.setPieces as Tactics['setPieces']) ?? { corners: 'near_post', freeKicks: 'shoot', penalties: '' },
-    };
-  }, [tacticsData]);
+  const importedTactics = useMemo(
+    () => importedPlan ? tacticalPlanToTactics(importedPlan) : undefined,
+    [importedPlan],
+  );
+
+  const initialTactics: Tactics | undefined = importedTactics ?? buildPersistedTactics(tacticsData);
 
   const squadSize = members.length || activeSquad?.memberCount || 0;
   const captain = useMemo(() => members.find((member) => member.role === 'captain') ?? null, [members]);
@@ -371,7 +381,23 @@ export default function SquadPage() {
     if (params.get("new") === "1") {
       setIsNewSquad(true);
     }
+    const plan = parseTacticalPlanSearchParams(params);
+    if (plan) {
+      setImportedPlan(plan);
+      setActiveTab("tactics");
+      trackCoreGrowthEvent("tactics_customized", {
+        source: "playground_import",
+        formation: plan.formation,
+        style: plan.style,
+        size: plan.size,
+      });
+    }
   }, []);
+
+  const importedPlanQuery = useMemo(
+    () => importedPlan ? buildTacticalPlanQuery(importedPlan) : "",
+    [importedPlan],
+  );
 
   const handleMakeOffer = (playerId: string, targetSquadId: string, amount: number, type: 'transfer' | 'loan') => {
     return transfersState.makeOffer(playerId, targetSquadId, amount, type);
@@ -419,7 +445,7 @@ export default function SquadPage() {
         onCreated={async () => {
           setShowCreateSquadFlow(false);
           await refreshSquads();
-          router.push('/squad?new=1');
+          router.push(importedPlanQuery ? `/squad?tab=tactics&new=1&${importedPlanQuery}` : '/squad?new=1');
         }}
         onCancel={() => setShowCreateSquadFlow(false)}
       />
@@ -432,7 +458,7 @@ export default function SquadPage() {
         onJoined={async () => {
           setShowJoinSquadFlow(false);
           await refreshSquads();
-          router.push('/squad?new=1');
+          router.push(importedPlanQuery ? `/squad?tab=tactics&new=1&${importedPlanQuery}` : '/squad?new=1');
         }}
         onCancel={() => setShowJoinSquadFlow(false)}
       />
@@ -441,7 +467,27 @@ export default function SquadPage() {
 
   if (squadWorkspaceGate.status === "blocked" && !showSample) {
     return (
-      <PageShell maxWidth="4xl">
+      <PageShell maxWidth="4xl" className="space-y-4">
+        {importedPlan && (
+          <Card className="border-emerald-200 bg-emerald-50/80 py-4">
+            <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+              <div>
+                <p className="font-semibold text-emerald-900">Your setup is ready</p>
+                <p className="mt-1 text-sm text-emerald-700">
+                  Start your squad to save {importedPlan.size}v{importedPlan.size} · {importedPlan.formation} · {PLAY_STYLE_LABELS[importedPlan.style]} as your first tactical identity.
+                </p>
+              </div>
+              {squadWorkspaceGate.reason === 'missing_squad' && (
+                <Button
+                  size="sm"
+                  onClick={() => setShowCreateSquadFlow(true)}
+                >
+                  Create squad from setup
+                </Button>
+              )}
+            </div>
+          </Card>
+        )}
         <SquadPreview
           title={squadWorkspaceGate.title}
           description={squadWorkspaceGate.description}
@@ -531,6 +577,34 @@ export default function SquadPage() {
               )}
             </div>
             <button onClick={() => setIsNewSquad(false)} className="shrink-0 text-green-600 hover:text-green-800 text-lg leading-none" aria-label="Dismiss banner">×</button>
+          </div>
+        </Card>
+      )}
+
+      {importedPlan && (
+        <Card className="border-emerald-200 bg-emerald-50/80 py-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p className="font-semibold text-emerald-900">Playground setup imported</p>
+              <p className="mt-1 text-sm text-emerald-700">
+                {importedPlan.size}v{importedPlan.size} · {importedPlan.formation} · {PLAY_STYLE_LABELS[importedPlan.style]} is ready in Tactics.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                onClick={() => setActiveTab('tactics')}
+              >
+                Review tactics
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleShareSquadInvite}
+              >
+                Invite teammates
+              </Button>
+            </div>
           </div>
         </Card>
       )}
@@ -808,6 +882,18 @@ export default function SquadPage() {
           initialLineup={tacticsData?.lineup || undefined}
           onSave={(tactics, lineup) => {
             if (!activeSquadId) return;
+            trackFeatureUsed("tactics_saved", {
+              source: importedPlan ? "playground_import" : "squad_page",
+              formation: tactics.formation,
+              style: tactics.style,
+              size: importedPlan?.size ?? null,
+            });
+            trackCoreGrowthEvent("tactics_customized", {
+              source: importedPlan ? "playground_import" : "squad_page",
+              formation: tactics.formation,
+              style: tactics.style,
+              size: importedPlan?.size ?? null,
+            });
             saveTacticsMutation.mutate({
               squadId: activeSquadId,
               formation: tactics.formation,

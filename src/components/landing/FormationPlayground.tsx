@@ -15,10 +15,10 @@ import type { PlaygroundFlow } from "@/lib/pitch/shareUrl";
 import type { Formation, PlayStyle, SquadSize } from "@/types";
 import {
   Play, Settings2, ChevronLeft, ChevronRight,
-  Palette, Users, Zap, Swords,
+  Palette, Users, Zap, Swords, Save, ClipboardList, Share2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { trackFeatureUsed } from "@/lib/analytics";
+import { trackCoreGrowthEvent, trackFeatureUsed } from "@/lib/analytics";
 import { ExportPanel } from "@/components/landing/pitch/ExportPanel";
 import { ChallengeOverlay } from "@/components/landing/pitch/ChallengeOverlay";
 import { MatchResultCard, type MatchResultData } from "@/components/landing/pitch/MatchResultCard";
@@ -33,27 +33,23 @@ interface OpponentState {
 }
 
 export const FormationPlayground: React.FC = () => {
-  // ── Read initial state from URL ──
-  const urlState = useMemo(() => {
-    if (typeof window === "undefined") return {};
-    return decodeFormationFromUrl(new URLSearchParams(window.location.search));
-  }, []);
-
   // ── Challenge flow ──
-  const [flow, setFlow] = useState<PlaygroundFlow>(urlState.flow || "build");
-  const [opponent, setOpponent] = useState<OpponentState | null>(
-    urlState.vs_formation
-      ? { formation: urlState.vs_formation, style: (urlState.vs_style as PlayStyle) || "balanced", color: urlState.vs_color || "#ef4444", names: urlState.vs_names || [] }
-      : null
-  );
+  const [flow, setFlow] = useState<PlaygroundFlow>("build");
+  const [opponent, setOpponent] = useState<OpponentState | null>(null);
   const [matchResult, setMatchResult] = useState<MatchResultData | null>(null);
   const [showCopiedToast, setShowCopiedToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("Challenge link copied — send it to your opponent!");
+  const [isSharingPlan, setIsSharingPlan] = useState(false);
 
   // ── Shared tactic state (initialized from URL where available) ──
-  const [squadSize, setSquadSize] = useState<SquadSize>((urlState.size as SquadSize) || 11);
-  const [formation, setFormation] = useState<Formation>((urlState.formation as Formation) || "4-4-2");
-  const [playStyle, setPlayStyle] = useState<PlayStyle>((urlState.style as PlayStyle) || "balanced");
-  const [primaryColor, setPrimaryColor] = useState(urlState.color || "#10b981");
+  const initialSquadSize = 5;
+  const [squadSize, setSquadSize] = useState<SquadSize>(initialSquadSize);
+  const [formation, setFormation] = useState<Formation>(
+    getDefaultFormationForSize(initialSquadSize)
+  );
+  const [playStyle, setPlayStyle] = useState<PlayStyle>("balanced");
+  const [primaryColor, setPrimaryColor] = useState("#10b981");
+  const [urlStateReady, setUrlStateReady] = useState(false);
   const [pitchTheme, setPitchTheme] = useState<'premier-league' | 'sunday-league' | 'night-match' | 'easy-on-eyes'>('premier-league');
   const [enablePlayerMovement, setEnablePlayerMovement] = useState(false);
   const [drawArrows, setDrawArrows] = useState(false);
@@ -76,19 +72,41 @@ export const FormationPlayground: React.FC = () => {
   const { members: realMembers } = useSquadDetails(activeSquadId);
   const hasRealMembers = realMembers.length > 0;
 
-  // ── Inject URL names on first mount ──
-  const urlNamesApplied = useRef(false);
+  // ── Apply URL state after mount to avoid SSR/client hydration drift ──
+  const urlStateApplied = useRef(false);
   useEffect(() => {
-    if (urlNamesApplied.current) return;
-    if (urlState.names && urlState.names.length > 0) {
-      personalization.setNames(urlState.names);
+    if (urlStateApplied.current || typeof window === "undefined") return;
+    const parsed = decodeFormationFromUrl(new URLSearchParams(window.location.search));
+    const parsedSize = (parsed.size as SquadSize | undefined) || initialSquadSize;
+
+    if (parsed.size) setSquadSize(parsedSize);
+    if (parsed.formation) {
+      setFormation(parsed.formation);
+    } else if (parsed.size) {
+      setFormation(getDefaultFormationForSize(parsedSize));
+    }
+    if (parsed.style) setPlayStyle(parsed.style as PlayStyle);
+    if (parsed.color) setPrimaryColor(parsed.color);
+    if (parsed.flow) setFlow(parsed.flow);
+    if (parsed.vs_formation) {
+      setOpponent({
+        formation: parsed.vs_formation,
+        style: (parsed.vs_style as PlayStyle) || "balanced",
+        color: parsed.vs_color || "#ef4444",
+        names: parsed.vs_names || [],
+      });
+    }
+    if (parsed.names && parsed.names.length > 0) {
+      personalization.setNames(parsed.names);
       personalization.setShowNames(true);
     }
-    urlNamesApplied.current = true;
-  }, [urlState.names, personalization]);
+    urlStateApplied.current = true;
+    setUrlStateReady(true);
+  }, [initialSquadSize, personalization]);
 
   // ── Sync state to URL on change (skip during challenge/result) ──
   useEffect(() => {
+    if (!urlStateReady) return;
     if (flow === "challenge_received" || flow === "result") return;
     syncStateToUrl({
       formation,
@@ -97,7 +115,7 @@ export const FormationPlayground: React.FC = () => {
       size: squadSize,
       names: personalization.names,
     });
-  }, [formation, playStyle, primaryColor, squadSize, personalization.names, flow]);
+  }, [formation, playStyle, primaryColor, squadSize, personalization.names, flow, urlStateReady]);
 
   // ── Derived ──
   const formationList = useMemo(
@@ -113,6 +131,43 @@ export const FormationPlayground: React.FC = () => {
     () => (opponent ? suggestCounterFormation(opponent.formation) : "4-3-3"),
     [opponent]
   );
+
+  const matchFormatLabel = useMemo(
+    () => squadSize === 11 ? "11v11 full XI" : `${squadSize}v${squadSize} small-sided`,
+    [squadSize]
+  );
+
+  const tacticalNotes = useMemo(() => {
+    const formatNotes: Record<SquadSize, string> = {
+      5: "5-a-side rewards quick support angles and one disciplined last player.",
+      6: "6-a-side gives you a spare runner; the midfield line has to recover fast.",
+      7: "7-a-side opens the flanks, so shape matters as much as individual pace.",
+      11: "11v11 gives the full pitch picture once the squad grows.",
+    };
+    const styleNotes: Record<PlayStyle, string> = {
+      balanced: "Balanced keeps your team compact enough to survive transitions.",
+      possession: "Possession asks the nearest two players to stay available.",
+      direct: "Direct play looks early for the striker and second runner.",
+      counter: "Counter attack keeps depth, then releases runners into space.",
+      high_press: "High press pushes the first line up and forces hurried passes.",
+      low_block: "Low block compresses the middle and protects the goal mouth.",
+    };
+    return [formatNotes[squadSize], styleNotes[playStyle]];
+  }, [playStyle, squadSize]);
+
+  const planQuery = useMemo(() => {
+    const sp = new URLSearchParams();
+    sp.set("formation", formation);
+    sp.set("style", playStyle);
+    sp.set("size", String(squadSize));
+    sp.set("color", primaryColor);
+    const names = personalization.names.filter(Boolean);
+    if (names.length > 0) sp.set("names", names.join(","));
+    return sp.toString();
+  }, [formation, playStyle, primaryColor, squadSize, personalization.names]);
+
+  const saveSetupHref = `/squad?tab=tactics&new=1&${planQuery}`;
+  const logMatchHref = `/match?mode=capture&${planQuery}`;
 
   // ── Challenge flow handlers ──
   const handleAcceptChallenge = useCallback(() => {
@@ -173,9 +228,70 @@ export const FormationPlayground: React.FC = () => {
     setFlow("build");
     setOpponent(null);
     setMatchResult(null);
+    setToastMessage("Challenge link copied — send it to your opponent!");
     setShowCopiedToast(true);
     setTimeout(() => setShowCopiedToast(false), 3000);
   }, [opponent, formation, playStyle, primaryColor, squadSize, personalization.names]);
+
+  const handleSharePlan = useCallback(async () => {
+    const fallbackUrl = `${window.location.origin}${window.location.pathname}?${planQuery}`;
+    const shareText = `${squadSize}v${squadSize} ${formation} ${PLAY_STYLE_LABELS[playStyle].name} setup. Claim your spot.`;
+    let shareUrl = fallbackUrl;
+    let shareSource = "playground_query_link";
+
+    setIsSharingPlan(true);
+    try {
+      const response = await fetch("/api/tactics/share", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          plan: {
+            formation,
+            style: playStyle,
+            size: squadSize,
+            color: primaryColor,
+            names: personalization.names.filter(Boolean),
+          },
+        }),
+      });
+      const payload = await response.json().catch(() => null);
+      if (response.ok && payload?.url) {
+        shareUrl = payload.url;
+        shareSource = "playground_short_link";
+      }
+    } catch {
+      shareUrl = fallbackUrl;
+    }
+
+    try {
+      if (navigator.share && window.matchMedia("(max-width: 1024px)").matches) {
+        await navigator.share({
+          title: "SportWarren tactical setup",
+          text: shareText,
+          url: shareUrl,
+        });
+        setToastMessage("Setup shared — keep the squad on the same plan.");
+      } else {
+        await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
+        setToastMessage(shareSource === "playground_short_link"
+          ? "Short setup link copied — send it to the squad."
+          : "Setup link copied — keep the squad on the same plan.");
+      }
+      trackFeatureUsed("setup_link_copied", { formation, style: playStyle, size: squadSize, source: shareSource });
+      trackCoreGrowthEvent("playground_plan_shared", {
+        formation,
+        style: playStyle,
+        size: squadSize,
+        source: shareSource,
+      });
+    } catch {
+      setToastMessage("Couldn't copy the setup link on this device.");
+    } finally {
+      setIsSharingPlan(false);
+      setShowCopiedToast(true);
+      setTimeout(() => setShowCopiedToast(false), 3000);
+    }
+  }, [formation, personalization.names, planQuery, playStyle, primaryColor, squadSize]);
 
   const handleNewChallenge = useCallback(() => {
     setFlow("build");
@@ -310,7 +426,7 @@ export const FormationPlayground: React.FC = () => {
   if (flow === "challenge_received" && opponent) {
     return (
       <div className="w-full max-w-5xl mx-auto px-2 sm:px-0">
-        <Card className="relative bg-gray-950/95 border-white/10 backdrop-blur-xl overflow-hidden shadow-2xl shadow-amber-500/5">
+        <Card className="relative !bg-gray-950/95 !border-white/10 backdrop-blur-xl overflow-hidden shadow-2xl shadow-amber-500/5">
           <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-amber-500/60 to-transparent" />
           <ChallengeOverlay
             opponentFormation={opponent.formation}
@@ -358,7 +474,7 @@ export const FormationPlayground: React.FC = () => {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-2 sm:px-0">
-      <Card className="relative bg-gray-950/95 dark:bg-gray-950/95 border-white/10 backdrop-blur-xl overflow-hidden shadow-2xl shadow-green-500/5">
+      <Card className="relative !bg-gray-950/95 !border-white/10 backdrop-blur-xl overflow-hidden shadow-2xl shadow-green-500/5">
         {/* Top accent */}
         <div className={`absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent ${isCounterMode ? "via-amber-500/60" : "via-green-500/60"} to-transparent`} />
 
@@ -563,21 +679,103 @@ export const FormationPlayground: React.FC = () => {
                   exit={{ opacity: 0, y: -8 }}
                   transition={{ duration: 0.2 }}
                 >
+                  <div className="mb-3 flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
+                        Applied plan
+                      </span>
+                      {[matchFormatLabel, formation, PLAY_STYLE_LABELS[playStyle].name].map((label) => (
+                        <span
+                          key={label}
+                          className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-bold text-gray-200"
+                        >
+                          {label}
+                        </span>
+                      ))}
+                      <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-bold text-gray-200">
+                        <span className="h-2.5 w-2.5 rounded-full border border-white/50" style={{ backgroundColor: primaryColor }} />
+                        Kit
+                      </span>
+                    </div>
+                    <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-300/80">
+                      Small-sided first. Full XI when you need it.
+                    </div>
+                  </div>
                   <MatchEnginePreview
                     formation={formation}
-                    playersPerSide={
-                      FORMATIONS[formation].length <= 5
-                        ? 5
-                        : FORMATIONS[formation].length <= 7
-                        ? FORMATIONS[formation].length - 1
-                        : 11
-                    }
+                    awayFormation={opponent?.formation}
+                    playStyle={playStyle}
+                    awayPlayStyle={opponent?.style}
+                    playersPerSide={FORMATIONS[formation].length}
                     homeColor={primaryColor}
+                    awayColor={opponent?.color}
                     playerNames={simulationPlayerNames}
                     awayPlayerNames={opponent?.names}
                     onMatchEnd={isCounterMode ? handleSimResult : undefined}
                     squadId={hasRealMembers ? activeSquadId : undefined}
                   />
+                  <div className="mt-4 border-t border-white/10 pt-4">
+                    <div className="grid gap-4 lg:grid-cols-[1fr_auto] lg:items-end">
+                      <div>
+                        <div className="mb-2 text-[10px] font-black uppercase tracking-[0.18em] text-gray-500">
+                          Match read
+                        </div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          {tacticalNotes.map((note) => (
+                            <div key={note} className="border-l border-emerald-400/40 pl-3 text-xs font-medium leading-relaxed text-gray-300">
+                              {note}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-2 lg:justify-end">
+                        <a
+                          href={saveSetupHref}
+                          onClick={() => {
+                            trackFeatureUsed("save_setup_clicked", { formation, style: playStyle, size: squadSize });
+                            trackCoreGrowthEvent("playground_setup_saved", {
+                              formation,
+                              style: playStyle,
+                              size: squadSize,
+                              source: "playground",
+                            });
+                          }}
+                          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-emerald-500"
+                        >
+                          <Save className="h-4 w-4" />
+                          Save setup
+                        </a>
+                        {isCounterMode && opponent ? (
+                          <button
+                            type="button"
+                            onClick={handleChallengeBack}
+                            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-amber-400/20 bg-amber-400/10 px-3 py-2 text-xs font-bold text-amber-100 transition hover:bg-amber-400/15"
+                          >
+                            <Share2 className="h-4 w-4" />
+                            Challenge back
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleSharePlan}
+                            disabled={isSharingPlan}
+                            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-bold text-gray-100 transition hover:bg-white/[0.1]"
+                          >
+                            <Share2 className="h-4 w-4" />
+                            {isSharingPlan ? "Preparing..." : "Share plan"}
+                          </button>
+                        )}
+                        <a
+                          href={logMatchHref}
+                          onClick={() => trackFeatureUsed("log_match_from_playground_clicked", { formation, style: playStyle, size: squadSize })}
+                          className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-bold text-gray-100 transition hover:bg-white/[0.1]"
+                        >
+                          <ClipboardList className="h-4 w-4" />
+                          Log result
+                        </a>
+                      </div>
+                    </div>
+                  </div>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -588,9 +786,14 @@ export const FormationPlayground: React.FC = () => {
           <div className="border-t lg:border-t-0 lg:border-l border-white/[0.06] p-4 space-y-4 bg-gray-950/50">
             {/* Squad Size */}
             <div>
-              <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-1.5 block">
-                Squad Size
-              </label>
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400">
+                  Match Format
+                </label>
+                <span className="text-[9px] font-bold uppercase tracking-[0.12em] text-emerald-300/70">
+                  5s / 6s / 7s first
+                </span>
+              </div>
               <div className="grid grid-cols-4 gap-1">
                 {SQUAD_SIZES.map((size) => (
                   <button
@@ -599,6 +802,8 @@ export const FormationPlayground: React.FC = () => {
                     className={`px-2 py-1.5 rounded-md text-[11px] font-bold text-center transition-all ${
                       squadSize === size
                         ? "bg-green-500/25 text-green-300 shadow-sm"
+                        : size === 11
+                        ? "bg-gray-900 text-gray-500 hover:text-green-300"
                         : "bg-gray-800 text-gray-400 hover:text-green-300"
                     }`}
                   >
@@ -790,7 +995,7 @@ export const FormationPlayground: React.FC = () => {
               exit={{ opacity: 0 }}
               className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-green-600 text-white text-xs font-bold px-4 py-2 rounded-full shadow-lg z-50"
             >
-              Challenge link copied — send it to your opponent!
+              {toastMessage}
             </motion.div>
           )}
         </AnimatePresence>

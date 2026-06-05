@@ -406,6 +406,7 @@ export const AdaptiveDashboard: React.FC = () => {
             <MatchEnginePreview
               squadId={primarySquadId}
               formation={squadTactics?.formation}
+              playStyle={squadTactics?.style}
             />
           </div>
         ),
@@ -945,7 +946,7 @@ export const AdaptiveDashboard: React.FC = () => {
     }
 
     return widgets;
-  }, [addToast, allChecklistDone, availableOpponents, avatarPresentation, avatarPresentationQuery, completeChecklistItem, currentUserId, dataState, digitalTwin3DAccess, entryState.id, handleDigitalTwin3DPreview, handleOpenOffice, isGuest, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, primarySquadName, profileSharpness, profileUpdatedAt, profileWeeklyStreak, profileLongestStreak, profileTotalXP, profileUserName, refreshSquads, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, squadTactics?.formation, stats, submitMatch, trackFeatureUsage]);
+  }, [addToast, allChecklistDone, availableOpponents, avatarPresentation, avatarPresentationQuery, completeChecklistItem, currentUserId, dataState, digitalTwin3DAccess, entryState.id, handleDigitalTwin3DPreview, handleOpenOffice, hasOperationalSquad, isGuest, isVerified, loading, matchesZeroState.actionHref, matchesZeroState.actionLabel, matchesZeroState.description, matchesZeroState.title, nextMatchZeroState.actionHref, nextMatchZeroState.actionLabel, nextMatchZeroState.description, nextMatchZeroState.title, personalizationDone, preferences, primarySquadId, primarySquadName, profileSharpness, profileUpdatedAt, profileWeeklyStreak, profileLongestStreak, profileTotalXP, profileUserName, refreshSquads, router, squadActivityZeroState.actionHref, squadActivityZeroState.actionLabel, squadActivityZeroState.description, squadActivityZeroState.title, squadTactics?.formation, squadTactics?.style, stats, submitMatch, trackFeatureUsage]);
 
   // Filter and sort widgets based on user preferences
   const visibleWidgets = useMemo(() => {

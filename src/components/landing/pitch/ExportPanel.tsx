@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { useVideoExport } from "@/hooks/pitch/useVideoExport";
 import { Download, Share2, Video, Square, Loader2, Check } from "lucide-react";
@@ -23,6 +23,11 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
   const video = useVideoExport({ fps: 12, maxDuration: 8 });
   const [pngExporting, setPngExporting] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const handleExportPng = useCallback(async () => {
     if (!pitchRef.current || pngExporting) return;
@@ -124,7 +129,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
       </Button>
 
       {/* Video Record */}
-      {video.isSupported && (
+      {mounted && video.isSupported && (
         <Button
           variant="ghost"
           size="sm"

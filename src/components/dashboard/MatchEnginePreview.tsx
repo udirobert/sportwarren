@@ -15,32 +15,34 @@ import {
     distanceBetween, resolveCollisions,
     tickPlayer, selectPassTarget, executePass,
     computeSupportOptions, determineBallState, tryGkSave,
+    getPlayStyleModifiers,
     type PlayerPuck, type BallState, type MatchCommentary,
     type MatchEvent, type SupportOptions,
 } from '@/lib/match/matchEngine';
 import {
     createInitialMatchSimulationSnapshot,
-    createMatchCommentaryEntry,
-    createMatchSimulationSnapshot,
     type MatchPhase,
 } from '@/lib/match/matchSimulation';
 
-import type { Formation } from '@/types';
+import type { Formation, PlayStyle } from '@/types';
 import { FORMATIONS } from '@/lib/formations';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
-import { Avatar } from '@/components/ui/Avatar';
 
-export const MatchEnginePreview: React.FC<{ 
-    squadId?: string; 
-    awaySquadId?: string; 
-    formation?: Formation; 
-    playersPerSide?: number; 
+export const MatchEnginePreview: React.FC<{
+    squadId?: string;
+    awaySquadId?: string;
+    formation?: Formation;
+    awayFormation?: Formation;
+    playStyle?: PlayStyle;
+    awayPlayStyle?: PlayStyle;
+    playersPerSide?: number;
     hasKeeper?: boolean;
     homeColor?: string;
+    awayColor?: string;
     playerNames?: string[];
     awayPlayerNames?: string[];
     onMatchEnd?: (result: { homeScore: number; awayScore: number; events: Array<{ time: string; text: string; type: string }> }) => void;
-}> = ({ squadId, awaySquadId, formation, playersPerSide = 11, hasKeeper = true, homeColor, playerNames, awayPlayerNames, onMatchEnd }) => {
+}> = ({ squadId, awaySquadId, formation, awayFormation, playStyle, awayPlayStyle, playersPerSide = 11, hasKeeper = true, homeColor, awayColor, playerNames, awayPlayerNames, onMatchEnd }) => {
     const { preferences } = useUserPreferences();
     const activeHomeColor = homeColor || preferences.squadBranding?.primaryColor || '#10b981';
     const env = useEnvironment();
@@ -71,6 +73,8 @@ export const MatchEnginePreview: React.FC<{
     const matchPhaseRef = useRef<MatchPhase>(initialSnapshot.matchPhase);
     const lastRenderedPhaseRef = useRef<MatchPhase>(initialSnapshot.matchPhase);
     const scoreRef = useRef(initialSnapshot.score);
+    const commentaryRef = useRef<MatchCommentary[]>(initialSnapshot.commentary);
+    const onMatchEndRef = useRef(onMatchEnd);
 
     const ownerCarryTicks = useRef(0);
     const passFlightRef = useRef<{ startX: number; startY: number; endX: number; endY: number; startTime: number } | null>(null);
@@ -82,6 +86,11 @@ export const MatchEnginePreview: React.FC<{
         wide: { player: null, distance: Infinity },
         advanced: { player: null, distance: Infinity },
     });
+    const playStyleRef = useRef(playStyle);
+    const awayPlayStyleRef = useRef(awayPlayStyle);
+    useEffect(() => { playStyleRef.current = playStyle; }, [playStyle]);
+    useEffect(() => { awayPlayStyleRef.current = awayPlayStyle; }, [awayPlayStyle]);
+    const activeAwayColor = awayColor || '#ef4444';
 
     const playersInitialised = useRef(false);
     const lowPowerModeRef = useRef(false);
@@ -91,6 +100,8 @@ export const MatchEnginePreview: React.FC<{
     // ── Sync refs from React state when tempo/lowPowerMode changes externally ──
     useEffect(() => { tempoRef.current = tempo; }, [tempo]);
     useEffect(() => { lowPowerModeRef.current = lowPowerMode; }, [lowPowerMode]);
+    useEffect(() => { commentaryRef.current = commentary; }, [commentary]);
+    useEffect(() => { onMatchEndRef.current = onMatchEnd; }, [onMatchEnd]);
 
     // ── Stable callbacks ──────────────────────────────────────────────────────
 
@@ -122,10 +133,12 @@ export const MatchEnginePreview: React.FC<{
             evtType === 'dao' ? 'dao' :
             evtType === 'incident' ? 'incident' : 'action';
 
-        setCommentary(prev =>
-            [...prev, { id: `${tick}-${Math.random().toString(36).slice(2)}`, time: timeStr, text, type: commentaryType }]
-                .slice(-COMMENTARY_PARAMS.maxEvents)
-        );
+        setCommentary(prev => {
+            const next = [...prev, { id: `${tick}-${Math.random().toString(36).slice(2)}`, time: timeStr, text, type: commentaryType }]
+                .slice(-COMMENTARY_PARAMS.maxEvents);
+            commentaryRef.current = next;
+            return next;
+        });
         setLatestEvent(text);
     }, []);
 
@@ -155,6 +168,7 @@ export const MatchEnginePreview: React.FC<{
         setTempo(nextSnapshot.tempo);
         tempoRef.current = nextSnapshot.tempo;
         setCommentary(nextSnapshot.commentary);
+        commentaryRef.current = nextSnapshot.commentary;
         setLatestEvent(nextSnapshot.latestEvent);
         passTargetRef.current = null;
         ownerCarryTicks.current = 0;
@@ -365,7 +379,12 @@ export const MatchEnginePreview: React.FC<{
                     }
                 } else if (roll < shootScore + passScore && ownerCarryTicks.current > 8) {
                     const teammatePool = currentPlayers.filter(c => c.team === player.team && c.id !== player.id && c.role !== 'GK');
-                    const target = selectPassTarget(player, teammatePool, opponents, supportOptionsRef.current);
+                    const styleMods = getPlayStyleModifiers(player.team === 'home' ? playStyleRef.current : awayPlayStyleRef.current);
+                    const bias = {
+                        forwardBias: styleMods.passForwardBias,
+                        widthBonus: styleMods.widthBonus,
+                    };
+                    const target = selectPassTarget(player, teammatePool, opponents, supportOptionsRef.current, tick, bias);
                     if (target) {
                         const pv = performPass(player, target, opponents);
                         nextBallVx = pv.vx;
@@ -382,7 +401,12 @@ export const MatchEnginePreview: React.FC<{
                 const carryLimit = 18 + Math.floor(Math.random() * 12);
                 if (ownerCarryTicks.current > carryLimit) {
                     const teammatePool = currentPlayers.filter(c => c.team === player.team && c.id !== player.id && c.role !== 'GK');
-                    const target = selectPassTarget(player, teammatePool, opponents, supportOptionsRef.current);
+                    const styleMods = getPlayStyleModifiers(player.team === 'home' ? playStyleRef.current : awayPlayStyleRef.current);
+                    const bias = {
+                        forwardBias: styleMods.passForwardBias,
+                        widthBonus: styleMods.widthBonus,
+                    };
+                    const target = selectPassTarget(player, teammatePool, opponents, supportOptionsRef.current, tick, bias);
                     if (target) {
                         const pv = performPass(player, target, opponents);
                         nextBallVx = pv.vx;
@@ -420,6 +444,13 @@ export const MatchEnginePreview: React.FC<{
                 recoveryCandidate.player.cooldownUntil = tick + cooldownTicks;
 
                 const pending = passTargetRef.current;
+                if (pending) {
+                    const passer = currentPlayers.find(p => p.id === pending.passerId);
+                    if (passer?.team === recoveryCandidate.player.team) {
+                        recoveryCandidate.player.lastPasserId = pending.passerId;
+                        recoveryCandidate.player.lastPassReceivedTick = tick;
+                    }
+                }
                 if (pending && recoveryCandidate.player.id === pending.targetId) {
                     addEvent(`${pending.targetName} receives from ${pending.passerName}.`, 'pass', recoveryCandidate.player.team);
                     passTargetRef.current = null;
@@ -434,8 +465,8 @@ export const MatchEnginePreview: React.FC<{
         } else {
             // ── Live tackle (anti-swarm) ───────────────────────────────────────
             const opponents = updatedPlayers.filter(p => p.team !== activeOwner.team && (p.cooldownUntil ?? 0) <= tick);
-            const defenderRoles = ['CB', 'LB', 'RB', 'DEF', 'FB'];
-            const midRoles = ['CM', 'DM', 'AM', 'MID'];
+            const defenderRoles = ['CB', 'LB', 'RB', 'DEF', 'FB', 'LWB', 'RWB'];
+            const midRoles = ['CM', 'DM', 'AM', 'MID', 'CDM', 'CAM', 'LM', 'RM'];
 
             let nearestDefender: PlayerPuck | null = null;
             let nearestMidfielder: PlayerPuck | null = null;
@@ -526,11 +557,12 @@ export const MatchEnginePreview: React.FC<{
             matchPhaseRef.current = 'fulltime';
             addEvent('🏁 Full time! The match has ended.', 'incident');
             setIsPlaying(false);
-            if (onMatchEnd) {
-                onMatchEnd({
+            const finishHandler = onMatchEndRef.current;
+            if (finishHandler) {
+                finishHandler({
                     homeScore: scoreRef.current.home,
                     awayScore: scoreRef.current.away,
-                    events: commentary.map(c => ({ time: c.time, text: c.text, type: c.type })),
+                    events: commentaryRef.current.map(c => ({ time: c.time, text: c.text, type: c.type })),
                 });
             }
         } else if (nextTick >= SIM_PARAMS.halftimeTick && matchPhaseRef.current === 'first_half') {
@@ -648,10 +680,10 @@ export const MatchEnginePreview: React.FC<{
     const { members, loading: membersLoading } = useSquadDetails(squadId);
     const { members: awayMembers, loading: awayMembersLoading } = useSquadDetails(awaySquadId);
 
-    // Reset initialization when formation or custom names change
+    // Reset initialization when formation, play style, or custom names change
     useEffect(() => {
         playersInitialised.current = false;
-    }, [formation, playerNames, awayPlayerNames]);
+    }, [formation, awayFormation, playStyle, awayPlayStyle, playerNames, awayPlayerNames]);
 
     // Initialize players (runs once after members load)
     useEffect(() => {
@@ -668,9 +700,30 @@ export const MatchEnginePreview: React.FC<{
 
         // Use saved tactics formation if provided, otherwise default to 4-4-2
         const formationKey = formation || '4-4-2';
+        const awayFormationKey = awayFormation || formationKey;
         const formationData = FORMATIONS[formationKey] || FORMATIONS['4-4-2'];
-        const homeFormation: Array<[number, number, string]> = formationData.map((s) => [s.x, s.y, s.role]);
-        const awayFormation = homeFormation.map(([x, y, role]) => [100 - x, y, role]) as Array<[number, number, string]>;
+        const awayFormationData = FORMATIONS[awayFormationKey] || FORMATIONS['4-4-2'];
+        const homeStyleMods = getPlayStyleModifiers(playStyle);
+        const awayStyleMods = getPlayStyleModifiers(awayPlayStyle);
+        const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+        const applyMods = (base: number, mod: number) => clamp(base + mod, 30, 99);
+        const toEngineSpot = (
+            spot: { x: number; y: number; role: string },
+            team: 'home' | 'away',
+            lineShift: number
+        ): [number, number, string] => {
+            const depthX = team === 'home' ? 100 - spot.y : spot.y;
+            const attackShift = team === 'home' ? lineShift : -lineShift;
+            const x = spot.role === 'GK' ? depthX : clamp(depthX + attackShift, 8, 92);
+            const y = team === 'home' ? spot.x : 100 - spot.x;
+            return [x, y, spot.role];
+        };
+        const homeFormationSpots: Array<[number, number, string]> = formationData
+            .slice(0, playersPerSide)
+            .map((s) => toEngineSpot(s, 'home', homeStyleMods.lineShift));
+        const awayFormationSpots: Array<[number, number, string]> = awayFormationData
+            .slice(0, playersPerSide)
+            .map((s) => toEngineSpot(s, 'away', awayStyleMods.lineShift));
         const allNames = ['GK', 'Tunde', 'Kofi', 'Diallo', 'Eze', 'Yusuf', 'Marcus', 'Jamie', 'Kwame', 'Alex', 'Seun', 'Bayo', 'Chidi', 'Emeka', 'Femi', 'Gbenga'];
         const isGhostMode = !squadId && isGuest;
         const homeNames = playerNames && playerNames.length > 0
@@ -683,10 +736,16 @@ export const MatchEnginePreview: React.FC<{
         let seededPlayers: PlayerPuck[] = [];
 
         // Home team — real data if available
-        const homePlayers = homeFormation.map(([x, y, role], i) => {
+        const homePlayers = homeFormationSpots.map(([x, y, role], i) => {
             if (isGhostMode && role !== 'GK') {
-                return createPlayer(`ghost-${i}`, `Shadow ${homeNames[i]}`, x, y, 'home', role, { 
-                    level: 1, passing: 40, stamina: 100, pace: 45, shooting: 40 
+                return createPlayer(`ghost-${i}`, `Shadow ${homeNames[i]}`, x, y, 'home', role, {
+                    level: 1,
+                    passing: applyMods(40, homeStyleMods.passing),
+                    stamina: 100,
+                    pace: applyMods(45, homeStyleMods.pace),
+                    shooting: applyMods(40, homeStyleMods.shooting),
+                    strength: applyMods(40, homeStyleMods.strength),
+                    agility: 45,
                 });
             }
             const m = members?.[i];
@@ -695,13 +754,20 @@ export const MatchEnginePreview: React.FC<{
             return createPlayer(
                 m?.id || `h${i}`, m ? m.name.split(' ')[0] : homeNames[i],
                 x, y, 'home', role,
-                { level, pace: Math.min(99, baseStat + (role === 'ST' || role.endsWith('W') ? 8 : 0)), agility: Math.min(99, baseStat + 2), strength: Math.min(99, baseStat - 5), passing: Math.min(99, baseStat + (role === 'CM' ? 8 : 0)) },
+                {
+                    level,
+                    pace: applyMods(Math.min(99, baseStat + (role === 'ST' || role.endsWith('W') ? 8 : 0)), homeStyleMods.pace),
+                    agility: Math.min(99, baseStat + 2),
+                    strength: applyMods(Math.min(99, baseStat - 5), homeStyleMods.strength),
+                    passing: applyMods(Math.min(99, baseStat + (role === 'CM' ? 8 : 0)), homeStyleMods.passing),
+                    shooting: applyMods(Math.min(99, baseStat), homeStyleMods.shooting),
+                },
                 m?.avatar
             );
         });
 
         // Away team — real data if available, random otherwise
-        const awayPlayers = awayFormation.map(([x, y, role], i) => {
+        const awayPlayers = awayFormationSpots.map(([x, y, role], i) => {
             const m = awayMembers?.[i];
             if (m) {
                 const level = m.stats?.level || 8;
@@ -709,12 +775,26 @@ export const MatchEnginePreview: React.FC<{
                 return createPlayer(
                     m.id, m.name.split(' ')[0],
                     x, y, 'away', role,
-                    { level, pace: Math.min(99, baseStat + (role === 'ST' || role.endsWith('W') ? 8 : 0)), agility: Math.min(99, baseStat + 2), strength: Math.min(99, baseStat - 5), passing: Math.min(99, baseStat + (role === 'CM' ? 8 : 0)) },
+                    {
+                        level,
+                        pace: applyMods(Math.min(99, baseStat + (role === 'ST' || role.endsWith('W') ? 8 : 0)), awayStyleMods.pace),
+                        agility: Math.min(99, baseStat + 2),
+                        strength: applyMods(Math.min(99, baseStat - 5), awayStyleMods.strength),
+                        passing: applyMods(Math.min(99, baseStat + (role === 'CM' ? 8 : 0)), awayStyleMods.passing),
+                        shooting: applyMods(Math.min(99, baseStat), awayStyleMods.shooting),
+                    },
                     m.avatar
                 );
             }
             return createPlayer(`a${i}`, awayNames[i], x, y, 'away', role,
-                { level: 10 + Math.floor(Math.random() * 8), pace: 65 + Math.floor(Math.random() * 20), agility: 60 + Math.floor(Math.random() * 20), strength: 65 + Math.floor(Math.random() * 20), passing: 65 + Math.floor(Math.random() * 20) },
+                {
+                    level: 10 + Math.floor(Math.random() * 8),
+                    pace: applyMods(65 + Math.floor(Math.random() * 20), awayStyleMods.pace),
+                    agility: 60 + Math.floor(Math.random() * 20),
+                    strength: applyMods(65 + Math.floor(Math.random() * 20), awayStyleMods.strength),
+                    passing: applyMods(65 + Math.floor(Math.random() * 20), awayStyleMods.passing),
+                    shooting: applyMods(65 + Math.floor(Math.random() * 20), awayStyleMods.shooting),
+                },
                 undefined);
         });
 
@@ -729,11 +809,13 @@ export const MatchEnginePreview: React.FC<{
             const kickoffBall = { x: kickoffStarter.x, y: kickoffStarter.y, vx: 0, vy: 0, ownerId: kickoffStarter.id };
             setBall(kickoffBall);
             ballRef.current = kickoffBall;
-            setCommentary([{ id: 'init-0', time: '0:00', text: `${kickoffStarter.name} takes the kickoff.`, type: 'action' }]);
+            const initialCommentary: MatchCommentary[] = [{ id: 'init-0', time: '0:00', text: `${kickoffStarter.name} takes the kickoff.`, type: 'action' }];
+            setCommentary(initialCommentary);
+            commentaryRef.current = initialCommentary;
             setLatestEvent(`${kickoffStarter.name} takes the kickoff.`);
         }
         playersInitialised.current = true;
-    }, [members, membersLoading, awayMembers, awayMembersLoading, formation, playersPerSide, hasKeeper, isGuest, squadId]);
+    }, [members, membersLoading, awayMembers, awayMembersLoading, formation, awayFormation, playStyle, awayPlayStyle, playerNames, awayPlayerNames, playersPerSide, hasKeeper, isGuest, squadId]);
 
     // Game loop — interval is stable because movePlayers has no deps
     useEffect(() => {
@@ -763,11 +845,11 @@ export const MatchEnginePreview: React.FC<{
     // ── Render ────────────────────────────────────────────────────────────────
 
     return (
-        <Card className="bg-gray-900 border-gray-800 overflow-hidden">
+        <Card className="!bg-gray-950 !border-white/10 overflow-hidden">
             <div className="p-4">
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-2">
-                        <Activity className="w-5 h-5 text-green-500" />
+                        <Activity className="w-5 h-5 text-green-400" />
                         <h2 className="text-sm font-black uppercase tracking-widest text-white italic">Match Visualization</h2>
                         {matchPhase === 'halftime' && <span className="text-xs font-bold text-yellow-400 ml-2">HALF TIME</span>}
                         {matchPhase === 'fulltime' && <span className="text-xs font-bold text-red-400 ml-2">FULL TIME</span>}
@@ -822,14 +904,14 @@ export const MatchEnginePreview: React.FC<{
                     </div>
                 </div>
 
-                <div className={`relative aspect-[16/9] rounded-xl border border-white/5 overflow-hidden transition-colors duration-1000 ${env.isNight ? 'bg-gradient-to-b from-gray-950 to-green-950' : 'bg-gradient-to-b from-green-900/40 to-green-900/60'}`}>
+                <div className={`relative aspect-[16/9] rounded-xl border border-emerald-300/20 overflow-hidden shadow-inner shadow-black/60 transition-colors duration-1000 ${env.isNight ? 'bg-gradient-to-b from-gray-950 via-emerald-950 to-green-950' : 'bg-gradient-to-b from-emerald-950 via-green-900 to-green-950'}`}>
                     {/* Night Match Floodlight Effect */}
                     {env.isNight && (
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(255,255,255,0.1),transparent_70%)] pointer-events-none z-30" />
                     )}
                     {/* Phygital Proximity Overlay */}
                     <div className="absolute bottom-4 left-4 z-40">
-                        <div className="bg-black/60 backdrop-blur-md px-3 py-2 rounded-xl border border-white/10 flex items-center space-x-2">
+                        <div className="bg-black/80 backdrop-blur-md px-3 py-2 rounded-xl border border-emerald-300/20 flex items-center space-x-2 shadow-lg shadow-black/40">
                             <div className="relative">
                                 <Activity className="w-3 h-3 text-green-500" />
                                 <div className="absolute inset-0 bg-green-500 blur-sm opacity-50 animate-pulse" />
@@ -841,15 +923,15 @@ export const MatchEnginePreview: React.FC<{
                     </div>
                     {/* Score Overlay */}
                     <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 flex items-center space-x-4">
-                        <div className="bg-black/80 px-4 py-1.5 rounded-lg border border-white/10 flex items-center space-x-4 font-mono shadow-2xl">
+                        <div className="bg-black/90 px-4 py-1.5 rounded-lg border border-white/20 flex items-center space-x-4 font-mono shadow-2xl shadow-black/60">
                             <div className="flex items-center space-x-2">
-                                <div className="w-4 h-4 bg-blue-600 rounded-sm" />
+                                <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: activeHomeColor }} />
                                 <span className="text-white font-black text-lg">{score.home}</span>
                             </div>
                             <div className="w-px h-6 bg-white/20" />
                             <div className="flex items-center space-x-2">
                                 <span className="text-white font-black text-lg">{score.away}</span>
-                                <div className="w-4 h-4 bg-red-600 rounded-sm" />
+                                <div className="w-4 h-4 rounded-sm" style={{ backgroundColor: activeAwayColor }} />
                             </div>
                         </div>
                     </div>
@@ -870,11 +952,11 @@ export const MatchEnginePreview: React.FC<{
                     )}
 
                     {/* Pitch markings */}
-                    <div className="absolute inset-0 opacity-10 pointer-events-none">
+                    <div className="absolute inset-0 opacity-25 pointer-events-none">
                         <div className="absolute top-0 left-1/2 w-px h-full bg-white" />
-                        <div className="absolute top-1/2 left-1/2 w-32 h-32 border border-white rounded-full -translate-x-1/2 -translate-y-1/2" />
-                        <div className="absolute top-1/2 left-0 w-24 h-48 border border-white -translate-y-1/2" />
-                        <div className="absolute top-1/2 right-0 w-24 h-48 border border-white -translate-y-1/2" />
+                        <div className="absolute top-1/2 left-1/2 w-32 h-32 border-2 border-white rounded-full -translate-x-1/2 -translate-y-1/2" />
+                        <div className="absolute top-1/2 left-0 w-24 h-48 border-2 border-white -translate-y-1/2" />
+                        <div className="absolute top-1/2 right-0 w-24 h-48 border-2 border-white -translate-y-1/2" />
                     </div>
 
                     {/* Intent Vectors */}
@@ -894,7 +976,7 @@ export const MatchEnginePreview: React.FC<{
                                             y1={p.y}
                                             x2={p.intent?.x}
                                             y2={p.intent?.y}
-                                            stroke={p.team === 'home' ? activeHomeColor : '#f87171'}
+                                            stroke={p.team === 'home' ? activeHomeColor : activeAwayColor}
                                             strokeWidth="0.5"
                                             strokeDasharray="2 2"
                                             opacity="0.6"
@@ -917,7 +999,7 @@ export const MatchEnginePreview: React.FC<{
                                 <div
                                     key={`trail-${p.id}-${i}`}
                                     className={`absolute w-2 h-2 rounded-full -translate-x-1/2 -translate-y-1/2 opacity-${(3 - i) * 20}`}
-                                    style={{ left: `${h.x}%`, top: `${h.y}%`, backgroundColor: p.team === 'home' ? activeHomeColor : '#ef4444' }}
+                                    style={{ left: `${h.x}%`, top: `${h.y}%`, backgroundColor: p.team === 'home' ? activeHomeColor : activeAwayColor }}
                                 />
                             ))}
                             <motion.div
@@ -925,7 +1007,10 @@ export const MatchEnginePreview: React.FC<{
                                 transition={{ type: 'spring', stiffness: 60, damping: 15 }}
                                 className="absolute -translate-x-1/2 -translate-y-1/2 z-10"
                             >
-                                <div className={`relative w-4 h-4 rounded-full border-2 ${p.team === 'home' ? 'border-white' : 'bg-red-500 border-red-300'} shadow-lg group overflow-hidden`} style={p.team === 'home' ? { backgroundColor: activeHomeColor } : {}}>
+                                <div
+                                    className="relative w-4 h-4 rounded-full border-2 border-white shadow-lg group overflow-hidden"
+                                    style={{ backgroundColor: p.team === 'home' ? activeHomeColor : activeAwayColor }}
+                                >
                                     {p.avatar ? (
                                         <img src={p.avatar} alt="" className="w-full h-full object-cover" />
                                     ) : (

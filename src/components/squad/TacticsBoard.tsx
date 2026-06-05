@@ -69,6 +69,13 @@ export const TacticsBoard: React.FC<TacticsBoardProps> = ({
   const formationPositions = FORMATIONS[selectedFormation];
   const formationRoles = useMemo(() => formationPositions.map((pos) => pos.role), [formationPositions]);
 
+  useEffect(() => {
+    if (!initialTactics) return;
+    setTactics(initialTactics);
+    setSelectedFormation(initialTactics.formation);
+    setHasChanges(false);
+  }, [initialTactics]);
+
   const handleFormationChange = (formation: Formation) => {
     setSelectedFormation(formation);
     setTactics(prev => ({ ...prev, formation }));
