@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Dumbbell, CheckCircle2, Flame, Zap } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
+import { ProgressionAnimation } from '@/components/ui/ProgressionAnimation';
 import { trpc } from '@/lib/trpc-client';
 import { useToast } from '@/contexts/ToastContext';
 
@@ -17,9 +18,18 @@ const ATTRIBUTE_LABELS: Record<string, string> = {
   physical: 'Physical',
 };
 
+interface DrillResult {
+  xpAwarded: number;
+  attribute: string;
+  attributeDelta: number;
+  levelUp?: boolean;
+  newLevel?: number;
+}
+
 export function DailyDrillWidget() {
   const { addToast } = useToast();
   const utils = trpc.useUtils();
+  const [drillResult, setDrillResult] = React.useState<DrillResult | null>(null);
 
   const { data: status, isLoading: statusLoading } = trpc.player.getDailyDrillStatus.useQuery(undefined, {
     retry: 1,
@@ -28,11 +38,22 @@ export function DailyDrillWidget() {
 
   const completeDrill = trpc.player.completeDailyDrill.useMutation({
     onSuccess: (data) => {
+      // Store drill result to show inline animation
+      setDrillResult({
+        xpAwarded: data.drill.xpAwarded,
+        attribute: data.drill.attribute,
+        attributeDelta: data.drill.attributeDelta,
+        levelUp: data.newLevel !== undefined,
+        newLevel: data.newLevel,
+      });
+
+      // Keep toast as fallback for accessibility
       addToast({
         tone: 'success',
         title: 'Drill Complete!',
-        message: `+${data.drill.xpAwarded} XP · +1 ${ATTRIBUTE_LABELS[data.drill.attribute] || data.drill.attribute}`,
+        message: `+${data.drill.xpAwarded} XP · +${data.drill.attributeDelta} ${ATTRIBUTE_LABELS[data.drill.attribute] || data.drill.attribute}`,
       });
+
       utils.player.getDailyDrillStatus.invalidate();
       utils.player.getTwinSummary.invalidate();
     },
@@ -47,6 +68,10 @@ export function DailyDrillWidget() {
 
   const handleComplete = () => {
     completeDrill.mutate();
+  };
+
+  const handleAnimationComplete = () => {
+    setDrillResult(null);
   };
 
   if (statusLoading) {
@@ -69,7 +94,24 @@ export function DailyDrillWidget() {
   return (
     <Card className="relative overflow-hidden">
       <AnimatePresence mode="wait">
-        {alreadyCompleted ? (
+        {drillResult ? (
+          <motion.div
+            key="animating"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <ProgressionAnimation
+              xpDelta={drillResult.xpAwarded}
+              attributeDeltas={[
+                { key: drillResult.attribute, delta: drillResult.attributeDelta },
+              ]}
+              levelUp={drillResult.levelUp}
+              newLevel={drillResult.newLevel}
+              onComplete={handleAnimationComplete}
+            />
+          </motion.div>
+        ) : alreadyCompleted ? (
           <motion.div
             key="completed"
             initial={{ opacity: 0, scale: 0.95 }}
