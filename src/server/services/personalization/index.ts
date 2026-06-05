@@ -9,3 +9,4 @@ export * from './notify';
 export * from './squad-energy';
 export * from './twin-sim';
 export * from './coaching';
+export * from './season';

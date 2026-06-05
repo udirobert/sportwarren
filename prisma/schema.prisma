@@ -1473,6 +1473,22 @@ model Notification {
 }
 
 // ============================================================================
+// SEASONS — lifecycle container for competitive periods
+// ============================================================================
+
+model Season {
+  id        String   @id @default(cuid())
+  name      String
+  startDate DateTime @map("start_date")
+  endDate   DateTime @map("end_date")
+  status    String   @default("active") // 'active' | 'completed'
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([status, endDate])
+  @@map("seasons")
+}
+
+// ============================================================================
 // TOURNAMENTS
 // ============================================================================
 

@@ -826,4 +826,38 @@ export const playerRouter = createTRPCRouter({
         });
       }
     }),
+
+  adminAdjustTwin: adminProcedure
+    .input(z.object({
+      twinId: z.string().min(1),
+      reason: z.string().min(1),
+      diff: z.object({
+        attributeDeltas: z.record(z.string(), z.number()).default({}),
+        xpDelta: z.number().default(0),
+        reputationDelta: z.number().default(0),
+        prestigeDelta: z.number().default(0),
+        matchStatsDelta: z.record(z.string(), z.number()).default({}),
+        energyDelta: z.number().optional(),
+      }),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { getTwinService } = await import('@/server/services/personalization/twin-service');
+      const twinService = getTwinService();
+      return twinService.recordEvent({
+        kind: 'admin_adjustment',
+        twinId: input.twinId,
+        reason: input.reason,
+        moderatorId: ctx.userId!,
+        diff: {
+          attributeDeltas: input.diff.attributeDeltas as any,
+          xpDelta: input.diff.xpDelta,
+          levelUp: false,
+          newLevel: 0,
+          prestigeDelta: input.diff.prestigeDelta,
+          matchStatsDelta: input.diff.matchStatsDelta as any,
+          reputationDelta: input.diff.reputationDelta,
+          energyDelta: input.diff.energyDelta,
+        },
+      });
+    }),
 });
