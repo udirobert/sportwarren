@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Brain, ChevronRight, Sparkles, Zap, Shield, Star } from 'lucide-react';
 import { trpc } from '@/lib/trpc-client';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -38,6 +38,18 @@ export function TwinHeroCard() {
     retry: 1,
     staleTime: 30_000,
   });
+  const [isPulsing, setIsPulsing] = React.useState(false);
+  const prevXP = React.useRef<number | undefined>(undefined);
+
+  // Pulse when XP changes (indicates data refresh from drill/match)
+  React.useEffect(() => {
+    if (twin?.xp !== undefined && prevXP.current !== undefined && twin.xp !== prevXP.current) {
+      setIsPulsing(true);
+      const timer = setTimeout(() => setIsPulsing(false), 300);
+      return () => clearTimeout(timer);
+    }
+    prevXP.current = twin?.xp;
+  }, [twin?.xp]);
 
   if (isLoading) {
     return (
@@ -98,7 +110,11 @@ export function TwinHeroCard() {
                 </div>
               </div>
               {/* XP progress bar */}
-              <div className="flex items-center gap-2">
+              <motion.div
+                animate={isPulsing ? { scale: [1, 1.05, 1] } : { scale: 1 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center gap-2"
+              >
                 <div className="flex-1 h-2 bg-white/10 rounded-full overflow-hidden">
                   <motion.div
                     className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full"
@@ -110,7 +126,7 @@ export function TwinHeroCard() {
                 <span className="text-[10px] font-bold text-gray-400 whitespace-nowrap">
                   {twin.xpToNext.toLocaleString()} XP
                 </span>
-              </div>
+              </motion.div>
             </div>
             <ChevronRight className="w-5 h-5 text-gray-600 group-hover:text-green-400 transition-colors flex-shrink-0" />
           </div>
