@@ -869,6 +869,10 @@ export default function SettingsPage() {
               ))}
             </div>
           </Card>
+
+          {connections.telegram?.connected && (
+            <SignalPreferencesCard />
+          )}
         </div>
       )}
 
@@ -952,5 +956,75 @@ export default function SettingsPage() {
         onConnected={() => setShowWalletModal(false)}
       />
     </PageShell>
+  );
+}
+
+const SIGNAL_LABELS: Record<string, string> = {
+  twin_created: 'Twin created',
+  level_up: 'Level up',
+  sim_podium: 'Sim podium',
+  sim_win: 'Sim win',
+  record_broken: 'Record broken',
+  attestation_100: '100 attestations',
+  attestation_500: '500 attestations',
+  attestation_1000: '1000 attestations',
+  attestation_milestone: 'Attestation milestone',
+  coaching_expired: 'Coaching ended',
+  season_end: 'Season complete',
+  achievement_unlocked: 'Achievement unlocked',
+};
+
+function SignalPreferencesCard() {
+  const utils = trpc.useUtils();
+  const { data: prefs, isLoading } = trpc.communication.getSignalPreferences.useQuery();
+  const setPref = trpc.communication.setSignalPreference.useMutation({
+    onMutate: async ({ kind, enabled }) => {
+      await utils.communication.getSignalPreferences.cancel();
+      const prev = utils.communication.getSignalPreferences.getData();
+      utils.communication.getSignalPreferences.setData(undefined, (old) =>
+        old?.map((p) => (p.kind === kind ? { ...p, enabled } : p)),
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      utils.communication.getSignalPreferences.setData(undefined, ctx?.prev);
+    },
+    onSettled: () => {
+      utils.communication.getSignalPreferences.invalidate();
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Twin Signals (Telegram)</h2>
+        <div className="space-y-2 animate-pulse">
+          {[1, 2, 3, 4].map((i) => <div key={i} className="h-10 bg-gray-100 dark:bg-gray-800 rounded" />)}
+        </div>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Twin Signals (Telegram)</h2>
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">Choose which twin events you receive on Telegram</p>
+      <div className="space-y-1">
+        {prefs?.map((pref) => (
+          <label key={pref.kind} className="flex items-center justify-between p-3 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg cursor-pointer">
+            <div>
+              <p className="font-medium text-gray-900 dark:text-white">{SIGNAL_LABELS[pref.kind] ?? pref.kind}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-300">{pref.kind}</p>
+            </div>
+            <input
+              type="checkbox"
+              checked={pref.enabled}
+              onChange={(e) => setPref.mutate({ channel: 'telegram', kind: pref.kind, enabled: e.target.checked })}
+              className="w-5 h-5 rounded border-gray-300 text-green-600 focus:ring-green-500"
+            />
+          </label>
+        ))}
+      </div>
+    </Card>
   );
 }

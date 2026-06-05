@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { StatCard } from "@/components/common/StatCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { PageShell } from "@/components/common/PageShell";
+import { trpc } from "@/lib/trpc-client";
 import { getJourneyZeroState } from "@/lib/journey/content";
 import { describeMatchForSquad } from "@/lib/match/summary";
 import { useJourneyState } from "@/hooks/useJourneyState";
@@ -167,6 +168,8 @@ export default function StatsPage() {
         <StatCard title="Assists" value={attributes.totalAssists} icon={TrendingUp} color="orange" />
         <StatCard title="Reputation" value={attributes.reputationScore} icon={Trophy} color="purple" />
       </div>
+
+      <SeasonOverviewCard />
 
       <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
         <h2 className="text-base font-black uppercase tracking-wide text-gray-700 mb-4">Skill Ratings</h2>
@@ -414,5 +417,56 @@ function SampleStats({ onClose }: { onClose: () => void }) {
         </Card>
       </div>
     </div>
+  );
+}
+
+function SeasonOverviewCard() {
+  const { data: season } = trpc.tournament.getActiveSeason.useQuery();
+  const { data: seasons } = trpc.tournament.listSeasons.useQuery({ limit: 5 });
+
+  if (!season) {
+    return null;
+  }
+
+  const now = new Date();
+  const start = new Date(season.startDate);
+  const end = new Date(season.endDate);
+  const totalDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+  const elapsed = Math.max(0, Math.round((now.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+  const remaining = Math.max(0, totalDays - elapsed);
+  const progress = Math.min(100, (elapsed / totalDays) * 100);
+
+  return (
+    <Card className="border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <h2 className="text-base font-black uppercase tracking-wide text-gray-700 dark:text-gray-200">Current Season</h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400">{season.name}</p>
+        </div>
+        <span className="text-xs font-bold px-2 py-1 rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400">
+          {remaining} days left
+        </span>
+      </div>
+      <div className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+        {start.toLocaleDateString()} — {end.toLocaleDateString()}
+      </div>
+      <div className="h-2 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+        <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${progress}%` }} />
+      </div>
+
+      {seasons && seasons.length > 1 && (
+        <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
+          <p className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider mb-2">History</p>
+          <div className="space-y-1">
+            {seasons.filter((s) => s.status === 'completed').map((s) => (
+              <div key={s.id} className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+                <span>{s.name}</span>
+                <span>{new Date(s.startDate).toLocaleDateString()} — {new Date(s.endDate).toLocaleDateString()}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
   );
 }
