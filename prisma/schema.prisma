@@ -40,8 +40,9 @@ model User {
   squadMedia         SquadMedia[]
 
   // Availability (Multi-squad support)
-  availabilities SquadAvailability[]
-  matchRsvps     MatchRsvp[]
+  availabilities     SquadAvailability[]
+  matchRsvps         MatchRsvp[]
+  twinSignalPreferences TwinSignalPreference[]
 
   @@map("users")
 }
@@ -1024,6 +1025,27 @@ model WhatsAppNotification {
 
   @@index([twinId, createdAt])
   @@map("whats_app_notifications")
+}
+
+// ============================================================================
+// TWIN SIGNAL PREFERENCES — per-kind opt-in for notification channels
+// ============================================================================
+
+model TwinSignalPreference {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  channel   String   // 'telegram'
+  kind      String   // MilestoneKind value: 'level_up', 'sim_win', etc.
+  enabled   Boolean  @default(true)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, channel, kind])
+  @@index([userId, channel])
+  @@map("twin_signal_preferences")
 }
 
 // ============================================================================

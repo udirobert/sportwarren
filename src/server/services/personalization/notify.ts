@@ -3,7 +3,7 @@
  *
  * Three tiers, three channels:
  *   - in-app  → always fires (in-memory event bus → react-query invalidation)
- *   - Telegram → per-event opt-in via PlatformIdentity
+ *   - Telegram → per-event opt-in via TwinSignalPreference
  *   - WhatsApp → milestone-tier only, hard cap of 3 per twin per 24h
  *
  * Why a service instead of inline calls:
@@ -90,14 +90,101 @@ class InAppChannel implements NotifyChannel {
 
 class TelegramChannel implements NotifyChannel {
   readonly name = 'telegram' as const;
-  async sendMilestone(_ctx: NotifyContext, _milestone: MilestoneHint) {
-    // Telegram delivery goes through the existing telegram-mini-app bot.
-    // Wiring the per-kind opt-in lives in PR 7 (signals + onboarding) so
-    // PR 2 stays focused on the orchestrator. The channel is a stub.
-    return false;
+
+  async sendMilestone(ctx: NotifyContext, milestone: MilestoneHint) {
+    const chatId = await this.resolveChatId(ctx);
+    if (!chatId) return false;
+
+    const optedIn = await this.isOptedIn(ctx, milestone.kind);
+    if (!optedIn) return false;
+
+    try {
+      const { getTelegramService } = await import('@/server/services/communication/telegram');
+      const telegramService = getTelegramService();
+      const bot = telegramService?.getBot();
+      if (!bot) return false;
+
+      const text = formatTelegramMilestone(ctx, milestone);
+      await bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
+      return true;
+    } catch (err) {
+      console.warn('[telegram] sendMilestone failed:', err);
+      return false;
+    }
   }
-  async sendMoment(_ctx: NotifyContext, _moment: MomentHint, _momentId: string) {
-    return false;
+
+  async sendMoment(ctx: NotifyContext, moment: MomentHint, momentId: string) {
+    const chatId = await this.resolveChatId(ctx);
+    if (!chatId) return false;
+
+    const optedIn = await this.isOptedIn(ctx, moment.kind);
+    if (!optedIn) return false;
+
+    try {
+      const { getTelegramService } = await import('@/server/services/communication/telegram');
+      const telegramService = getTelegramService();
+      const bot = telegramService?.getBot();
+      if (!bot) return false;
+
+      const subject = ctx.scope === 'player' ? 'Your twin' : 'Your squad twin';
+      const text = `✨ *${moment.label}*\n${subject} unlocked a new moment.`;
+      await bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
+      return true;
+    } catch (err) {
+      console.warn('[telegram] sendMoment failed:', err);
+      return false;
+    }
+  }
+
+  private async resolveChatId(ctx: NotifyContext): Promise<number | null> {
+    if (ctx.scope === 'player') {
+      const identity = await prisma.platformIdentity.findFirst({
+        where: { platform: 'telegram', user: { playerProfile: { id: ctx.ownerId } } },
+      });
+      return identity?.chatId ? parseInt(identity.chatId, 10) : null;
+    }
+    const group = await prisma.squadGroup.findFirst({
+      where: { squadId: ctx.ownerId, platform: 'telegram' },
+    });
+    return group?.chatId ? parseInt(group.chatId, 10) : null;
+  }
+
+  private async isOptedIn(ctx: NotifyContext, kind: string): Promise<boolean> {
+    let userId: string | null = null;
+    if (ctx.scope === 'player') {
+      const profile = await prisma.playerProfile.findUnique({
+        where: { id: ctx.ownerId },
+        select: { userId: true },
+      });
+      userId = profile?.userId ?? null;
+    } else {
+      const squad = await prisma.squad.findUnique({
+        where: { id: ctx.ownerId },
+        include: { members: { where: { role: 'captain' }, take: 1 } },
+      });
+      userId = squad?.members[0]?.userId ?? null;
+    }
+    if (!userId) return false;
+
+    const pref = await prisma.twinSignalPreference.findUnique({
+      where: { userId_channel_kind: { userId, channel: 'telegram', kind } },
+    });
+    return pref?.enabled ?? false;
+  }
+}
+
+function formatTelegramMilestone(ctx: NotifyContext, m: MilestoneHint): string {
+  const subject = ctx.scope === 'player' ? 'Your twin' : 'Your squad twin';
+  switch (m.kind) {
+    case 'twin_created': return `🎮 *${subject} just woke up*\nTime to train.`;
+    case 'level_up': return `📈 *Level up!*\n${subject} reached L${(m.payload as any).to ?? '?'}.`;
+    case 'sim_win': return `🏆 *Sim champion*\n${subject} won the tournament.`;
+    case 'sim_podium': return `🥉 *Sim podium*\n${subject} placed in the top 3.`;
+    case 'attestation_milestone': return `✅ *Attestation milestone*\n${subject} crossed a verification threshold.`;
+    case 'record_broken': return `🔥 *Record broken*\n${subject} set a new record.`;
+    case 'season_end': return `🏁 *Season complete*\n${subject} closed the season.`;
+    case 'coaching_expired': return `⏰ *Coaching ended*\nA coaching boost has expired.`;
+    default: return `⭐ *Milestone*\n${subject} hit a milestone.`;
   }
 }
 

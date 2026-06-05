@@ -244,6 +244,28 @@ export class TwinService {
       momentId: moment.id,
     });
 
+    // Seed default Telegram signal preferences for the owning user
+    const DEFAULT_SIGNAL_KINDS = ['twin_created', 'level_up', 'sim_win', 'record_broken'];
+    let userId: string | null = null;
+    if (scope === 'player') {
+      userId = owner.userId!;
+    } else {
+      const captain = await this.db.squadMember.findFirst({
+        where: { squadId: owner.squadId!, role: 'captain' },
+        select: { userId: true },
+      });
+      userId = captain?.userId ?? null;
+    }
+    if (userId) {
+      for (const kind of DEFAULT_SIGNAL_KINDS) {
+        await this.db.twinSignalPreference.upsert({
+          where: { userId_channel_kind: { userId, channel: 'telegram', kind } },
+          create: { userId, channel: 'telegram', kind, enabled: true },
+          update: {},
+        });
+      }
+    }
+
     return { twinId: row.id, diff, momentId: moment.id };
   }
 
