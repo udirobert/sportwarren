@@ -253,10 +253,21 @@ export async function claimSharePosition(
   const rows = await prisma.$queryRaw<ShareClaimRow[]>`
     INSERT INTO share_claims (id, share_id, position_index, display_name, remix_slug, updated_at)
     VALUES (${randomUUID()}, ${shareId}, ${positionIndex}, ${cleanName}, ${remixSlug}, CURRENT_TIMESTAMP)
-    ON CONFLICT (share_id, position_index) DO UPDATE
-      SET display_name = EXCLUDED.display_name, updated_at = CURRENT_TIMESTAMP
+    ON CONFLICT (share_id, position_index) DO NOTHING
     RETURNING id, share_id, position_index, display_name, remix_slug, claimed_at
   `;
+
+  // If DO NOTHING fired, someone else claimed this slot between our check and insert.
+  // Re-select the winning row so we can return the actual claimant's name.
+  if (!rows[0]) {
+    const winner = await prisma.$queryRaw<ShareClaimRow[]>`
+      SELECT id, share_id, position_index, display_name, remix_slug, claimed_at
+      FROM share_claims
+      WHERE share_id = ${shareId} AND position_index = ${positionIndex}
+      LIMIT 1
+    `;
+    return { claim: rowToClaim(winner[0]), alreadyClaimed: true };
+  }
 
   return { claim: rowToClaim(rows[0]), alreadyClaimed: false };
 }

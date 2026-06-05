@@ -31,8 +31,9 @@ function getShareCopy(planTitle: string, names: string[]): string {
   return `Tonight's SportWarren setup: ${planTitle}. Claim your spot.`;
 }
 
-export async function generateMetadata({ params }: PlaySharePageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PlaySharePageProps): Promise<Metadata> {
   const { slug } = await params;
+  const { me: meParam } = await searchParams;
   const record = await getTacticalPlanShare(slug);
 
   if (!record) {
@@ -42,10 +43,27 @@ export async function generateMetadata({ params }: PlaySharePageProps): Promise<
     };
   }
 
-  const title = `${getTacticalPlanTitle(record.plan)} | SportWarren`;
+  const slots = FORMATIONS[record.plan.formation] || [];
+  // Validate me param before including it in URLs
+  const meIndex =
+    meParam !== undefined && /^\d+$/.test(meParam) && Number(meParam) < slots.length
+      ? Number(meParam)
+      : null;
+
+  const title = meIndex !== null
+    ? `My ${slots[meIndex]?.role ?? "spot"} — ${getTacticalPlanTitle(record.plan)} | SportWarren`
+    : `${getTacticalPlanTitle(record.plan)} | SportWarren`;
   const description = getShareCopy(getTacticalPlanTitle(record.plan), record.plan.names);
   const baseUrl = getBaseUrl();
-  const imageUrl = `${baseUrl}/api/og/tactic-card?slug=${encodeURIComponent(slug)}`;
+
+  // Wire ?me= into the OG image so personalised links get personalised previews
+  const imageUrl = meIndex !== null
+    ? `${baseUrl}/api/og/tactic-card?slug=${encodeURIComponent(slug)}&me=${meIndex}`
+    : `${baseUrl}/api/og/tactic-card?slug=${encodeURIComponent(slug)}`;
+
+  const pageUrl = meIndex !== null
+    ? `${baseUrl}/play/${encodeURIComponent(slug)}?me=${meIndex}`
+    : `${baseUrl}/play/${encodeURIComponent(slug)}`;
 
   return {
     title,
@@ -54,7 +72,7 @@ export async function generateMetadata({ params }: PlaySharePageProps): Promise<
       title,
       description,
       type: "website",
-      url: `${baseUrl}/play/${encodeURIComponent(slug)}`,
+      url: pageUrl,
       images: [{ url: imageUrl, width: 1200, height: 630, alt: title }],
     },
     twitter: {
