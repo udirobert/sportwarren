@@ -56,7 +56,7 @@ export async function GET(request: Request) {
     // Coaching expiry sweep
     const now = new Date();
     const expiredEffects = await prisma.coachingEffect.findMany({
-      where: { active: true, expiresAt: { lte: now } },
+      where: { active: true, targetType: 'player', expiresAt: { lte: now } },
     });
     let coachingExpired = 0;
     const twinService = getTwinService();
@@ -83,12 +83,39 @@ export async function GET(request: Request) {
       }
     }
 
+    // Squad coaching expiry sweep
+    const squadExpiredEffects = await prisma.coachingEffect.findMany({
+      where: { active: true, targetType: 'squad', expiresAt: { lte: now } },
+    });
+    let squadCoachingExpired = 0;
+    for (const effect of squadExpiredEffects) {
+      try {
+        const twin = await prisma.squadTwin.findUnique({
+          where: { squadId: effect.targetId },
+        });
+        if (!twin) continue;
+        await twinService.recordEvent({
+          kind: 'coaching_expired',
+          twinId: twin.id,
+          effectId: effect.id,
+        });
+        await prisma.coachingEffect.update({
+          where: { id: effect.id },
+          data: { active: false },
+        });
+        squadCoachingExpired++;
+      } catch (err) {
+        console.warn(`Squad coaching expiry failed for effect ${effect.id}:`, err);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       matchesProcessed: recentMatches.length,
       squadsUpdated: processedSquads.size,
       energyUpdates,
       coachingExpired,
+      squadCoachingExpired,
     });
   } catch (error) {
     console.error('Cron twin housekeeping failed:', error);

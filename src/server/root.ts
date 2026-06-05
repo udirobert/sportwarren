@@ -11,6 +11,7 @@ import { lensRouter } from './routers/lens';
 import { communicationRouter } from './routers/communication';
 import { peerRatingRouter } from './routers/peer-rating';
 import { tournamentRouter } from './routers/tournament';
+import { coachingRouter } from './routers/coaching';
 
 export const appRouter = createTRPCRouter({
   match: matchRouter,
@@ -25,6 +26,7 @@ export const appRouter = createTRPCRouter({
   communication: communicationRouter,
   peerRating: peerRatingRouter,
   tournament: tournamentRouter,
+  coaching: coachingRouter,
 });
 
 export type AppRouter = typeof appRouter;
