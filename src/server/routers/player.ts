@@ -8,6 +8,7 @@ import { applyMatchXP } from '../services/match-xp';
 import { getAvatarPresentation } from '../services/avatar/avatar-presentation';
 import { generateAiAvatar } from '../services/avatar/avatar-generator';
 import { generateTacticalInsights } from '../../lib/ai/tactical-insights';
+import { identityService } from '../services/personalization/identity';
 
 const AttributeType = z.enum([
   'pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical',
@@ -125,6 +126,43 @@ export const playerRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to fetch current player profile',
+          cause: error,
+        });
+      }
+    }),
+
+  getIdentity: publicProcedure
+    .input(z.object({
+      profileId: z.string().min(1, 'Profile ID is required'),
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await identityService.getPlayerIdentity(input.profileId);
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch player identity',
+          cause: error,
+        });
+      }
+    }),
+
+  getMyIdentity: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const profile = await ctx.prisma.playerProfile.findUnique({
+          where: { userId: ctx.userId! },
+        });
+        if (!profile) {
+          throw new TRPCError({ code: 'NOT_FOUND', message: 'Player profile not found' });
+        }
+        return await identityService.getPlayerIdentity(profile.id);
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch player identity',
           cause: error,
         });
       }

@@ -43,8 +43,8 @@ are the source of truth.
   - `moments.ts` (Moment row CRUD; render is a no-op stub — PR 4 wires satori/resvg)
   - `image.ts` (avatar upload + key resolution; writes storage key to `User.avatar`)
   - `squad-energy.ts` (bypasses `TwinService` — energy is a squad-level operational metric, not a twin brain mutation)
-  - `narrative.ts` (stub; PR 3 wires LLM prompt)
-  - `identity.ts` (PR 3: `getPlayerIdentity` / `getSquadIdentity` — one read API for the identity card)
+  - `narrative.ts` (two-tier: fast sync stubs `generatePlayerNarrative`/`generateSquadNarrative` for hot paths + LLM-driven `buildRichPlayerNarrative`/`buildRichSquadNarrative` with Redis 1h cache keyed on content hash; consumes `generateInference` from `@/lib/ai/inference`)
+  - `identity.ts` (`IdentityService.getPlayerIdentity` / `getSquadIdentity` — single read API joining skin (User/Squad) + brain (PlayerTwin/SquadTwin) + moments + attestations + match stats + sync narrative; tRPC: `player.getIdentity`/`player.getMyIdentity`, `squad.getIdentity`)
 - Player identity surface is `src/components/identity/PlayerIdentityCard.tsx` (one card, variant-driven; PR 4)
 - All twin state mutations go through `TwinService.recordEvent({ kind, ... })` — no direct Prisma writes to `PlayerTwin` or `SquadTwin` fields from call sites
 - `User.avatar` is a storage key (not base64); image variants generated at upload (PR 4)

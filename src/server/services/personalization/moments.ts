@@ -90,4 +90,3 @@ class MomentServiceImpl {
 
 export const momentService = new MomentServiceImpl();
 export type { MomentServiceImpl as MomentService };
-export type { MomentTier };
