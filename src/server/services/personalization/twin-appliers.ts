@@ -21,6 +21,7 @@ import type {
   AttributeKey,
   CoachingExpiredEvent,
   CoachingHiredEvent,
+  DailyDrillEvent,
   GhostMatchEvent,
   MilestoneHint,
   MomentHint,
@@ -73,6 +74,8 @@ export function applyEvent(state: TwinState, event: TwinEvent, now: Date): TwinD
       return applySeasonEnd(state, event);
     case 'admin_adjustment':
       return applyAdminAdjustment(state, event);
+    case 'daily_drill':
+      return applyDailyDrill(state, event);
   }
 }
 
@@ -474,6 +477,37 @@ function applyAdminAdjustment(
     ...event.diff,
     milestonesHit: [],
     momentHint: undefined,
+  };
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Applier: daily_drill — small daily XP + attribute reward
+// ────────────────────────────────────────────────────────────────────────────
+
+function applyDailyDrill(state: TwinState, event: DailyDrillEvent): TwinDiff {
+  const { attribute, xpAwarded, attributeDelta } = event.drill;
+  const clamped = clampAttributeDeltas(state.baseAttributes, { [attribute]: attributeDelta });
+  const newXp = Math.max(0, state.xp + xpAwarded);
+  const newLevel = computeLevel(newXp);
+  const levelUp = newLevel > state.level;
+
+  const milestones: MilestoneHint[] = [];
+  if (levelUp) {
+    milestones.push({ kind: 'level_up', payload: { from: state.level, to: newLevel } });
+  }
+
+  return {
+    attributeDeltas: clamped,
+    xpDelta: xpAwarded,
+    levelUp,
+    newLevel,
+    prestigeDelta: 0,
+    matchStatsDelta: {},
+    reputationDelta: 0,
+    milestonesHit: milestones,
+    momentHint: levelUp
+      ? { kind: 'level_up', tier: 'standard', label: `Level ${newLevel}`, detail: 'Daily drill' }
+      : undefined,
   };
 }
 

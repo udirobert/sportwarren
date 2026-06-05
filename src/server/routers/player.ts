@@ -942,4 +942,38 @@ export const playerRouter = createTRPCRouter({
         });
       }
     }),
+
+  completeDailyDrill: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      try {
+        const { completeDrill } = await import('@/server/services/personalization/daily-drill');
+        return await completeDrill(ctx.userId!, ctx.prisma);
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('already completed')) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Daily drill already completed today',
+          });
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to complete daily drill',
+          cause: error,
+        });
+      }
+    }),
+
+  getDailyDrillStatus: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const { getDailyDrillStatus } = await import('@/server/services/personalization/daily-drill');
+        return await getDailyDrillStatus(ctx.userId!, ctx.prisma);
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch daily drill status',
+          cause: error,
+        });
+      }
+    }),
 });

@@ -95,7 +95,8 @@ export type TwinEvent =
   | GhostMatchEvent
   | PeerRatingConsensusEvent
   | SeasonEndEvent
-  | AdminAdjustmentEvent;
+  | AdminAdjustmentEvent
+  | DailyDrillEvent;
 
 export interface TwinCreatedEvent {
   kind: 'twin_created';
@@ -191,6 +192,17 @@ export interface AdminAdjustmentEvent {
   reason: string;
   moderatorId: string;
   diff: Omit<TwinDiff, 'milestonesHit' | 'momentHint'>;
+}
+
+export interface DailyDrillEvent {
+  kind: 'daily_drill';
+  twinId: string;
+  drill: {
+    attribute: AttributeKey;
+    xpAwarded: number;
+    attributeDelta: number;
+    drillType: string;
+  };
 }
 
 // ────────────────────────────────────────────────────────────────────────────
