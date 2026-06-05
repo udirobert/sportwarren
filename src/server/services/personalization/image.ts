@@ -1,10 +1,11 @@
 /**
- * Image service — avatar upload + key resolution.
+ * Image service — avatar upload, variant generation, and key resolution.
  *
- * PR 2 stores the original avatar under `players/<profileId>/avatar/main.<ext>`.
- * Variant generation (square / wide / tall / thumb) lands in PR 4 with the
- * identity card, which is the first surface that actually consumes multiple
- * sizes. For now we keep the storage contract simple: one file, one key.
+ * Avatars are stored as the original (`main`) plus three resized variants
+ * generated via sharp:
+ *   - `square` (256×256, cover) — profile thumbnails
+ *   - `thumb`  (64×64, cover)  — member lists, comments
+ *   - `wide`   (512×288, cover) — card banners
  *
  * Key resolution:
  *   - Local keys (`players/.../avatar/main.png`) → served by the public
@@ -14,6 +15,7 @@
  * The lookup is pure: no DB, no network, deterministic.
  */
 
+import sharp from 'sharp';
 import { prisma } from '@/lib/db';
 import { getStorageAdapter } from '../storage';
 import type { SaveBase64Opts } from '../storage/types';
@@ -22,7 +24,6 @@ const ALLOWED_MIME_TYPES = new Set([
   'image/jpeg',
   'image/png',
   'image/webp',
-  'image/gif',
 ]);
 
 const MAX_BYTES = 8 * 1024 * 1024; // 8MB
@@ -31,8 +32,21 @@ const EXTENSION_FOR_MIME: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
-  'image/gif': 'gif',
 };
+
+export type AvatarVariant = 'main' | 'square' | 'thumb' | 'wide';
+
+interface VariantSpec {
+  id: AvatarVariant;
+  width: number;
+  height: number;
+}
+
+const AVATAR_VARIANTS: VariantSpec[] = [
+  { id: 'square', width: 256, height: 256 },
+  { id: 'thumb', width: 64, height: 64 },
+  { id: 'wide', width: 512, height: 288 },
+];
 
 export interface UploadAvatarInput {
   ownerType: 'player' | 'squad';
@@ -44,15 +58,10 @@ export interface UploadAvatarInput {
 export interface UploadAvatarResult {
   key: string;
   size: number;
+  variants: Record<AvatarVariant, string | null>;
 }
 
 class ImageServiceImpl {
-  /**
-   * Store an avatar and write the storage key to the owner row.
-   * For players this is `User.avatar`. Squads don't have an avatar field
-   * yet (PR 4 adds it with the identity card); PR 2 stores the key on
-   * User regardless.
-   */
   async uploadAvatar(input: UploadAvatarInput): Promise<UploadAvatarResult> {
     if (!ALLOWED_MIME_TYPES.has(input.mimeType)) {
       throw new Error(`UNSUPPORTED_MIME:${input.mimeType}`);
@@ -62,8 +71,9 @@ class ImageServiceImpl {
       throw new Error('AVATAR_TOO_LARGE:Maximum avatar size is 8MB');
     }
     const ext = EXTENSION_FOR_MIME[input.mimeType];
+    const adapter = getStorageAdapter();
 
-    const opts: SaveBase64Opts = {
+    const mainOpts: SaveBase64Opts = {
       ownerType: input.ownerType,
       ownerId: input.ownerId,
       kind: 'avatar',
@@ -72,10 +82,42 @@ class ImageServiceImpl {
       extension: ext,
       mimeType: input.mimeType,
     };
+    const stored = await adapter.saveBase64(mainOpts);
 
-    const stored = await getStorageAdapter().saveBase64(opts);
+    const variants: Record<AvatarVariant, string | null> = {
+      main: stored.key,
+      square: null,
+      thumb: null,
+      wide: null,
+    };
 
-    // Persist the key. Players own the avatar on User; squads will in PR 4.
+    const image = sharp(buffer);
+    const format = input.mimeType === 'image/webp' ? 'webp' : input.mimeType === 'image/png' ? 'png' : 'jpeg';
+
+    for (const spec of AVATAR_VARIANTS) {
+      try {
+        const resized = await image
+          .resize(spec.width, spec.height, { fit: 'cover' })
+          [format]({ quality: 85 })
+          .toBuffer();
+
+        const variantBase64 = resized.toString('base64');
+        const variantOpts: SaveBase64Opts = {
+          ownerType: input.ownerType,
+          ownerId: input.ownerId,
+          kind: 'avatar',
+          variantId: spec.id,
+          base64Data: variantBase64,
+          extension: ext,
+          mimeType: input.mimeType,
+        };
+        const result = await adapter.saveBase64(variantOpts);
+        variants[spec.id] = result.key;
+      } catch (e) {
+        console.warn(`[ImageService] Failed to generate ${spec.id} variant:`, e);
+      }
+    }
+
     if (input.ownerType === 'player') {
       await prisma.user.update({
         where: { id: input.ownerId },
@@ -83,15 +125,9 @@ class ImageServiceImpl {
       });
     }
 
-    return { key: stored.key, size: stored.size };
+    return { key: stored.key, size: stored.size, variants };
   }
 
-  /**
-   * Resolve a storage key to a public URL.
-   *   - IPFS keys: <gateway-read-url>/<cid>
-   *   - Local keys: /api/storage/<key>
-   * Returns null if the key is unrecognised.
-   */
   resolveUrl(key: string | null | undefined): string | null {
     if (!key) return null;
     if (key.startsWith('ipfs/')) {
@@ -101,6 +137,17 @@ class ImageServiceImpl {
       return `${gateway}/${cid}`;
     }
     return `/api/storage/${key}`;
+  }
+
+  /**
+   * Derive a variant URL from the main avatar key.
+   * E.g. `players/abc/avatar/main.jpg` → `players/abc/avatar/square.jpg`
+   */
+  resolveVariantUrl(mainKey: string | null | undefined, variant: AvatarVariant): string | null {
+    if (!mainKey) return null;
+    if (variant === 'main') return this.resolveUrl(mainKey);
+    const variantKey = mainKey.replace(/\/main(\.\w+)$/, `/${variant}$1`);
+    return this.resolveUrl(variantKey);
   }
 }
 
