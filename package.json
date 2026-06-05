@@ -43,6 +43,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "2": "3.0.0",
     "@aws-sdk/client-kms": "^3.1023.0",
     "@erc7824/nitrolite": "^0.5.3",
     "@kapso/whatsapp-cloud-api": "^0.2.1",
@@ -50,6 +51,7 @@
     "@prisma/client": "^7.4.1",
     "@privy-io/react-auth": "^3.18.0",
     "@privy-io/wagmi": "^4.0.3",
+    "@resvg/resvg-js": "2.6.2",
     "@sentry/nextjs": "^10.53.1",
     "@tanstack/react-query": "5.90.21",
     "@ton/core": "^0.63.1",
@@ -77,6 +79,8 @@
     "prisma": "^7.4.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "satori": "0.26.0",
+    "sharp": "0.34.5",
     "socket.io": "^4.7.4",
     "socket.io-client": "^4.7.4",
     "uuid": "^9.0.1",

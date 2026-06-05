@@ -67,15 +67,15 @@ class MomentServiceImpl {
     };
   }
 
-  /**
-   * Lazy render. PR 2 stub: returns the row unchanged. A future cron or
-   * worker will pick up moments with `renderedKey: null` and generate a PNG
-   * via satori/resvg, then write back `renderedKey` and `renderedAt`.
-   */
   async render(momentId: string): Promise<{ renderedKey: string | null }> {
-    const row = await prisma.moment.findUnique({ where: { id: momentId } });
-    if (!row) throw new Error(`Moment not found: ${momentId}`);
-    return { renderedKey: row.renderedKey };
+    const { renderMoment } = await import('./moment-render');
+    try {
+      const result = await renderMoment(momentId);
+      return { renderedKey: result.renderedKey };
+    } catch (e) {
+      console.error(`[Moments] Render failed for ${momentId}:`, e);
+      return { renderedKey: null };
+    }
   }
 
   /** Read API for the gallery (PR 5 consumes this). */

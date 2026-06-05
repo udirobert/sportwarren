@@ -9,6 +9,7 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   productionBrowserSourceMaps: false,
+  serverExternalPackages: ['sharp', '@resvg/resvg-js'],
   typescript: {
     // Type-checking runs in GitHub Actions CI (ci.yml) with 8GB heap — not during
     // the Vercel build, which is limited to 8GB total RAM and OOMs on tsc.
