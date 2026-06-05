@@ -54,6 +54,7 @@ interface UseMySquadsReturn {
   memberships: Array<{
     squad: Squad;
     role: string;
+    status: string;
     joinedAt: Date;
   }>;
   loading: boolean;
@@ -165,11 +166,11 @@ export function useSquadDetails(squadId?: string): UseSquadDetailsReturn {
 
 // Get current user's squads
 export function useMySquads(): UseMySquadsReturn {
-  const { isVerified } = useWallet();
+  const { hasAccount, isVerified } = useWallet();
   const { data, isLoading, error, refetch } = trpc.squad.getMySquads.useQuery(
     undefined,
     {
-      enabled: isVerified,
+      enabled: !!hasAccount,
       staleTime: 30 * 1000,
     }
   );
@@ -178,12 +179,13 @@ export function useMySquads(): UseMySquadsReturn {
     memberships: data?.map((m: any) => ({
       squad: transformSquad(m.squad),
       role: m.role,
+      status: m.status ?? 'active',
       joinedAt: new Date(m.joinedAt),
     })) || [],
     loading: isLoading,
     error: error?.message || null,
     refresh: async () => {
-      if (!isVerified) return;
+      if (!hasAccount) return;
       await refetch();
     },
   };

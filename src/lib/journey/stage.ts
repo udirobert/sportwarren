@@ -2,6 +2,7 @@ export type JourneyStage =
   | 'public_visitor'
   | 'guest_preview'
   | 'account_ready'
+  | 'pending_member'
   | 'wallet_unverified'
   | 'verified_no_squad'
   | 'season_kickoff'
@@ -13,6 +14,7 @@ export interface JourneyStageInput {
   hasWallet: boolean;
   authState?: 'none' | 'missing' | 'expired' | 'valid' | 'guest' | null;
   squadCount?: number;
+  hasPendingMembership?: boolean;
   totalMatches?: number;
   pendingMatchesCount?: number;
   completedChecklistCount?: number;
@@ -26,6 +28,7 @@ export function getJourneyStage(input: JourneyStageInput): JourneyStage {
     hasWallet,
     authState = null,
     squadCount = 0,
+    hasPendingMembership = false,
     totalMatches = 0,
     pendingMatchesCount = 0,
     completedChecklistCount = 0,
@@ -38,6 +41,10 @@ export function getJourneyStage(input: JourneyStageInput): JourneyStage {
 
   if (isGuest) {
     return 'guest_preview';
+  }
+
+  if (hasPendingMembership && !hasWallet) {
+    return 'pending_member';
   }
 
   if (!hasWallet) {

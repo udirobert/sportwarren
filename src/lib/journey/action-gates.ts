@@ -96,6 +96,17 @@ export function getJourneyActionGate(
     );
   }
 
+  if (input.stage === 'pending_member') {
+    return createBlockedGate(
+      'missing_wallet',
+      'Connect Wallet to Unlock',
+      `You're on the roster — connect a wallet to unlock ${surfaceLabel}`,
+      `Your squad invite is accepted. Connect a wallet to start building your match record, access tactics, and participate in transfers.`,
+      { label: 'Connect wallet', href: SETTINGS_WALLET_HREF },
+      { label: 'Back to dashboard', href: DASHBOARD_HREF },
+    );
+  }
+
   // Match center is available without a wallet — only squad governance requires one
   if (surface !== 'match_center') {
     if (!input.hasWallet) {

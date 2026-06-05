@@ -590,6 +590,124 @@ export const squadRouter = createTRPCRouter({
       }
     }),
 
+  // Join a squad with email-only auth (pending status, no wallet required)
+  joinPending: protectedProcedure
+    .input(z.object({ squadId: squadIdSchema }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const squad = await ctx.prisma.squad.findUnique({
+          where: { id: input.squadId },
+        });
+
+        if (!squad) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Squad not found',
+          });
+        }
+
+        const existing = await ctx.prisma.squadMember.findUnique({
+          where: {
+            squadId_userId: {
+              squadId: input.squadId,
+              userId: ctx.userId!,
+            }
+          }
+        });
+
+        if (existing) {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Already a member of this squad',
+          });
+        }
+
+        const member = await ctx.prisma.squadMember.create({
+          data: {
+            squadId: input.squadId,
+            userId: ctx.userId!,
+            role: 'player',
+            status: 'pending',
+          },
+        });
+
+        return {
+          membership: member,
+          nextSteps: ['connect_wallet', 'claim_profile'] as const,
+        };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to join squad',
+          cause: error,
+        });
+      }
+    }),
+
+  // Upgrade pending membership to active (requires wallet connection)
+  upgradeMembership: protectedProcedure
+    .input(z.object({ squadId: squadIdSchema }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        const member = await ctx.prisma.squadMember.findUnique({
+          where: {
+            squadId_userId: {
+              squadId: input.squadId,
+              userId: ctx.userId!,
+            }
+          }
+        });
+
+        if (!member) {
+          throw new TRPCError({
+            code: 'NOT_FOUND',
+            message: 'Not a member of this squad',
+          });
+        }
+
+        if (member.status !== 'pending') {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'Membership is not pending',
+          });
+        }
+
+        const updated = await ctx.prisma.squadMember.update({
+          where: { id: member.id },
+          data: { status: 'active' },
+        });
+
+        // Create twin if not already exists
+        const profile = await ctx.prisma.playerProfile.findUnique({
+          where: { userId: ctx.userId! },
+          include: { twin: true },
+        });
+
+        if (profile && !profile.twin) {
+          const twinService = getTwinService();
+          await twinService.recordEvent({
+            kind: 'twin_created',
+            twinId: profile.id,
+            initialAttributes: {
+              pace: 50, shooting: 50, passing: 50,
+              dribbling: 50, defending: 50, physical: 50,
+            },
+            context: { userId: ctx.userId! },
+          });
+        }
+
+        return { membership: updated };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to upgrade membership',
+          cause: error,
+        });
+      }
+    }),
+
   // Leave a squad
   leave: protectedProcedure
     .input(z.object({ squadId: squadIdSchema }))
