@@ -860,4 +860,86 @@ export const playerRouter = createTRPCRouter({
         },
       });
     }),
+
+  getTwinSummary: protectedProcedure
+    .query(async ({ ctx }) => {
+      try {
+        const profile = await ctx.prisma.playerProfile.findUnique({
+          where: { userId: ctx.userId! },
+          include: {
+            twin: {
+              include: {
+                agent: {
+                  include: {
+                    attestations: {
+                      orderBy: { createdAt: 'desc' },
+                      take: 1,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        if (!profile?.twin) {
+          return null;
+        }
+
+        const twin = profile.twin;
+        const { computeLevel, xpToNext } = await import('@/server/services/personalization/twin-appliers');
+        
+        const level = computeLevel(twin.xp);
+        const xpNeeded = xpToNext(twin.xp);
+        const baseAttrs = (twin.baseAttributes as Record<string, number>) || {};
+        
+        // Get top 2 attributes by value
+        const topAttributes = Object.entries(baseAttrs)
+          .sort(([, a], [, b]) => b - a)
+          .slice(0, 2)
+          .map(([key, value]) => ({ key, value }));
+
+        // Active modifiers from coaching effects
+        const activeModifiers = (twin.activeModifiers as Array<{
+          id: string;
+          source: string;
+          expiresAt: string;
+          deltas: Record<string, number>;
+        }>) || [];
+
+        // Last event from attestations
+        const lastAttestation = twin.agent.attestations[0];
+        const lastEvent = lastAttestation ? {
+          kind: lastAttestation.kind,
+          createdAt: lastAttestation.createdAt.toISOString(),
+          summary: (lastAttestation.payload as Record<string, unknown>)?.reason as string || lastAttestation.kind,
+        } : null;
+
+        // Next milestone detection
+        const nextMilestone = (() => {
+          if (twin.attestationCount < 100) return { kind: 'attestation_100' as const, threshold: 100, current: twin.attestationCount };
+          if (twin.attestationCount < 500) return { kind: 'attestation_500' as const, threshold: 500, current: twin.attestationCount };
+          if (twin.attestationCount < 1000) return { kind: 'attestation_1000' as const, threshold: 1000, current: twin.attestationCount };
+          return null;
+        })();
+
+        return {
+          level,
+          xp: twin.xp,
+          xpToNext: xpNeeded,
+          prestige: twin.prestige,
+          reputation: twin.reputation,
+          topAttributes,
+          activeModifiers,
+          lastEvent,
+          nextMilestone,
+        };
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to fetch twin summary',
+          cause: error,
+        });
+      }
+    }),
 });
