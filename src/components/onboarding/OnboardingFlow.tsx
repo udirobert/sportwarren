@@ -238,6 +238,10 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
         },
       });
       setPhase('checklist');
+      // Flag the match center to open in capture mode on this first session
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('sw_first_match_session', '1');
+      }
       onComplete?.();
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : 'Could not save your player profile.');
