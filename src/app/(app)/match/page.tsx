@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { trpc } from "@/lib/trpc-client";
 import { useMatchVerification } from "@/hooks/match/useMatchVerification";
+import { useEvidenceCapture } from "@/hooks/match/useEvidenceCapture";
 import { useMatchCenterData } from "@/hooks/match/useMatchCenterData";
 import { useWallet } from "@/contexts/WalletContext";
 import { JourneyGateCard } from "@/components/common/JourneyGateCard";
@@ -87,6 +88,31 @@ export default function MatchPage() {
     getMatchById,
     loading,
   } = useMatchVerification(activeSquadId);
+  const evidenceCapture = useEvidenceCapture();
+  const [gpsCaptured, setGpsCaptured] = useState(false);
+
+  const handleGpsCapture = () => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      () => setGpsCaptured(true),
+      () => setGpsCaptured(false),
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  };
+
+  const handleVoiceToggle = () => {
+    if (evidenceCapture.state.isRecording) {
+      void evidenceCapture.stopRecording();
+    } else {
+      void evidenceCapture.startRecording();
+    }
+  };
+
+  const handlePhotoCapture = () => {
+    void evidenceCapture.capturePhoto();
+  };
 
   const finalizeMatchXP = trpc.player.finalizeMatchXP.useMutation();
   const utils = trpc.useUtils();
@@ -665,27 +691,82 @@ export default function MatchPage() {
                 <span className="section-kicker bg-gray-100 text-gray-500">Optional</span>
               </div>
               <div className="space-y-2">
-                {[
-                  { label: "GPS stamp", detail: "Auto-captured at kickoff", icon: MapPin },
-                  { label: "Voice note", detail: "Captain confirmation", icon: Mic },
-                  { label: "Photo proof", detail: "Scoreboard or team shot", icon: Camera },
-                ].map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <div key={item.label} className="flex items-center justify-between rounded-xl border border-gray-200 px-3 py-2">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center text-gray-600">
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <div>
-                          <div className="text-sm font-semibold text-gray-900">{item.label}</div>
-                          <div className="text-xs text-gray-500">{item.detail}</div>
-                        </div>
-                      </div>
-                      <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Ready</span>
+                <button
+                  type="button"
+                  onClick={handleGpsCapture}
+                  className="w-full flex items-center justify-between rounded-xl border border-gray-200 px-3 py-2 hover:border-emerald-300 hover:bg-emerald-50/40 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${gpsCaptured ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                      <MapPin className="w-4 h-4" />
                     </div>
-                  );
-                })}
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">GPS stamp</div>
+                      <div className="text-xs text-gray-500">{gpsCaptured ? 'Location captured' : 'Tap to capture location'}</div>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${gpsCaptured ? 'text-emerald-600' : 'text-gray-400'}`}>
+                    {gpsCaptured ? 'Captured' : 'Capture'}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleVoiceToggle}
+                  className={`w-full flex items-center justify-between rounded-xl border px-3 py-2 text-left transition-colors ${
+                    evidenciaCapture.state.isRecording
+                      ? 'border-red-300 bg-red-50/40'
+                      : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/40'
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      evidenciaCapture.state.isRecording ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      <Mic className={`w-4 h-4 ${evidenciaCapture.state.isRecording ? 'animate-pulse' : ''}`} />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">Voice note</div>
+                      <div className="text-xs text-gray-500">
+                        {evidenciaCapture.state.isRecording
+                          ? 'Recording — tap to stop'
+                          : evidenciaCapture.state.capturedAudio.length > 0
+                            ? `${evidenciaCapture.state.capturedAudio.length} captured`
+                            : 'Captain confirmation'}
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                    evidenciaCapture.state.isRecording ? 'text-red-600' : 'text-gray-400'
+                  }`}>
+                    {evidenciaCapture.state.isRecording ? 'Stop' : 'Record'}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handlePhotoCapture}
+                  className="w-full flex items-center justify-between rounded-xl border border-gray-200 px-3 py-2 hover:border-emerald-300 hover:bg-emerald-50/40 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                      evidenciaCapture.state.capturedPhotos.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'
+                    }`}>
+                      <Camera className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-gray-900">Photo proof</div>
+                      <div className="text-xs text-gray-500">
+                        {evidenciaCapture.state.capturedPhotos.length > 0
+                          ? `${evidenciaCapture.state.capturedPhotos.length} photo${evidenciaCapture.state.capturedPhotos.length === 1 ? '' : 's'} captured`
+                          : 'Scoreboard or team shot'}
+                      </div>
+                    </div>
+                  </div>
+                  <span className={`text-[10px] font-bold uppercase tracking-widest ${
+                    evidenciaCapture.state.capturedPhotos.length > 0 ? 'text-emerald-600' : 'text-gray-400'
+                  }`}>
+                    {evidenciaCapture.state.capturedPhotos.length > 0 ? 'Captured' : 'Capture'}
+                  </span>
+                </button>
               </div>
             </Card>
 

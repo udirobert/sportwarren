@@ -13,8 +13,12 @@ export const TRUST_TIER_WEIGHTS: Record<TrustTier, number> = {
   platinum: 60,
 };
 
-// Minimum trust score required for auto-verification
-export const AUTO_VERIFICATION_THRESHOLD = 75;
+// Minimum trust score required for auto-verification.
+// Lowered from 75 to 50 to support greenfield users with a single
+// social-trust match between the same squads — the first match gets
+// auto-verified at a lower trust weight, subsequent matches at higher
+// trust as the relationship builds.
+export const AUTO_VERIFICATION_THRESHOLD = 50;
 
 // Minimum trust score before flagging for review
 export const REVIEW_THRESHOLD = 30;

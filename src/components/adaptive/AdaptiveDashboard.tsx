@@ -401,7 +401,37 @@ export const AdaptiveDashboard: React.FC = () => {
         priority: 500, // Top priority
         requiredLevel: 'basic' as const,
         category: 'matches' as const,
-        component: (
+        component: stats?.matches === 0 ? (
+          /* Persona-aware empty state: when the user has no matches
+             yet, show a card that bridges the persona narrative to
+             the match center. Uses the same emerald gradient language
+             as the OnboardingFlow card-as-anchor and the XP summary
+             banner. The link uses ?mode=capture, which combined with
+             the OnboardingFlow sessionStorage flag from the match
+             bridge lands the user in capture mode for first-time
+             visitors. */
+          <Link href="/match?mode=capture">
+            <Card className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-4 shadow-lg shadow-emerald-500/5 hover:border-emerald-500/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-emerald-400/40 bg-emerald-500/15">
+                  <Trophy className="h-6 w-6 text-emerald-300" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">
+                    Your first match
+                  </p>
+                  <p className="text-base font-black text-white">
+                    Log a result to make stats real
+                  </p>
+                  <p className="text-[11px] leading-relaxed text-emerald-200/70 mt-1">
+                    Pick your opponent, enter the score, and submit. The opposing captain confirms and your card updates.
+                  </p>
+                </div>
+                <ChevronRight className="h-5 w-5 shrink-0 text-emerald-300" />
+              </div>
+            </Card>
+          </Link>
+        ) : (
           <div onClick={() => completeChecklistItem('log_match')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); completeChecklistItem('log_match'); } }}>
             <MatchEnginePreview
               squadId={primarySquadId}
