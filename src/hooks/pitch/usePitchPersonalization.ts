@@ -118,6 +118,6 @@ export function usePitchPersonalization(formation: Formation) {
     initDefaults,
     resetCurrentFormation,
     resetAllFormations,
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- setters from useState are referentially stable
+  /* eslint-disable-next-line react-hooks/exhaustive-deps -- setters from useState are referentially stable */
   }, [names, avatars, showNames, blurFaces, blurLevel, selectedSlotIndex, unlocked, initDefaults, setUnlockedAndPersist, resetCurrentFormation, resetAllFormations]);
 }

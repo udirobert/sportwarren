@@ -248,7 +248,7 @@ export const AdaptiveDashboard: React.FC = () => {
           requiredLevel: 'basic',
           category: 'stats',
           component: (
-            <OnboardingFlow journeyStage={entryState.id} onComplete={() => setPersonalizationDone(true)} />
+            <OnboardingFlow journeyStage={entryState.id} onComplete={() => setPersonalizationDone(true)} completeChecklistItem={completeChecklistItem} />
           ),
         });
       }
@@ -1179,6 +1179,7 @@ export const AdaptiveDashboard: React.FC = () => {
             <OnboardingFlow
               onComplete={() => setPersonalizationDone(true)}
               journeyStage={entryState.id}
+              completeChecklistItem={completeChecklistItem}
             />
           </div>
         </div>
@@ -1247,7 +1248,7 @@ export const AdaptiveDashboard: React.FC = () => {
         </Card>
       </div>
 
-      <OnboardingFlow onVisibilityChange={setIsTourActive} journeyStage={entryState.id} />
+      <OnboardingFlow onVisibilityChange={setIsTourActive} journeyStage={entryState.id} completeChecklistItem={completeChecklistItem} />
       {!isTourActive && <AgenticConcierge journeyStage={entryState.id} />}
 
       {/* Next-action focus strip — shows the single most important thing to do */}
