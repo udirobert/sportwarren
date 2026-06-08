@@ -71,6 +71,10 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
   });
   
   // Personalization state
+  // These defaults are read once at mount. The persona prefill useEffect below
+  // overrides `formation` and `playerName` from a fresh landing-card save when
+  // one exists (precedence: persona > preferences). Position has no preference
+  // default — it starts unset and is set by the persona branch or the user.
   const [playerName, setPlayerName] = useState('');
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [formation, setFormation] = useState<string | null>(preferences.squadBranding?.formation || null);

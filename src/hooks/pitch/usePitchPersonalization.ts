@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import type { Formation } from '@/types';
 import { DEFAULT_PLAYER_NAMES, STORAGE_KEYS, formationKey } from '@/lib/pitch.constants';
 
@@ -107,7 +107,7 @@ export function usePitchPersonalization(formation: Formation) {
     } catch { /* localStorage unavailable */ }
   }, []);
 
-  return {
+  return useMemo(() => ({
     names, setNames,
     avatars, setAvatars,
     showNames, setShowNames,
@@ -118,5 +118,6 @@ export function usePitchPersonalization(formation: Formation) {
     initDefaults,
     resetCurrentFormation,
     resetAllFormations,
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- setters from useState are referentially stable
+  }, [names, avatars, showNames, blurFaces, blurLevel, selectedSlotIndex, unlocked, initDefaults, setUnlockedAndPersist, resetCurrentFormation, resetAllFormations]);
 }
