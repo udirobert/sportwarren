@@ -20,15 +20,29 @@ if [ ! -f "$ARTIFACT_PATH" ]; then
   exit 1
 fi
 
-# 2. Upload to server
+# 2. Apply pending migrations from the build machine (uses local node_modules +
+# DATABASE_URL from .env to connect to the remote DB). If this fails, abort
+# before uploading so the server keeps the previous working release.
+echo "🗄️  Running prisma migrate deploy..."
+if ! npx prisma migrate deploy; then
+  echo "❌ Migration failed — aborting deploy to keep previous release live"
+  exit 1
+fi
+
+# 3. Upload to server
 echo "📤 Uploading $ARTIFACT_NAME to $SSH_TARGET..."
 scp "$ARTIFACT_PATH" "$SSH_TARGET:$REMOTE_PATH/"
 
-# 3. Trigger remote deploy script
-echo "⚡ Executing remote deployment script..."
-ssh "$SSH_TARGET" "bash $REMOTE_APP_ROOT/current/scripts/deploy-runtime-release.sh $REMOTE_PATH/$ARTIFACT_NAME"
+# 4. Extract the fresh deploy script from the new artifact so changes to
+# the deploy script itself take effect in the same release (not one-deploy-lag).
+echo "⚡ Extracting deploy script from new artifact..."
+ssh "$SSH_TARGET" "tar -xzf $REMOTE_PATH/$ARTIFACT_NAME -C /tmp ./scripts/deploy-runtime-release.sh"
 
-# 4. Final health check
+# 5. Trigger remote deploy script
+echo "⚡ Executing remote deployment script..."
+ssh "$SSH_TARGET" "bash /tmp/scripts/deploy-runtime-release.sh $REMOTE_PATH/$ARTIFACT_NAME"
+
+# 6. Final health check
 echo "✅ Deployment complete. Waiting for restart..."
 sleep 5
 echo "🩺 Running health check..."
