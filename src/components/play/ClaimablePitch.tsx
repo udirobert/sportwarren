@@ -410,8 +410,8 @@ export function ClaimablePitch({
         setActiveSlot(meIndex);
       }
     }
-  // Only run on mount (meIndex and autoOpenDismissed intentionally excluded from dep array)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  /* Only run on mount (meIndex and autoOpenDismissed intentionally excluded from dep array) */
+  /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
 
   // Poll for new claims every 15s

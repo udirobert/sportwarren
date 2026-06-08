@@ -160,8 +160,8 @@ export default function SettingsPage() {
     if (!avatarChanged) {
       setAvatarPreview(currentProfile.user?.avatar ?? null);
     }
-    // Using JSON.stringify as a stable primitive dependency to avoid TypeScript deep instantiation error
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    /* Using JSON.stringify as a stable primitive dependency to avoid TypeScript deep instantiation error */
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [JSON.stringify(currentProfile), avatarChanged]);
 
   const copyAddress = async () => {

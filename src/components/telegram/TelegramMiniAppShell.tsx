@@ -227,7 +227,7 @@ export function TelegramMiniAppShell({
   useEffect(() => {
     if (!sessionBootstrapped || requiresSquadOnboarding) { setLoading(false); return; }
     void loadContext();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [sessionToken, sessionBootstrapped, requiresSquadOnboarding]);
 
   const handleTabChange = (tabId: TabId) => {

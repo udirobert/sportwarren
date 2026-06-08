@@ -153,7 +153,7 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
   // — we only want to re-run when the formation value itself changes.
   useEffect(() => {
     if (urlStateReady) onFormationChange?.(formation);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [formation, urlStateReady]);
 
   // ── Derived ──
