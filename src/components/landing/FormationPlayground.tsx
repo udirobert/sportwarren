@@ -106,6 +106,12 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
   const urlStateApplied = useRef(false);
   useEffect(() => {
     if (urlStateApplied.current || typeof window === "undefined") return;
+
+    // If the URL contains Privy OAuth callback params, skip formation decode.
+    // The OAuth code needs to remain in the URL for Privy SDK to process it.
+    // The sync-to-URL effect below will strip them if we run formation decode now.
+    if (window.location.search.includes("privy_oauth_state=")) return;
+
     const parsed = decodeFormationFromUrl(new URLSearchParams(window.location.search));
     const parsedSize = (parsed.size as SquadSize | undefined) || initialSquadSize;
 

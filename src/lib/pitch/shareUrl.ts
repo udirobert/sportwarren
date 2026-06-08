@@ -135,10 +135,30 @@ export function decodeFormationFromUrl(
 
 /**
  * Sync current formation state to the browser URL without navigation.
+ * Preserves non-formation query params (e.g. Privy OAuth state/code) so
+ * OAuth callbacks aren't stripped during playground interaction.
  */
 export function syncStateToUrl(params: FormationUrlState): void {
   if (typeof window === "undefined") return;
-  const url = encodeFormationToUrl(params);
+
+  const currentUrl = new URL(window.location.href);
+  const incomingSp = new URLSearchParams(
+    encodeFormationToUrl(params).replace(/^[^?]*\?/, ""),
+  );
+
+  // Copy all existing params, then overlay formation params on top.
+  // This preserves third-party params (privy_oauth_state, etc.) while
+  // keeping formation state up to date.
+  const merged = new URLSearchParams(currentUrl.search);
+  for (const [key, value] of incomingSp) {
+    merged.set(key, value);
+  }
+
+  const mergedQuery = merged.toString();
+  const url = mergedQuery
+    ? `${currentUrl.pathname}?${mergedQuery}`
+    : currentUrl.pathname;
+
   window.history.replaceState(null, "", url);
 }
 
