@@ -124,9 +124,9 @@ export function createSeededPlayers(
  * Hook wrapper that memoizes the seeded players.
  */
 export function useSimulationPlayers(input: SimulationPlayerInput): PlayerPuck[] {
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   return useMemo(
     () => createSeededPlayers(input),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [input.formation, input.playersPerSide, input.names.join(",")]
   );
 }

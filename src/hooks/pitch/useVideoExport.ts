@@ -70,7 +70,7 @@ export function useVideoExport(
       }
       if (videoUrl) URL.revokeObjectURL(videoUrl);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, []);
 
   const getMimeType = useCallback((): string => {
