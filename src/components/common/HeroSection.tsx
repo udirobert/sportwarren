@@ -8,16 +8,19 @@ import { getJourneyContent } from '@/lib/journey/content';
 import { getJourneyStage } from '@/lib/journey/stage';
 import { AccountStatusControl } from '@/components/common/AccountStatusControl';
 import { FormationPlayground } from '@/components/landing/FormationPlayground';
+import { PlayerCardPreview } from '@/components/landing/PlayerCardPreview';
 import { ProblemSection } from '@/components/landing/ProblemSection';
 import { SolutionSection } from '@/components/landing/SolutionSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
 import { AppPreviewSection } from '@/components/landing/AppPreviewSection';
 import { InlineWaitlistSection } from '@/components/landing/InlineWaitlistSection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
+import type { PlayerPosition } from '@/types';
 
 interface HeroSectionProps {
   onGetStarted?: () => void;
   onGuestStart?: () => void;
+  onSavePlayerCard?: () => void;
 }
 
 interface PlatformStats {
@@ -27,8 +30,10 @@ interface PlatformStats {
   waitlistTotal?: number;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestStart }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestStart, onSavePlayerCard }) => {
   const [stats, setStats] = useState<PlatformStats>({ totalPlayers: 0, totalMatches: 0, totalAgents: 0, waitlistTotal: 0 });
+  const [cardName, setCardName] = useState('');
+  const [cardPosition, setCardPosition] = useState<PlayerPosition>('MF');
   const { address, chain, loginAsGuest, hasAccount, hasWallet, isGuest, authStatus } = useWallet();
   const parallaxRef = useRef<HTMLDivElement>(null);
   const parallaxRef2 = useRef<HTMLDivElement>(null);
@@ -68,6 +73,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
     authState: authStatus.state,
   });
   const journeyContent = getJourneyContent(journeyStage);
+  const isPublicVisitor = journeyStage === 'public_visitor';
+  // New visitors lead with the low-friction persona path (build a card as a guest)
+  // rather than a wallet gate. Returning users sign in via the secondary link/header.
+  const handlePrimaryCta = () => {
+    if (isPublicVisitor) {
+      document.getElementById('formation-playground')?.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      onGetStarted?.();
+    }
+  };
   const hasEmbeddedWalletAddress = Boolean(address && /^0x[a-fA-F0-9]{8,}$/.test(address));
   const heroSessionLine = isGuest
     ? 'Guest preview is active. Claim your season when you are ready for progress that sticks.'
@@ -135,21 +150,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             Start with a 5s, 6s, or 7s setup. Put yourself in the team, share the card to the group, then turn matchdays into verified stats, XP, and squad history.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-            <button
-              onClick={onGetStarted}
-              className="group relative inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
-            >
-              <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
-              {journeyContent.hero.primaryCtaLabel}
-              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
-            </button>
-          </div>
+          <PlayerCardPreview
+            authed={hasAccount && !isGuest}
+            onSave={onSavePlayerCard ?? onGetStarted}
+            onNameChange={setCardName}
+            onPositionChange={setCardPosition}
+          />
 
-          <div className="mx-auto mb-6 grid max-w-3xl gap-2 text-left sm:grid-cols-3">
+          <div className="mx-auto mb-6 grid max-w-2xl gap-2 text-left sm:grid-cols-2">
             {[
               { icon: Target, label: "Pick a role", detail: "Small-sided shapes first, 11v11 when the squad grows." },
-              { icon: Sparkles, label: "See yourself", detail: "Your claimed spot becomes a starter player card." },
               { icon: Users, label: "Bring the squad", detail: "Every teammate gets a native spot to claim and share." },
             ].map(({ icon: Icon, label, detail }) => (
               <div key={label} className="rounded-xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
@@ -160,23 +170,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             ))}
           </div>
 
-          <div className="mb-6">
-            <a
-              href="https://t.me/sportwarrenbot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+            <button
+              onClick={handlePrimaryCta}
+              className="group relative inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
             >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-              </svg>
-              <span>Or open in Telegram</span>
-              <ArrowRight className="w-3 h-3" aria-hidden="true" />
-            </a>
+              <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
+              {journeyContent.hero.primaryCtaLabel}
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+            </button>
           </div>
 
           {journeyContent.hero.stageLine && (
-            <p className="mb-6 text-sm font-bold uppercase tracking-[0.16em] text-green-300">
+            <p className="mb-4 text-sm font-bold uppercase tracking-[0.16em] text-green-300">
               {journeyContent.hero.stageLine}
             </p>
           )}
@@ -202,12 +208,37 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
           </div>
 
           <div className="mb-6">
+            <a
+              href="https://t.me/sportwarrenbot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+            >
+              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+              </svg>
+              <span>Or open in Telegram</span>
+              <ArrowRight className="w-3 h-3" aria-hidden="true" />
+            </a>
+          </div>
+
+          <div id="formation-playground" className="mb-6">
             <React.Suspense fallback={<div className="h-[400px] w-full animate-pulse rounded-2xl bg-white/5" />}>
-              <FormationPlayground />
+              <FormationPlayground initialName={cardName} initialPosition={cardPosition} />
             </React.Suspense>
           </div>
 
-          {!hasAccount && journeyContent.hero.previewLinkLabel && (
+          {!hasAccount && isPublicVisitor && (
+            <p className="text-center mb-16">
+              <button
+                onClick={onGetStarted}
+                className="text-sm text-gray-500 hover:text-gray-300 underline underline-offset-4 decoration-gray-600 hover:decoration-gray-400 transition-colors"
+              >
+                Already have an account? Sign in
+              </button>
+            </p>
+          )}
+          {!hasAccount && !isPublicVisitor && journeyContent.hero.previewLinkLabel && (
             <p className="text-center mb-16">
               <button
                 onClick={() => {
@@ -220,7 +251,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               </button>
             </p>
           )}
-          {hasAccount && <div className="mb-16" />}
+          {(hasAccount || (!isPublicVisitor && !journeyContent.hero.previewLinkLabel)) && <div className="mb-16" />}
 
           {stats.totalPlayers > 0 || (stats.waitlistTotal && stats.waitlistTotal > 0) ? (
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 p-4 sm:p-6 border border-white/5 rounded-2xl bg-white/2">

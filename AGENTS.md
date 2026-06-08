@@ -17,6 +17,11 @@ are the source of truth.
 - Sentry for monitoring
 - Vercel deployment
 
+### AI tooling
+- GitHub Copilot (inline autocomplete + Copilot Chat) is used for day-to-day development
+  assistance alongside other agents. Treat Copilot suggestions as drafts to review, not
+  authoritative — they may lag the Next.js 16 / React 18.3 conventions above.
+
 ### Key conventions
 - Use `src/app` for App Router pages
 - Server actions in `src/server/actions/`

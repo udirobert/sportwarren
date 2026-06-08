@@ -8,7 +8,7 @@ import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
 import type { DashboardEntryAction, DashboardEntryStateId } from '@/lib/dashboard/entry-state';
-import type { ChecklistId } from '@/lib/onboarding/types';
+import type { ChecklistId } from '@/lib/onboarding/flow';
 import dynamic from 'next/dynamic';
 
 const AgenticConcierge = dynamic(() => import('@/components/adaptive/AgenticConcierge').then(m => ({ default: m.AgenticConcierge })), { ssr: false });
@@ -61,7 +61,7 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
           {entryState.primaryAction.href ? (
             <Link
               href={entryState.primaryAction.href}
-              onClick={() => completeChecklistItem(entryState.primaryAction.intent === 'log_match' ? 'log_match' : 'set_formation')}
+              onClick={() => completeChecklistItem(entryState.primaryAction.intent === 'log_match' ? 'log_match' : 'complete_card')}
               className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-xl shadow-green-500/30 hover:shadow-green-500/50 transition-all duration-200 hover:scale-[1.02]"
             >
               <Zap className="w-5 h-5 mr-2" />

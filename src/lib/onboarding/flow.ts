@@ -1,7 +1,24 @@
 // Unified Onboarding Flow - Single source of truth for user onboarding
-// Consolidates: GuestTour, OnboardingTour, QuickPersonalization, OnboardingChecklist
 
 import type { DashboardEntryStateId } from '@/lib/dashboard/entry-state';
+
+export type Platform = 'web' | 'mobile' | 'telegram';
+
+export type ChecklistId =
+  | 'complete_card'
+  | 'join_squad'
+  | 'log_match'
+  | 'claim_identity';
+
+export interface ChecklistItemConfig {
+  id: ChecklistId;
+  label: string;
+  description: string;
+  emoji: string;
+  href: string;
+  actionLabel: string;
+  xp: number;
+}
 
 export type OnboardingPhase = 
   | 'tour'        // Guided walkthrough overlay
@@ -37,10 +54,10 @@ export interface OnboardingCallbacks {
 
 // Platform-aware tour steps
 export const TOUR_STEPS: { id: OnboardingStep; title: string; description: string; emoji: string }[] = [
-  { id: 'welcome', title: 'Welcome to SportWarren', description: 'Your tactical command center for grassroots football', emoji: '🏟️' },
-  { id: 'match-intro', title: 'Log Your First Game', description: 'Track matches, earn XP, and build your reputation', emoji: '🎮' },
+  { id: 'welcome', title: 'Your Player Card', description: 'Six attributes — pace, shooting, passing, and more — that grow with every match. Your card is your identity on the platform.', emoji: '🪪' },
+  { id: 'match-intro', title: 'The Squad Verifies', description: 'Teammates confirm your stats. What starts as a provisional estimate becomes a verified reputation the whole squad trusts.', emoji: '✅' },
   { id: 'meet-coach', title: 'Meet Coach Kite', description: 'Your AI squad manager — scouts opponents, suggests lineups, and handles operations. The blockchain works for you, not the other way around.', emoji: '🤖' },
-  { id: 'claim-identity', title: 'Save Your Progress', description: 'Connect a wallet to protect your data and unlock features', emoji: '⚡' },
+  { id: 'claim-identity', title: 'Make It Permanent', description: 'Save your progress so your card, XP, and squad history stick. A wallet locks protected actions when you need them.', emoji: '💾' },
 ];
 
 // Personalization steps
@@ -48,14 +65,6 @@ export const PERSONALIZATION_STEPS: { id: OnboardingStep; title: string }[] = [
   { id: 'identity', title: 'Create Your Player' },
   { id: 'formation', title: 'Choose Your Formation' },
   { id: 'brand', title: 'Brand Your Squad' },
-];
-
-// Checklist items — ordered to prove value first (match before wallet/squad)
-export const CHECKLIST_ITEMS: { id: string; label: string; description: string; emoji: string; href: string }[] = [
-  { id: 'log_match', label: 'Log your first match', description: 'Jump straight in — start earning XP now', emoji: '⚽', href: '/match?mode=capture' },
-  { id: 'join_squad', label: 'Create or join a squad', description: 'Squads unlock tactics & peer ratings', emoji: '👥', href: '/squad' },
-  { id: 'set_formation', label: 'Set your formation', description: 'Define your squad tactics', emoji: '📋', href: '/squad?tab=tactics' },
-  { id: 'claim_identity', label: 'Save your progress', description: 'Connect a wallet to protect your data', emoji: '⚡', href: '/settings?tab=wallet' },
 ];
 
 // Storage keys

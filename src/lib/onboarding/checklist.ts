@@ -1,35 +1,35 @@
-import type { ChecklistItemConfig, ChecklistId, Platform } from './types';
+import type { ChecklistItemConfig, ChecklistId, Platform } from './flow';
 
 export const CHECKLIST_IDS: readonly ChecklistId[] = [
+    'complete_card',
     'join_squad',
-    'set_formation',
     'log_match',
     'claim_identity',
 ] as const;
 
 export const CHECKLIST_ITEMS: ChecklistItemConfig[] = [
     {
+        id: 'complete_card',
+        label: 'Complete your player card',
+        description: 'Set your name, position, and avatar — your card is your identity on the platform',
+        emoji: '🪪',
+        href: '/profile',
+        actionLabel: 'Edit card',
+        xp: 50,
+    },
+    {
         id: 'join_squad',
         label: 'Create or join a squad',
-        description: 'Squads are the core of SportWarren — form your team to start logging matches and earning XP',
+        description: 'Squads verify your stats — teammates make your card real',
         emoji: '👥',
         href: '/squad',
         actionLabel: 'Find a squad',
         xp: 100,
     },
     {
-        id: 'set_formation',
-        label: 'Set your formation',
-        description: 'Pick a formation — Coach Kite can auto-select based on your squad strengths',
-        emoji: '📋',
-        href: '/squad?tab=tactics',
-        actionLabel: 'Set tactics',
-        xp: 50,
-    },
-    {
         id: 'log_match',
         label: 'Log your first match',
-        description: 'Submit a real match — Coach Kite handles verification, peer ratings, and XP',
+        description: 'Real results turn provisional stats into a verified record',
         emoji: '⚽',
         href: '/match?mode=capture',
         actionLabel: 'Log match',
@@ -37,12 +37,12 @@ export const CHECKLIST_ITEMS: ChecklistItemConfig[] = [
     },
     {
         id: 'claim_identity',
-        label: 'Save your progress',
-        description: 'Create an account so your results, XP, and squad data persist across devices',
+        label: 'Secure your progress',
+        description: 'Connect a wallet so your card, XP, and squad history persist across devices',
         emoji: '⚡',
         href: '/settings?tab=wallet',
         actionLabel: 'Save progress',
-        xp: 100,
+        xp: 50,
     },
 ];
 

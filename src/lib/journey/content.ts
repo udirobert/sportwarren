@@ -77,40 +77,40 @@ const DEFAULT_RIVAL = 'the next opponent';
 export function getJourneyNavigationSubtitle(stage: JourneyStage): string {
   switch (stage) {
     case 'guest_preview':
-      return 'Simulate your squad tactics and see the result';
+      return 'Preview your card and see how the platform works';
     case 'account_ready':
-      return 'Set up your tactical DNA to inspire your squad';
+      return 'Complete your player card and set your formation';
     case 'wallet_unverified':
-      return 'Verify once to unlock deeper tactical insights';
+      return 'Secure your card so stats persist across devices';
     case 'verified_no_squad':
-      return 'Create the squad your tactical vision will run through';
+      return 'Bring teammates onto your card to verify each other';
     case 'season_kickoff':
-      return 'Invite your team to their first tactical briefing';
+      return 'Log a real result to turn your card stats from provisional to verified';
     case 'returning_manager':
-      return 'Keep the tactical prep and match loop moving';
+      return 'Keep the card growing with matches and squad activity';
     case 'public_visitor':
     default:
-      return 'Experience tactical depth, squad building, and on-chain results';
+      return 'Build your player card, share it, and make the stats real';
   }
 }
 
 export function getJourneyNextAction(stage: JourneyStage): JourneyAction {
   switch (stage) {
     case 'guest_preview':
-      return { label: 'Start your own season', href: '/?connect=1' };
+      return { label: 'Claim your card', href: '/?connect=1' };
     case 'account_ready':
-      return { label: 'Set up your tactics', href: '/match/preview' };
+      return { label: 'Complete your card', href: '/match/preview' };
     case 'wallet_unverified':
-      return { label: 'Verify wallet', href: '/settings?tab=wallet' };
+      return { label: 'Secure your card', href: '/settings?tab=wallet' };
     case 'verified_no_squad':
       return { label: 'Create squad', href: '/squad' };
     case 'season_kickoff':
-      return { label: 'Team Briefing', href: '/match/briefing/next' };
+      return { label: 'Log first result', href: '/match/briefing/next' };
     case 'returning_manager':
       return { label: 'Go to Match Center', href: '/match?mode=preview' };
     case 'public_visitor':
     default:
-      return { label: 'Start your season', href: '/?connect=1' };
+      return { label: 'Build your card', href: '/?connect=1' };
   }
 }
 
@@ -211,24 +211,24 @@ export function getJourneyContent(
     case 'guest_preview':
       return {
         hero: {
-          primaryCtaLabel: 'Start Your Own Season',
-          stageLine: 'Try the match flow, then create an account to track real progress.',
+          primaryCtaLabel: 'Claim Your Card',
+          stageLine: 'Your provisional stats are waiting — sign up to make them permanent.',
           previewLinkLabel: 'or continue the preview',
           highlights: [
-            'See the full match flow',
-            'Understand how verification works',
-            'Convert to a real account when ready',
+            'Your player card with six attributes',
+            'Squad-verified stats that level up',
+            'Share your card to the group',
           ],
         },
         authModal: {
-          title: 'Claim this season',
-          description: 'Turn your preview into a real account so matches, squad moves, and reputation belong to you.',
+          title: 'Claim your player card',
+          description: 'Create an account to save your card, track your stats, and let your squad verify your reputation.',
           benefits: [
-            'Save progress beyond the preview session',
+            'Save your player card beyond this session',
             'Start logging real matches immediately',
-            'Unlock squad, wallet, and reputation setup when ready',
+            'Share your card to the squad group chat',
           ],
-          primaryActionLabel: 'Start My Season',
+          primaryActionLabel: 'Claim My Card',
           secondaryActionLabel: 'Continue preview',
         },
         assistant: {
@@ -263,23 +263,23 @@ export function getJourneyContent(
     case 'account_ready':
       return {
         hero: {
-          primaryCtaLabel: 'Set Your Tactical DNA',
-          stageLine: 'Choose your formation and play style before you hit the pitch.',
+          primaryCtaLabel: 'Complete Your Card',
+          stageLine: 'Finish your player card — name, position, avatar — and pick your formation.',
           highlights: [
+            'Complete your player card',
             'Pick your starting formation',
-            'Define your squad play style',
-            'Earn XP for tactical discipline',
+            'Your squad verifies the stats',
           ],
         },
         authModal: {
-          title: 'Your Account Is Ready',
-          description: 'The fastest win is logging one real match. Add a wallet when you need protected actions, treasury moves, and on-chain progression.',
+          title: 'Your card is waiting',
+          description: 'Finish setting up your player card and pick your formation. Real matches turn provisional stats into a verified record.',
           benefits: [
-            'Log your first match and earn real XP',
-            'Share the verification link so the result sticks',
-            'Create or join a squad once your team is ready',
+            'Complete your player card in 30 seconds',
+            'Share your card to the squad group',
+            'Log your first match to make stats real',
           ],
-          primaryActionLabel: 'Start My Season',
+          primaryActionLabel: 'Complete My Card',
           secondaryActionLabel: 'Add a wallet now',
         },
         assistant: {
@@ -314,23 +314,23 @@ export function getJourneyContent(
     case 'wallet_unverified':
       return {
         hero: {
-          primaryCtaLabel: 'Verify And Continue',
-          stageLine: 'One signature unlocks protected actions and squad control.',
+          primaryCtaLabel: 'Secure Your Card',
+          stageLine: 'One signature locks in your card so stats, XP, and squad history persist across devices.',
           highlights: [
-            'Unlock protected actions',
-            'Secure your progression',
-            'Keep treasury paths ready',
+            'Protect your player card across devices',
+            'Unlock verified stat tracking',
+            'Keep your squad history safe',
           ],
         },
         authModal: {
-          title: 'Verify your wallet',
-          description: 'Approve one signature to unlock protected actions while keeping the rest of your flow unchanged.',
+          title: 'Secure your player card',
+          description: 'Approve one signature to protect your card, stats, and squad history. Your progress stays safe across sessions and devices.',
           benefits: [
-            'Approve secure squad and treasury actions',
-            'Keep your session trusted across protected flows',
-            'Move from setup into real team operations',
+            'Lock in your card and stats permanently',
+            'Keep squad history and XP safe',
+            'Unlock protected actions for your team',
           ],
-          primaryActionLabel: 'Verify wallet',
+          primaryActionLabel: 'Secure my card',
         },
         assistant: {
           welcome: 'Your wallet is connected. One verification signature unlocks protected actions without slowing down the rest of your season.',
@@ -364,21 +364,21 @@ export function getJourneyContent(
     case 'verified_no_squad':
       return {
         hero: {
-          primaryCtaLabel: 'Build Your Squad',
-          stageLine: 'Create your squad to start tracking matches together.',
+          primaryCtaLabel: 'Bring The Squad',
+          stageLine: 'Your card is ready. Bring your teammates onto the pitch to verify each other\'s stats.',
           highlights: [
-            'Invite teammates',
-            'Track matches together',
+            'Invite teammates to claim their cards',
+            'Squad verifies your stats',
             'Compete as a team',
           ],
         },
         authModal: {
-          title: 'Your identity is secured',
-          description: 'Now create or join the squad that should accumulate match proof, invites, and reputation with you.',
+          title: 'Add your squad',
+          description: 'Your card becomes real when your teammates verify your matches. Create or join a squad to start the verification loop.',
           benefits: [
-            'Give results a real team context',
-            'Create an invite path for teammates',
-            'Prepare governance and treasury features for later',
+            'Give your card a real team context',
+            'Teammates verify your stats',
+            'Start the squad reputation loop',
           ],
           primaryActionLabel: 'Create squad',
         },
@@ -414,21 +414,21 @@ export function getJourneyContent(
     case 'season_kickoff':
       return {
         hero: {
-          primaryCtaLabel: 'Log Your First Result',
-          stageLine: 'Log a match to create proof and start your season.',
+          primaryCtaLabel: 'Make Your Stats Real',
+          stageLine: 'One verified match turns your provisional card into a living record.',
           highlights: [
-            'Create the first verified result',
-            'Give your squad real context',
-            'Start the weekly match loop',
+            'Log a real result to verify your stats',
+            'Your squad confirms the card is real',
+            'Watch your attributes level up after each match',
           ],
         },
         authModal: {
           title: 'Make the first result count',
-          description: 'Everything important is in place. The next win is getting one real result verified so the season becomes real.',
+          description: 'Your card, squad, and formation are in place. One verified match turns your provisional stats into a real player record.',
           benefits: [
-            'Create the first proof-backed season event',
-            'Give the squad something concrete to react to',
-            'Turn setup into a weekly operating loop',
+            'Turn provisional stats into verified attributes',
+            'Give your squad something concrete to react to',
+            'Start the weekly match-and-card-growth loop',
           ],
           primaryActionLabel: 'Log first result',
         },
@@ -465,11 +465,11 @@ export function getJourneyContent(
       return {
         hero: {
           primaryCtaLabel: 'Open Manager Console',
-          stageLine: 'Your squad is ready. Get back to logging matches.',
+          stageLine: 'Keep your card growing — log results, coordinate the squad, watch the stats climb.',
           highlights: [
-            'Review what needs attention',
-            'Log the next result',
-            'Coordinate your squad',
+            'Log results to grow your card',
+            'Coordinate the squad for the next match',
+            'Review what needs attention this week',
           ],
         },
         authModal: {
@@ -515,25 +515,25 @@ export function getJourneyContent(
     default:
       return {
         hero: {
-          primaryCtaLabel: 'Log Your First Match',
-          stageLine: 'Every match. Every stat. Forever.',
+          primaryCtaLabel: 'Try the Tactics Board',
+          stageLine: 'Claim your spot. Share your card. Make the stats real.',
           previewLinkLabel: 'or take the tour',
           highlights: [
-            'Log matches in 30 seconds',
-            'Stats that level up like FIFA',
-            'Banter with AI coaches. Relive the highlights.',
+            'Claim your spot in 30 seconds',
+            'Six attributes that level up like FIFA',
+            'Share your card — your squad verifies the stats',
           ],
         },
         authModal: {
-          title: 'Stop ghost games.',
-          description: 'Every goal. Every assist. Every clean sheet. Tracked, verified, and yours forever. Log the match. See your stats level up. Get roasted by AI coaches. Your kickabouts just got an upgrade.',
+          title: 'Make your card permanent',
+          description: 'The card you just built — your name, position, and provisional stats — will become your real player profile. Save it and start logging verified matches.',
           benefits: [
-            'Track every banger',
-            'Level up your squad',
-            'Turn matches into memories that actually stick',
+            'Your player card, XP, and history stick across devices',
+            'Teammates verify your real stats',
+            'Unlock squad tools and protected actions later',
           ],
-          primaryActionLabel: 'Get Started Free',
-          secondaryActionLabel: 'Explore preview',
+          primaryActionLabel: 'Save My Card & Start',
+          secondaryActionLabel: 'Keep browsing',
         },
         assistant: {
           welcome: "I'm here to make your footy matches more legendary — before, during, and after the final whistle.",

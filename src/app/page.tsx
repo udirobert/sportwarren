@@ -16,6 +16,7 @@ export default function Home() {
   const router = useRouter();
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState(false);
+  const [modalContext, setModalContext] = useState<{ title?: string; description?: string }>({});
   const hasRealSession = hasAccount || authenticated;
 
   useEffect(() => {
@@ -50,6 +51,20 @@ export default function Home() {
     if (hasRealSession) {
       router.push('/dashboard');
     } else {
+      setModalContext({});
+      setPendingRedirect(true);
+      setShowWalletModal(true);
+    }
+  };
+
+  const handleSavePlayerCard = () => {
+    if (hasRealSession) {
+      router.push('/profile');
+    } else {
+      setModalContext({
+        title: 'Save your player card',
+        description: 'Create an account to keep your provisional stats and make them permanent.',
+      });
       setPendingRedirect(true);
       setShowWalletModal(true);
     }
@@ -60,6 +75,7 @@ export default function Home() {
       <HeroSection
         onGetStarted={handleEnterApp}
         onGuestStart={() => router.push('/dashboard')}
+        onSavePlayerCard={handleSavePlayerCard}
       />
       
       {/* Floating Feedback Button */}
@@ -78,13 +94,16 @@ export default function Home() {
         </a>
       </div>
 
-      <WalletConnectModal 
-        isOpen={showWalletModal} 
+      <WalletConnectModal
+        isOpen={showWalletModal}
         onClose={() => {
           setShowWalletModal(false);
           setPendingRedirect(false);
-        }} 
+          setModalContext({});
+        }}
         onConnected={() => setPendingRedirect(true)}
+        contextTitle={modalContext.title}
+        contextDescription={modalContext.description}
       />
     </>
   );

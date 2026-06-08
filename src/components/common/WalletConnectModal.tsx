@@ -15,6 +15,8 @@ interface WalletConnectModalProps {
   onClose: () => void;
   onConnected?: () => void;
   forceWalletSetup?: boolean;
+  contextTitle?: string;
+  contextDescription?: string;
 }
 
 export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
@@ -22,6 +24,8 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
   onClose,
   onConnected,
   forceWalletSetup = false,
+  contextTitle,
+  contextDescription,
 }) => {
   const { connect, hasWallet, refreshAuthSignature, authStatus } = useWallet();
   const { login: privyLogin, authenticated, ready } = usePrivy();
@@ -124,8 +128,14 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
           <div className="p-8">
             <div className="text-center mb-8">
               <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/20">
-                <span className="text-3xl">⚽</span>
+                <span className="text-3xl">{contextTitle ? '🪪' : '⚽'}</span>
               </div>
+              {contextTitle && (
+                <div className="mb-3">
+                  <h2 className="text-lg font-black text-gray-900">{contextTitle}</h2>
+                  {contextDescription && <p className="text-sm text-gray-500 mt-1">{contextDescription}</p>}
+                </div>
+              )}
               <h2 className="text-2xl font-bold text-gray-900 mb-2">{publicContent.authModal.title}</h2>
               <p className="text-gray-600 text-sm">{publicContent.authModal.description}</p>
             </div>

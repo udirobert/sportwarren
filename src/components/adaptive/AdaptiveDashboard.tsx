@@ -402,7 +402,7 @@ export const AdaptiveDashboard: React.FC = () => {
         requiredLevel: 'basic' as const,
         category: 'matches' as const,
         component: (
-          <div onClick={() => completeChecklistItem('set_formation')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); completeChecklistItem('set_formation'); } }}>
+          <div onClick={() => completeChecklistItem('log_match')} role="button" tabIndex={0} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); completeChecklistItem('log_match'); } }}>
             <MatchEnginePreview
               squadId={primarySquadId}
               formation={squadTactics?.formation}

@@ -4,13 +4,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '@/contexts/WalletContext';
 import { trackOnboarding, trackCoreGrowthEvent, type CoreGrowthEvent } from '@/lib/analytics';
 import { CHECKLIST_ITEMS } from '@/lib/onboarding/checklist';
-import type { ChecklistId } from '@/lib/onboarding/types';
+import type { ChecklistId } from '@/lib/onboarding/flow';
 
 export { CHECKLIST_IDS } from '@/lib/onboarding/checklist';
-export type { ChecklistId } from '@/lib/onboarding/types';
+export type { ChecklistId } from '@/lib/onboarding/flow';
 
 const CHECKLIST_GROWTH_EVENTS: Partial<Record<ChecklistId, CoreGrowthEvent>> = {
-    set_formation: 'tactics_customized',
+    complete_card: 'player_card_save_intent',
     log_match: 'first_match_submitted',
     claim_identity: 'identity_connected',
 };
@@ -34,8 +34,8 @@ interface OnboardingState {
 
 const DEFAULT_STATE: OnboardingState = {
     checklistItems: {
+        complete_card: false,
         join_squad: false,
-        set_formation: false,
         log_match: false,
         claim_identity: false,
     },

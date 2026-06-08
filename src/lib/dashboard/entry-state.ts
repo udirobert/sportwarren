@@ -78,9 +78,9 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
     return {
       id: 'guest_preview',
       eyebrow: 'Guest Preview',
-      headline: 'Explore the platform before you commit',
-      description: 'You are in an interactive preview. Log a result, inspect the flow, then start your own season when you are ready to save real progress.',
-      primaryAction: { intent: 'open_wallet', label: 'Start your own season', href: '/?connect=1' },
+      headline: 'Preview your player card',
+      description: 'You are in an interactive preview. Build your card, see the match flow, then claim it to save real progress.',
+      primaryAction: { intent: 'open_wallet', label: 'Claim your card', href: '/?connect=1' },
       secondaryAction: { intent: 'preview_match', label: 'Preview your next match', href: '/match/preview' },
       surfaceLabel: 'Preview',
       queueLabel: 'Preview queue ready',
@@ -88,8 +88,8 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       squadLabel: 'Preview roster',
       isNewUser: true,
       steps: [
-        { number: 1, label: 'Try a match', completed: false, href: '/match?mode=capture' },
-        { number: 2, label: 'Claim your season', completed: false, href: '/?connect=1' },
+        { number: 1, label: 'Build your card', completed: false, href: '/match?mode=capture' },
+        { number: 2, label: 'Claim your card', completed: false, href: '/?connect=1' },
       ],
     };
   }
@@ -97,20 +97,20 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
   if (stage === 'account_ready' || stage === 'public_visitor') {
     return {
       id: 'account_ready',
-      eyebrow: 'Individual Identity',
-      headline: 'Set your tactical DNA',
-      description: 'Before you hit the pitch, set your formation and play style. Your tactical choices define how you earn XP and reputation.',
-      primaryAction: { intent: 'preview_match', label: 'Set Tactics', href: '/squad?tab=tactics' },
+      eyebrow: 'Player Card',
+      headline: 'Complete your player card',
+      description: 'Finish your card — name, position, avatar — and pick your formation. Real matches turn provisional stats into a verified record.',
+      primaryAction: { intent: 'preview_match', label: 'Complete Card', href: '/squad?tab=tactics' },
       secondaryAction: { intent: 'open_staff_room', label: 'Explore the Staff Room' },
-      surfaceLabel: 'Profile Setup',
-      queueLabel: 'Tactics not set yet',
+      surfaceLabel: 'Player Card',
+      queueLabel: 'Card not completed yet',
       identityLabel: 'Account active',
       squadLabel: input.squadCount > 0 ? 'Squad linked' : 'No squad yet',
       isNewUser: true,
       steps: [
-        { number: 1, label: 'Set your tactics', completed: input.completedChecklistCount > 0, href: '/squad?tab=tactics' },
-        { number: 2, label: 'Customize Avatar', completed: false, href: '/settings?tab=profile' },
-        { number: 3, label: 'Connect Wallet', completed: false, href: '/settings?tab=wallet' },
+        { number: 1, label: 'Complete your card', completed: input.completedChecklistCount > 0, href: '/squad?tab=tactics' },
+        { number: 2, label: 'Set your avatar', completed: false, href: '/settings?tab=profile' },
+        { number: 3, label: 'Secure your progress', completed: false, href: '/settings?tab=wallet' },
       ],
     };
   }
@@ -139,20 +139,20 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
   if (stage === 'wallet_unverified') {
     return {
       id: 'wallet_unverified',
-      eyebrow: 'Tactical Preparation',
-      headline: 'Refine your tactical vision',
-      description: 'Your wallet is connected. Now define your squad identity and formation to unlock deeper tactical briefings.',
-      primaryAction: { intent: 'preview_match', label: 'Refine Tactics', href: '/squad?tab=tactics' },
-      secondaryAction: { intent: 'verify_wallet', label: 'Verify Identity' },
+      eyebrow: 'Card Security',
+      headline: 'Secure your player card',
+      description: 'Your wallet is connected. One signature locks in your card so stats, XP, and squad history persist across devices.',
+      primaryAction: { intent: 'preview_match', label: 'Complete Card', href: '/squad?tab=tactics' },
+      secondaryAction: { intent: 'verify_wallet', label: 'Secure my card' },
       surfaceLabel: 'Wallet Connected',
       queueLabel: getPendingLabel(input.pendingMatchesCount),
       identityLabel: 'Wallet connected',
       squadLabel: input.squadCount > 0 ? 'Squad linked' : 'No squad yet',
       isNewUser: true,
       steps: [
-        { number: 1, label: 'Set tactics', completed: input.completedChecklistCount > 0, href: '/squad?tab=tactics' },
-        { number: 2, label: 'Verify wallet', completed: false },
-        { number: 3, label: 'Join a squad', completed: input.squadCount > 0, href: '/squad' },
+        { number: 1, label: 'Complete your card', completed: input.completedChecklistCount > 0, href: '/squad?tab=tactics' },
+        { number: 2, label: 'Secure your card', completed: false },
+        { number: 3, label: 'Add teammates', completed: input.squadCount > 0, href: '/squad' },
       ],
     };
   }
@@ -160,20 +160,20 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
   if (stage === 'verified_no_squad') {
     return {
       id: 'verified_no_squad',
-      eyebrow: 'Squad Identity',
-      headline: 'Create your tactical hub',
-      description: 'Your identity is secured. Now create the squad that will execute your tactical vision on the pitch.',
-      primaryAction: { intent: 'create_squad', label: 'Build Your Squad' },
+      eyebrow: 'Squad Verification',
+      headline: 'Add teammates to your card',
+      description: 'Your card is secured. Bring your teammates onto the pitch so they can verify your stats and make the card real.',
+      primaryAction: { intent: 'create_squad', label: 'Create Squad' },
       secondaryAction: { intent: 'join_squad', label: 'Find a Squad' },
-      surfaceLabel: 'Identity Secured',
+      surfaceLabel: 'Card Secured',
       queueLabel: getPendingLabel(input.pendingMatchesCount),
       identityLabel: 'Verified',
       squadLabel: 'No squad yet',
       isNewUser: true,
       steps: [
-        { number: 1, label: 'Set tactics', completed: input.completedChecklistCount > 0, href: '/squad?tab=tactics' },
-        { number: 2, label: 'Create or join squad', completed: false },
-        { number: 3, label: 'Log match', completed: false, href: '/match?mode=capture' },
+        { number: 1, label: 'Complete your card', completed: input.completedChecklistCount > 0, href: '/squad?tab=tactics' },
+        { number: 2, label: 'Add teammates', completed: false },
+        { number: 3, label: 'Log first match', completed: false, href: '/match?mode=capture' },
       ],
     };
   }
@@ -181,9 +181,9 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
   if (stage === 'season_kickoff') {
     return {
       id: 'season_kickoff',
-      eyebrow: 'Match Day Ready',
-      headline: 'Prepare for your first match',
-      description: 'Your squad is ready. Set your tactics, choose your formation, and preview how your team will line up before the whistle blows.',
+      eyebrow: 'Card Verification',
+      headline: 'Make your stats real',
+      description: 'Your squad is in place. Log a verified match to turn your provisional card stats into a living player record.',
       primaryAction: { intent: 'preview_match', label: 'Preview your squad', href: '/squad?tab=tactics' },
       secondaryAction: { intent: 'open_match_center', label: 'Match Center', href: '/match' },
       surfaceLabel: 'Season Live',
@@ -192,9 +192,9 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       squadLabel: 'Squad active',
       isNewUser: true,
       steps: [
-        { number: 1, label: 'Set up squad', completed: true },
-        { number: 2, label: 'Choose formation', completed: false, href: '/squad?tab=tactics' },
-        { number: 3, label: 'Play match', completed: input.totalMatches > 0, href: '/match?mode=capture' },
+        { number: 1, label: 'Build your squad', completed: true },
+        { number: 2, label: 'Pick your formation', completed: false, href: '/squad?tab=tactics' },
+        { number: 3, label: 'Log first match', completed: input.totalMatches > 0, href: '/match?mode=capture' },
       ],
     };
   }
@@ -206,8 +206,8 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       ? `${input.pendingMatchesCount} match report${input.pendingMatchesCount === 1 ? '' : 's'} need review`
       : 'Ready for your next match',
     description: input.pendingMatchesCount > 0
-      ? 'Review the queue, confirm results, and keep the season moving.'
-      : 'Your squad is set. Preview your tactics, check your lineup, or head to the pitch.',
+      ? 'Review the queue, confirm results, and keep your card growing.'
+      : 'Your squad is active. Log a result, preview your lineup, or head to the pitch to keep the card growing.',
     primaryAction: input.pendingMatchesCount > 0
       ? { intent: 'open_match_center', label: 'Review reports', href: '/match?mode=verify' }
       : { intent: 'preview_match', label: 'Preview next match', href: '/squad?tab=tactics' },

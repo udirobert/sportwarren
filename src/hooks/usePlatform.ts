@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { Platform } from '@/lib/onboarding/types';
+import type { Platform } from '@/lib/onboarding/flow';
 
 interface PlatformDetectionResult {
     platform: Platform;
