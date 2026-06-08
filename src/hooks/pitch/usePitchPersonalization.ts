@@ -107,17 +107,21 @@ export function usePitchPersonalization(formation: Formation) {
     } catch { /* localStorage unavailable */ }
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- setters from useState are referentially stable
-  return useMemo(() => ({
-    names, setNames,
-    avatars, setAvatars,
-    showNames, setShowNames,
-    blurFaces, setBlurFaces,
-    blurLevel, setBlurLevel,
-    selectedSlotIndex, setSelectedSlotIndex,
-    unlocked, setUnlocked: setUnlockedAndPersist,
-    initDefaults,
-    resetCurrentFormation,
-    resetAllFormations,
+  const value = useMemo(() => {
+    return {
+      names, setNames,
+      avatars, setAvatars,
+      showNames, setShowNames,
+      blurFaces, setBlurFaces,
+      blurLevel, setBlurLevel,
+      selectedSlotIndex, setSelectedSlotIndex,
+      unlocked, setUnlocked: setUnlockedAndPersist,
+      initDefaults,
+      resetCurrentFormation,
+      resetAllFormations,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setters from useState are referentially stable
   }, [names, avatars, showNames, blurFaces, blurLevel, selectedSlotIndex, unlocked, initDefaults, setUnlockedAndPersist, resetCurrentFormation, resetAllFormations]);
+
+  return value;
 }
