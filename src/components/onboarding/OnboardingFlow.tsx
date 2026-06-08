@@ -492,12 +492,12 @@ function PersonalizationCard({
                     <Camera className="w-4 h-4" /> {avatarPreview ? 'Change photo' : 'Upload photo'}
                   </button>
                   {!avatarPreview && (
-                    // Skip link: avatar is optional, the "Choose Formation" CTA
-                    // doesn't gate on it. Card-savers skip the identity step
-                    // entirely so this is only seen by Path A visitors who
-                    // didn't prefill a card — still worth it for first-time
-                    // friction. Gated on name length so a 1-char name can't
-                    // slip through past the "Choose Formation" CTA's check.
+                    /* Skip link: avatar is optional, the "Choose Formation" CTA
+                       doesn't gate on it. Card-savers skip the identity step
+                       entirely so this is only seen by Path A visitors who
+                       didn't prefill a card — still worth it for first-time
+                       friction. Gated on name length so a 1-char name can't
+                       slip through past the "Choose Formation" CTA's check. */
                     <button
                       type="button"
                       onClick={() => playerName.trim().length >= 2 && setStep('formation')}
@@ -540,10 +540,10 @@ function PersonalizationCard({
               <p className="text-sm text-gray-400 mb-8">This defines how your squad lines up on match day.</p>
 
               {hasPendingPersona && (
-                // Card-as-anchor: the card-saver's provisional card, visible
-                // as a visual element above the formation picker. Echoes the
-                // landing PlayerCardPreview so the journey reads as one
-                // continuous surface ("your card is still with you").
+                /* Card-as-anchor: the card-saver's provisional card, visible
+                   as a visual element above the formation picker. Echoes the
+                   landing PlayerCardPreview so the journey reads as one
+                   continuous surface ("your card is still with you"). */
                 <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-4 shadow-lg shadow-emerald-500/5">
                   <div className="flex items-center gap-3">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-emerald-400/40 bg-emerald-500/15 text-base font-black text-emerald-200">
