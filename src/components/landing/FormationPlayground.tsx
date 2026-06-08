@@ -77,16 +77,18 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
   const personalization = usePitchPersonalization(formation);
 
   // ── Wire card preview name/position into the first pitch slot ──
+  // Destructured to keep the dep array tight; the hook return is memoized
+  // but the values themselves are the only ones this effect actually reads.
+  const { names: pitchNames, setNames: setPitchNames, showNames: pitchShowNames, setShowNames: setPitchShowNames } = personalization;
   useEffect(() => {
     if (!initialName) return;
     const idx = initialPosition ? POSITION_TO_PITCH_INDEX[initialPosition] : 0;
-    const next = [...personalization.names];
-    if (next[idx] !== initialName) {
-      next[idx] = initialName;
-      personalization.setNames(next);
-      if (!personalization.showNames) personalization.setShowNames(true);
-    }
-  }, [initialName, initialPosition, personalization]);
+    if (pitchNames[idx] === initialName) return;
+    const next = [...pitchNames];
+    next[idx] = initialName;
+    setPitchNames(next);
+    if (!pitchShowNames) setPitchShowNames(true);
+  }, [initialName, initialPosition, pitchNames, pitchShowNames, setPitchNames, setPitchShowNames]);
 
   // ── Real squad data (when logged in) ──
   const { activeSquadId } = useActiveSquad();
