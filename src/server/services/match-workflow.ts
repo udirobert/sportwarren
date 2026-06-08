@@ -712,6 +712,55 @@ export async function verifyMatchResult({
       } catch (e) {
         console.error('Failed to sync twin after verification:', e);
       }
+
+      // 2. ERC-8004 giveFeedback — close the trust loop between Yellow
+      //    fee rail and the GOAT Network reputation registry. For each
+      //    participating player who has a goatAgentId on their profile,
+      //    submit reputation feedback to the registry. Non-blocking:
+      //    any error is logged and the verification still succeeds.
+      try {
+        const { isGoatErc8004Configured, giveFeedback } = await import(
+          './blockchain/goat-erc8004'
+        );
+        if (isGoatErc8004Configured()) {
+          const participants = await prisma.squadMember.findMany({
+            where: {
+              squadId: { in: [resultMatch.homeSquadId, resultMatch.awaySquadId] },
+              status: 'active',
+            },
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  playerProfile: { select: { goatAgentId: true } },
+                },
+              },
+            },
+          });
+          for (const member of participants) {
+            const agentId = member.user.playerProfile?.goatAgentId;
+            if (!agentId) continue;
+            try {
+              await giveFeedback({
+                agentId,
+                value: 5, // 5/5 — verified match result is a strong positive
+                valueDecimals: 0,
+                tag1: 'match_result',
+                tag2: homeResult,
+                endpoint: 'verify-match',
+                feedbackURI: `/match/${matchId}`,
+              });
+            } catch (feedbackErr) {
+              console.warn(
+                `Failed to giveFeedback to GOAT agent ${agentId} for match ${matchId}:`,
+                feedbackErr,
+              );
+            }
+          }
+        }
+      } catch (goatErr) {
+        console.warn('GOAT Network giveFeedback step failed:', goatErr);
+      }
     }
 
     if (newStatus === 'verified' || newStatus === 'disputed') {

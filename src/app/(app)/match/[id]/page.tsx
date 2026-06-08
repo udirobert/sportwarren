@@ -303,6 +303,56 @@ export default function PublicMatchPage() {
                     </Card>
                 )}
 
+                {/* Settlement summary — surfaces the Yellow fee rail and
+                    x402 attestation so users see the platform is genuinely
+                    settling value on their behalf, not just running a DB. */}
+                {isVerified && m.yellowFeeSessionId && (
+                    <Card className="bg-gray-900 border-blue-500/30 p-4">
+                        <h4 className="text-xs font-bold text-blue-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <Shield className="w-3 h-3" /> Settlement
+                        </h4>
+                        <div className="space-y-2 text-xs">
+                            <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Fee rail</span>
+                                <span className="text-blue-300 font-bold uppercase">Yellow Network</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-gray-400">Session ID</span>
+                                <span className="text-gray-500 font-mono text-[10px] truncate max-w-[12rem]" title={m.yellowFeeSessionId}>
+                                    {m.yellowFeeSessionId}
+                                </span>
+                            </div>
+                            {m.yellowFeeSettledAt && (
+                                <div className="flex items-center justify-between">
+                                    <span className="text-gray-400">Settled at</span>
+                                    <span className="text-emerald-300 font-bold">
+                                        {new Date(m.yellowFeeSettledAt).toLocaleString()}
+                                    </span>
+                                </div>
+                            )}
+                        </div>
+                    </Card>
+                )}
+
+                {/* x402 verification attestation badge — confirms the
+                    match was also recorded as a paid x402 attestation on
+                    the Kite chain (visible to external agents). */}
+                {isVerified && (
+                    <Card className="bg-gray-900 border-emerald-500/30 p-4">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/15 flex items-center justify-center shrink-0">
+                                <CheckCircle2 className="w-5 h-5 text-emerald-300" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <h4 className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Verified via x402</h4>
+                                <p className="text-xs text-emerald-200/70 mt-0.5">
+                                    Match result recorded as a paid x402 attestation on the Kite agent economy. External agents can verify the same result for the standard fee.
+                                </p>
+                            </div>
+                        </div>
+                    </Card>
+                )}
+
                 {/* Peer Ratings Section */}
                 {isVerified && (
                   <Card className="bg-gradient-to-br from-gray-900 to-indigo-950/20 border-indigo-500/30 p-6 text-center shadow-lg shadow-indigo-500/10">
