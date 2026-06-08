@@ -166,7 +166,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             currentFormation={cardFormation}
           />
 
-          <div className="mx-auto mb-6 grid max-w-2xl gap-2 text-left sm:grid-cols-2">
+          <div className="mx-auto mb-6 grid max-w-sm gap-2 text-left sm:grid-cols-2">
             {[
               { icon: Target, label: "Pick a role", detail: "Small-sided shapes first, 11v11 when the squad grows." },
               { icon: Users, label: "Bring the squad", detail: "Every teammate gets a native spot to claim and share." },
