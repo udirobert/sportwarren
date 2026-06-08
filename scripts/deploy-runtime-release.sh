@@ -45,9 +45,15 @@ if [ -f "$SHARED_DIR/.env" ]; then
   ln -sfn "$SHARED_DIR/.env" "$RELEASE_DIR/.next/standalone/.env"
 fi
 
-# Migrations and Prisma client generation are done locally before building the
-# artifact (pnpm prisma migrate deploy && pnpm prisma generate). The server
-# stays lightweight — no npm installs here.
+# Apply pending Prisma migrations from the shipped artifact before swapping
+# the current symlink. The Prisma client was generated at build time and is
+# baked into the standalone bundle, so the matching schema + migrations must
+# be applied here. Runs from the release dir so the local prisma/ directory
+# and the bundled prisma binary are picked up.
+(cd "$RELEASE_DIR" && npx prisma migrate deploy) || {
+  echo "prisma migrate deploy failed — aborting deploy to keep previous release live"
+  exit 1
+}
 
 ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
 
