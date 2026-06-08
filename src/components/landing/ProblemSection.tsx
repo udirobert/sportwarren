@@ -4,22 +4,22 @@ import { ScrollReveal } from '@/components/landing/ScrollReveal';
 
 const problems = [
   {
-    title: 'No Recognition',
-    description: 'Your goals, assists, and performances disappear after the final whistle. No permanent record, no reputation.',
+    title: 'No Record',
+    description: 'Your goals, assists, and clean sheets vanish after the final whistle. No card, no stats, no proof you were ever there.',
     icon: Ghost,
     color: 'text-red-400',
     bg: 'bg-red-500/10',
   },
   {
-    title: 'No Competition',
-    description: "You play the same local teams every week. No way to challenge squads across cities or prove you're the best.",
+    title: 'No Squad',
+    description: 'You play every week but nobody verifies your stats. Your card stays provisional forever without teammates to back it up.',
     icon: TrendingDown,
     color: 'text-orange-400',
     bg: 'bg-orange-500/10',
   },
   {
-    title: 'No Strategy',
-    description: 'You play the same way every week. No tactical analysis, no opponent scouting, no squad optimization.',
+    title: 'No Growth',
+    description: 'Without verified matches, your attributes never level up. No XP, no progression, no way to see yourself improve over time.',
     icon: HelpCircle,
     color: 'text-amber-400',
     bg: 'bg-amber-500/10',

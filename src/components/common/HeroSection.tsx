@@ -28,12 +28,29 @@ interface PlatformStats {
   totalMatches: number;
   totalAgents: number;
   waitlistTotal?: number;
+  recentCardsClaimed?: number;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestStart, onSavePlayerCard }) => {
-  const [stats, setStats] = useState<PlatformStats>({ totalPlayers: 0, totalMatches: 0, totalAgents: 0, waitlistTotal: 0 });
-  const [cardName, setCardName] = useState('');
-  const [cardPosition, setCardPosition] = useState<PlayerPosition>('MF');
+  const [stats, setStats] = useState<PlatformStats>({ totalPlayers: 0, totalMatches: 0, totalAgents: 0, waitlistTotal: 0, recentCardsClaimed: 0 });
+  const [cardName, setCardName] = useState(() => {
+    if (typeof window === 'undefined') return '';
+    try {
+      const stored = localStorage.getItem('sw_partial_persona');
+      return stored ? JSON.parse(stored).displayName || '' : '';
+    } catch {
+      return '';
+    }
+  });
+  const [cardPosition, setCardPosition] = useState<PlayerPosition>(() => {
+    if (typeof window === 'undefined') return 'MF';
+    try {
+      const stored = localStorage.getItem('sw_partial_persona');
+      return stored ? JSON.parse(stored).position || 'MF' : 'MF';
+    } catch {
+      return 'MF';
+    }
+  });
   // Tracked separately from the playground's internal state so the persona
   // context (and therefore onboarding prefill) can carry the formation
   // through Path D: playground → save card → personalize.
@@ -41,6 +58,19 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
   const { address, chain, loginAsGuest, hasAccount, hasWallet, isGuest, authStatus } = useWallet();
   const parallaxRef = useRef<HTMLDivElement>(null);
   const parallaxRef2 = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (typeof window === 'undefined') return;
+      const partial = { displayName: cardName, position: cardPosition };
+      if (cardName.trim() || cardPosition !== 'MF') {
+        localStorage.setItem('sw_partial_persona', JSON.stringify(partial));
+      } else {
+        localStorage.removeItem('sw_partial_persona');
+      }
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [cardName, cardPosition]);
 
   useEffect(() => {
     fetch('/api/platform/stats')
@@ -317,6 +347,18 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                   <div className="text-left">
                     <div className="text-lg sm:text-2xl font-bold text-white">{stats.waitlistTotal.toLocaleString()}</div>
                     <div className="text-[10px] sm:text-xs text-gray-400">On Waitlist</div>
+                  </div>
+                </div>
+              )}
+              {stats.recentCardsClaimed && stats.recentCardsClaimed > 0 && (
+                <div className="flex items-center space-x-2 group">
+                  <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform relative">
+                    <CheckCircle2 className="w-4 sm:w-5 h-4 sm:h-5 text-emerald-400" aria-hidden="true" />
+                    <span className="absolute inset-0 rounded-full bg-emerald-400/30 animate-pulse" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-lg sm:text-2xl font-bold text-white">{stats.recentCardsClaimed.toLocaleString()}</div>
+                    <div className="text-[10px] sm:text-xs text-gray-400">Cards This Week</div>
                   </div>
                 </div>
               )}
