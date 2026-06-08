@@ -11,6 +11,7 @@ export type { ChecklistId } from '@/lib/onboarding/flow';
 
 const CHECKLIST_GROWTH_EVENTS: Partial<Record<ChecklistId, CoreGrowthEvent>> = {
     complete_card: 'player_card_save_intent',
+    set_formation: 'tactics_customized',
     log_match: 'first_match_submitted',
     claim_identity: 'identity_connected',
 };
@@ -35,6 +36,7 @@ interface OnboardingState {
 const DEFAULT_STATE: OnboardingState = {
     checklistItems: {
         complete_card: false,
+        set_formation: false,
         join_squad: false,
         log_match: false,
         claim_identity: false,

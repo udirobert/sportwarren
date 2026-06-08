@@ -482,10 +482,24 @@ function PersonalizationCard({
                   </div>
                 </div>
                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onAvatarFile} />
-                <div>
+                <div className="flex flex-col gap-1">
                   <button onClick={() => fileInputRef.current?.click()} className="text-sm font-bold text-green-400 hover:text-green-300 transition-colors flex items-center gap-2">
                     <Camera className="w-4 h-4" /> {avatarPreview ? 'Change photo' : 'Upload photo'}
                   </button>
+                  {!avatarPreview && (
+                    // Skip link: avatar is optional, the "Choose Formation" CTA
+                    // doesn't gate on it. Card-savers skip the identity step
+                    // entirely so this is only seen by Path A visitors who
+                    // didn't prefill a card — still worth it for first-time
+                    // friction.
+                    <button
+                      type="button"
+                      onClick={() => setStep('formation')}
+                      className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4 decoration-gray-700 hover:decoration-gray-500 transition-colors text-left"
+                    >
+                      Skip for now
+                    </button>
+                  )}
                 </div>
               </div>
               

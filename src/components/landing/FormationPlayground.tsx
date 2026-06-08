@@ -26,6 +26,13 @@ import { MatchResultCard, type MatchResultData } from "@/components/landing/pitc
 interface FormationPlaygroundProps {
   initialName?: string;
   initialPosition?: PlayerPosition;
+  /**
+   * Called whenever the current formation changes. Used by the hero to
+   * pipe the active formation into PlayerCardPreview so the persona context
+   * carries it through to onboarding (Path D: playground → save card →
+   * personalize prefill).
+   */
+  onFormationChange?: (formation: Formation) => void;
 }
 
 const POSITION_TO_PITCH_INDEX: Record<PlayerPosition, number> = {
@@ -41,7 +48,7 @@ interface OpponentState {
   names: string[];
 }
 
-export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initialName, initialPosition }) => {
+export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initialName, initialPosition, onFormationChange }) => {
   // ── Challenge flow ──
   const [flow, setFlow] = useState<PlaygroundFlow>("build");
   const [opponent, setOpponent] = useState<OpponentState | null>(null);
@@ -139,6 +146,15 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
       names: personalization.names,
     });
   }, [formation, playStyle, primaryColor, squadSize, personalization.names, flow, urlStateReady]);
+
+  // ── Emit formation changes to the parent (for persona prefill) ──
+  // Gated on urlStateReady so the initial mount and the URL-settled value
+  // don't fire duplicate emits. onFormationChange intentionally NOT in deps
+  // — we only want to re-run when the formation value itself changes.
+  useEffect(() => {
+    if (urlStateReady) onFormationChange?.(formation);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formation, urlStateReady]);
 
   // ── Derived ──
   const formationList = useMemo(

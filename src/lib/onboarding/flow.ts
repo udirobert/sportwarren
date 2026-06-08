@@ -6,6 +6,7 @@ export type Platform = 'web' | 'mobile' | 'telegram';
 
 export type ChecklistId =
   | 'complete_card'
+  | 'set_formation'
   | 'join_squad'
   | 'log_match'
   | 'claim_identity';

@@ -181,9 +181,9 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
   if (stage === 'season_kickoff') {
     return {
       id: 'season_kickoff',
-      eyebrow: 'Card Verification',
+      eyebrow: 'Season Kickoff',
       headline: 'Make your stats real',
-      description: 'Your squad is in place. Log a verified match to turn your provisional card stats into a living player record.',
+      description: 'Your squad is in place. Log a verified match to turn your provisional stats into a living player record.',
       primaryAction: { intent: 'preview_match', label: 'Preview your squad', href: '/squad?tab=tactics' },
       secondaryAction: { intent: 'open_match_center', label: 'Match Center', href: '/match' },
       surfaceLabel: 'Season Live',
@@ -206,8 +206,8 @@ export function getDashboardEntryState(input: DashboardEntryStateInput): Dashboa
       ? `${input.pendingMatchesCount} match report${input.pendingMatchesCount === 1 ? '' : 's'} need review`
       : 'Ready for your next match',
     description: input.pendingMatchesCount > 0
-      ? 'Review the queue, confirm results, and keep your card growing.'
-      : 'Your squad is active. Log a result, preview your lineup, or head to the pitch to keep the card growing.',
+      ? 'Review the queue, confirm results, and keep your stats growing.'
+      : 'Your squad is active. Log a result, preview your lineup, or head to the pitch to keep the momentum going.',
     primaryAction: input.pendingMatchesCount > 0
       ? { intent: 'open_match_center', label: 'Review reports', href: '/match?mode=verify' }
       : { intent: 'preview_match', label: 'Preview next match', href: '/squad?tab=tactics' },

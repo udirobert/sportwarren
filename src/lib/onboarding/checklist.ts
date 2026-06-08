@@ -2,6 +2,7 @@ import type { ChecklistItemConfig, ChecklistId, Platform } from './flow';
 
 export const CHECKLIST_IDS: readonly ChecklistId[] = [
     'complete_card',
+    'set_formation',
     'join_squad',
     'log_match',
     'claim_identity',
@@ -16,6 +17,15 @@ export const CHECKLIST_ITEMS: ChecklistItemConfig[] = [
         href: '/profile',
         actionLabel: 'Edit card',
         xp: 50,
+    },
+    {
+        id: 'set_formation',
+        label: 'Pick your formation',
+        description: 'Choose your starting formation and play style — this shapes how your squad lines up on match day',
+        emoji: '📋',
+        href: '/squad?tab=tactics',
+        actionLabel: 'Set formation',
+        xp: 75,
     },
     {
         id: 'join_squad',
