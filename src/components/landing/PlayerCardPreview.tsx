@@ -6,7 +6,7 @@ import {
 } from "lucide-react";
 import { ATTRIBUTE_KEYS } from "@/server/services/personalization/twin-types";
 import type { PlayerPosition } from "@/types";
-import { trackCoreGrowthEvent, trackFeatureUsed } from "@/lib/analytics";
+import { trackCoreGrowthEvent, trackFeatureUsed, trackEvent } from "@/lib/analytics";
 import { storePendingPersona } from "@/lib/claims/persona";
 import { ATTRIBUTE_DISPLAY, ATTRIBUTE_BAR_TONES } from "@/lib/attributes/display";
 import { PROVISIONAL_ATTRIBUTES, VERIFIED_DELTAS } from "@/lib/attributes/provisional";
@@ -62,11 +62,15 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
   const handleNameChange = (value: string) => {
     setName(value);
     onNameChange?.(value);
+    if (value.trim().length > 0 && name.trim().length === 0) {
+      trackEvent('card_name_entered', { position });
+    }
   };
 
   const handlePositionChange = (value: PlayerPosition) => {
     setPosition(value);
     onPositionChange?.(value);
+    trackEvent('card_position_selected', { position: value });
   };
 
   const displayName = name.trim() || "Your name";

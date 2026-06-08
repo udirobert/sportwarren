@@ -6,6 +6,7 @@ import { X, ChevronRight, ChevronLeft, Sparkles, Cpu, Zap, MousePointer2, Check,
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
+import { trackEvent } from '@/lib/analytics';
 import { Card } from '@/components/ui/Card';
 import { TermTooltip, GlossaryButton } from '@/components/ui/TermTooltip';
 import { trpc } from '@/lib/trpc-client';
@@ -107,6 +108,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
       // Skip tour — user already claimed a spot, they know the product
       setHasCompletedTour(true);
       setPhase('personalize');
+      trackEvent('personalization_started', { source: 'pending_claim' });
       setShowBanner(false);
       localStorage.setItem(ONBOARDING_STORAGE_KEYS.TOUR_COMPLETED, 'true');
       return;
@@ -122,6 +124,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
       setPersonalizationStep('formation');
       setHasCompletedTour(true);
       setPhase('personalize');
+      trackEvent('personalization_started', { source: 'pending_persona' });
       setShowBanner(false);
       localStorage.setItem(ONBOARDING_STORAGE_KEYS.TOUR_COMPLETED, 'true');
     }
@@ -166,6 +169,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
 
   // Tour handlers
   const startTour = useCallback(() => {
+    trackEvent('tour_started');
     setShowBanner(false);
     setTourStep(0);
   }, []);
@@ -174,7 +178,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
     if (tourStep < TOUR_STEPS.length - 1) {
       setTourStep(prev => prev + 1);
     } else {
-      // Tour complete
+      trackEvent('tour_completed');
       localStorage.setItem(ONBOARDING_STORAGE_KEYS.TOUR_COMPLETED, 'true');
       setHasCompletedTour(true);
       setTourStep(-1);
@@ -191,11 +195,12 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
   }, [tourStep]);
   
   const handleSkipTour = useCallback(() => {
+    trackEvent('tour_skipped', { step: tourStep });
     localStorage.setItem(ONBOARDING_STORAGE_KEYS.TOUR_COMPLETED, 'true');
     setHasCompletedTour(true);
     setTourStep(-1);
     setPhase('personalize');
-  }, []);
+  }, [tourStep]);
   
   // Personalization handlers
   const handleAvatarFile = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -309,6 +314,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
           hasPendingPersona={hasPendingPersona}
           pendingClaimPosition={pendingClaimPosition}
           completeChecklistItem={completeChecklistItem}
+          skipBrandStep={journeyStage !== 'season_kickoff' && journeyStage !== 'returning_manager'}
         />
         <ConfettiOverlay />
       </>
@@ -450,12 +456,13 @@ interface PersonalizationCardProps {
   hasPendingPersona?: boolean;
   pendingClaimPosition?: PlayerPosition | null;
   completeChecklistItem?: (id: string) => void;
+  skipBrandStep?: boolean;
 }
 
 function PersonalizationCard({
   step, setStep, playerName, setPlayerName, avatarPreview, fileInputRef, onAvatarFile,
   formation, setFormation, primaryColor, setPrimaryColor, nickname, setNickname,
-  isCompleting, error, onComplete, onBack, hasPendingPersona, pendingClaimPosition, completeChecklistItem
+  isCompleting, error, onComplete, onBack, hasPendingPersona, pendingClaimPosition, completeChecklistItem, skipBrandStep
 }: PersonalizationCardProps) {
   return (
     <Card className="bg-gradient-to-br from-gray-900 to-black border-gray-800 text-white overflow-hidden relative shadow-2xl max-w-lg mx-auto">
@@ -592,11 +599,20 @@ function PersonalizationCard({
               </div>
               
               <button
-                onClick={() => { if (formation) { completeChecklistItem?.('set_formation'); setStep('brand'); } }}
+                onClick={() => {
+                  if (formation) {
+                    completeChecklistItem?.('set_formation');
+                    if (skipBrandStep) {
+                      onComplete();
+                    } else {
+                      setStep('brand');
+                    }
+                  }
+                }}
                 disabled={!formation}
                 className="w-full py-4 bg-white text-black rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-green-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                Define Your Identity <ChevronRight className="w-5 h-5" />
+                {skipBrandStep ? 'Launch Your Season' : 'Define Your Identity'} <ChevronRight className="w-5 h-5" />
               </button>
               {!hasPendingPersona && (
                 <button onClick={() => setStep('identity')} className="w-full py-3 text-xs text-gray-600 hover:text-gray-400 font-bold uppercase tracking-widest transition-colors mt-4">Back to Identity</button>

@@ -1,21 +1,21 @@
 import React from 'react';
-import { Target, Swords, CheckCircle2, Trophy } from 'lucide-react';
+import { Target, Users, CheckCircle2, Trophy } from 'lucide-react';
 import { ScrollReveal } from '@/components/landing/ScrollReveal';
 
 const steps = [
   {
     icon: Target,
-    title: 'Set Your Formation',
-    description: 'Pick your formation, play style, and squad. Use real teammates or test with synthetic players.',
+    title: 'Build Your Card',
+    description: 'Pick your name, position, and formation. Get provisional stats based on your role — six attributes that define you on the pitch.',
     color: 'from-blue-500 to-blue-600',
     hoverBorder: 'hover:border-blue-500/50',
   },
   {
-    icon: Swords,
-    title: 'Challenge Opponents',
-    description: 'Share a challenge link. Opponents see your formation and pick a counter. The simulation runs head-to-head.',
-    color: 'from-orange-500 to-orange-600',
-    hoverBorder: 'hover:border-orange-500/50',
+    icon: Users,
+    title: 'Bring the Squad',
+    description: 'Create or join a squad. Teammates verify each other\'s stats — what starts as provisional becomes a real, trusted record.',
+    color: 'from-purple-500 to-purple-600',
+    hoverBorder: 'hover:border-purple-500/50',
   },
   {
     icon: CheckCircle2,
@@ -26,8 +26,8 @@ const steps = [
   },
   {
     icon: Trophy,
-    title: 'Compete & Grow',
-    description: 'Enter tournaments, climb brackets, earn XP, and build your squad\'s reputation. Every match counts.',
+    title: 'Grow & Compete',
+    description: 'Every verified match grows your card. Earn XP, level up attributes, enter tournaments, and build your squad\'s reputation.',
     color: 'from-amber-500 to-amber-600',
     hoverBorder: 'hover:border-amber-500/50',
   },
@@ -43,10 +43,10 @@ export const HowItWorksSection: React.FC = () => (
             <span>How It Works</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 sm:mb-6">
-            From <span className="text-blue-400">Formation</span> to <span className="text-amber-400">Trophy</span>
+            From <span className="text-blue-400">Card</span> to <span className="text-amber-400">Trophy</span>
           </h2>
           <p className="text-sm sm:text-base lg:text-xl text-gray-300 max-w-2xl mx-auto">
-            Four steps. Every match verified. Every stat permanent.
+            Four steps. Every stat verified. Every match counts.
           </p>
         </ScrollReveal>
       </div>

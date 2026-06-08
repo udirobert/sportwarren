@@ -20,6 +20,7 @@ export default function Home() {
   const hasRealSession = hasAccount || authenticated;
 
   useEffect(() => {
+    trackEvent('landing_viewed', { has_account: String(!!hasRealSession) });
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     const claimCtx = params.get('claimContext');
@@ -46,6 +47,12 @@ export default function Home() {
       router.push('/dashboard');
     }
   }, [hasRealSession, pendingRedirect, router]);
+
+  useEffect(() => {
+    if (showWalletModal) {
+      trackEvent('auth_modal_opened', { context: modalContext.title || 'generic' });
+    }
+  }, [showWalletModal, modalContext.title]);
 
   const handleEnterApp = () => {
     if (hasRealSession) {
