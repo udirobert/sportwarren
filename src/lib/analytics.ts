@@ -27,6 +27,7 @@ export const CORE_GROWTH_EVENTS = {
   opponent_verification_invite_shared: { stage: 'viral' as GrowthStage },
   playground_plan_shared: { stage: 'viral' as GrowthStage },
   playground_setup_saved: { stage: 'conversion' as GrowthStage },
+  player_card_save_intent: { stage: 'conversion' as GrowthStage },
   channel_connected: { stage: 'retention' as GrowthStage },
   identity_connected: { stage: 'conversion' as GrowthStage },
   verification_queue_reviewed: { stage: 'retention' as GrowthStage },

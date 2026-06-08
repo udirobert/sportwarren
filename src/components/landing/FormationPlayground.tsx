@@ -12,7 +12,7 @@ import { FORMATIONS, getFormationsBySquadSize, getDefaultFormationForSize, PLAY_
 import { POSITIONS_BY_SQUAD_SIZE, DEFAULT_PLAYER_NAMES, SQUAD_SIZES, PLAY_STYLES, SQUAD_COLORS } from "@/lib/pitch.constants";
 import { decodeFormationFromUrl, syncStateToUrl, suggestCounterFormation, encodeChallengeUrl } from "@/lib/pitch/shareUrl";
 import type { PlaygroundFlow } from "@/lib/pitch/shareUrl";
-import type { Formation, PlayStyle, SquadSize } from "@/types";
+import type { Formation, PlayStyle, SquadSize, PlayerPosition } from "@/types";
 import {
   Play, Settings2, ChevronLeft, ChevronRight,
   Palette, Users, Zap, Swords, Save, ClipboardList, Share2,
@@ -23,6 +23,15 @@ import { ExportPanel } from "@/components/landing/pitch/ExportPanel";
 import { ChallengeOverlay } from "@/components/landing/pitch/ChallengeOverlay";
 import { MatchResultCard, type MatchResultData } from "@/components/landing/pitch/MatchResultCard";
 
+interface FormationPlaygroundProps {
+  initialName?: string;
+  initialPosition?: PlayerPosition;
+}
+
+const POSITION_TO_PITCH_INDEX: Record<PlayerPosition, number> = {
+  GK: 0, DF: 1, MF: 2, WG: 3, ST: 4,
+};
+
 type PlaygroundMode = "tactics" | "simulation";
 
 interface OpponentState {
@@ -32,7 +41,7 @@ interface OpponentState {
   names: string[];
 }
 
-export const FormationPlayground: React.FC = () => {
+export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initialName, initialPosition }) => {
   // ── Challenge flow ──
   const [flow, setFlow] = useState<PlaygroundFlow>("build");
   const [opponent, setOpponent] = useState<OpponentState | null>(null);
@@ -66,6 +75,18 @@ export const FormationPlayground: React.FC = () => {
 
   // ── Personalization hook (shared across modes) ──
   const personalization = usePitchPersonalization(formation);
+
+  // ── Wire card preview name/position into the first pitch slot ──
+  useEffect(() => {
+    if (!initialName) return;
+    const idx = initialPosition ? POSITION_TO_PITCH_INDEX[initialPosition] : 0;
+    const next = [...personalization.names];
+    if (next[idx] !== initialName) {
+      next[idx] = initialName;
+      personalization.setNames(next);
+      if (!personalization.showNames) personalization.setShowNames(true);
+    }
+  }, [initialName, initialPosition, personalization]);
 
   // ── Real squad data (when logged in) ──
   const { activeSquadId } = useActiveSquad();

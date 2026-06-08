@@ -15,11 +15,11 @@ import {
   ONBOARDING_STORAGE_KEYS,
   TOUR_STEPS,
   PERSONALIZATION_STEPS,
-  CHECKLIST_ITEMS,
   type OnboardingPhase,
   type OnboardingStep,
 } from '@/lib/onboarding/flow';
 import { getPendingClaim, clearPendingClaim, roleToPosition } from '@/lib/claims/context';
+import { consumePendingPersona, clearPendingPersona } from '@/lib/claims/persona';
 
 const FORMATION_OPTIONS = [
   { id: '1-2-1', label: '5s 1-2-1', description: 'One stays, two support, one finishes' },
@@ -88,6 +88,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
   const [pendingClaimPosition, setPendingClaimPosition] = useState<PlayerPosition | null>(null);
   const [pendingClaimToken, setPendingClaimToken] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
+  const [hasPendingPersona, setHasPendingPersona] = useState(false);
   const autoLinkAttemptedRef = React.useRef(false);
 
   useEffect(() => {
@@ -99,6 +100,21 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
       setPendingClaimPosition(roleToPosition(claim.role));
       setPendingClaimToken(claim.claimToken);
       // Skip tour — user already claimed a spot, they know the product
+      setHasCompletedTour(true);
+      setPhase('personalize');
+      setShowBanner(false);
+      localStorage.setItem(ONBOARDING_STORAGE_KEYS.TOUR_COMPLETED, 'true');
+      return;
+    }
+
+    const persona = consumePendingPersona();
+    if (persona) {
+      setPlayerName(persona.displayName);
+      setPendingClaimPosition(persona.position);
+      if (persona.formation) setFormation(persona.formation);
+      setHasPendingPersona(true);
+      // Identity already captured on the landing card — skip to formation.
+      setPersonalizationStep('formation');
       setHasCompletedTour(true);
       setPhase('personalize');
       setShowBanner(false);
@@ -197,6 +213,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
       });
 
       clearPendingClaim();
+      clearPendingPersona();
       setPendingClaimToken(null);
       setPendingClaimPosition(null);
       savePreferences({
@@ -282,6 +299,8 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
           error={profileError}
           onComplete={handleCompletePersonalization}
           onBack={() => setPhase('checklist')}
+          hasPendingPersona={hasPendingPersona}
+          pendingClaimPosition={pendingClaimPosition}
         />
         <ConfettiOverlay />
       </>
@@ -420,12 +439,14 @@ interface PersonalizationCardProps {
   error: string | null;
   onComplete: () => void;
   onBack: () => void;
+  hasPendingPersona?: boolean;
+  pendingClaimPosition?: PlayerPosition | null;
 }
 
 function PersonalizationCard({
   step, setStep, playerName, setPlayerName, avatarPreview, fileInputRef, onAvatarFile,
   formation, setFormation, primaryColor, setPrimaryColor, nickname, setNickname,
-  isCompleting, error, onComplete, onBack
+  isCompleting, error, onComplete, onBack, hasPendingPersona, pendingClaimPosition
 }: PersonalizationCardProps) {
   return (
     <Card className="bg-gradient-to-br from-gray-900 to-black border-gray-800 text-white overflow-hidden relative shadow-2xl max-w-lg mx-auto">
@@ -492,6 +513,20 @@ function PersonalizationCard({
               </div>
               <h2 className="text-2xl font-black uppercase tracking-tight mb-2">Pick Your Formation</h2>
               <p className="text-sm text-gray-400 mb-8">This defines how your squad lines up on match day.</p>
+
+              {hasPendingPersona && (
+                <div className="mb-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.1em] text-emerald-300">
+                      {pendingClaimPosition ?? 'MF'}
+                    </span>
+                    <span className="text-sm font-bold text-white">{playerName || 'Your player'}</span>
+                  </div>
+                  <p className="text-[11px] text-emerald-200/70 leading-relaxed">
+                    These are your starting stats. They become real after your first verified match.
+                  </p>
+                </div>
+              )}
               
               <div className="space-y-3 mb-8">
                 {FORMATION_OPTIONS.map(option => (
@@ -519,7 +554,9 @@ function PersonalizationCard({
               >
                 Define Your Identity <ChevronRight className="w-5 h-5" />
               </button>
-              <button onClick={() => setStep('identity')} className="w-full py-3 text-xs text-gray-600 hover:text-gray-400 font-bold uppercase tracking-widest transition-colors mt-4">Back to Identity</button>
+              {!hasPendingPersona && (
+                <button onClick={() => setStep('identity')} className="w-full py-3 text-xs text-gray-600 hover:text-gray-400 font-bold uppercase tracking-widest transition-colors mt-4">Back to Identity</button>
+              )}
             </motion.div>
           ) : (
             <motion.div key="brand" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>

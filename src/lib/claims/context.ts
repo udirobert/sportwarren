@@ -4,7 +4,7 @@
  * Single source of truth for the pending-claim shape and lifecycle.
  */
 
-export type PlayerPosition = "GK" | "DF" | "MF" | "ST" | "WG";
+import type { PlayerPosition } from "@/types";
 
 export interface PendingClaimContext {
   shareSlug: string;

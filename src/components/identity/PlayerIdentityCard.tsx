@@ -2,25 +2,15 @@
 
 import React from 'react';
 import { Card } from '@/components/ui/Card';
-import { Shield, Swords, Target, TrendingUp, Zap, Star, Award, Calendar, Clock } from 'lucide-react';
+import { Award, Calendar, Clock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import type { PlayerIdentity } from '@/server/services/personalization/identity';
-import type { AttributeKey } from '@/server/services/personalization/twin-types';
+import { ATTRIBUTE_KEYS } from '@/server/services/personalization/twin-types';
+import { ATTRIBUTE_DISPLAY, ATTRIBUTE_BAR_TONES } from '@/lib/attributes/display';
 
 interface PlayerIdentityCardProps {
   identity: PlayerIdentity;
 }
-
-const ATTRIBUTE_LABELS: Record<AttributeKey, { label: string; icon: React.ReactNode; color: string }> = {
-  pace: { label: 'Pace', icon: <Zap className="h-3.5 w-3.5" />, color: 'bg-emerald-500' },
-  shooting: { label: 'Shooting', icon: <Target className="h-3.5 w-3.5" />, color: 'bg-red-500' },
-  passing: { label: 'Passing', icon: <TrendingUp className="h-3.5 w-3.5" />, color: 'bg-sky-500' },
-  dribbling: { label: 'Dribbling', icon: <Star className="h-3.5 w-3.5" />, color: 'bg-amber-500' },
-  defending: { label: 'Defending', icon: <Shield className="h-3.5 w-3.5" />, color: 'bg-violet-500' },
-  physical: { label: 'Physical', icon: <Swords className="h-3.5 w-3.5" />, color: 'bg-orange-500' },
-};
-
-const ATTRIBUTE_KEYS: AttributeKey[] = ['pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical'];
 
 const MOMENT_ICONS: Record<string, string> = {
   twin_created: '✨',
@@ -107,22 +97,23 @@ export const PlayerIdentityCard: React.FC<PlayerIdentityCardProps> = ({ identity
         <h3 className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2">Attributes</h3>
         <div className="grid grid-cols-2 gap-x-4 gap-y-2">
           {ATTRIBUTE_KEYS.map((key) => {
-            const attr = ATTRIBUTE_LABELS[key];
+            const display = ATTRIBUTE_DISPLAY[key];
+            const Icon = display.Icon;
             const base = brain.baseAttributes[key] ?? 0;
             const effective = brain.effectiveAttributes[key] ?? 0;
             const boost = effective - base;
             return (
               <div key={key} className="flex items-center gap-2">
-                <span className="text-slate-400">{attr.icon}</span>
+                <span className="text-slate-400"><Icon className="h-3.5 w-3.5" /></span>
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between text-[10px] mb-0.5">
-                    <span className="text-slate-300">{attr.label}</span>
+                    <span className="text-slate-300">{display.label}</span>
                     <span className={boost > 0 ? 'text-emerald-400' : 'text-slate-400'}>
                       {effective}{boost > 0 && ` (+${boost})`}
                     </span>
                   </div>
                   <div className="h-1 bg-slate-700 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full ${attr.color} transition-all`} style={{ width: `${effective}%` }} />
+                    <div className={`h-full rounded-full ${ATTRIBUTE_BAR_TONES[key]} transition-all`} style={{ width: `${effective}%` }} />
                   </div>
                 </div>
               </div>

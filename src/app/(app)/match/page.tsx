@@ -96,7 +96,7 @@ export default function MatchPage() {
 
   const { checklistItems, completeChecklistItem } = useOnboarding();
   const firstMatchSubmitted = checklistItems.find((item) => item.id === "log_match")?.completed ?? false;
-  const verificationInviteShared = checklistItems.find((item) => item.id === "set_formation")?.completed ?? false;
+  const verificationInviteShared = checklistItems.find((item) => item.id === "join_squad")?.completed ?? false;
   const identityConnected = checklistItems.find((item) => item.id === "claim_identity")?.completed ?? false;
   const inviteTargetMatchId = lastSubmittedMatchId ?? pendingMatches[0]?.id ?? null;
   const currentPlayerId = currentPlayerAttributes?.address ?? "";
@@ -199,7 +199,7 @@ export default function MatchPage() {
         setInviteShareState("copied");
       }
 
-      completeChecklistItem("set_formation");
+      completeChecklistItem("join_squad");
       trackFeatureUsed("verification_invite_shared", {
         match_id: inviteTargetMatchId,
         share_method: shareMethod,
