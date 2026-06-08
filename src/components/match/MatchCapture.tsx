@@ -25,7 +25,7 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false);
   const [playersPerSide, setPlayersPerSide] = useState(11);
   const [hasKeeper, setHasKeeper] = useState(true);
-  const [isQuickLog, setIsQuickLog] = useState(false);
+  const [isQuickLog, setIsQuickLog] = useState(true);
   const [quickLogForm, setQuickLogForm] = useState({ homeScore: 0, awayScore: 0 });
   const [celebration, setCelebration] = useState<{ isVisible: boolean; title: string; type: 'win' | 'legendary' | 'verified' }>({
     isVisible: false, title: '', type: 'verified'
@@ -132,13 +132,13 @@ export const MatchCapture: React.FC<MatchCaptureProps> = ({
             onClick={() => setIsQuickLog(false)}
             className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${!isQuickLog ? 'bg-white shadow-sm text-green-700' : 'text-gray-500'}`}
           >
-            LIVE TRACKER
+            Live Tracker
           </button>
           <button
             onClick={() => setIsQuickLog(true)}
             className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${isQuickLog ? 'bg-white shadow-sm text-green-700' : 'text-gray-500'}`}
           >
-            QUICK LOG
+            Quick Log
           </button>
         </div>
 

@@ -123,7 +123,9 @@ export async function getMatchParticipantCandidates(
 
 /**
  * Checks if two squads have a recurring relationship for "Social Trust" verification.
- * Threshold: 3+ completed matches between these specific squads.
+ * Threshold: 1+ completed matches between these specific squads.
+ * For greenfield users with no prior matches, this returns false and the
+ * match stays pending until the share-link verification path completes.
  */
 export async function checkSocialTrust(
   prisma: PrismaClient,
@@ -140,7 +142,7 @@ export async function checkSocialTrust(
     },
   });
 
-  return recurringMatchCount >= 3;
+  return recurringMatchCount >= 1;
 }
 
 export async function settleMatchFee(
