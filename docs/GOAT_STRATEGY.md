@@ -30,3 +30,35 @@ Squad Treasuries held on Goat Network can benefit from **Sustainable BTC Yield**
 2.  **ERC-8004 Integration:** Implement `IAgentIdentity` hooks in `Reputation.sol`.
 3.  **x402 Facilitator:** Configure the `AgentEscrow` to use Goat's native micropayment facilitators.
 4.  **Testnet Deployment:** Deploy to BitVM2 Testnet and exercise cross-chain proofs from Algorand.
+
+## Deferred Work: x402 Verify-Match as Canonical Path
+
+**Status:** Roadmap item (not yet implemented). Captured 2026-06-09.
+
+### Context
+
+The `POST /api/x402/verify-match` endpoint exists and is functional. It accepts a paid X-Payment header, settles via Pieverse facilitator on Kite chain, creates an `Attestation` row, and returns a signed match hash. However, the current match verification flow in `src/server/services/match-workflow.ts` (lines 671-715) writes attestations directly to the database instead of routing through this endpoint.
+
+### What needs to change
+
+1. **Server-side call to /api/x402/verify-match** from inside `verifyMatchResult()` after the standard verification threshold is reached. The call must bypass the X-Payment header requirement (service-account pattern or sandboxed facilitator mode).
+2. **Yellow fee rail becomes downstream of the x402 attestation** — settle the fee only after the x402 attestation has been written, so the chain of evidence is: verified → x402 attestation → fee settled.
+3. **External agents can call the same endpoint** to verify the same match for the standard fee, creating a true two-sided agent economy.
+
+### Why it's deferred
+
+- **Risk:** The x402 endpoint expects an X-Payment header. Internal calls need a service-account bypass pattern (signed service-internal proof instead of user payment). This changes the payment semantics and needs careful testing.
+- **Effort:** ~2-3 hours for the refactor + testing.
+- **Lower-priority alternatives shipped in 2026-06-09:** Yellow fee rail toast + settlement card visible to users (Fix 1), "Verified via x402" badge on match detail (Fix 2), and `giveFeedback` on ERC-8004 reputation registry after verified match (Fix 3) already close the visible-integration gap.
+
+### Acceptance criteria for the deferred work
+
+- [ ] `verifyMatchResult()` calls `/api/x402/verify-match` server-side, not directly writes to the `Attestation` table
+- [ ] Service-account payment bypass works (or sandboxed facilitator mode)
+- [ ] Yellow fee settlement only runs after x402 attestation is written
+- [ ] External agent can verify a match via the x402 endpoint and pay the standard fee
+- [ ] No regression in the existing match verification happy path
+
+### Tracking
+
+Owner: TBD. Estimated: 1 focused session. Block on: Yellow fee rail production traffic.
