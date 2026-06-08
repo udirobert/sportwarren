@@ -74,16 +74,16 @@ For the long-term production API, we use a lean **runtime-only artifact** on Het
 
 #### 1. Build Artifact
 ```bash
-pnpm run deploy:runtime:build
+bash scripts/build-runtime-artifact.sh
 # Produces artifacts/sportwarren-runtime-TIMESTAMP.tar.gz
 ```
 
 #### 2. Deploy Release
-Upload the artifact to the server and run the deploy script:
+The full pipeline (build + migrate + upload + deploy) is automated:
 ```bash
-bash scripts/deploy-runtime-release.sh /path/to/sportwarren-runtime-*.tar.gz
+bash scripts/deploy-hetzner.sh
 ```
-The script unpacks the release, symlinks shared `.env` and `storage`, runs pending Prisma migrations, regenerates the Prisma client in the standalone bundle, and restarts PM2.
+Migrations run from the build machine against the remote database before uploading. The deploy script unpacks the release, symlinks shared `.env` and `storage`, and restarts PM2.
 
 #### 3. PM2 Management
 The `ecosystem.config.cjs` runs the Next.js standalone server on port `5200`. Use `pm2 status` and `pm2 logs` for monitoring.

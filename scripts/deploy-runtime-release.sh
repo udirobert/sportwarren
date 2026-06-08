@@ -54,14 +54,6 @@ if [ -d "$RELEASE_DIR/.next/standalone/node_modules" ]; then
   ln -sfn "$RELEASE_DIR/.next/standalone/node_modules" "$RELEASE_DIR/node_modules"
 fi
 
-# Apply pending Prisma migrations before swapping the current symlink.
-# The Prisma config + schema + migrations are in the release dir; the
-# CLI and config module are accessed via the node_modules symlink above.
-(cd "$RELEASE_DIR" && npx prisma migrate deploy) || {
-  echo "prisma migrate deploy failed — aborting deploy to keep previous release live"
-  exit 1
-}
-
 ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
 
 # pm2 caches `cwd` on first start; a reload won't move it to the new release.
