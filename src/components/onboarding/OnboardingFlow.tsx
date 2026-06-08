@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronRight, ChevronLeft, Sparkles, Cpu, Zap, MousePointer2, Check, Users, User, Palette, Camera } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, Sparkles, Cpu, Zap, MousePointer2, Check, Users, User, Palette, Camera, Lock } from 'lucide-react';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
@@ -47,9 +47,10 @@ interface OnboardingFlowProps {
   journeyStage?: DashboardEntryStateId;
   onComplete?: () => void;
   onVisibilityChange?: (isVisible: boolean) => void;
+  completeChecklistItem?: (id: string) => void;
 }
 
-export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onVisibilityChange }: OnboardingFlowProps) {
+export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onVisibilityChange, completeChecklistItem }: OnboardingFlowProps) {
   const { isGuest } = useWallet();
   const { venue } = useEnvironment();
   const { preferences, savePreferences } = useUserPreferences();
@@ -220,6 +221,8 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
       clearPendingPersona();
       setPendingClaimToken(null);
       setPendingClaimPosition(null);
+      completeChecklistItem?.('complete_card');
+      completeChecklistItem?.('set_formation');
       savePreferences({
         onboardingCompleted: true,
         squadBranding: {
@@ -236,7 +239,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
     } finally {
       setIsCompleting(false);
     }
-  }, [playerName, avatarPreview, primaryColor, nickname, formation, updateProfile, savePreferences, pendingClaimPosition, pendingClaimToken, onComplete]);
+  }, [playerName, avatarPreview, primaryColor, nickname, formation, updateProfile, savePreferences, pendingClaimPosition, pendingClaimToken, onComplete, completeChecklistItem]);
   
   // Skip if already completed
   if (preferences.onboardingCompleted && hasCompletedTour) {
@@ -305,6 +308,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
           onBack={() => setPhase('checklist')}
           hasPendingPersona={hasPendingPersona}
           pendingClaimPosition={pendingClaimPosition}
+          completeChecklistItem={completeChecklistItem}
         />
         <ConfettiOverlay />
       </>
@@ -445,12 +449,13 @@ interface PersonalizationCardProps {
   onBack: () => void;
   hasPendingPersona?: boolean;
   pendingClaimPosition?: PlayerPosition | null;
+  completeChecklistItem?: (id: string) => void;
 }
 
 function PersonalizationCard({
   step, setStep, playerName, setPlayerName, avatarPreview, fileInputRef, onAvatarFile,
   formation, setFormation, primaryColor, setPrimaryColor, nickname, setNickname,
-  isCompleting, error, onComplete, onBack, hasPendingPersona, pendingClaimPosition
+  isCompleting, error, onComplete, onBack, hasPendingPersona, pendingClaimPosition, completeChecklistItem
 }: PersonalizationCardProps) {
   return (
     <Card className="bg-gradient-to-br from-gray-900 to-black border-gray-800 text-white overflow-hidden relative shadow-2xl max-w-lg mx-auto">
@@ -491,13 +496,15 @@ function PersonalizationCard({
                     // doesn't gate on it. Card-savers skip the identity step
                     // entirely so this is only seen by Path A visitors who
                     // didn't prefill a card — still worth it for first-time
-                    // friction.
+                    // friction. Gated on name length so a 1-char name can't
+                    // slip through past the "Choose Formation" CTA's check.
                     <button
                       type="button"
-                      onClick={() => setStep('formation')}
-                      className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4 decoration-gray-700 hover:decoration-gray-500 transition-colors text-left"
+                      onClick={() => playerName.trim().length >= 2 && setStep('formation')}
+                      disabled={playerName.trim().length < 2}
+                      className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4 decoration-gray-700 hover:decoration-gray-500 transition-colors text-left disabled:opacity-30 disabled:cursor-not-allowed disabled:no-underline"
                     >
-                      Skip for now
+                      Skip avatar for now
                     </button>
                   )}
                 </div>
@@ -533,14 +540,33 @@ function PersonalizationCard({
               <p className="text-sm text-gray-400 mb-8">This defines how your squad lines up on match day.</p>
 
               {hasPendingPersona && (
-                <div className="mb-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-3">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.1em] text-emerald-300">
-                      {pendingClaimPosition ?? 'MF'}
-                    </span>
-                    <span className="text-sm font-bold text-white">{playerName || 'Your player'}</span>
+                // Card-as-anchor: the card-saver's provisional card, visible
+                // as a visual element above the formation picker. Echoes the
+                // landing PlayerCardPreview so the journey reads as one
+                // continuous surface ("your card is still with you").
+                <div className="mb-6 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-4 shadow-lg shadow-emerald-500/5">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-emerald-400/40 bg-emerald-500/15 text-base font-black text-emerald-200">
+                      {(playerName.trim().slice(0, 2) || 'SW').toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">
+                        Your player card
+                      </p>
+                      <p className="truncate text-base font-black text-white">
+                        {playerName || 'Your player'}
+                      </p>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="rounded-md bg-emerald-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-300">
+                          {pendingClaimPosition ?? 'MF'}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-full border border-amber-400/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-amber-200">
+                          <Lock className="h-2.5 w-2.5" /> Provisional
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <p className="text-[11px] text-emerald-200/70 leading-relaxed">
+                  <p className="mt-3 text-[11px] leading-relaxed text-emerald-200/80">
                     These are your starting stats. They become real after your first verified match.
                   </p>
                 </div>
@@ -566,7 +592,7 @@ function PersonalizationCard({
               </div>
               
               <button
-                onClick={() => formation && setStep('brand')}
+                onClick={() => { if (formation) { completeChecklistItem?.('set_formation'); setStep('brand'); } }}
                 disabled={!formation}
                 className="w-full py-4 bg-white text-black rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-green-400 transition-all disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >

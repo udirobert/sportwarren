@@ -14,7 +14,7 @@ export const CHECKLIST_ITEMS: ChecklistItemConfig[] = [
         label: 'Complete your player card',
         description: 'Set your name, position, and avatar — your card is your identity on the platform',
         emoji: '🪪',
-        href: '/profile',
+        href: '/settings?tab=profile',
         actionLabel: 'Edit card',
         xp: 50,
     },

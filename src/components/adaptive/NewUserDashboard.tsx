@@ -142,7 +142,7 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
         </div>
       </div>
 
-      <OnboardingFlow onVisibilityChange={setIsTourActive} journeyStage={entryState.id} />
+      <OnboardingFlow onVisibilityChange={setIsTourActive} journeyStage={entryState.id} completeChecklistItem={completeChecklistItem} />
       {!isTourActive && <AgenticConcierge journeyStage={entryState.id} />}
 
       <Link

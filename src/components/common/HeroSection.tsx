@@ -82,7 +82,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
   // rather than a wallet gate. Returning users sign in via the secondary link/header.
   const handlePrimaryCta = () => {
     if (isPublicVisitor) {
-      document.getElementById('formation-playground')?.scrollIntoView({ behavior: 'smooth' });
+      // Public visitors: the section CTA drives the same persona-save
+      // conversion as the card. Falls back to onGetStarted when no
+      // onSavePlayerCard handler is wired (defensive — should not happen
+      // in practice since page.tsx always passes both).
+      onSavePlayerCard?.() ?? onGetStarted?.();
     } else {
       onGetStarted?.();
     }
@@ -176,26 +180,24 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-            {isPublicVisitor ? (
-              // Public visitors: the card's "Save my player card" is the primary
-              // conversion. The section CTA below is a *secondary* action — a
-              // low-emphasis text link to the playground, visually distinct from
-              // the card-save gradient.
+            <button
+              onClick={handlePrimaryCta}
+              className="group relative inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
+            >
+              <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
+              {journeyContent.hero.primaryCtaLabel}
+              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+            </button>
+            {isPublicVisitor && (
+              // For public visitors, the playground is the natural secondary
+              // destination after the card-save CTA. Low-emphasis text link
+              // — visually subordinate to the gradient primary above.
               <button
-                onClick={handlePrimaryCta}
+                onClick={() => document.getElementById('formation-playground')?.scrollIntoView({ behavior: 'smooth' })}
                 className="group inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 transition-colors"
               >
                 <span>Or scroll down to try the playground</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
-              </button>
-            ) : (
-              <button
-                onClick={handlePrimaryCta}
-                className="group relative inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
-              >
-                <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
-                {journeyContent.hero.primaryCtaLabel}
-                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
               </button>
             )}
           </div>
