@@ -85,9 +85,9 @@ export function getJourneyNavigationSubtitle(stage: JourneyStage): string {
     case 'verified_no_squad':
       return 'Bring teammates onto your card to verify each other';
     case 'season_kickoff':
-      return 'Log a real result to turn your card stats from provisional to verified';
+      return 'Log your first real result and watch your stats become verified';
     case 'returning_manager':
-      return 'Keep the card growing with matches and squad activity';
+      return 'Keep matches, stats, and squad activity moving week to week';
     case 'public_visitor':
     default:
       return 'Build your player card, share it, and make the stats real';
@@ -418,7 +418,7 @@ export function getJourneyContent(
           stageLine: 'One verified match turns your provisional card into a living record.',
           highlights: [
             'Log a real result to verify your stats',
-            'Your squad confirms the card is real',
+            'Your squad confirms the stats are real',
             'Watch your attributes level up after each match',
           ],
         },
@@ -465,9 +465,9 @@ export function getJourneyContent(
       return {
         hero: {
           primaryCtaLabel: 'Open Manager Console',
-          stageLine: 'Keep your card growing — log results, coordinate the squad, watch the stats climb.',
+          stageLine: 'Keep your stats growing — log results, coordinate the squad, climb the ranks.',
           highlights: [
-            'Log results to grow your card',
+            'Log results to level up your stats',
             'Coordinate the squad for the next match',
             'Review what needs attention this week',
           ],

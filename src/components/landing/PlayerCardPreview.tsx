@@ -40,6 +40,12 @@ interface PlayerCardPreviewProps {
   onNameChange?: (name: string) => void;
   /** Called when the visitor changes their position on the card. */
   onPositionChange?: (position: PlayerPosition) => void;
+  /**
+   * Current formation selected on the playground (e.g. "4-4-2"). Read on save
+   * so the persona context carries formation through to onboarding, letting
+   * Path D (playground → save card → personalize) prefill the formation step.
+   */
+  currentFormation?: string | null;
 }
 
 /**
@@ -48,7 +54,7 @@ interface PlayerCardPreviewProps {
  * turn an estimate into a real, trusted profile. Saving the card is the conversion
  * moment — it triggers account creation.
  */
-export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, authed = false, onNameChange, onPositionChange }) => {
+export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, authed = false, onNameChange, onPositionChange, currentFormation }) => {
   const [name, setName] = useState("");
   const [position, setPosition] = useState<PlayerPosition>("MF");
   const [verified, setVerified] = useState(false);
@@ -81,9 +87,14 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
   );
 
   const handleSave = () => {
-    storePendingPersona({ displayName, position, savedAt: Date.now() });
-    trackFeatureUsed("player_card_save_clicked", { position, named: name.trim().length > 0 });
-    trackCoreGrowthEvent("player_card_save_intent", { position, authed });
+    storePendingPersona({
+      displayName,
+      position,
+      formation: currentFormation ?? undefined,
+      savedAt: Date.now(),
+    });
+    trackFeatureUsed("player_card_save_clicked", { position, named: name.trim().length > 0, formation: currentFormation ?? null });
+    trackCoreGrowthEvent("player_card_save_intent", { position, authed, formation: currentFormation ?? null });
     onSave?.();
   };
 

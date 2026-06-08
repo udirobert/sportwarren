@@ -34,6 +34,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
   const [stats, setStats] = useState<PlatformStats>({ totalPlayers: 0, totalMatches: 0, totalAgents: 0, waitlistTotal: 0 });
   const [cardName, setCardName] = useState('');
   const [cardPosition, setCardPosition] = useState<PlayerPosition>('MF');
+  // Tracked separately from the playground's internal state so the persona
+  // context (and therefore onboarding prefill) can carry the formation
+  // through Path D: playground → save card → personalize.
+  const [cardFormation, setCardFormation] = useState<string | null>(null);
   const { address, chain, loginAsGuest, hasAccount, hasWallet, isGuest, authStatus } = useWallet();
   const parallaxRef = useRef<HTMLDivElement>(null);
   const parallaxRef2 = useRef<HTMLDivElement>(null);
@@ -155,6 +159,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             onSave={onSavePlayerCard ?? onGetStarted}
             onNameChange={setCardName}
             onPositionChange={setCardPosition}
+            currentFormation={cardFormation}
           />
 
           <div className="mx-auto mb-6 grid max-w-2xl gap-2 text-left sm:grid-cols-2">
@@ -171,14 +176,28 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
           </div>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-            <button
-              onClick={handlePrimaryCta}
-              className="group relative inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
-            >
-              <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
-              {journeyContent.hero.primaryCtaLabel}
-              <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
-            </button>
+            {isPublicVisitor ? (
+              // Public visitors: the card's "Save my player card" is the primary
+              // conversion. The section CTA below is a *secondary* action — a
+              // low-emphasis text link to the playground, visually distinct from
+              // the card-save gradient.
+              <button
+                onClick={handlePrimaryCta}
+                className="group inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 transition-colors"
+              >
+                <span>Or scroll down to try the playground</span>
+                <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
+              </button>
+            ) : (
+              <button
+                onClick={handlePrimaryCta}
+                className="group relative inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
+              >
+                <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
+                {journeyContent.hero.primaryCtaLabel}
+                <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
+              </button>
+            )}
           </div>
 
           {journeyContent.hero.stageLine && (
@@ -224,7 +243,11 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
 
           <div id="formation-playground" className="mb-6">
             <React.Suspense fallback={<div className="h-[400px] w-full animate-pulse rounded-2xl bg-white/5" />}>
-              <FormationPlayground initialName={cardName} initialPosition={cardPosition} />
+              <FormationPlayground
+                initialName={cardName}
+                initialPosition={cardPosition}
+                onFormationChange={setCardFormation}
+              />
             </React.Suspense>
           </div>
 
