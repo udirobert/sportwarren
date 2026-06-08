@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { XPGainSummary } from '@/components/player/XPGainPopup';
-import { Sparkles, Clock3 } from 'lucide-react';
+import { Sparkles, Clock3, CheckCircle2 } from 'lucide-react';
 
 interface XPSummaryData {
   totalXP: number;
@@ -30,6 +30,35 @@ export const MatchXPSummaryView: React.FC<MatchXPSummaryViewProps> = ({
 
     {xpResultState === 'available' && xpSummaryData ? (
       <>
+        {/* Card-as-anchor: bridges the landing page promise
+            ("See how stats become real") to the actual XP event.
+            Mirrors the visual language used in OnboardingFlow's
+            hasPendingPersona banner so the journey reads as one
+            continuous surface. */}
+        <div className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-4 shadow-lg shadow-emerald-500/5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-emerald-400/40 bg-emerald-500/15">
+              <CheckCircle2 className="h-6 w-6 text-emerald-300" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">
+                Match Verified
+              </p>
+              <p className="truncate text-base font-black text-white">
+                Your stats are now real
+              </p>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="rounded-full border border-emerald-400/30 bg-emerald-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-200">
+                  +{xpSummaryData.totalXP} XP
+                </span>
+              </div>
+            </div>
+          </div>
+          <p className="mt-3 text-[11px] leading-relaxed text-emerald-200/80">
+            Your provisional stats have been upgraded based on the verified match result.
+          </p>
+        </div>
+
         <XPGainSummary
           totalXP={xpSummaryData.totalXP}
           attributeGains={xpSummaryData.attributeGains as any}

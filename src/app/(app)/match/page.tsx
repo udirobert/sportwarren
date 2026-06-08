@@ -150,8 +150,21 @@ export default function MatchPage() {
       return;
     }
 
+    // First session after onboarding: open capture directly so the
+    // user doesn't have to navigate from "Launch Your Season" to the
+    // match center manually. The flag is session-scoped, set by
+    // OnboardingFlow on personalization complete.
+    if (typeof window !== "undefined" && matches.length === 0) {
+      const firstSession = sessionStorage.getItem("sw_first_match_session") === "1";
+      if (firstSession) {
+        sessionStorage.removeItem("sw_first_match_session");
+        setViewMode("capture");
+        return;
+      }
+    }
+
     setViewMode(pendingMatches.length > 0 ? "verify" : settledMatches.length > 0 ? "history" : "preview");
-  }, [pendingMatches.length, settledMatches.length, requestedMatchId, requestedMode]);
+  }, [pendingMatches.length, settledMatches.length, requestedMatchId, requestedMode, matches.length]);
 
   useEffect(() => {
     if (!selectedOpponentId && availableOpponents[0]?.id) {
@@ -447,14 +460,20 @@ export default function MatchPage() {
             <div className="flex-1">
               <p className="font-semibold text-emerald-900">Season Kickoff Path</p>
               <p className="mt-1 text-sm text-emerald-700">
-                Set your tactics, play your match, verify the result, then save your progress.
+                Your provisional stats are waiting — log your first match and verify it with the opposing team to make them real.
               </p>
               <div className="mt-3 space-y-2">
                 {[
-                  { label: "Set your formation", done: false },
+                  {
+                    label: "Complete your player card",
+                    done: checklistItems.find((i) => i.id === "complete_card")?.completed ?? false,
+                  },
+                  {
+                    label: "Set your formation",
+                    done: checklistItems.find((i) => i.id === "set_formation")?.completed ?? false,
+                  },
                   { label: "Log your first match result", done: firstMatchSubmitted },
                   { label: "Verify with opponent", done: verificationInviteShared },
-                  { label: "Save your progress", done: identityConnected },
                 ].map((step) => (
                   <div key={step.label} className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className={`h-4 w-4 ${step.done ? "text-emerald-600" : "text-gray-300"}`} />
