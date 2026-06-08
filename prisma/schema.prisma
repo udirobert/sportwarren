@@ -75,6 +75,12 @@ model PlayerProfile {
   // Reputation
   reputationScore Int @default(100) @map("reputation_score")
 
+  // GOAT Network ERC-8004 Agent identity
+  // Set after onboarding when the platform registers an on-chain agent
+  // for this player. Null means registration hasn't been attempted or
+  // Goat Network is not configured.
+  goatAgentId Int? @map("goat_agent_id")
+
   // Scout (Peer Rating)
   scoutXP   Int    @default(0) @map("scout_xp")
   scoutTier String @default("rookie") @map("scout_tier") // rookie, trusted, elite
