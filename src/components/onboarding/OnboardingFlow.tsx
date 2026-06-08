@@ -243,6 +243,14 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
         sessionStorage.setItem('sw_first_match_session', '1');
       }
       onComplete?.();
+
+      // Fire-and-forget: register an ERC-8004 agent identity for this
+      // user on the GOAT Network. This runs after the user's profile
+      // is saved so the agent registration can reference their data.
+      // If Goat is not configured or the network call fails, the
+      // onboarding still succeeds — this is an infrastructure concern.
+      registerGoatAgent(playerName.trim(), pendingClaimPosition ?? 'MF');
+
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : 'Could not save your player profile.');
     } finally {
@@ -675,6 +683,33 @@ function PersonalizationCard({
       </div>
     </Card>
   );
+}
+
+// ── GOAT Network ERC-8004 agent registration ──
+// Called fire-and-forget on personalization completion.
+// Silently fails if Goat is not configured or the network is unreachable.
+
+function registerGoatAgent(name: string, position: string): void {
+  if (typeof window === 'undefined') return;
+
+  fetch('/api/goat/register-agent', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({
+      name: `SportWarren Player — ${name}`,
+      description: `Player agent for ${name}. Position: ${position}. Registered at season launch.`,
+      serviceEndpoints: [{
+        name: 'verify-match',
+        endpoint: `${window.location.origin}/api/x402/verify-match`,
+        version: '1.0.0',
+        skills: ['match_verification'],
+        domains: ['football', 'sport'],
+      }],
+    }),
+  }).catch(() => {
+    // Goat not configured or network error — onboarding already succeeded.
+    console.debug('GOAT agent registration skipped (not configured or unreachable)');
+  });
 }
 
 // Backward compatibility exports
