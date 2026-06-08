@@ -215,7 +215,7 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
     setIsCompleting(true);
     setProfileError(null);
     try {
-      await updateProfile.mutateAsync({
+      const profileResult = await updateProfile.mutateAsync({
         name: playerName.trim(),
         position: pendingClaimPosition ?? ('MF' as PlayerPosition),
         avatar: avatarPreview || undefined,
@@ -249,7 +249,11 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
       // is saved so the agent registration can reference their data.
       // If Goat is not configured or the network call fails, the
       // onboarding still succeeds — this is an infrastructure concern.
-      registerGoatAgent(playerName.trim(), pendingClaimPosition ?? 'MF');
+      registerGoatAgent(
+        playerName.trim(),
+        pendingClaimPosition ?? 'MF',
+        profileResult?.user?.id,
+      );
 
     } catch (error) {
       setProfileError(error instanceof Error ? error.message : 'Could not save your player profile.');
@@ -689,7 +693,7 @@ function PersonalizationCard({
 // Called fire-and-forget on personalization completion.
 // Silently fails if Goat is not configured or the network is unreachable.
 
-function registerGoatAgent(name: string, position: string): void {
+function registerGoatAgent(name: string, position: string, userId?: string): void {
   if (typeof window === 'undefined') return;
 
   fetch('/api/goat/register-agent', {
@@ -698,6 +702,7 @@ function registerGoatAgent(name: string, position: string): void {
     body: JSON.stringify({
       name: `SportWarren Player — ${name}`,
       description: `Player agent for ${name}. Position: ${position}. Registered at season launch.`,
+      profileUserId: userId,
       serviceEndpoints: [{
         name: 'verify-match',
         endpoint: `${window.location.origin}/api/x402/verify-match`,

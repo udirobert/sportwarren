@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { prisma } from '@/lib/db';
 import {
   registerAgent,
   buildAgentRegistrationJSON,
@@ -25,6 +26,8 @@ export async function POST(request: NextRequest) {
       version: string;
     }>;
     agentURI?: string;
+    /** When provided, the resulting agentId is stored on the user's PlayerProfile */
+    profileUserId?: string;
   };
 
   try {
@@ -59,6 +62,19 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await registerAgent(agentURI);
+
+    // If a profile user id was provided, persist the agentId on the PlayerProfile
+    if (body.profileUserId) {
+      try {
+        await prisma.playerProfile.update({
+          where: { userId: body.profileUserId },
+          data: { goatAgentId: result.agentId },
+        });
+      } catch (profileError) {
+        // Profile might not exist yet or db issue — non-fatal
+        console.warn('GOAT: could not store agentId on PlayerProfile:', profileError);
+      }
+    }
 
     return NextResponse.json({
       success: true,
