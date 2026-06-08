@@ -48,9 +48,10 @@ fi
 # Apply pending Prisma migrations from the shipped artifact before swapping
 # the current symlink. The Prisma client was generated at build time and is
 # baked into the standalone bundle, so the matching schema + migrations must
-# be applied here. Runs from the release dir so the local prisma/ directory
-# and the bundled prisma binary are picked up.
-(cd "$RELEASE_DIR" && npx prisma migrate deploy) || {
+# be applied here. Uses --prefix to point at the standalone dir where the
+# bundled prisma CLI and @prisma/config module live (copied by
+# build-runtime-artifact.sh).
+(cd "$RELEASE_DIR" && npx --prefix "$RELEASE_DIR/.next/standalone" prisma migrate deploy) || {
   echo "prisma migrate deploy failed — aborting deploy to keep previous release live"
   exit 1
 }
