@@ -669,10 +669,11 @@ export async function verifyMatchResult({
     });
 
     if (newStatus === 'verified') {
+      const homeResult = resultMatch.homeScore! > resultMatch.awayScore! ? 'win' :
+                         resultMatch.homeScore! < resultMatch.awayScore! ? 'loss' : 'draw';
+
       // 1. Twin Sync (squad-level)
       try {
-        const homeResult = resultMatch.homeScore! > resultMatch.awayScore! ? 'win' :
-                           resultMatch.homeScore! < resultMatch.awayScore! ? 'loss' : 'draw';
         const awayResult = homeResult === 'win' ? 'loss' : homeResult === 'loss' ? 'win' : 'draw';
 
         const homeTwin = await getTwinService().getOrCreateSquadTwin(resultMatch.homeSquadId);
