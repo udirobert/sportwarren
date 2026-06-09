@@ -10,8 +10,8 @@ REMOTE_APP_ROOT="/opt/sportwarren-api"
 
 echo "🚀 Starting Tactical Deployment to $SSH_TARGET..."
 
-# 1. Build locally
-echo "📦 Building runtime artifact..."
+# 1. Build locally (API-only artifact, frontend on Vercel)
+echo "📦 Building API-only artifact..."
 ARTIFACT_PATH=$(bash scripts/build-runtime-artifact.sh | tail -n 1)
 ARTIFACT_NAME=$(basename "$ARTIFACT_PATH")
 

@@ -1,17 +1,15 @@
 # SportWarren Smart Contracts
 
-This directory contains the on-chain contracts for the SportWarren platform, primarily across **Algorand** and **Avalanche**.
+This directory contains the on-chain contracts for the SportWarren platform, primarily across **Algorand** and **Goat Network** (Bitcoin L2).
 
 Within the broader SportWarren architecture, these contracts work alongside **Kite AI** (agent identity, agent payments, attestations), **Yellow** (instant settlement rail), **TON** (Telegram-native treasury UX), and **Lens** (social identity and distribution). Those integrations live in the application and service layers rather than in this directory.
 
-## Contract Responsibility Model
-
-SportWarren uses on-chain contracts where they fit best:
+## Chain Responsibility Model
 
 | Feature | Algorand | Goat Network (Bitcoin L2) |
-|---------|----------|-----------|
+|---------|----------|---------------------------|
 | **Purpose** | Match verification, reputation, proof-backed match state | Governance, treasury policy, programmable assets, Agentic Economy |
-| **Language** | TEAL | Solidity (EVM) |
+| **Language** | TEAL | Solidity (EVM, Type-1 zkEVM) |
 | **Network** | Testnet → Mainnet | BitVM2 Testnet → Mainnet |
 
 These chains are not competing implementations of the same feature set. Algorand handles the high-frequency sports data, while Goat Network serves as the secure, Bitcoin-native settlement and agent logic layer.
@@ -22,68 +20,68 @@ These chains are not competing implementations of the same feature set. Algorand
 contracts/
 ├── README.md                   # This file
 ├── algorand/                   # Algorand TEAL contracts
+│   ├── match_verification/     # Match result attestation
+│   ├── reputation_system/      # Player reputation
+│   └── global_challenges/      # Tournament contracts
 └── goat/                       # EVM Solidity contracts (Goat Network Target)
-    ├── SquadDAO.sol           # Squad governance (ERC-8004 compatible)
-    ├── AgentEscrow.sol        # Micropayment handling for AI Scouts (x402)
-    ├── SquadToken.sol         # Governance & Incentive token
-    ├── Reputation.sol         # Player reputation tokens (ERC-8004)
+    ├── SquadDAO.sol            # Squad governance (ERC-8004 compatible)
+    ├── AgentEscrow.sol         # Micropayment handling for AI Scouts (x402)
+    ├── SquadToken.sol          # Governance & Incentive token
+    ├── Reputation.sol          # Player reputation tokens (ERC-8004)
+    ├── AchievementNFT.sol       # Match milestone NFTs
     ├── interfaces/
-    │   ├── IAgentIdentity.sol # ERC-8004 Interface
-    │   └── IGoatYield.sol     # Goat Native Yield Interface
+    │   ├── IAgentIdentity.sol  # ERC-8004 Interface
+    │   └── IGoatYield.sol      # Goat Native Yield Interface
     └── test/
         ├── SquadDAO.t.sol
-        ├── Reputation.t.sol
+        └── Reputation.t.sol
 ```
 
 ## Available Contracts
 
-### 🏛️ Squad DAO
+### 🏛️ Squad DAO (Goat Network)
 
-**Algorand:** `contracts/algorand/squad_dao/`  
-**Avalanche:** `contracts/avalanche/SquadDAO.sol`
+**Goat Network:** `contracts/goat/SquadDAO.sol`
 
 **Features:**
 - Democratic team decision making
-- Token-based voting systems
+- Token-based voting systems (ERC-20 Votes)
 - Squad treasury management
 - Role-based permissions
-- **Avalanche:** ERC-8004 agent identity support
+- ERC-8004 agent identity support
 
-### ✅ Match Verification
+### ✅ Match Verification (Algorand)
 
-**Algorand:** `contracts/algorand/match_verification/`  
-**Avalanche:** `contracts/avalanche/MatchVerification.sol`
+**Algorand:** `contracts/algorand/match_verification/`
 
 **Features:**
 - Multi-party match result verification
 - Immutable match statistics storage
 - Dispute resolution mechanisms
 - Automated stat updates
-- **Algorand:** Chainlink oracle integration
+- Chainlink oracle integration
 
 ### 🎯 Reputation System
 
-**Algorand:** `contracts/algorand/reputation_system/`  
-**Avalanche:** `contracts/avalanche/Reputation.sol`
+**Algorand:** `contracts/algorand/reputation_system/` — Player reputation records  
+**Goat Network:** `contracts/goat/Reputation.sol` — ERC-8004 agent identity registry
 
 **Features:**
 - Decentralized reputation scoring
 - Skill-based token distribution
 - Performance verification
 - Professional pathway credentials
-- **Avalanche:** Soulbound tokens (SBT)
+- Soulbound tokens (SBT)
 
-### 🏆 Global Challenges
+### 🏆 Global Challenges (Algorand)
 
-**Algorand:** `contracts/algorand/global_challenges/`  
-**Avalanche:** `contracts/avalanche/GlobalChallenges.sol`
+**Algorand:** `contracts/algorand/global_challenges/`
 
 **Features:**
 - Tournament creation and management
 - Prize pool distribution
 - Cross-league competition tracking
 - Automated reward distribution
-- **Dual-Chain:** Cross-chain tournaments via AWM + State Proofs
 
 ## Deployment
 
@@ -94,10 +92,10 @@ contracts/
 - algosdk v3.x
 - Sufficient ALGO for deployment
 
-**Avalanche:**
+**Goat Network:**
 - Foundry (`curl -L https://foundry.paradigm.xyz | bash`)
 - Node.js 18+
-- Sufficient AVAX for deployment
+- Sufficient ETH/BTC for deployment
 
 ### Deploy Contracts
 
@@ -105,8 +103,8 @@ contracts/
 # Deploy Algorand contracts to testnet
 npm run deploy:contracts:algorand:testnet
 
-# Deploy Avalanche contracts to Fuji testnet
-npm run deploy:contracts:avalanche:fuji
+# Deploy Goat contracts to BitVM2 testnet
+npx hardhat run scripts/deploy.ts --network goat
 
 # Deploy to both chains
 npm run deploy:contracts:testnet
@@ -124,7 +122,7 @@ npm run check:deployments
 
 Contract addresses are saved in:
 - `deployments/algorand-{network}.json`
-- `deployments/avalanche-{network}.json`
+- `deployments/goat-{network}.json`
 
 ## Development
 
@@ -134,7 +132,7 @@ Contract addresses are saved in:
 # Test Algorand contracts
 npm run test:contracts:algorand
 
-# Test Avalanche contracts (Foundry)
+# Test Goat contracts (Foundry)
 forge test
 
 # Test all contracts
@@ -152,47 +150,27 @@ cd sandbox && ./sandbox up dev
 npm run deploy:contracts:algorand:local
 ```
 
-#### Avalanche Local Subnet (Optional)
+#### Goat Network Local Dev
 ```bash
-# Install Avalanche CLI
-npm install -g avalanche-cli
+# Start local EVM dev environment
+npx hardhat node --network localhost
 
-# Create local subnet
-avalanche subnet create sportwarren-local
-avalanche subnet deploy sportwarren-local
+# Deploy to local
+npx hardhat run scripts/deploy.ts --network localhost
 ```
 
-## Contract Addresses
+## Chain Selection Guide
 
-### Testnet
-
-| Contract | Algorand (Testnet) | Avalanche (Fuji) |
-|----------|-------------------|------------------|
-| Squad DAO / Token | `PENDING` | [`0x9ecDe1788E1cE1B40024F0fD9eA87f49a94781dB`](https://testnet.snowtrace.io/address/0x9ecDe1788E1cE1B40024F0fD9eA87f49a94781dB) ✅ |
-| Squad Timelock | `PENDING` | [`0xb3cF66142882b3eAf197167cA7191654d4Ea5A78`](https://testnet.snowtrace.io/address/0xb3cF66142882b3eAf197167cA7191654d4Ea5A78) ✅ |
-| Squad Governor | `PENDING` | [`0x2e98aF1871bF208Ad361202884AB88F904eFf826`](https://testnet.snowtrace.io/address/0x2e98aF1871bF208Ad361202884AB88F904eFf826) ✅ |
-| Match Verification | [`756630713`](https://testnet.algoscan.app/app/756630713) ✅ | `PENDING` |
-| Achievement NFT | `PENDING` | [`0xF8ae857B73DF377A4D9387600bA15c0f1e0e15C4`](https://testnet.snowtrace.io/address/0xF8ae857B73DF377A4D9387600bA15c0f1e0e15C4) ✅ |
-| Agent Escrow | `PENDING` | [`0xc675D1Dd85419C7Af28755830e06b0F54DB196c7`](https://testnet.snowtrace.io/address/0xc675D1Dd85419C7Af28755830e06b0F54DB196c7) ✅ |
-| Reputation | `PENDING` | `PENDING` |
-| Global Challenges | `PENDING` | `PENDING` |
-
-**Algorand Deployer:** `CO5MCLTB6IKXIKIEY3AYWUTLD4XHQYTGK3KPSCXEIFJX4PJETAT4GTPWHQ`
-
-**Avalanche Deployer:** `0x29FA4181620358dA180CAD770dB1696fbA78F1Cd`
-
-**Deployment Date:** March 9, 2026
-
-**Network:** Avalanche Fuji Testnet (Chain ID: 43113)
-
-### Mainnet
-
-| Contract | Algorand (Mainnet) | Avalanche (C-Chain) |
-|----------|-------------------|---------------------|
-| Squad DAO | `PENDING` | `PENDING` |
-| Match Verification | `PENDING` | `PENDING` |
-| Reputation | `PENDING` | `PENDING` |
-| Global Challenges | `PENDING` | `PENDING` |
+| Use Case | Recommended Chain | Rationale |
+|----------|------------------|-----------|
+| Match verification | Algorand | Proof-backed football state and low-cost verification |
+| Player reputation | Algorand | Durable progression and reputation records |
+| Squad governance | Goat Network | Bitcoin-native security via BitVM2, ERC-8004 agent identity |
+| Squad assets / escrow | Goat Network | Programmable contracts, x402 micropayments, native yield |
+| Agent identity / payments | Kite AI | Purpose-built agent passports and agent economy rails |
+| Instant settlement | Yellow | Fast operational settlement outside heavyweight contract flows |
+| Telegram wallet UX | TON | Native consumer payment flows in Telegram |
+| Social distribution | Lens | Portable social graph and content publishing |
 
 ## Security Considerations
 
@@ -207,53 +185,12 @@ avalanche subnet deploy sportwarren-local
 - TEAL best practices
 - Minimal computation for fee optimization
 
-### Avalanche-Specific
+### Goat Network-Specific
 - Foundry tests with high coverage
 - EVM security best practices
 - Reentrancy guards
 - Access control (OpenZeppelin)
-
-## Cross-Chain Integration
-
-### Chain Abstraction Layer
-
-SportWarren implements an application-layer abstraction that provides:
-- Unified access to Algorand and Avalanche contracts
-- Clear defaults (Algorand for verified football state, Avalanche for governance and escrow)
-- Service-layer coordination with Kite, Yellow, TON, and Lens
-- Cross-network operations support
-
-### Cross-Chain Messaging
-
-| Direction | Protocol | Use Case |
-|-----------|----------|----------|
-| Avalanche → Avalanche | AWM | Cross-subnet tournaments |
-| Algorand → External | State Proofs | Verifiable data proofs |
-| Both | Application Layer | Tournament synchronization |
-
-## Contributing
-
-When adding new contracts:
-
-1. **Determine target chain(s)** based on use case
-2. **Create appropriate subdirectory** (algorand/ or avalanche/)
-3. **Follow established patterns** for contract structure
-4. **Write comprehensive tests** (TEAL tests or Foundry)
-5. **Update documentation** (this README + docs/)
-6. **Security review** before deployment
-
-### Chain Selection Guide
-
-| Use Case | Recommended Chain | Rationale |
-|----------|------------------|-----------|
-| Match verification | Algorand | Proof-backed football state and low-cost verification |
-| Player reputation | Algorand | Durable progression and reputation records |
-| Squad governance | Avalanche | Mature EVM governance and treasury tooling |
-| Squad assets / escrow | Avalanche | Programmable contracts and asset standards |
-| Agent identity / payments | Kite AI | Purpose-built agent passports and agent economy rails |
-| Instant settlement | Yellow | Fast operational settlement outside heavyweight contract flows |
-| Telegram wallet UX | TON | Native consumer payment flows in Telegram |
-| Social distribution | Lens | Portable social graph and content publishing |
+- BitVM2 fraud proof compatibility
 
 ## Resources
 
@@ -262,17 +199,17 @@ When adding new contracts:
 - [TEAL Language Reference](https://developer.algorand.org/docs/get-details/dapps/avm/teal/)
 - [algosdk Documentation](https://algorand.github.io/js-algorand-sdk/)
 
-### Avalanche
-- [Avalanche Developer Documentation](https://docs.avax.network/)
+### Goat Network
+- [Goat Network Documentation](https://docs.goat.network/)
 - [Foundry Book](https://book.getfoundry.sh/)
 - [ERC-8004 Standard](https://eips.ethereum.org/EIPS/eip-8004)
+- [BitVM2 Overview](https://bitvm.org/)
 
 ### SportWarren
-- [Migration Strategy](../docs/MIGRATION_STRATEGY.md)
-- [Deployment Guide](../docs/DEPLOYMENT.md)
-- [Project Structure](../docs/PROJECT_STRUCTURE.md)
+- [Architecture](../docs/ARCHITECT.md)
+- [Build & Deployment](../docs/BUILD.md)
 
 ---
 
-**Last Updated:** 2026-02-25  
-**Status:** Algorand contracts deployed ✅ | Avalanche contracts in development ⏳
+**Last Updated:** 2026-06-09  
+**Status:** Algorand deployed ✅ | Goat Network BitVM2 testnet pending ⏳

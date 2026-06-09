@@ -1,0 +1,13 @@
+{
+  "build": {
+    "env": {
+      "DISABLE_SENTRY_BUILD": "true",
+      "NODE_OPTIONS": "--max-old-space-size=8192"
+    }
+  },
+  "functions": {
+    "app/api/**/*.ts": {
+      "maxDuration": 30
+    }
+  }
+}

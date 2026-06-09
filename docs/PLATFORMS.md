@@ -18,6 +18,22 @@ Telegram is the primary surface for **squad coordination and power users**.
 - **Match Cards:** After verification and peer consensus, a visual match result card (score, MOTM, XP progression) is sent to both squad group chats as a photo.
 - **TON Integration:** Native wallet UX for treasury top-ups and rewards.
 
+### App Routes (Telegram Mini App)
+| Route | Purpose |
+|-------|---------|
+| `/match` | Match center with quick-log default |
+| `/match/preview` | Pre-match AI briefing |
+| `/match/[id]/rate` | Peer rating interface |
+| `/squad` | Squad management |
+| `/coaching` | Coaching marketplace |
+| `/stats` | Season overview |
+| `/reputation` | Reputation page |
+| `/leaderboard` | Global leaderboards |
+| `/community` | Community hub |
+| `/achievements` | Achievement gallery |
+| `/profile` | Player identity card |
+| `/settings` | Signal preferences, wallet |
+
 ---
 
 ## 🟢 WhatsApp: Squad Engagement
@@ -32,6 +48,8 @@ WhatsApp reaches the broadest, least technical squad members. All messages are s
 - **Rating reminders DM:** Cron (every 2h) nudges players who haven't rated teammates after a match.
 - **Rate-token auth:** Players tap a signed link in DM to rate teammates — no Privy login required. Wallet banners are suppressed for these sessions.
 - **Post-match player cards:** FIFA-style player cards posted to the group after consensus closes.
+- **Yellow fee toast:** Settlement status shown after match verification.
+- **ERC-8004 agent registration:** Fire-and-forget registration on onboarding completion.
 
 ### Management Commands
 | Message | Action |
@@ -42,6 +60,7 @@ WhatsApp reaches the broadest, least technical squad members. All messages are s
 | `whoami` | List your linked platform identities. |
 | `unlink` | Remove your WhatsApp connection from SportWarren. |
 | `cost` | View pricing for autonomous agent services. |
+| `kite-proof` | Agent pays Kite-listed service → real USDC tx (hackathon demo). |
 
 ---
 
