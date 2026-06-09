@@ -61,11 +61,7 @@ fi
 # Remove pages router output if it exists (legacy pages)
 rm -rf "$BUILD_DIR/.next/standalone/.next/server/pages"
 
-# Remove unnecessary server chunks and manifests
-find "$BUILD_DIR/.next/standalone/.next/server" -name '*app-paths-manifest*' -delete
-find "$BUILD_DIR/.next/standalone/.next/server" -name '*pages-manifest*' -delete
-find "$BUILD_DIR/.next/standalone/.next/server" -name '*middleware*' -delete
-find "$BUILD_DIR/.next/standalone/.next/server" -name '*interception-route*' -delete
+# Keep all required manifests - Next.js standalone server needs them at boot
 
 # Remove image optimization (frontend-only feature)
 rm -rf "$BUILD_DIR/.next/standalone/.next/server/image-optimizer*"

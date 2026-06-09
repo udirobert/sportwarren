@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronRight, ChevronLeft, Sparkles, MousePointer2, Check, Users, User, Palette, Camera, Lock } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, Sparkles, MousePointer2, Check, Users, User, Palette, Camera, Lock, TrendingUp, Plus, CheckCircle2, Share2 } from 'lucide-react';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
@@ -13,6 +13,7 @@ import { trpc } from '@/lib/trpc-client';
 import type { DashboardEntryStateId } from '@/lib/dashboard/entry-state';
 import type { PlayerPosition } from '@/types';
 import type { ChecklistId } from '@/lib/onboarding/flow';
+import type { AttributeKey } from '@/server/services/personalization/twin-types';
 import {
   ONBOARDING_STORAGE_KEYS,
   TOUR_STEPS,
@@ -22,6 +23,9 @@ import {
 } from '@/lib/onboarding/flow';
 import { getPendingClaim, clearPendingClaim, roleToPosition } from '@/lib/claims/context';
 import { consumePendingPersona, clearPendingPersona } from '@/lib/claims/persona';
+import { ATTRIBUTE_DISPLAY, ATTRIBUTE_BAR_TONES } from '@/lib/attributes/display';
+import { PROVISIONAL_ATTRIBUTES, VERIFIED_DELTAS } from '@/lib/attributes/provisional';
+import { FORMATIONS } from '@/lib/formations';
 
 const FORMATION_OPTIONS = [
   { id: '1-2-1', label: '5s 1-2-1', description: 'One stays, two support, one finishes' },
@@ -485,6 +489,103 @@ function PersonalizationCard({
   formation, setFormation, primaryColor, setPrimaryColor, nickname, setNickname,
   isCompleting, error, onComplete, onBack, hasPendingPersona, pendingClaimPosition, completeChecklistItem, skipBrandStep
 }: PersonalizationCardProps) {
+  const [matchResult, setMatchResult] = useState<'won' | 'drew' | 'lost' | null>(null);
+  const [teammates, setTeammates] = useState<{ name: string; position: string }[]>([]);
+  const [newTeammateName, setNewTeammateName] = useState('');
+  const [newTeammatePos, setNewTeammatePos] = useState('MF');
+
+  const SCORE_OPTIONS = [
+    { id: 'won' as const, label: 'Won 3-1', emoji: '🏆', boost: '+15 XP' },
+    { id: 'drew' as const, label: 'Drew 2-2', emoji: '🤝', boost: '+10 XP' },
+    { id: 'lost' as const, label: 'Lost 1-2', emoji: '💪', boost: '+5 XP' },
+  ] as const;
+
+  const TEAMMATE_POSITIONS = ['GK', 'DF', 'MF', 'WG', 'ST'] as const;
+
+  const handleMatchResultClick = (result: typeof SCORE_OPTIONS[number]['id']) => {
+    setMatchResult(result);
+    trackEvent('onboarding_match_result_selected', { result });
+  };
+
+  // Compute provisional attributes with match-result deltas for display
+  const MATCH_RESULT_XP: Record<string, number> = { won: 15, drew: 10, lost: 5 };
+  const MATCH_RESULT_MULTIPLIER: Record<string, number> = { won: 1, drew: 0.6, lost: 0.3 };
+
+  const displayAttributes: { key: AttributeKey; label: string; Icon: React.FC<{ className?: string }>; baseValue: number; boostedValue: number }[] = useMemo(() => {
+    const pos = pendingClaimPosition ?? 'MF';
+    const base = PROVISIONAL_ATTRIBUTES[pos];
+    const delta = VERIFIED_DELTAS[pos];
+    const mult = matchResult ? MATCH_RESULT_MULTIPLIER[matchResult] ?? 0 : 0;
+    const allKeys = Object.keys(base) as AttributeKey[];
+    return allKeys.map(key => ({
+      key,
+      label: ATTRIBUTE_DISPLAY[key].label,
+      Icon: ATTRIBUTE_DISPLAY[key].Icon,
+      baseValue: base[key],
+      boostedValue: Math.min(99, Math.max(1, Math.round(base[key] + (delta[key] ?? 0) * mult))),
+    }));
+  }, [matchResult, pendingClaimPosition]);
+
+  const xpGained = matchResult ? MATCH_RESULT_XP[matchResult] ?? 0 : 0;
+  const [displayedXp, setDisplayedXp] = useState(0);
+
+  useEffect(() => {
+    if (!matchResult || xpGained <= 0) return;
+    setDisplayedXp(0);
+    const start = performance.now();
+    const duration = 1200;
+    const raf = requestAnimationFrame(function tick(now) {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setDisplayedXp(Math.round(eased * xpGained));
+      if (progress < 1) requestAnimationFrame(tick);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [matchResult, xpGained]);
+
+  const addTeammate = () => {
+    if (!newTeammateName.trim()) return;
+    setTeammates(prev => [...prev, { name: newTeammateName.trim(), position: newTeammatePos }]);
+    setNewTeammateName('');
+    trackEvent('onboarding_teammate_added', { position: newTeammatePos });
+  };
+
+  const removeTeammate = (index: number) => {
+    setTeammates(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const positionsLabel = (formationId: string, playerCount: number) => {
+    const pos = FORMATIONS[formationId as keyof typeof FORMATIONS];
+    if (!pos) return '';
+    const total = pos.length;
+    const gk = 1;
+    const outfield = total - gk;
+    return `${playerCount} of ${total} — ${gk} GK, ${outfield} outfield`;
+  };
+
+  const handleShareSquad = () => {
+    trackEvent('onboarding_share_squad_clicked', { formation, teammates: teammates.length });
+    const shareText = `🪪 I built my squad on SportWarren\n\n👤 ${playerName || 'Me'}\n📋 ${formation || '4-4-2'}\n👥 ${teammates.length + 1} players\n\nCome join and make the stats real.`;
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
+  const handleSharePlayerCard = () => {
+    trackEvent('onboarding_share_player_card_clicked', { formation, matchResult });
+    const resultEmoji = matchResult === 'won' ? '🏆' : matchResult === 'drew' ? '🤝' : matchResult === 'lost' ? '💪' : '🪪';
+    const resultLine = matchResult ? `${resultEmoji} Last result: ${matchResult === 'won' ? 'Win' : matchResult === 'drew' ? 'Draw' : 'Loss'}` : '';
+    const shareText = [
+      `🪪 My player card — ${playerName || 'New Player'} (${pendingClaimPosition ?? 'MF'})`,
+      resultLine,
+      `📋 ${formation || '4-4-2'}`,
+      'Build yours on SportWarren and make the stats real.',
+    ].filter(Boolean).join('\n\n');
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   return (
     <Card className="bg-gradient-to-br from-gray-900 to-black border-gray-800 text-white overflow-hidden relative shadow-2xl max-w-lg mx-auto">
       <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
@@ -549,6 +650,141 @@ function PersonalizationCard({
                   className="w-full bg-white/5 border-2 border-white/10 rounded-2xl p-4 text-white font-bold focus:outline-none focus:border-green-500 transition-colors"
                 />
               </div>
+
+              {/* ── Quick match result interaction ── */}
+              {playerName.trim().length >= 2 && !hasPendingPersona && (
+                <div className="mb-8">
+                  <AnimatePresence mode="wait">
+                    {!matchResult ? (
+                      <motion.div
+                        key="select-result"
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="rounded-2xl border border-amber-500/30 bg-gradient-to-br from-amber-500/10 to-amber-500/5 p-5"
+                      >
+                        <div className="text-[10px] font-black uppercase tracking-[0.18em] text-amber-300 mb-3 flex items-center gap-2">
+                          <TrendingUp className="w-3.5 h-3.5" />
+                          How did your last match go?
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          {SCORE_OPTIONS.map(option => (
+                            <button
+                              key={option.id}
+                              onClick={() => handleMatchResultClick(option.id)}
+                              className="flex flex-col items-center gap-1 rounded-xl border border-white/10 bg-white/[0.06] px-3 py-3 transition-all hover:border-emerald-500/40 hover:bg-emerald-500/10"
+                            >
+                              <span className="text-lg">{option.emoji}</span>
+                              <span className="text-xs font-bold text-white">{option.label}</span>
+                              <span className="text-[9px] font-black text-emerald-400">{option.boost}</span>
+                            </button>
+                          ))}
+                        </div>
+                        <p className="mt-3 text-[10px] text-gray-600 text-center">
+                          Your stats adjust based on the result
+                        </p>
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="result-shown"
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 p-5"
+                      >
+                        {/* Header */}
+                        <div className="flex items-center gap-3 mb-4">
+                          <motion.div
+                            initial={{ scale: 0, rotate: -180 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            transition={{ type: 'spring', stiffness: 260, damping: 18 }}
+                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500/20 text-lg"
+                          >
+                            {matchResult === 'won' ? '🏆' : matchResult === 'drew' ? '🤝' : '💪'}
+                          </motion.div>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-black text-white">
+                              {matchResult === 'won' ? 'Great win!' : matchResult === 'drew' ? 'Hard-fought draw' : 'Tough loss — more to prove'}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              Your attributes adjusted for the result
+                            </p>
+                          </div>
+                          {/* XP counter */}
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.5 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ delay: 0.6, type: 'spring' }}
+                            className="flex shrink-0 flex-col items-center"
+                          >
+                            <span className="text-lg font-black tabular-nums text-emerald-400">
+                              +{displayedXp}
+                            </span>
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-emerald-500/70">
+                              XP
+                            </span>
+                          </motion.div>
+                        </div>
+
+                        {/* Animated attribute bars */}
+                        <div className="space-y-2.5">
+                          {displayAttributes.map((attr, i) => {
+                            const Icon = attr.Icon;
+                            const barColor = ATTRIBUTE_BAR_TONES[attr.key];
+                            const isBoosted = attr.boostedValue > attr.baseValue;
+                            const targetPercent = (attr.boostedValue / 99) * 100;
+                            return (
+                              <div key={attr.key} className="flex items-center gap-2.5">
+                                <div className="flex w-20 items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] text-gray-400">
+                                  <Icon className="h-3 w-3" />
+                                  {attr.label}
+                                </div>
+                                <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-white/10">
+                                  <motion.div
+                                    initial={{ width: '0%' }}
+                                    animate={{ width: `${targetPercent}%` }}
+                                    transition={{ duration: 0.8, delay: 0.3 + i * 0.12, ease: 'easeOut' }}
+                                    className={`h-full rounded-full ${barColor}`}
+                                  />
+                                </div>
+                                <div className="flex w-10 items-center justify-end gap-0.5 text-xs font-black tabular-nums text-white">
+                                  <motion.span
+                                    initial={{ opacity: 0, x: -4 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: 0.5 + i * 0.12 }}
+                                    className="transition-all"
+                                  >
+                                    {attr.boostedValue}
+                                  </motion.span>
+                                  {isBoosted && (
+                                    <motion.span
+                                      initial={{ opacity: 0, scale: 0 }}
+                                      animate={{ opacity: 1, scale: 1 }}
+                                      transition={{ delay: 0.7 + i * 0.12, type: 'spring' }}
+                                      className="text-[9px] font-bold text-emerald-400"
+                                    >
+                                      +{attr.boostedValue - attr.baseValue}
+                                    </motion.span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Confirmation footer */}
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 1.8 }}
+                          className="mt-4 flex items-center justify-center gap-1.5 text-xs"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                          <span className="font-bold text-emerald-400">Stats recorded to your card</span>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
               
               <button
                 onClick={() => playerName.trim().length >= 2 && setStep('formation')}
@@ -600,7 +836,7 @@ function PersonalizationCard({
                 </div>
               )}
               
-              <div className="space-y-3 mb-8">
+              <div className="space-y-3 mb-6">
                 {FORMATION_OPTIONS.map(option => (
                   <button
                     key={option.id}
@@ -618,6 +854,164 @@ function PersonalizationCard({
                   </button>
                 ))}
               </div>
+
+              {/* ── Lightweight teammate addition ── */}
+              {formation && !hasPendingPersona && (
+                <div className="mb-6 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400 mb-3 flex items-center gap-2">
+                    <Users className="w-3.5 h-3.5" />
+                    Your Starting XI
+                  </div>
+
+                  {/* Current teammates */}
+                  {teammates.length > 0 && (
+                    <div className="mb-4 space-y-2">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-emerald-400/40 bg-emerald-500/15 text-[10px] font-black text-emerald-300">
+                          {(playerName.trim().slice(0, 2) || 'SW').toUpperCase()}
+                        </div>
+                        <span className="text-xs font-bold text-white">{playerName || 'You'}</span>
+                        <span className="rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-black text-emerald-300">
+                          {pendingClaimPosition ?? 'MF'}
+                        </span>
+                        <span className="text-[9px] text-gray-600 font-bold ml-auto">You</span>
+                      </div>
+                      {teammates.map((t, i) => (
+                        <div key={i} className="flex items-center gap-2 group">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-white/10 bg-white/[0.06] text-[10px] font-black text-gray-400">
+                            {(t.name.slice(0, 2) || 'SW').toUpperCase()}
+                          </div>
+                          <span className="text-xs font-bold text-white">{t.name}</span>
+                          <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-black text-gray-300">
+                            {t.position}
+                          </span>
+                          <button
+                            onClick={() => removeTeammate(i)}
+                            className="ml-auto opacity-0 group-hover:opacity-100 p-1 text-gray-600 hover:text-red-400 transition-all"
+                            aria-label={`Remove ${t.name}`}
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Add teammate form */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newTeammateName}
+                      onChange={(e) => setNewTeammateName(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') addTeammate(); }}
+                      placeholder="Teammate name"
+                      maxLength={20}
+                      className="flex-1 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-xs font-medium text-white placeholder-gray-600 outline-none transition focus:border-emerald-500/60"
+                    />
+                    <select
+                      value={newTeammatePos}
+                      onChange={(e) => setNewTeammatePos(e.target.value)}
+                      className="rounded-lg border border-white/10 bg-white/[0.06] px-2 py-2 text-xs font-bold text-white outline-none transition focus:border-emerald-500/60"
+                    >
+                      {TEAMMATE_POSITIONS.map(pos => (
+                        <option key={pos} value={pos} className="bg-gray-900 text-white">{pos}</option>
+                      ))}
+                    </select>
+                    <button
+                      onClick={addTeammate}
+                      disabled={!newTeammateName.trim()}
+                      className="flex items-center gap-1 rounded-lg bg-emerald-500/20 px-3 py-2 text-xs font-bold text-emerald-300 transition-all hover:bg-emerald-500/30 disabled:opacity-30 disabled:cursor-not-allowed"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Add
+                    </button>
+                  </div>
+                  {teammates.length > 0 && (
+                    <p className="mt-3 text-[10px] text-gray-600 text-center">
+                      You + {teammates.length} teammate{teammates.length !== 1 ? 's' : ''} — add more or proceed
+                    </p>
+                  )}
+                  {teammates.length === 0 && (
+                    <p className="mt-2 text-[10px] text-gray-700 text-center">
+                      Add a few teammates to see your squad come together
+                    </p>
+                  )}
+
+                  {/* ── Mini pitch with formation positions ── */}
+                  {teammates.length > 0 && formation && FORMATIONS[formation as keyof typeof FORMATIONS] && (
+                    <div className="mt-5">
+                      <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500 mb-2">
+                        Matchday lineup
+                      </div>
+                      <div className="relative mx-auto h-52 w-full max-w-[200px] overflow-hidden rounded-2xl"
+                        style={{
+                          background: 'linear-gradient(135deg, #166534 0%, #15803d 50%, #166534 100%)',
+                        }}
+                      >
+                        {/* Pitch markings */}
+                        <div className="absolute inset-x-0 top-1/2 h-px bg-white/15" />
+                        <div className="absolute left-1/2 top-0 h-full w-px bg-white/15" />
+                        <div className="absolute left-1/2 top-1/2 h-16 w-16 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white/15" />
+                        <div className="absolute bottom-0 left-1/2 h-14 w-28 -translate-x-1/2 rounded-t-full border-2 border-b-0 border-white/15" />
+                        {/* Centre spot */}
+                        <div className="absolute left-1/2 top-1/2 h-2 w-2 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/20" />
+
+                        {/* Player dots */}
+                        {(() => {
+                          const positions = FORMATIONS[formation as keyof typeof FORMATIONS];
+                          if (!positions) return null;
+                          // Assign players: user is GK (first slot), teammates fill outfield
+                          const allPlayers = [
+                            { name: playerName || 'You', initials: (playerName.trim().slice(0, 2) || 'SW').toUpperCase(), isUser: true },
+                            ...teammates.slice(0, positions.length - 1).map(t => ({
+                              name: t.name,
+                              initials: (t.name.slice(0, 2) || 'SW').toUpperCase(),
+                              isUser: false,
+                            })),
+                          ];
+                          return positions.map((pos, i) => {
+                            const player = allPlayers[i];
+                            if (!player) return null;
+                            return (
+                              <motion.div
+                                key={`pos-${i}`}
+                                initial={{ opacity: 0, scale: 0 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.1 + i * 0.06, type: 'spring', stiffness: 200 }}
+                                className="absolute z-10 flex flex-col items-center"
+                                style={{
+                                  left: `${pos.x}%`,
+                                  top: `${pos.y}%`,
+                                  transform: 'translate(-50%, -50%)',
+                                }}
+                              >
+                                <div
+                                  className={`flex h-7 w-7 items-center justify-center rounded-full border-2 text-[9px] font-black shadow-lg ${
+                                    player.isUser
+                                      ? 'border-emerald-400 bg-emerald-500 text-white shadow-emerald-500/30'
+                                      : 'border-white/40 bg-white/15 text-white'
+                                  }`}
+                                >
+                                  {player.initials}
+                                </div>
+                                <span className="mt-0.5 whitespace-nowrap rounded bg-black/40 px-1 py-[1px] text-[7px] font-bold uppercase tracking-wider text-white/80">
+                                  {pos.role}
+                                </span>
+                              </motion.div>
+                            );
+                          });
+                        })()}
+
+                        {/* Pitch glow */}
+                        <div className="pointer-events-none absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10" />
+                      </div>
+                      <p className="mt-2 text-center text-[9px] text-gray-600">
+                        {positionsLabel(formation, teammates.length + 1)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
               
               <button
                 onClick={() => {
@@ -676,6 +1070,98 @@ function PersonalizationCard({
                   ))}
                 </div>
               </div>
+
+              {/* ── Share card (squad or solo) ── */}
+              {teammates.length > 0 ? (
+                <div className="mb-6 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-gray-800/50 to-gray-900/50">
+                  <div className="p-4">
+                    <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500 mb-3 flex items-center gap-2">
+                      <Share2 className="w-3.5 h-3.5" />
+                      Your squad card
+                    </div>
+                    <div
+                      className="rounded-xl p-4"
+                      style={{ backgroundColor: primaryColor + '15', borderColor: primaryColor + '40', borderWidth: 1 }}
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <div>
+                          <p className="text-base font-black text-white">{nickname || 'Your Squad'}</p>
+                          <p className="text-[10px] text-gray-500">{formation} · {teammates.length + 1} players</p>
+                        </div>
+                        <div className="flex -space-x-2">
+                          <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-emerald-400 bg-emerald-500/20 text-[8px] font-black text-emerald-300">
+                            {(playerName.trim().slice(0, 2) || 'SW').toUpperCase()}
+                          </div>
+                          {teammates.slice(0, 3).map((t, i) => (
+                            <div key={i} className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/30 bg-white/10 text-[8px] font-black text-gray-300">
+                              {(t.name.slice(0, 2) || 'SW').toUpperCase()}
+                            </div>
+                          ))}
+                          {teammates.length > 3 && (
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-white/20 bg-white/5 text-[8px] font-black text-gray-500">
+                              +{teammates.length - 3}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-[9px] text-gray-500">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span>Ready for the season</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleShareSquad}
+                    className="flex w-full items-center justify-center gap-2 border-t border-white/10 px-4 py-3 text-xs font-bold text-emerald-400 transition-all hover:bg-white/[0.03] hover:text-emerald-300"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share with your squad
+                  </button>
+                </div>
+              ) : (
+                <div className="mb-6 overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-gray-800/50 to-gray-900/50">
+                  <div className="p-4">
+                    <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-500 mb-3 flex items-center gap-2">
+                      <Share2 className="w-3.5 h-3.5" />
+                      Your player card
+                    </div>
+                    <div
+                      className="rounded-xl p-4"
+                      style={{ backgroundColor: primaryColor + '15', borderColor: primaryColor + '40', borderWidth: 1 }}
+                    >
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border-2 border-emerald-400/40 bg-emerald-500/15 text-base font-black text-emerald-200">
+                          {(playerName.trim().slice(0, 2) || 'SW').toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-base font-black text-white">{playerName || 'New Player'}</p>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="rounded-md bg-white/10 px-1.5 py-0.5 text-[9px] font-black text-gray-300">
+                              {pendingClaimPosition ?? 'MF'}
+                            </span>
+                            {matchResult && (
+                              <span className="text-[9px] text-emerald-400 font-bold">
+                                {matchResult === 'won' ? '🏆 Won' : matchResult === 'drew' ? '🤝 Drew' : '💪 Lost'}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-[9px] text-gray-500">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span>Ready to share with your squad</span>
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleSharePlayerCard}
+                    className="flex w-full items-center justify-center gap-2 border-t border-white/10 px-4 py-3 text-xs font-bold text-emerald-400 transition-all hover:bg-white/[0.03] hover:text-emerald-300"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share your player card
+                  </button>
+                </div>
+              )}
               
               <button
                 onClick={onComplete}

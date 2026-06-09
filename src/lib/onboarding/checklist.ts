@@ -5,7 +5,6 @@ export const CHECKLIST_IDS: readonly ChecklistId[] = [
     'set_formation',
     'join_squad',
     'log_match',
-    'claim_identity',
 ] as const;
 
 export const CHECKLIST_ITEMS: ChecklistItemConfig[] = [
@@ -45,15 +44,7 @@ export const CHECKLIST_ITEMS: ChecklistItemConfig[] = [
         actionLabel: 'Log match',
         xp: 150,
     },
-    {
-        id: 'claim_identity',
-        label: 'Secure your progress',
-        description: 'Connect a wallet so your card, XP, and squad history persist across devices',
-        emoji: '⚡',
-        href: '/settings?tab=wallet',
-        actionLabel: 'Save progress',
-        xp: 50,
-    },
+
 ];
 
 export const PLATFORM_CHECKLIST_FILTERS: Record<Platform, string[]> = {
