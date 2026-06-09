@@ -16,10 +16,158 @@ Match Scheduled → Pre-Match Preview → Live Match → Post-Match Ratings → 
 
 | Phase | What Happens | User Surface |
 |-------|-------------|--------------|
-| **Pre-Match** | AI generates win probabilities, tactical breakdowns, and head-to-head comparisons. Autonomous squad agent may procure external intelligence on opponents. | WhatsApp + Telegram preview card |
+| **Pre-Match** | AI generates win probabilities, tactical breakdowns, and head-to-head comparisons. Autonomous squad agent may procure external intelligence on opponents. | `/match/preview` page, WhatsApp + Telegram preview card |
 | **Live Match** | Real-time commentary delivered to squad WhatsApp groups. Match events (goals, cards, subs) logged through chat commands or Telegram Mini App. | WhatsApp group chat |
 | **Post-Match** | Teammates rate each other's FIFA-style attributes. Consensus logic deduplicates and weights ratings. Result verified through Algorand attestation. | WhatsApp prompts + Telegram dashboard |
 | **Progression** | Player attributes evolve based on peer consensus and match history. XP earned for accurate ratings. Squad stats aggregate into season-long narratives. | PlayerIdentityCard (skin + twin, one component) |
+
+### Match Briefing & Preview
+
+The `/match/preview` page provides AI-generated pre-match intelligence:
+
+- **Win probabilities** based on historical performance
+- **Tactical breakdowns** and head-to-head comparisons
+- **Opponent scouting** via Kite AI agents (on-demand or cron-triggered 22h before kickoff)
+- **Yellow fee integration** for settlement rail visibility
+
+### Post-Match Reactions
+
+After verified matches, players receive animated **PostMatchReaction** widgets:
+
+- **XP gains** with animated counter
+- **Attribute changes** with +/- indicators
+- **Level-up celebrations** for milestone achievements
+- **Yellow settlement toast** showing fee breakdown
+
+The reaction widget is the primary conversion surface for first-time users — it makes the value proposition tangible immediately after their first match.
+
+---
+
+## 🏋️ Daily Drills
+
+Players complete daily training drills to boost their twin's attributes outside of match days.
+
+### Drill Mechanics
+- **Daily reset** at midnight UTC
+- **Streak tracking** for consecutive days completed
+- **Attribute boosts** applied via `TwinService.recordEvent({ kind: 'drill_completed' })`
+- **Streak rewards** unlock premium features (3D twin, extended moments)
+
+### Dashboard Integration
+- `DailyDrillWidget` displays on `AdaptiveDashboard`
+- Shows current streak, today's drill, and reward tier
+- First-match users see drill widget as onboarding CTA
+
+---
+
+## 🎮 Formation Playground & Viral Loop
+
+The Formation Playground is the primary user acquisition surface — an interactive pitch editor that doubles as a viral growth engine.
+
+### Core Features
+- **Drag-and-drop formation builder** with player name/avatar inputs
+- **Tactical share** via `/api/tactics/share` → generates shareable slug
+- **Claim flow** at `/play/[slug]` — teammates claim positions without logging in
+- **Counter-play loop** — opponents can counter the formation and share back
+
+### Architecture
+- `FormationPlayground` — Client component with 4 flow states: `build`, `challenge_received`, `counter_setup`, `result`
+- `PitchCanvas` — DOM-based pitch renderer with framer-motion animations
+- `MatchEnginePreview` — Tick-based match simulation with physics, passing, GK saves
+- `ExportPanel` — PNG export (html-to-image), Web Share API, WebM video recording
+
+### Counter-Play Viral Loop
+```
+User A builds formation → shares challenge URL (vs_f, vs_s, vs_c, vs_n params)
+    ↓
+User B opens URL → sees ChallengeOverlay ("Countering your 4-3-3")
+    ↓
+User B clicks "Counter with 4-5-1" → simulation runs
+    ↓
+MatchResultCard renders (score, goals, possession, Rematch/Share/Challenge Back)
+    ↓
+User B clicks "Challenge Back" → new URL copied → loop restarts
+```
+
+### Claim-to-Signup Flow
+```
+User shares formation with claim link → Teammate clicks /play/[slug]
+    ↓
+ClaimablePitch shows formation with open positions
+    ↓
+Teammate enters name, claims position → PendingClaimContext stored
+    ↓
+OnboardingFlow consumes claim context → profile pre-filled with claimed role
+    ↓
+Avatar upload available during personalization step
+```
+
+---
+
+## 🚪 Onboarding Flow
+
+SportWarren uses a **persona-first** onboarding that prioritizes the formation playground as the primary conversion surface.
+
+### Flow Stages
+1. **Landing** — Hero section with FormationPlayground, value prop grid
+2. **Squad Creation** — Create or join a squad (soft wallet gate)
+3. **Formation Setup** — Set tactical preferences (pre-fill from claim context if applicable)
+4. **Avatar Upload** — Optional photo upload (stored in PendingPersonaContext)
+5. **Personalization** — FIFA-style attribute selection
+6. **Dashboard** — Adaptive dashboard based on user state (new vs. returning)
+
+### Key Components
+- `OnboardingFlow` — Multi-step wizard with progress indicator
+- `SquadCreationModal` — Create/join squad inline
+- `PendingPersonaContext` — Stores avatar + preferences in localStorage (24h TTL)
+- `PendingClaimContext` — Bridges anonymous claim to authenticated profile
+- `AdaptiveDashboard` — Persona-aware dashboard (NewUserDashboard vs. returning user)
+
+### Soft Wallet Gate
+- Squad invites work without wallet connection
+- First match triggers wallet setup
+- Privy OAuth callbacks preserve formation URL state
+
+---
+
+## 💰 Yellow Fee Integration
+
+Match verification settlement uses Yellow as the operational payment rail.
+
+### Flow
+1. Match result verified (3+ confirms or 6h silence)
+2. x402 attestation written to database
+3. Yellow fee settled downstream of attestation
+4. User sees "Verified via x402" badge on match detail
+5. Toast notification shows settlement status
+
+### ERC-8004 Trust Loop
+- `goatAgentId` persisted on `PlayerProfile` through register-agent API
+- Fire-and-forget ERC-8004 agent registration on onboarding completion
+- Closes the trust loop between SportWarren and Goat Network agent identity
+
+---
+
+## 📊 App Routes
+
+| Route | Purpose |
+|-------|---------|
+| `/` | Landing page with FormationPlayground |
+| `/play/[slug]` | Claim formation position (viral entry) |
+| `/join/[squadId]` | Join squad from invite |
+| `/match` | Match center (logging, history) |
+| `/match/preview` | Pre-match AI briefing |
+| `/match/[id]/rate` | Peer rating interface |
+| `/squad` | Squad management |
+| `/coaching` | Coaching marketplace |
+| `/stats` | Season overview + stats |
+| `/reputation` | Reputation page |
+| `/leaderboard` | Global leaderboards |
+| `/community` | Community hub |
+| `/achievements` | Achievement gallery |
+| `/profile` | Player identity card |
+| `/settings` | Signal preferences, wallet |
+| `/analytics` | Admin analytics dashboard |
 
 ---
 
@@ -232,12 +380,14 @@ Key analytics events to measure loop effectiveness:
 
 | Phase | Milestone | Status |
 |-------|-----------|--------|
-| **Phase 1** | **Core Loop:** Match logging, Algorand verification, XP system. | ✅ 100% |
-| **Phase 2** | **Agents & Economy:** Kite AI x402, Staff Office, Squad DAOs. | ✅ 100% |
-| **Phase 3** | **Viral Features:** Formation playground, counter-play loop, Lens Social, Derby tracking. | ✅ 100% |
-| **Phase 3b** | **WhatsApp Engagement:** Auto-link, RSVP reply, scout lists, rating reminders DM, rate-token auth, player cards. | ✅ 100% |
-| **Phase 3c** | **Viral Squad Formation Sharing:** Avatar upload infrastructure, formation playground avatar integration, shareable formation image generation, enhanced claim flow with avatar selection. | ✅ 100% (2026-06-09) |
-| **Phase 4** | **Immersive Evolution:** Unified player identity (avatar = skin, twin = brain), moment renders, 3D broadcast tier. | 🟡 PR 1+2 done (schema, appliers, TwinService orchestrator, notify, moments, image, storage adapter); PR 3-7 pending |
+| **Phase 1** | **Core Loop:** Match logging, Algorand verification, XP system. | ✅ Complete |
+| **Phase 2** | **Agents & Economy:** Kite AI x402, Staff Office, Squad DAOs. | ✅ Complete |
+| **Phase 3** | **Viral Features:** Formation playground, counter-play loop, Lens Social, Derby tracking. | ✅ Complete |
+| **Phase 3b** | **WhatsApp Engagement:** Auto-link, RSVP reply, scout lists, rating reminders DM, rate-token auth, player cards. | ✅ Complete |
+| **Phase 3c** | **Viral Squad Formation Sharing:** Avatar upload, claim flow, counter-play loop. | ✅ Complete |
+| **Phase 4** | **Personalization:** TwinService, coaching marketplace, daily drills, post-match reactions, onboarding flow. | ✅ Complete |
+| **Phase 5** | **Twin Simulations:** Overnight round-robin tournaments, fluid squad composition insights. | 🟡 In Progress |
+| **Phase 6** | **3D Broadcast:** Three.js renderer, camera director, broadcast graphics. | 🔜 Planned |
 
 ### Immediate Next Steps (Post-Deploy)
 

@@ -50,10 +50,12 @@ SportWarren transforms grassroots football into a progression system. Players ea
 
 | Document | Purpose |
 |----------|---------|
-| **[ARCHITECT.md](docs/ARCHITECT.md)** | Technical blueprint: twin brain system, match lifecycle, peer consensus engine. |
+| **[ARCHITECT.md](docs/ARCHITECT.md)** | Technical blueprint: match lifecycle, twin system, formations, onboarding. |
 | **[PLATFORMS.md](docs/PLATFORMS.md)** | Channel guides for Telegram, WhatsApp, and web dashboard. |
-| **[BUILD.md](docs/BUILD.md)** | Development setup, deployment flow, and testing instructions. |
-| **[DEPLOY_HETZNER_RUNTIME.md](docs/DEPLOY_HETZNER_RUNTIME.md)** | Production deployment and operations guide. |
+| **[BUILD.md](docs/BUILD.md)** | Development setup, deployment, tRPC routers, and cron endpoints. |
+| **[FORMATIONS.md](docs/FORMATIONS.md)** | Formation playground, viral loop, and claim flow. |
+| **[ONBOARDING.md](docs/ONBOARDING.md)** | Persona-first onboarding flow and context management. |
+| **[DESIGN_TOKENS.md](docs/DESIGN_TOKENS.md)** | Visual system: colors, typography, layout, animations. |
 
 ---
 

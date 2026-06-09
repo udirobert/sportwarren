@@ -48,8 +48,28 @@ SportWarren uses a role-specific multi-chain system. Fallback **Simulation Mode*
 | `/api/cron/verification-expiry` | Every 15 min | Expires unverified pending matches |
 | `/api/cron/consensus` | Every 15 min | Closes expired rating windows |
 | `/api/cron/rating-reminders` | Every 2h | DMs players who haven't rated teammates |
+| `/api/cron/moment-render` | Every 6h | Generates PNG renders for unrendered moments |
+| `/api/cron/twin-sim` | Daily | Runs overnight round-robin tournaments |
+| `/api/cron/digital-twin` | Daily | Sweeps expired coaching effects, fires events |
+| `/api/cron/season` | Daily | Auto-ends seasons past endDate |
 
 All require `Authorization: Bearer <CRON_SECRET>`.
+
+### tRPC Routers
+| Router | Purpose |
+|--------|---------|
+| `player.ts` | Player identity, profile, avatar, admin adjustments |
+| `squad.ts` | Squad management, members, invites |
+| `match.ts` | Match logging, verification, history |
+| `peer-rating.ts` | Peer consensus engine, rating submission |
+| `tournament.ts` | Seasons, twin sims, leaderboards |
+| `coaching.ts` | Coaching marketplace, hire/cancel effects |
+| `communication.ts` | Signal preferences, notifications |
+| `agent.ts` | Kite AI agent integration, attestations |
+| `market.ts` | Transfer market |
+| `auth.ts` | Authentication, session management |
+| `lens.ts` | Lens Protocol integration |
+| `memory.ts` | Agent memory service |
 
 ### Chain Responsibility Matrix
 | Network | Responsibility | Key Variables |
@@ -69,14 +89,30 @@ Ideal for the web UI and non-intensive API routes.
 vercel --prod
 ```
 
-### Hetzner (Standalone Runtime)
-For the long-term production API, we use a lean **runtime-only artifact** on Hetzner via PM2. This avoids keeping the full source code on the server.
+### Hetzner (API-Only Backend)
+For the production API backend, we deploy an **API-only artifact** to Hetzner via PM2. The frontend is served by Vercel (www.sportwarren.com), while Hetzner runs only the backend API routes, tRPC endpoints, workers, and cron jobs.
 
-#### 1. Build Artifact
+#### Architecture
+- **Vercel**: Frontend (Next.js pages, React components, SSR/ISR) → www.sportwarren.com
+- **Hetzner**: Backend API only (tRPC, REST, workers, cron, database) → api.sportwarren.com
+
+#### 1. Build API-Only Artifact
 ```bash
 bash scripts/build-runtime-artifact.sh
-# Produces artifacts/sportwarren-runtime-TIMESTAMP.tar.gz
+# Produces artifacts/sportwarren-api-TIMESTAMP.tar.gz
 ```
+
+The build script:
+1. Builds the full Next.js app (required for API route compilation)
+2. Prunes frontend bloat from the standalone output:
+   - Removes `.next/static` (JS/CSS bundles - Vercel handles this)
+   - Removes `public/` (frontend assets - Vercel handles this)
+   - Removes all app routes except `api/` directory
+   - Removes pages router output (legacy pages)
+   - Removes middleware, image optimizer, and frontend manifests
+3. Bundles only the API server with Prisma schema and deploy scripts
+
+**Result:** ~20-30MB artifact (vs ~121MB full app), ~5min build time (vs ~38min).
 
 #### 2. Deploy Release
 The full pipeline (build + migrate + upload + deploy) is automated:
@@ -86,7 +122,7 @@ bash scripts/deploy-hetzner.sh
 Migrations run from the build machine against the remote database before uploading. The deploy script unpacks the release, symlinks shared `.env` and `storage`, and restarts PM2.
 
 #### 3. PM2 Management
-The `ecosystem.config.cjs` runs the Next.js standalone server on port `5200`. Use `pm2 status` and `pm2 logs` for monitoring.
+The `ecosystem.config.cjs` runs the Next.js standalone server on port `5200`. The server only responds to API routes (`/api/*`, `/trpc/*`). Frontend requests are handled by Vercel. Use `pm2 status` and `pm2 logs` for monitoring.
 
 ---
 
@@ -114,4 +150,4 @@ pnpm run build
 
 ---
 
-**See Also:** [ARCHITECT.md](./ARCHITECT.md) | [PLATFORMS.md](./PLATFORMS.md) | [HACKATHON.md](./HACKATHON.md)
+**See Also:** [ARCHITECT.md](./ARCHITECT.md) | [PLATFORMS.md](./PLATFORMS.md)
