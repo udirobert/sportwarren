@@ -55,7 +55,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
   // context (and therefore onboarding prefill) can carry the formation
   // through Path D: playground → save card → personalize.
   const [cardFormation, setCardFormation] = useState<string | null>(null);
-  const { address, chain, loginAsGuest, hasAccount, hasWallet, isGuest, authStatus } = useWallet();
+  const { loginAsGuest, hasAccount, hasWallet, isGuest, authStatus } = useWallet();
   const parallaxRef = useRef<HTMLDivElement>(null);
   const parallaxRef2 = useRef<HTMLDivElement>(null);
 
@@ -116,21 +116,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
       // conversion as the card. Falls back to onGetStarted when no
       // onSavePlayerCard handler is wired (defensive — should not happen
       // in practice since page.tsx always passes both).
-      onSavePlayerCard?.() ?? onGetStarted?.();
+      if (onSavePlayerCard) {
+        onSavePlayerCard();
+      } else {
+        onGetStarted?.();
+      }
     } else {
       onGetStarted?.();
     }
   };
-  const hasEmbeddedWalletAddress = Boolean(address && /^0x[a-fA-F0-9]{8,}$/.test(address));
-  const heroSessionLine = isGuest
-    ? 'Guest preview is active. Claim your season when you are ready for progress that sticks.'
-    : hasWallet && address
-      ? `Signed in with ${address.slice(0, 6)}…${address.slice(-4)} on ${chain || 'your wallet network'}.`
-      : hasEmbeddedWalletAddress && address
-        ? `Signed in with embedded wallet ${address.slice(0, 6)}…${address.slice(-4)}. Add a chain wallet later for protected actions.`
-      : hasAccount
-        ? 'Signed in successfully. Add a wallet later when you need protected actions.'
-        : null;
+
 
   return (
     <div className="relative bg-gray-900 overflow-hidden">
@@ -236,15 +231,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             <p className="mb-4 text-sm font-bold uppercase tracking-[0.16em] text-green-300">
               {journeyContent.hero.stageLine}
             </p>
-          )}
-
-          {heroSessionLine && (
-            <div className="mb-6 flex items-center justify-center">
-              <div className="inline-flex max-w-2xl items-center gap-2 rounded-full border border-green-400/25 bg-green-500/10 px-4 py-2 text-sm font-medium text-green-100 backdrop-blur-sm">
-                <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{heroSessionLine}</span>
-              </div>
-            </div>
           )}
 
           <div className="mb-4 flex flex-wrap items-center justify-center gap-2">

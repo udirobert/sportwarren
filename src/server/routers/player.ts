@@ -10,6 +10,7 @@ import { generateAiAvatar } from '../services/avatar/avatar-generator';
 import { generateTacticalInsights } from '../../lib/ai/tactical-insights';
 import { identityService } from '../services/personalization/identity';
 import { verifyShareClaimToken } from '../services/tactical-claim-token';
+import { resolveEnsWithFallback } from '../services/ens-resolver';
 
 const AttributeType = z.enum([
   'pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical',
@@ -22,7 +23,7 @@ const playerProfileInclude = {
     orderBy: { createdAt: 'desc' },
     take: 5,
   },
-  user: { select: { name: true, avatar: true, position: true, walletAddress: true } },
+  user: { select: { name: true, avatar: true, position: true, walletAddress: true, ensName: true, walletLabel: true } },
   twin: {
     include: {
       agent: {
@@ -305,6 +306,54 @@ export const playerRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to update player profile',
+          cause: error,
+        });
+      }
+    }),
+
+  resolveEnsName: protectedProcedure
+    .mutation(async ({ ctx }) => {
+      try {
+        const user = await ctx.prisma.user.findUnique({
+          where: { id: ctx.userId! },
+          select: { id: true, walletAddress: true, ensName: true },
+        });
+        if (!user?.walletAddress) {
+          return { ensName: null };
+        }
+        const ensName = await resolveEnsWithFallback(user.walletAddress);
+        if (ensName && ensName !== user.ensName) {
+          await ctx.prisma.user.update({
+            where: { id: user.id },
+            data: { ensName },
+          });
+        }
+        return { ensName };
+      } catch (error) {
+        if (error instanceof TRPCError) throw error;
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to resolve ENS name',
+          cause: error,
+        });
+      }
+    }),
+
+  updateWalletLabel: protectedProcedure
+    .input(z.object({
+      walletLabel: z.string().max(30).nullable(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      try {
+        await ctx.prisma.user.update({
+          where: { id: ctx.userId! },
+          data: { walletLabel: input.walletLabel },
+        });
+        return { success: true };
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update wallet label',
           cause: error,
         });
       }

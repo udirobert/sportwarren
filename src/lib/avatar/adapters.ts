@@ -14,6 +14,8 @@ export interface PlayerAvatarSummary {
   totalGoals?: number | null;
   totalAssists?: number | null;
   reputationScore?: number | null;
+  ensName?: string | null;
+  walletLabel?: string | null;
 }
 
 export function buildAvatarPresentationFromSummary(
