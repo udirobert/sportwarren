@@ -10,6 +10,9 @@ interface ExportPanelProps {
   pitchRef: React.RefObject<HTMLElement | null>;
   formation: Formation;
   playStyle: string;
+  squadSize?: number;
+  names?: string[];
+  color?: string;
   /** Called when a share action completes */
   onShare?: () => void;
 }
@@ -18,6 +21,9 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
   pitchRef,
   formation,
   playStyle,
+  squadSize,
+  names,
+  color,
   onShare,
 }) => {
   const video = useVideoExport({ fps: 12, maxDuration: 8 });
@@ -53,6 +59,33 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
 
   const handleShare = useCallback(async () => {
     if (!pitchRef.current) return;
+    
+    // Create tactical share to get claim link
+    let claimUrl = window.location.href;
+    try {
+      if (squadSize && names) {
+        const response = await fetch("/api/tactics/share", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            plan: {
+              formation,
+              style: playStyle,
+              size: squadSize,
+              color: color || "#10b981",
+              names: names.filter(Boolean),
+            },
+          }),
+        });
+        const payload = await response.json().catch(() => null);
+        if (response.ok && payload?.url) {
+          claimUrl = payload.url;
+        }
+      }
+    } catch {
+      // Fall back to current URL if share creation fails
+    }
+    
     try {
       const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(pitchRef.current, {
@@ -67,14 +100,16 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
         type: "image/png",
       });
 
+      const shareText = `Tonight's ${squadSize}v${squadSize} ${formation} setup. Claim your spot: ${claimUrl}`;
+
       if (navigator.share && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: "My SportWarren Formation",
-          text: `Check out my ${formation} setup! Can you beat it?`,
+          text: shareText,
           files: [file],
         });
       } else {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(shareText);
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
       }
@@ -82,7 +117,7 @@ export const ExportPanel: React.FC<ExportPanelProps> = ({
     } catch (err) {
       console.error("Share failed:", err);
     }
-  }, [pitchRef, formation, onShare]);
+  }, [pitchRef, formation, playStyle, squadSize, names, color, onShare]);
 
   const handleVideoToggle = useCallback(async () => {
     if (video.state === "recording") {

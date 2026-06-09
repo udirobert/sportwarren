@@ -119,6 +119,10 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
       setPlayerName(persona.displayName);
       setPendingClaimPosition(persona.position);
       if (persona.formation) setFormation(persona.formation);
+      if (persona.avatarBase64 && persona.avatarMimeType) {
+        const dataUrl = `data:${persona.avatarMimeType};base64,${persona.avatarBase64}`;
+        setAvatarPreview(dataUrl);
+      }
       setHasPendingPersona(true);
       // Identity already captured on the landing card — skip to formation.
       setPersonalizationStep('formation');
