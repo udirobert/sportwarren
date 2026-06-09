@@ -13,7 +13,6 @@ const CHECKLIST_GROWTH_EVENTS: Partial<Record<ChecklistId, CoreGrowthEvent>> = {
     complete_card: 'player_card_save_intent',
     set_formation: 'tactics_customized',
     log_match: 'first_match_submitted',
-    claim_identity: 'identity_connected',
 };
 
 export interface ChecklistItem {
@@ -39,7 +38,6 @@ const DEFAULT_STATE: OnboardingState = {
         set_formation: false,
         join_squad: false,
         log_match: false,
-        claim_identity: false,
     },
 };
 
@@ -96,12 +94,6 @@ export function useOnboarding() {
         persist(DEFAULT_STATE);
     }, [persist]);
 
-    useEffect(() => {
-        if (!hydrated || isGuest || !hasAccount || state.checklistItems.claim_identity) {
-            return;
-        }
-        completeChecklistItem('claim_identity');
-    }, [completeChecklistItem, hasAccount, hydrated, isGuest, state.checklistItems.claim_identity]);
 
     const checklistItems: ChecklistItem[] = CHECKLIST_ITEMS.map((item) => ({
         ...item,

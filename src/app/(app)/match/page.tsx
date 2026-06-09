@@ -125,7 +125,7 @@ export default function MatchPage() {
   const { checklistItems, completeChecklistItem } = useOnboarding();
   const firstMatchSubmitted = checklistItems.find((item) => item.id === "log_match")?.completed ?? false;
   const verificationInviteShared = checklistItems.find((item) => item.id === "join_squad")?.completed ?? false;
-  const identityConnected = checklistItems.find((item) => item.id === "claim_identity")?.completed ?? false;
+  const identityConnected = hasAccount && hasWallet;
   const inviteTargetMatchId = lastSubmittedMatchId ?? pendingMatches[0]?.id ?? null;
   const currentPlayerId = currentPlayerAttributes?.address ?? "";
 
