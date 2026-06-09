@@ -159,15 +159,114 @@ User B clicks "Challenge Back" → new URL copied → loop restarts
 
 ---
 
+## 🌊 Viral Squad Formation Sharing
+
+The viral recruitment loop transforms formation building into a shareable artifact that drives organic user acquisition. One user's squad setup drives N new signups through personalized claim links.
+
+### The Viral Loop
+```
+User uploads team photos in formation → exports PNG with claim link → shares via WhatsApp
+    ↓
+Teammates see formation image with their photos → click claim link
+    ↓
+Teammates claim positions and signup → upload their own avatar → cycle repeats
+```
+
+### Architecture
+
+**Phase 1: Avatar Upload Infrastructure**
+- `useAvatarUpload` hook — File validation (JPEG/PNG/WebP, 5MB max), preview generation, base64 encoding
+- `PendingPersonaContext` — Stores avatar base64 + mime type in localStorage (24h TTL)
+- `PlayerCardPreview` — Camera icon UI on landing card, avatar preview replaces initials
+- Onboarding flow — Reconstructs avatar data URL from persona context, uploads via `updateProfile` mutation
+
+**Phase 2: Formation Playground Avatar Integration**
+- Avatar upload buttons next to each player name input (when personalization unlocked)
+- Avatars stored in `usePitchPersonalization` hook, persisted per-formation in localStorage
+- `PitchCanvas` already wired to display avatars from `personalization.avatars` array
+- Avatars included in PNG exports via html-to-image
+
+**Phase 3: Shareable Formation Image Generation**
+- `ExportPanel` enhanced to create tactical share with claim link via `/api/tactics/share`
+- Share text includes claim URL: "Tonight's 5v5 4-3-3 setup. Claim your spot: [url]"
+- PNG export includes avatars, formation layout, player names
+- Web Share API (mobile) or clipboard fallback (desktop)
+
+**Phase 4: Enhanced Claim Flow**
+- Teammates click claim link → `/play/[slug]` page shows formation with claimed positions
+- `ClaimablePitch` component — Enter name, claim position, creates `ShareClaimRecord`
+- `PendingClaimContext` — Bridges anonymous claim to authenticated profile (stores slug, position, token)
+- Onboarding auto-prefills from claim context, avatar upload available during personalization
+
+### Data Flow
+```
+FormationPlayground (avatars + names)
+    ↓
+POST /api/tactics/share → creates TacticalPlanShare with slug
+    ↓
+ExportPanel exports PNG + includes claim URL in share text
+    ↓
+User shares via WhatsApp → teammate clicks link
+    ↓
+/play/[slug] → ClaimablePitch → teammate claims position
+    ↓
+OnboardingFlow consumes PendingClaimContext → profile created with claimed role
+```
+
+### Viral Conversion Tracking
+Key analytics events to measure loop effectiveness:
+- `formation_shared` — User creates tactical share
+- `claim_link_clicked` — Teammate opens claim page
+- `claim_position_completed` — Teammate claims a position
+- `signup_from_share` — Teammate completes signup from claim flow
+
+### Storage & Persistence
+- **PendingPersonaContext** — localStorage, 24h TTL, includes avatar base64
+- **PendingClaimContext** — localStorage, base64-encoded JSON, includes share slug + claim token
+- **TacticalPlanShare** — PostgreSQL, fingerprint-based deduplication, tracks view/copy counts
+- **ShareClaimRecord** — PostgreSQL, one claim per position per share, prevents double-claims
+
+---
+
 ## 🚀 Development Roadmap
 
 | Phase | Milestone | Status |
 |-------|-----------|--------|
 | **Phase 1** | **Core Loop:** Match logging, Algorand verification, XP system. | ✅ 100% |
 | **Phase 2** | **Agents & Economy:** Kite AI x402, Staff Office, Squad DAOs. | ✅ 100% |
-| **Phase 3** | **Viral Features:** Formation playground, counter-play loop, Lens Social, Derby tracking. | ✅ 95% |
+| **Phase 3** | **Viral Features:** Formation playground, counter-play loop, Lens Social, Derby tracking. | ✅ 100% |
 | **Phase 3b** | **WhatsApp Engagement:** Auto-link, RSVP reply, scout lists, rating reminders DM, rate-token auth, player cards. | ✅ 100% |
+| **Phase 3c** | **Viral Squad Formation Sharing:** Avatar upload infrastructure, formation playground avatar integration, shareable formation image generation, enhanced claim flow with avatar selection. | ✅ 100% (2026-06-09) |
 | **Phase 4** | **Immersive Evolution:** Unified player identity (avatar = skin, twin = brain), moment renders, 3D broadcast tier. | 🟡 PR 1+2 done (schema, appliers, TwinService orchestrator, notify, moments, image, storage adapter); PR 3-7 pending |
+
+### Immediate Next Steps (Post-Deploy)
+
+**This Week:**
+1. **Deploy to production** — Push viral loop to Hetzner, verify health check passes
+2. **End-to-end testing** — Create formation → upload avatars → share via WhatsApp → claim position → complete signup
+3. **Add viral conversion analytics** — Track `formation_shared`, `claim_link_clicked`, `claim_position_completed`, `signup_from_share`
+4. **Monitor production** — Watch for errors, performance issues, user drop-off points
+
+**Next 2 Weeks:**
+1. **A/B test share copy** — Test different messages: "Claim your spot" vs "Join the squad" vs personalized "John needs you at striker"
+2. **Mobile UX polish** — Optimize share sheet and avatar upload for iOS/Android
+3. **Gather user feedback** — Survey early users on the sharing experience
+
+**Next Month:**
+1. **Phase 5: Fluid Squad Composition Insights** — Analytics showing "When X plays with Y, win rate +15%" or "Your best formation is 4-3-3 with these players"
+2. **Performance optimization** — Lazy load avatar uploads, better image compression, CDN for shared images
+3. **Gamification** — Badges for "Squad Builder" (shared 5 formations), "Recruiter" (10 signups from your shares)
+
+### Strategic Questions to Answer
+- Are users actually sharing formations? (Check analytics after 1 week)
+- What's the conversion rate from share → claim → signup?
+- Which positions get claimed fastest? (Striker? GK?)
+- Do squads with avatars get more shares?
+
+### On-Chain Deployment Status
+- **Algorand contracts** — ✅ Functional (MatchVerification, ReputationSystem, SquadDAO, GlobalChallenges)
+- **GOAT Network** — 🟡 Architecture ready, deployment stub exists, awaiting SquadToken/AgentEscrow implementation
+- **Priority** — Focus on core user loop validation before expanding on-chain features
 
 ---
 
