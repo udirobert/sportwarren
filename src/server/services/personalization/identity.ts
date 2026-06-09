@@ -36,6 +36,8 @@ export interface PlayerSkin {
   position: string | null;
   chain: string;
   walletAddress: string;
+  ensName: string | null;
+  walletLabel: string | null;
 }
 
 export interface PlayerBrain {
@@ -210,6 +212,8 @@ export class IdentityService {
         position: profile.user.position,
         chain: profile.user.chain,
         walletAddress: profile.user.walletAddress,
+        ensName: profile.user.ensName,
+        walletLabel: profile.user.walletLabel,
       },
       brain: {
         twinId: twin?.id ?? 'unborn',

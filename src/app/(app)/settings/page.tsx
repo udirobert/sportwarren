@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Settings, Wallet, User, Bell, Link2, Check, X, Copy, LogOut, Trophy, Target, Star, MessageCircle, ShieldAlert, ShieldCheck, Camera } from 'lucide-react';
+import { Settings, Wallet, User, Bell, Link2, Check, X, Copy, LogOut, Trophy, Target, Star, MessageCircle, ShieldAlert, ShieldCheck, Camera, Edit3, RefreshCw } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useMySquads } from '@/hooks/squad/useSquad';
 import { usePlatformConnections } from '@/hooks/usePlatformConnections';
@@ -938,6 +938,13 @@ export default function SettingsPage() {
                 </Button>
               )}
             </div>
+
+            {hasWallet && (
+              <WalletLabelSection
+                currentLabel={currentProfile?.user?.walletLabel ?? undefined}
+                ensName={currentProfile?.user?.ensName ?? undefined}
+              />
+            )}
           </Card>
 
           {hasWallet && !hasYellowEligibleWallet && (
@@ -973,6 +980,82 @@ const SIGNAL_LABELS: Record<string, string> = {
   season_end: 'Season complete',
   achievement_unlocked: 'Achievement unlocked',
 };
+
+function WalletLabelSection({ currentLabel, ensName }: { currentLabel?: string; ensName?: string }) {
+  const [label, setLabel] = useState(currentLabel ?? '');
+  const [isEditing, setIsEditing] = useState(false);
+  const updateLabel = trpc.player.updateWalletLabel.useMutation({
+    onSuccess: () => {
+      setIsEditing(false);
+    },
+  });
+  const resolveEns = trpc.player.resolveEnsName.useMutation();
+
+  return (
+    <Card className="mt-4">
+      <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Wallet Identity</h3>
+      <div className="space-y-3">
+        {ensName && (
+          <div className="flex items-center justify-between rounded-xl border border-gray-200 px-3 py-2 dark:border-gray-700">
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">ENS Name</div>
+              <div className="text-sm font-semibold text-gray-900 dark:text-white">{ensName}</div>
+            </div>
+            <RefreshCw
+              className="h-4 w-4 cursor-pointer text-gray-400 hover:text-gray-600"
+              onClick={() => resolveEns.mutate(undefined, { onSuccess: () => window.location.reload() })}
+            />
+          </div>
+        )}
+        <div className="flex items-center justify-between rounded-xl border border-gray-200 px-3 py-2 dark:border-gray-700">
+          {isEditing ? (
+            <div className="flex w-full items-center gap-2">
+              <input
+                type="text"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                placeholder="Nickname for this wallet"
+                maxLength={30}
+                className="flex-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm outline-none focus:border-green-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white"
+                autoFocus
+              />
+              <button
+                onClick={() => updateLabel.mutate({ walletLabel: label || null })}
+                className="rounded-lg bg-green-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-green-700"
+              >
+                Save
+              </button>
+              <button
+                onClick={() => { setIsEditing(false); setLabel(currentLabel ?? ''); }}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-semibold hover:bg-gray-100 dark:border-gray-600 dark:hover:bg-gray-800"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <>
+              <div>
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-500">Wallet Label</div>
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                  {currentLabel || 'No label set'}
+                </div>
+              </div>
+              <button
+                onClick={() => setIsEditing(true)}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800"
+              >
+                <Edit3 className="h-4 w-4" />
+              </button>
+            </>
+          )}
+        </div>
+        <p className="text-xs text-gray-500">
+          A wallet label is only visible to you. It replaces the truncated address in the account menu.
+        </p>
+      </div>
+    </Card>
+  );
+}
 
 function SignalPreferencesCard() {
   const utils = trpc.useUtils();

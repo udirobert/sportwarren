@@ -16,6 +16,10 @@ import {
   Wallet,
 } from "lucide-react";
 import { useWallet } from "@/contexts/WalletContext";
+import { Avatar } from "@/components/ui/Avatar";
+import { trpc } from "@/lib/trpc-client";
+import { resolveAvatarUrl, xpProgress } from "@/lib/utils/avatar";
+import type { PlayerAvatarSummary } from "@/lib/avatar/adapters";
 
 type AccountStatusControlVariant = "nav" | "hero";
 
@@ -23,6 +27,7 @@ interface AccountStatusControlProps {
   variant?: AccountStatusControlVariant;
   compact?: boolean;
   className?: string;
+  playerSummary?: PlayerAvatarSummary | null;
 }
 
 const truncateMiddle = (value: string, leading = 6, trailing = 4) => {
@@ -62,6 +67,7 @@ export function AccountStatusControl({
   variant = "nav",
   compact = false,
   className = "",
+  playerSummary = null,
 }: AccountStatusControlProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -74,11 +80,42 @@ export function AccountStatusControl({
     loginMethod,
     authStatus,
     disconnect,
+    isVerified,
   } = useWallet();
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const hasEmbeddedWalletAddress = Boolean(address && /^0x[a-fA-F0-9]{8,}$/.test(address));
+  const [guestPersona] = useState(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem("sw_partial_persona");
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const { data: fallbackProfile } = trpc.player.getCurrentProfile.useQuery(undefined, {
+    enabled: !playerSummary && isVerified,
+    staleTime: 1000 * 60 * 5,
+    retry: false,
+  });
+
+  const resolvedIdentity = (playerSummary ?? (fallbackProfile ? {
+    id: fallbackProfile.userId,
+    name: fallbackProfile.user?.name,
+    avatar: resolveAvatarUrl(fallbackProfile.user?.avatar),
+    position: fallbackProfile.user?.position,
+    level: fallbackProfile.level,
+    totalXP: fallbackProfile.totalXP,
+    totalMatches: fallbackProfile.totalMatches,
+    totalGoals: fallbackProfile.totalGoals,
+    totalAssists: fallbackProfile.totalAssists,
+    reputationScore: fallbackProfile.reputationScore,
+    ensName: fallbackProfile.user?.ensName,
+    walletLabel: fallbackProfile.user?.walletLabel,
+  } : null));
 
   const summary = useMemo(() => {
     const verificationNeeded = hasWallet && (authStatus.state === "missing" || authStatus.state === "expired");
@@ -92,11 +129,12 @@ export function AccountStatusControl({
     const chainLabel = formatChainLabel(chain);
 
     if (isGuest) {
+      const guestName = guestPersona?.displayName ?? null;
       return {
         badge: "Preview",
-        title: "Guest preview active",
-        reference: "Local demo session",
-        fullReference: "Guest preview",
+        title: guestName ? `Playing as ${guestName}` : "Guest preview active",
+        reference: guestName ?? "Local demo session",
+        fullReference: guestName ?? "Guest preview",
         support: "Nothing protected yet. Claim your season when you are ready.",
         icon: Sparkles,
         iconTone: "bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-200",
@@ -178,7 +216,7 @@ export function AccountStatusControl({
       detailLabel: "No account",
       hasCopyableAddress: false,
     };
-  }, [address, authStatus.state, chain, hasAccount, hasEmbeddedWalletAddress, hasWallet, isGuest, loginMethod]);
+  }, [address, authStatus.state, chain, guestPersona, hasAccount, hasEmbeddedWalletAddress, hasWallet, isGuest, loginMethod]);
 
   useEffect(() => {
     setIsOpen(false);
@@ -244,6 +282,8 @@ export function AccountStatusControl({
     return null;
   }
 
+  const showIdentity = resolvedIdentity && resolvedIdentity.name;
+
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       <button
@@ -255,23 +295,53 @@ export function AccountStatusControl({
           compact ? "h-10 w-10 justify-center px-0 py-0" : ""
         }`}
       >
-        <span className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${summary.iconTone}`}>
-          <Icon className="h-4 w-4" />
-          {!isGuest && (
-            <span className={`absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 ${
-              variant === "hero" ? "border-gray-950 bg-green-400" : "border-white bg-green-500 dark:border-gray-900"
-            }`} />
-          )}
-        </span>
+        {showIdentity && !isGuest ? (
+          <span className="relative shrink-0">
+            <Avatar
+              src={resolvedIdentity.avatar}
+              name={resolvedIdentity.name ?? undefined}
+              size="sm"
+            />
+            {!isGuest && (
+              <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border-2 ${
+                variant === "hero" ? "border-gray-950 bg-green-400" : "border-white bg-green-500 dark:border-gray-900"
+              }`} />
+            )}
+          </span>
+        ) : (
+          <span className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${summary.iconTone}`}>
+            <Icon className="h-4 w-4" />
+            {!isGuest && (
+              <span className={`absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 ${
+                variant === "hero" ? "border-gray-950 bg-green-400" : "border-white bg-green-500 dark:border-gray-900"
+              }`} />
+            )}
+          </span>
+        )}
 
         {!compact && (
           <span className="min-w-0">
-            <span className="block text-[10px] font-black uppercase tracking-[0.18em] opacity-70">
-              {summary.badge}
-            </span>
-            <span className="block max-w-[11rem] truncate text-sm font-semibold">
-              {summary.reference}
-            </span>
+            {showIdentity && !isGuest ? (
+              <>
+                <span className="block max-w-[11rem] truncate text-sm font-semibold">
+                  {resolvedIdentity.name}
+                </span>
+                <span className="block text-[10px] font-mono opacity-70">
+                  {hasWallet && address
+                    ? (resolvedIdentity.walletLabel ?? resolvedIdentity.ensName ?? truncateMiddle(address, 8, 6))
+                    : summary.reference}
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="block text-[10px] font-black uppercase tracking-[0.18em] opacity-70">
+                  {summary.badge}
+                </span>
+                <span className="block max-w-[11rem] truncate text-sm font-semibold">
+                  {summary.reference}
+                </span>
+              </>
+            )}
           </span>
         )}
 
@@ -283,34 +353,105 @@ export function AccountStatusControl({
           role="menu"
           className={`absolute right-0 top-[calc(100%+0.75rem)] z-[120] w-[min(22rem,calc(100vw-1.5rem))] rounded-2xl border p-4 ${panelClasses}`}
         >
-          <div className="flex items-start gap-3">
-            <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${summary.iconTone}`}>
-              <Icon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${badgeTone}`}>
-                {summary.badge}
+          {showIdentity && !isGuest ? (
+            <div className="flex items-start gap-3">
+              <Avatar
+                src={resolvedIdentity.avatar}
+                name={resolvedIdentity.name ?? undefined}
+                size="lg"
+                className="shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="truncate text-base font-bold">{resolvedIdentity.name}</span>
+                  {resolvedIdentity.position && (
+                    <span className="shrink-0 rounded-md bg-emerald-500/15 px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      {resolvedIdentity.position}
+                    </span>
+                  )}
+                </div>
+                <div className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                  Lvl {resolvedIdentity.level ?? 1}
+                </div>
+                {typeof resolvedIdentity.totalXP === "number" && (() => {
+                  const prog = xpProgress(resolvedIdentity.totalXP);
+                  return (
+                    <div className="mt-1.5">
+                      <div className="flex items-center justify-between text-[10px] font-medium opacity-70">
+                        <span>XP</span>
+                        <span>{prog.current}/{prog.needed}</span>
+                      </div>
+                      <div className="mt-0.5 h-1.5 w-full overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-emerald-400 transition-all"
+                          style={{ width: `${prog.percent}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
+                <div className="mt-2 flex items-center gap-2 font-mono text-[11px] opacity-70">
+                  <span>
+                    {hasWallet && address
+                      ? (resolvedIdentity.walletLabel ?? resolvedIdentity.ensName ?? truncateMiddle(address, 8, 6))
+                      : "No wallet"}
+                  </span>
+                  {hasWallet && summary.verificationLabel === "Verified" && (
+                    <span className="inline-flex items-center gap-1 text-green-500">
+                      <ShieldCheck className="h-3 w-3" /> Verified
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-start gap-3">
+              <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl ${summary.iconTone}`}>
+                <Icon className="h-5 w-5" />
               </span>
-              <div className="mt-2 text-base font-bold">{summary.title}</div>
-              <div className="mt-1 break-all font-mono text-xs opacity-80">{summary.fullReference}</div>
-              <p className="mt-2 text-sm opacity-75">{summary.support}</p>
+              <div className="min-w-0 flex-1">
+                <span className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${badgeTone}`}>
+                  {summary.badge}
+                </span>
+                <div className="mt-2 text-base font-bold">{summary.title}</div>
+                <div className="mt-1 break-all font-mono text-xs opacity-80">{summary.fullReference}</div>
+                <p className="mt-2 text-sm opacity-75">{summary.support}</p>
+              </div>
             </div>
-          </div>
+          )}
 
-          <div className="mt-4 grid gap-2 sm:grid-cols-2">
-            <div className="rounded-xl border border-white/10 bg-black/5 px-3 py-2 dark:bg-white/5">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">Mode</div>
-              <div className="mt-1 text-sm font-semibold">{summary.detailLabel}</div>
+          {/* Stats or wallet info */}
+          {showIdentity && !isGuest ? (
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <div className="rounded-xl border border-white/10 bg-black/5 px-3 py-2 text-center dark:bg-white/5">
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">Matches</div>
+                <div className="mt-1 text-sm font-bold">{resolvedIdentity.totalMatches ?? 0}</div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-black/5 px-3 py-2 text-center dark:bg-white/5">
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">Goals</div>
+                <div className="mt-1 text-sm font-bold">{resolvedIdentity.totalGoals ?? 0}</div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-black/5 px-3 py-2 text-center dark:bg-white/5">
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">Assists</div>
+                <div className="mt-1 text-sm font-bold">{resolvedIdentity.totalAssists ?? 0}</div>
+              </div>
             </div>
-            <div className="rounded-xl border border-white/10 bg-black/5 px-3 py-2 dark:bg-white/5">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">Network</div>
-              <div className="mt-1 text-sm font-semibold">{summary.chainLabel}</div>
+          ) : (
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              <div className="rounded-xl border border-white/10 bg-black/5 px-3 py-2 dark:bg-white/5">
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">Mode</div>
+                <div className="mt-1 text-sm font-semibold">{summary.detailLabel}</div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-black/5 px-3 py-2 dark:bg-white/5">
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">Network</div>
+                <div className="mt-1 text-sm font-semibold">{summary.chainLabel}</div>
+              </div>
+              <div className="rounded-xl border border-white/10 bg-black/5 px-3 py-2 dark:bg-white/5 sm:col-span-2">
+                <div className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">Protection</div>
+                <div className="mt-1 text-sm font-semibold">{summary.verificationLabel}</div>
+              </div>
             </div>
-            <div className="rounded-xl border border-white/10 bg-black/5 px-3 py-2 dark:bg-white/5 sm:col-span-2">
-              <div className="text-[10px] font-black uppercase tracking-[0.16em] opacity-60">Protection</div>
-              <div className="mt-1 text-sm font-semibold">{summary.verificationLabel}</div>
-            </div>
-          </div>
+          )}
 
           <div className="mt-4 grid gap-2">
             {pathname !== "/dashboard" && (

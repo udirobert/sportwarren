@@ -20,7 +20,9 @@ model User {
   chain         String // 'algorand', 'avalanche', or 'lens'
 
   // Profile
-  name     String?
+  name        String?
+  ensName     String?  @map("ens_name") // Resolved ENS/Lens display name
+  walletLabel String?  @map("wallet_label") // User-set nickname for their wallet
   avatar   String?
   position String? // Preferred position
 

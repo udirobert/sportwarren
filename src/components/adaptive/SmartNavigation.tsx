@@ -17,6 +17,7 @@ import { GlossaryButton } from '@/components/ui/TermTooltip';
 import { trpc } from '@/lib/trpc-client';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { buildAvatarPresentationFromSummary } from '@/lib/avatar/adapters';
+import { resolveAvatarUrl } from '@/lib/utils/avatar';
 import { isEnabled } from '@/lib/feature-flags';
 
 const BOTTOM_NAV_MAX = 5;
@@ -52,7 +53,7 @@ export const SmartNavigation: React.FC = () => {
     return buildAvatarPresentationFromSummary({
       id: playerProfile.userId,
       name: playerProfile.user?.name,
-      avatar: playerProfile.user?.avatar,
+      avatar: resolveAvatarUrl(playerProfile.user?.avatar),
       position: playerProfile.user?.position,
       level: playerProfile.level,
       totalXP: playerProfile.totalXP,
@@ -61,6 +62,23 @@ export const SmartNavigation: React.FC = () => {
       totalAssists: playerProfile.totalAssists,
       reputationScore: playerProfile.reputationScore,
     });
+  }, [playerProfile]);
+  const playerSummaryForDropdown = useMemo(() => {
+    if (!playerProfile) return null;
+    return {
+      id: playerProfile.userId,
+      name: playerProfile.user?.name,
+      avatar: resolveAvatarUrl(playerProfile.user?.avatar),
+      position: playerProfile.user?.position,
+      level: playerProfile.level,
+      totalXP: playerProfile.totalXP,
+      totalMatches: playerProfile.totalMatches,
+      totalGoals: playerProfile.totalGoals,
+      totalAssists: playerProfile.totalAssists,
+      reputationScore: playerProfile.reputationScore,
+      ensName: playerProfile.user?.ensName,
+      walletLabel: playerProfile.user?.walletLabel,
+    };
   }, [playerProfile]);
   const hasUnconnectedPlatforms = Boolean(
     isVerified &&
@@ -298,7 +316,7 @@ export const SmartNavigation: React.FC = () => {
                   {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
                 </button>
 
-                <AccountStatusControl />
+                <AccountStatusControl playerSummary={playerSummaryForDropdown} />
               </div>
             </ContextualHelp>
           </div>
@@ -335,7 +353,7 @@ export const SmartNavigation: React.FC = () => {
                 {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
               </button>
             )}
-            <AccountStatusControl compact />
+            <AccountStatusControl compact playerSummary={playerSummaryForDropdown} />
           </div>
         </div>
       </nav>
