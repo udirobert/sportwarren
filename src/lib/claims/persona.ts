@@ -5,6 +5,8 @@ export interface PendingPersonaContext {
   position: PlayerPosition;
   savedAt: number;
   formation?: string;
+  avatarBase64?: string;
+  avatarMimeType?: string;
 }
 
 const STORAGE_KEY = "sw_pending_persona";
@@ -23,7 +25,9 @@ export function isPendingPersonaContext(value: unknown): value is PendingPersona
     PLAYER_POSITIONS.includes(ctx.position as PlayerPosition) &&
     typeof ctx.savedAt === "number" &&
     Number.isFinite(ctx.savedAt) &&
-    (ctx.formation === undefined || (typeof ctx.formation === "string" && ctx.formation.length > 0 && ctx.formation.length <= 16))
+    (ctx.formation === undefined || (typeof ctx.formation === "string" && ctx.formation.length > 0 && ctx.formation.length <= 16)) &&
+    (ctx.avatarBase64 === undefined || typeof ctx.avatarBase64 === "string") &&
+    (ctx.avatarMimeType === undefined || typeof ctx.avatarMimeType === "string")
   );
 }
 

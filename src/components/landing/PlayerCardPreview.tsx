@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from "react";
 import {
-  Sparkles, ArrowRight, CheckCircle2, Lock,
+  Sparkles, ArrowRight, CheckCircle2, Lock, Camera,
 } from "lucide-react";
 import { ATTRIBUTE_KEYS } from "@/server/services/personalization/twin-types";
 import type { PlayerPosition } from "@/types";
@@ -10,6 +10,7 @@ import { trackCoreGrowthEvent, trackFeatureUsed, trackEvent } from "@/lib/analyt
 import { storePendingPersona } from "@/lib/claims/persona";
 import { ATTRIBUTE_DISPLAY, ATTRIBUTE_BAR_TONES } from "@/lib/attributes/display";
 import { PROVISIONAL_ATTRIBUTES, VERIFIED_DELTAS } from "@/lib/attributes/provisional";
+import { useAvatarUpload } from "@/hooks/useAvatarUpload";
 
 const POSITION_LABELS: Record<PlayerPosition, string> = {
   GK: "Goalkeeper",
@@ -58,6 +59,7 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
   const [name, setName] = useState("");
   const [position, setPosition] = useState<PlayerPosition>("MF");
   const [verified, setVerified] = useState(false);
+  const avatar = useAvatarUpload();
 
   const handleNameChange = (value: string) => {
     setName(value);
@@ -96,8 +98,10 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
       position,
       formation: currentFormation ?? undefined,
       savedAt: Date.now(),
+      avatarBase64: avatar.base64 ?? undefined,
+      avatarMimeType: avatar.mimeType ?? undefined,
     });
-    trackFeatureUsed("player_card_save_clicked", { position, named: name.trim().length > 0, formation: currentFormation ?? null });
+    trackFeatureUsed("player_card_save_clicked", { position, named: name.trim().length > 0, formation: currentFormation ?? null, hasAvatar: !!avatar.base64 });
     trackCoreGrowthEvent("player_card_save_intent", { position, authed, formation: currentFormation ?? null });
     onSave?.();
   };
@@ -108,8 +112,33 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
         <div className="relative p-4">
           {/* Header */}
           <div className="flex items-start gap-3">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-emerald-400/40 bg-emerald-500/15 text-xl font-black text-emerald-200 shadow-lg">
-              {initialsFor(displayName)}
+            <div className="relative">
+              {avatar.previewUrl ? (
+                <img
+                  src={avatar.previewUrl}
+                  alt="Your avatar"
+                  className="h-16 w-16 shrink-0 rounded-xl border border-emerald-400/40 object-cover shadow-lg"
+                />
+              ) : (
+                <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-emerald-400/40 bg-emerald-500/15 text-xl font-black text-emerald-200 shadow-lg">
+                  {initialsFor(displayName)}
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={avatar.onClick}
+                className="absolute -bottom-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full border border-white/20 bg-emerald-500 text-white shadow-lg transition hover:scale-110 hover:bg-emerald-400"
+                title="Upload photo"
+              >
+                <Camera className="h-3 w-3" />
+              </button>
+              <input
+                ref={avatar.fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={avatar.onChange}
+                className="hidden"
+              />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">

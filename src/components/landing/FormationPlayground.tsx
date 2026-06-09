@@ -15,7 +15,7 @@ import type { PlaygroundFlow } from "@/lib/pitch/shareUrl";
 import type { Formation, PlayStyle, SquadSize, PlayerPosition } from "@/types";
 import {
   Play, Settings2, ChevronLeft, ChevronRight,
-  Palette, Users, Zap, Swords, Save, ClipboardList, Share2,
+  Palette, Users, Zap, Swords, Save, ClipboardList, Share2, Camera,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { trackCoreGrowthEvent, trackFeatureUsed } from "@/lib/analytics";
@@ -79,9 +79,22 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
 
   // ── Refs ──
   const pitchRef = useRef<HTMLDivElement>(null);
+  const avatarInputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // ── Personalization hook (shared across modes) ──
   const personalization = usePitchPersonalization(formation);
+
+  const handleAvatarUpload = useCallback((index: number, file: File) => {
+    if (!file.type.startsWith('image/') || file.size > 2 * 1024 * 1024) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      const newAvatars = [...personalization.avatars];
+      newAvatars[index] = dataUrl;
+      personalization.setAvatars(newAvatars);
+    };
+    reader.readAsDataURL(file);
+  }, [personalization]);
 
   // ── Wire card preview name/position into the first pitch slot ──
   // Destructured to keep the dep array tight; the hook return is memoized
@@ -598,6 +611,9 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
               pitchRef={pitchRef}
               formation={formation}
               playStyle={playStyle}
+              squadSize={squadSize}
+              names={personalization.names.slice(0, squadSize)}
+              color={primaryColor}
             />
           </div>
         </div>
@@ -999,20 +1015,48 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
                 <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-1.5 block">
                   Player Names
                 </label>
-                <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
                   {personalization.names.slice(0, squadSize).map((name, i) => (
-                    <input
-                      key={i}
-                      type="text"
-                      value={name}
-                      onChange={(e) => {
-                        const newNames = [...personalization.names];
-                        newNames[i] = e.target.value;
-                        personalization.setNames(newNames);
-                      }}
-                      placeholder={`Player ${i + 1}`}
-                      className="w-full px-2 py-1 bg-gray-800 border border-white/10 rounded text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
-                    />
+                    <div key={i} className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => avatarInputRefs.current[i]?.click()}
+                        className="relative flex-shrink-0 w-7 h-7 rounded-full border border-white/10 bg-gray-800 overflow-hidden hover:border-green-500/50 transition-all"
+                        title="Upload photo"
+                      >
+                        {personalization.avatars[i] ? (
+                          <img
+                            src={personalization.avatars[i]!}
+                            alt={name || `Player ${i + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Camera className="w-3 h-3 text-gray-500 mx-auto my-auto" />
+                        )}
+                      </button>
+                      <input
+                        ref={(el) => { avatarInputRefs.current[i] = el; }}
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleAvatarUpload(i, file);
+                          e.target.value = '';
+                        }}
+                      />
+                      <input
+                        type="text"
+                        value={name}
+                        onChange={(e) => {
+                          const newNames = [...personalization.names];
+                          newNames[i] = e.target.value;
+                          personalization.setNames(newNames);
+                        }}
+                        placeholder={`Player ${i + 1}`}
+                        className="flex-1 px-2 py-1 bg-gray-800 border border-white/10 rounded text-[11px] text-white placeholder-gray-500 focus:outline-none focus:border-green-500/50"
+                      />
+                    </div>
                   ))}
                 </div>
               </div>
