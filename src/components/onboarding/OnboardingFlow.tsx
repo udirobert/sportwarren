@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ChevronRight, ChevronLeft, Sparkles, Cpu, Zap, MousePointer2, Check, Users, User, Palette, Camera, Lock } from 'lucide-react';
+import { X, ChevronRight, ChevronLeft, Sparkles, MousePointer2, Check, Users, User, Palette, Camera, Lock } from 'lucide-react';
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
@@ -12,6 +12,7 @@ import { TermTooltip, GlossaryButton } from '@/components/ui/TermTooltip';
 import { trpc } from '@/lib/trpc-client';
 import type { DashboardEntryStateId } from '@/lib/dashboard/entry-state';
 import type { PlayerPosition } from '@/types';
+import type { ChecklistId } from '@/lib/onboarding/flow';
 import {
   ONBOARDING_STORAGE_KEYS,
   TOUR_STEPS,
@@ -48,7 +49,7 @@ interface OnboardingFlowProps {
   journeyStage?: DashboardEntryStateId;
   onComplete?: () => void;
   onVisibilityChange?: (isVisible: boolean) => void;
-  completeChecklistItem?: (id: string) => void;
+  completeChecklistItem?: (id: ChecklistId) => void;
 }
 
 export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onVisibilityChange, completeChecklistItem }: OnboardingFlowProps) {
@@ -475,7 +476,7 @@ interface PersonalizationCardProps {
   onBack: () => void;
   hasPendingPersona?: boolean;
   pendingClaimPosition?: PlayerPosition | null;
-  completeChecklistItem?: (id: string) => void;
+  completeChecklistItem?: (id: ChecklistId) => void;
   skipBrandStep?: boolean;
 }
 

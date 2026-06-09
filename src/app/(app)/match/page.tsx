@@ -44,6 +44,7 @@ import { trackCoreGrowthEvent, trackFeatureUsed, trackMatchSubmission } from "@/
 import { useCurrentPlayerAttributes } from "@/hooks/player/usePlayerAttributes";
 import { buildTacticalPlanQuery, parseTacticalPlanSearchParams, type ImportedTacticalPlan } from "@/lib/pitch/tacticalPlan";
 import { PLAY_STYLE_LABELS } from "@/lib/formations";
+import { useToast } from "@/contexts/ToastContext";
 
 type ViewMode = "preview" | "capture" | "verify" | "detail" | "xp-summary" | "history";
 type XPResultState = "idle" | "pending" | "available";
@@ -63,6 +64,7 @@ export default function MatchPage() {
   const { chain, hasAccount, hasWallet, isVerified } = useWallet();
   const { journeyStage, memberships } = useJourneyState();
   const { attributes: currentPlayerAttributes } = useCurrentPlayerAttributes(isVerified);
+  const { addToast } = useToast();
   const activeMembership = memberships[0];
   const activeSquad = activeMembership?.squad;
   const activeSquadId = activeSquad?.id;
@@ -723,32 +725,32 @@ export default function MatchPage() {
                   type="button"
                   onClick={handleVoiceToggle}
                   className={`w-full flex items-center justify-between rounded-xl border px-3 py-2 text-left transition-colors ${
-                    evidenciaCapture.state.isRecording
+                    evidenceCapture.state.isRecording
                       ? 'border-red-300 bg-red-50/40'
                       : 'border-gray-200 hover:border-emerald-300 hover:bg-emerald-50/40'
                   }`}
                 >
                   <div className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      evidenciaCapture.state.isRecording ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
+                      evidenceCapture.state.isRecording ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'
                     }`}>
-                      <Mic className={`w-4 h-4 ${evidenciaCapture.state.isRecording ? 'animate-pulse' : ''}`} />
+                      <Mic className={`w-4 h-4 ${evidenceCapture.state.isRecording ? 'animate-pulse' : ''}`} />
                     </div>
                     <div>
                       <div className="text-sm font-semibold text-gray-900">Voice note</div>
                       <div className="text-xs text-gray-500">
-                        {evidenciaCapture.state.isRecording
+                        {evidenceCapture.state.isRecording
                           ? 'Recording — tap to stop'
-                          : evidenciaCapture.state.capturedAudio.length > 0
-                            ? `${evidenciaCapture.state.capturedAudio.length} captured`
+                          : evidenceCapture.state.capturedAudio.length > 0
+                            ? `${evidenceCapture.state.capturedAudio.length} captured`
                             : 'Captain confirmation'}
                       </div>
                     </div>
                   </div>
                   <span className={`text-[10px] font-bold uppercase tracking-widest ${
-                    evidenciaCapture.state.isRecording ? 'text-red-600' : 'text-gray-400'
+                    evidenceCapture.state.isRecording ? 'text-red-600' : 'text-gray-400'
                   }`}>
-                    {evidenciaCapture.state.isRecording ? 'Stop' : 'Record'}
+                    {evidenceCapture.state.isRecording ? 'Stop' : 'Record'}
                   </span>
                 </button>
                 <button
@@ -758,23 +760,23 @@ export default function MatchPage() {
                 >
                   <div className="flex items-center gap-2">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                      evidenciaCapture.state.capturedPhotos.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'
+                      evidenceCapture.state.capturedPhotos.length > 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-600'
                     }`}>
                       <Camera className="w-4 h-4" />
                     </div>
                     <div>
                       <div className="text-sm font-semibold text-gray-900">Photo proof</div>
                       <div className="text-xs text-gray-500">
-                        {evidenciaCapture.state.capturedPhotos.length > 0
-                          ? `${evidenciaCapture.state.capturedPhotos.length} photo${evidenciaCapture.state.capturedPhotos.length === 1 ? '' : 's'} captured`
+                        {evidenceCapture.state.capturedPhotos.length > 0
+                          ? `${evidenceCapture.state.capturedPhotos.length} photo${evidenceCapture.state.capturedPhotos.length === 1 ? '' : 's'} captured`
                           : 'Scoreboard or team shot'}
                       </div>
                     </div>
                   </div>
                   <span className={`text-[10px] font-bold uppercase tracking-widest ${
-                    evidenciaCapture.state.capturedPhotos.length > 0 ? 'text-emerald-600' : 'text-gray-400'
+                    evidenceCapture.state.capturedPhotos.length > 0 ? 'text-emerald-600' : 'text-gray-400'
                   }`}>
-                    {evidenciaCapture.state.capturedPhotos.length > 0 ? 'Captured' : 'Capture'}
+                    {evidenceCapture.state.capturedPhotos.length > 0 ? 'Captured' : 'Capture'}
                   </span>
                 </button>
               </div>

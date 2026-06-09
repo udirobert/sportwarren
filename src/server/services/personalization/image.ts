@@ -97,8 +97,7 @@ class ImageServiceImpl {
     for (const spec of AVATAR_VARIANTS) {
       try {
         const resized = await image
-          .resize(spec.width, spec.height, { fit: 'cover' })
-          [format]({ quality: 85 })
+          .resize(spec.width, spec.height, { fit: 'cover' })[format]({ quality: 85 })
           .toBuffer();
 
         const variantBase64 = resized.toString('base64');
