@@ -1,5 +1,5 @@
 import React from 'react';
-import { Target } from 'lucide-react';
+import { Send, Target } from 'lucide-react';
 import { WaitlistForm } from '@/components/common/WaitlistForm';
 
 export const LandingFooter: React.FC = () => (
@@ -17,7 +17,8 @@ export const LandingFooter: React.FC = () => (
         </div>
 
         <nav aria-label="Social links" className="flex items-center gap-4 sm:gap-6">
-          <a href="https://t.me/sportwarrenbot" target="_blank" rel="noopener noreferrer" className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors">
+          <a href="https://t.me/sportwarrenbot" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs sm:text-sm text-gray-400 hover:text-white transition-colors">
+            <Send className="h-3.5 w-3.5" />
             Telegram
           </a>
           <a href="https://x.com/sportwarren" target="_blank" rel="noopener noreferrer" className="text-xs sm:text-sm text-gray-400 hover:text-white transition-colors">
