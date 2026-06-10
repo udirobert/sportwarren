@@ -63,6 +63,27 @@ export const RivalPreviewCard: React.FC<RivalPreviewCardProps> = ({
 
           {!result && !loading && (
             <div className="text-center space-y-4">
+              {/* Context banner — shows accumulated investment from playground */}
+              {(names.length > 0 || formation !== "4-4-2") && (
+                <div className="flex flex-wrap items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2">
+                  <span className="text-[9px] font-black uppercase tracking-[0.18em] text-gray-500">Your squad</span>
+                  {[formation, style].map((label) => (
+                    <span key={label} className="rounded-md border border-white/10 bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
+                      {label}
+                    </span>
+                  ))}
+                  {color && (
+                    <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.06] px-1.5 py-0.5 text-[9px] font-bold text-amber-300">
+                      <span className="h-2 w-2 rounded-full border border-white/50" style={{ backgroundColor: color }} />
+                    </span>
+                  )}
+                  {names.length > 0 && (
+                    <span className="text-[9px] font-bold text-gray-400 truncate max-w-[120px]" title={names.join(", ")}>
+                      {names.slice(0, 3).join(", ")}{names.length > 3 ? ` +${names.length - 3}` : ""}
+                    </span>
+                  )}
+                </div>
+              )}
               <p className="text-sm text-gray-300">
                 Your squad is ready. See how it stacks up against a real rival.
               </p>

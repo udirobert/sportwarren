@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
 import { generateInference } from '@/lib/ai/inference';
+import { checkRateLimit } from '@/server/services/security/rate-limiter';
 
 export interface NlMatchPayload {
   command: string;
@@ -28,11 +30,21 @@ Rules:
 - Return ONLY a JSON object: {"events": [...], "homeScore": number, "awayScore": number}
 - Do not include markdown code blocks or explanation text.`;
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   try {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      || request.headers.get('x-real-ip')
+      || 'unknown';
+    const rl = await checkRateLimit(ip, { windowMs: 60_000, max: 5, keyPrefix: 'nl-sim' });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Too many simulations. Please wait a minute and try again.' },
+        { status: 429, headers: { 'Retry-After': String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+      );
+    }
+
     const body = (await request.json()) as NlMatchPayload;
     const { command, formation, style, names } = body;
-
     const userMessage = `Squad: ${names.slice(0, 5).join(', ') || 'Player 1, Player 2'} playing ${formation} (${style}).\nCommand: ${command}`;
 
     const result = await generateInference(
@@ -43,12 +55,16 @@ export async function POST(request: Request) {
       { temperature: 0.7, max_tokens: 800 }
     );
 
-    let parsed;
+    const content = result?.content;
+    if (!content) {
+      throw new Error('No inference provider available');
+    }
+
+    let parsed: { events: NlMatchEvent[]; homeScore: number; awayScore: number };
     try {
-      parsed = JSON.parse(result) as { events: NlMatchEvent[]; homeScore: number; awayScore: number };
+      parsed = JSON.parse(content) as { events: NlMatchEvent[]; homeScore: number; awayScore: number };
     } catch {
-      // Fallback: try to extract JSON from markdown
-      const jsonMatch = result.match(/\{[\s\S]*\}/);
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         parsed = JSON.parse(jsonMatch[0]) as { events: NlMatchEvent[]; homeScore: number; awayScore: number };
       } else {
@@ -56,9 +72,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Clamp and sort events
-    const events = parsed.events
-      .map((e) => ({ ...e, minute: Math.max(1, Math.min(60, e.minute)) }))
+    const events = (parsed.events ?? [])
+      .map((event) => ({ ...event, minute: Math.max(1, Math.min(60, event.minute)) }))
       .sort((a, b) => a.minute - b.minute);
 
     return NextResponse.json({
