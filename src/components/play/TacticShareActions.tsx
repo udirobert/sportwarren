@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Clipboard, MessageCircle, Save, Trophy } from "lucide-react";
+import { Clipboard, MessageCircle, Save, Send, Trophy } from "lucide-react";
 import { trackCoreGrowthEvent, trackFeatureUsed } from "@/lib/analytics";
+import { buildShareLinks } from "@/lib/share/links";
 
 interface TacticShareActionsProps {
   slug: string;
@@ -28,7 +29,7 @@ export function TacticShareActions({
 }: TacticShareActionsProps) {
   const [copyState, setCopyState] = useState<"idle" | "copied" | "shared" | "error">("idle");
 
-  const recordCopy = async (method: "clipboard" | "web_share" | "whatsapp") => {
+  const recordCopy = async (method: "clipboard" | "web_share" | "whatsapp" | "telegram") => {
     fetch("/api/tactics/share", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
@@ -66,7 +67,8 @@ export function TacticShareActions({
     }
   };
 
-  const whatsappHref = `https://wa.me/?text=${encodeURIComponent(`${shareText}\n${shareUrl}`)}`;
+  const whatsappHref = buildShareLinks({ text: shareText, url: shareUrl }).whatsapp;
+  const telegramHref = buildShareLinks({ text: shareText, url: shareUrl }).telegram;
 
   return (
     <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -103,6 +105,16 @@ export function TacticShareActions({
       >
         <MessageCircle className="h-4 w-4" />
         WhatsApp
+      </a>
+      <a
+        href={telegramHref}
+        target="_blank"
+        rel="noreferrer"
+        onClick={() => recordCopy("telegram")}
+        className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-800 transition hover:bg-sky-100"
+      >
+        <Send className="h-4 w-4" />
+        Telegram
       </a>
       {copyState === "error" && (
         <p className="text-xs font-medium text-rose-600 sm:basis-full">

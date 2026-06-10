@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
-import { MessageSquare } from "lucide-react";
+import { Send } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { decodePendingClaim, storePendingClaim } from "@/lib/claims/context";
 
@@ -83,18 +83,19 @@ export default function Home() {
         onSavePlayerCard={handleSavePlayerCard}
       />
       
-      {/* Floating Feedback Button */}
+      {/* Floating Telegram support button */}
       <div className="fixed bottom-6 right-6 z-50">
-        <a 
+        <a
           href="https://t.me/sportwarren_support"
           target="_blank"
           rel="noopener noreferrer"
           onClick={() => trackEvent('feedback_clicked', { source: 'floating_button' })}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg shadow-blue-500/30 transition-transform hover:scale-110 active:scale-95 group relative"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-sky-500 text-white shadow-lg shadow-sky-500/30 transition-transform hover:scale-110 active:scale-95 group relative"
+          aria-label="Telegram support"
         >
-          <MessageSquare className="h-6 w-6" />
+          <Send className="h-5 w-5" />
           <span className="absolute right-full mr-3 whitespace-nowrap rounded-lg bg-gray-900 px-3 py-1.5 text-xs font-bold text-white opacity-0 transition-opacity group-hover:opacity-100 border border-white/10 shadow-xl pointer-events-none">
-            Send Feedback
+            Telegram support
           </span>
         </a>
       </div>

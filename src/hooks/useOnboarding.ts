@@ -36,6 +36,7 @@ const DEFAULT_STATE: OnboardingState = {
     checklistItems: {
         complete_card: false,
         set_formation: false,
+        connect_telegram: false,
         join_squad: false,
         log_match: false,
     },

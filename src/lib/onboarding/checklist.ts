@@ -1,8 +1,10 @@
 import type { ChecklistItemConfig, ChecklistId, Platform } from './flow';
+import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
 
 export const CHECKLIST_IDS: readonly ChecklistId[] = [
     'complete_card',
     'set_formation',
+    'connect_telegram',
     'join_squad',
     'log_match',
 ] as const;
@@ -25,6 +27,15 @@ export const CHECKLIST_ITEMS: ChecklistItemConfig[] = [
         href: '/squad?tab=tactics',
         actionLabel: 'Set formation',
         xp: 75,
+    },
+    {
+        id: 'connect_telegram',
+        label: 'Open SportWarren in Telegram',
+        description: 'One-tap match log, instant verification, real-time squad chat — the fastest way to run a season',
+        emoji: '✈️',
+        href: buildTelegramDeepLink({ tab: 'squad' }),
+        actionLabel: 'Open Telegram',
+        xp: 25,
     },
     {
         id: 'join_squad',

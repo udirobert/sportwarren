@@ -3,6 +3,7 @@
  * Enables squads to generate shareable challenge URLs that rivals
  * can use to accept a match challenge directly.
  */
+import { buildShareLinks } from './links';
 
 export interface ChallengeData {
   challengerSquadId: string;
@@ -28,5 +29,17 @@ export function buildChallengeShareText(squadName: string, message?: string): st
 export function buildChallengeWhatsAppUrl(squadName: string, challengerSquadId: string, message?: string): string {
   const text = buildChallengeShareText(squadName, message);
   const url = buildChallengeUrl(challengerSquadId);
-  return `https://wa.me/?text=${encodeURIComponent(`${text}\n\n${url}`)}`;
+  return buildShareLinks({ text, url }).whatsapp;
+}
+
+/**
+ * Full multi-channel share for a public challenge. Returns URLs for
+ * WhatsApp and Telegram so callers can render both pills without
+ * re-deriving the text/url themselves.
+ */
+export function buildChallengeShareLinks(squadName: string, challengerSquadId: string, message?: string) {
+  return buildShareLinks({
+    text: buildChallengeShareText(squadName, message),
+    url: buildChallengeUrl(challengerSquadId),
+  });
 }

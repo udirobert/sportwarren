@@ -40,6 +40,11 @@ export interface JourneyContent {
     primaryCtaLabel: string;
     stageLine: string;
     previewLinkLabel?: string;
+    /**
+     * Eyebrow copy above the Telegram/WhatsApp co-primary row in the
+     * hero. Defaults to "Or open in" when not set.
+     */
+    altCtasLabel?: string;
     highlights: string[];
   };
   authModal: {

@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Play, RotateCcw, Zap, Mic } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { TelegramContextualTip } from "@/components/common/TelegramContextualTip";
 
 export interface NlMatchEvent {
   minute: number;
@@ -284,6 +285,13 @@ export const NaturalLanguageMatchSim: React.FC<NaturalLanguageMatchSimProps> = (
                     Replay
                   </button>
                 </div>
+
+                {/* After the timeline finishes, surface the Telegram tip
+                    once. The existing tip handles dismiss persistence
+                    internally so we don't re-render on replay. */}
+                {currentMinute >= 60 && (
+                  <TelegramContextualTip context="match-log" />
+                )}
               </motion.div>
             )}
           </AnimatePresence>

@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Swords, Zap, Trophy, Users } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { TelegramContextualTip } from "@/components/common/TelegramContextualTip";
 
 export interface RivalMatchResult {
   user: { name: string; formation: string; color: string; score: number };
@@ -177,6 +178,12 @@ export const RivalPreviewCard: React.FC<RivalPreviewCardProps> = ({
                     Challenge Rival
                   </a>
                 </div>
+
+                {/* Verification loop anchor — once the user has seen a
+                    simulated rival result, the verification copy in the
+                    Telegram tip is the highest-relevance moment. The tip
+                    handles its own dismiss state. */}
+                <TelegramContextualTip context="verification" />
               </motion.div>
             )}
           </AnimatePresence>

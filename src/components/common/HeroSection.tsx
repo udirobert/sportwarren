@@ -17,6 +17,9 @@ import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
 import { AppPreviewSection } from '@/components/landing/AppPreviewSection';
 import { InlineWaitlistSection } from '@/components/landing/InlineWaitlistSection';
 import { LandingFooter } from '@/components/landing/LandingFooter';
+import { ShareLinks } from '@/components/common/ShareLinks';
+import { usePlatform } from '@/hooks/usePlatform';
+import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
 import type { PlayerPosition } from '@/types';
 
 interface HeroSectionProps {
@@ -62,6 +65,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
   // carries forward into the simulator surfaces.
   const [playgroundState, setPlaygroundState] = useState<PlaygroundStateSnapshot | null>(null);
   const { loginAsGuest, hasAccount, hasWallet, isGuest, authStatus } = useWallet();
+  const { platform, isTelegram } = usePlatform();
   const parallaxRef = useRef<HTMLDivElement>(null);
   const parallaxRef2 = useRef<HTMLDivElement>(null);
 
@@ -117,6 +121,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
   // New visitors lead with the low-friction persona path (build a card as a guest)
   // rather than a wallet gate. Returning users sign in via the secondary link/header.
   const handlePrimaryCta = () => {
+    if (isTelegram) {
+      // Telegram Mini App users already have a session — go straight in
+      // via the deep link, no web auth modal in front of it.
+      if (typeof window !== 'undefined') {
+        window.location.assign(buildTelegramDeepLink({ tab: 'squad' }));
+      }
+      return;
+    }
     if (isPublicVisitor) {
       // Public visitors: the section CTA drives the same persona-save
       // conversion as the card. Falls back to onGetStarted when no
@@ -210,13 +222,36 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             ))}
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <div className="flex flex-col items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+            {isPublicVisitor && !isTelegram && (
+              // Telegram/WhatsApp are the fastest auth paths for rec players
+              // who already coordinate in group chats. Show them as equal
+              // co-primary CTAs above the gradient button so the user sees
+              // the no-friction path before the wallet gate.
+              <div className="flex flex-col items-center gap-1.5">
+                <p className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-400">
+                  {journeyContent.hero.altCtasLabel ?? 'Or open in'}
+                </p>
+                <ShareLinks
+                  variant="primary"
+                  layout="row"
+                  channels={platform === 'mobile' ? ['whatsapp', 'telegram'] : ['telegram', 'whatsapp']}
+                  payload={{
+                    text: 'Join me on SportWarren — build a player card and log real matches with the squad.',
+                    url: typeof window === 'undefined' ? undefined : `${window.location.origin}/?connect=1`,
+                    telegramDeepLink: buildTelegramDeepLink({ tab: 'squad' }),
+                  }}
+                  trackEventName="hero_channel_cta_clicked"
+                  trackProps={{ surface: 'hero_primary' }}
+                />
+              </div>
+            )}
             <button
               onClick={handlePrimaryCta}
               className="group relative inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
             >
               <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
-              {journeyContent.hero.primaryCtaLabel}
+              {isTelegram ? 'Open in Telegram' : journeyContent.hero.primaryCtaLabel}
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
             </button>
             {isPublicVisitor && (
@@ -251,18 +286,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
           </div>
 
           <div className="mb-6">
-            <a
-              href="https://t.me/sportwarrenbot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 transition-colors"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-              </svg>
-              <span>Or open in Telegram</span>
-              <ArrowRight className="w-3 h-3" aria-hidden="true" />
-            </a>
+            {/* Inline "Or open in Telegram" link removed — superseded by
+                the channel CTA row above the primary button, which offers
+                both Telegram and WhatsApp as co-primary options. Keeping
+                the section so the surrounding rhythm doesn't shift. */}
           </div>
 
           <div id="formation-playground" className="mb-6">

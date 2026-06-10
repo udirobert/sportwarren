@@ -2,6 +2,7 @@
  * Match Result Card — generates shareable image data for WhatsApp/Instagram
  * Uses html-to-image (already in deps) to render a DOM node to PNG/JPEG.
  */
+import { buildShareLinks } from './links';
 
 export interface ShareableMatchData {
   homeTeam: string;
@@ -48,8 +49,7 @@ export function buildShareUrl(matchId: string): string {
 }
 
 export function buildWhatsAppShareUrl(text: string, url: string): string {
-  const encoded = encodeURIComponent(`${text}\n${url}`);
-  return `https://wa.me/?text=${encoded}`;
+  return buildShareLinks({ text, url }).whatsapp;
 }
 
 export function buildTwitterShareUrl(text: string, url: string): string {

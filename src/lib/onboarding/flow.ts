@@ -8,7 +8,8 @@ export type ChecklistId =
   | 'complete_card'
   | 'set_formation'
   | 'join_squad'
-  | 'log_match';
+  | 'log_match'
+  | 'connect_telegram';
 
 export interface ChecklistItemConfig {
   id: ChecklistId;

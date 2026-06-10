@@ -24,6 +24,8 @@ import { useWallet } from "@/contexts/WalletContext";
 import { useEnvironment } from "@/contexts/EnvironmentContext";
 import { trackEvent } from "@/lib/analytics";
 import { trackOnboardingProgressMilestone } from "@/lib/analytics-funnel";
+import { ShareLinks } from "@/components/common/ShareLinks";
+import { buildSquadShareText, buildMatchResultShareText, buildOnboardingShareUrl } from "@/lib/share/onboarding-copy";
 import { Card } from "@/components/ui/Card";
 import { TermTooltip, GlossaryButton } from "@/components/ui/TermTooltip";
 import { trpc } from "@/lib/trpc-client";
@@ -791,9 +793,12 @@ function PersonalizationCard({
       formation,
       teammates: teammates.length,
     });
-    const shareText = `🪪 I built my squad on SportWarren\n\n👤 ${playerName || "Me"}\n📋 ${formation || "4-4-2"}\n👥 ${teammates.length + 1} players\n\nCome join and make the stats real.`;
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-    window.open(whatsappUrl, "_blank");
+    const shareText = buildSquadShareText({ playerName, formation, teammates });
+    const shareUrl = buildOnboardingShareUrl();
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`,
+      "_blank",
+    );
   };
 
   const handleSharePlayerCard = () => {
@@ -801,27 +806,17 @@ function PersonalizationCard({
       formation,
       matchResult,
     });
-    const resultEmoji =
-      matchResult === "won"
-        ? "🏆"
-        : matchResult === "drew"
-          ? "🤝"
-          : matchResult === "lost"
-            ? "💪"
-            : "🪪";
-    const resultLine = matchResult
-      ? `${resultEmoji} Last result: ${matchResult === "won" ? "Win" : matchResult === "drew" ? "Draw" : "Loss"}`
-      : "";
-    const shareText = [
-      `🪪 My player card — ${playerName || "New Player"} (${pendingClaimPosition ?? "MF"})`,
-      resultLine,
-      `📋 ${formation || "4-4-2"}`,
-      "Build yours on SportWarren and make the stats real.",
-    ]
-      .filter(Boolean)
-      .join("\n\n");
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(shareText)}`;
-    window.open(whatsappUrl, "_blank");
+    const shareText = buildMatchResultShareText({
+      playerName,
+      position: pendingClaimPosition ?? null,
+      result: matchResult,
+      formation,
+    });
+    const shareUrl = buildOnboardingShareUrl();
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`,
+      "_blank",
+    );
   };
 
   return (
@@ -1133,6 +1128,39 @@ function PersonalizationCard({
                             Stats recorded to your card
                           </span>
                         </motion.div>
+
+                        {/* Anchor the verification loop — let the squad confirm
+                            the result in their group chat (Telegram or WhatsApp).
+                            Same visual weight as the brand-step share moment,
+                            but earlier while the dopamine is highest. */}
+                        <motion.div
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 2.1 }}
+                          className="mt-4 flex flex-col items-center gap-2"
+                        >
+                          <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">
+                            <Users className="h-3 w-3" />
+                            Your squad verifies this in the group chat
+                          </p>
+                          <ShareLinks
+                            variant="ghost"
+                            payload={{
+                              text: buildMatchResultShareText({
+                                playerName,
+                                position: pendingClaimPosition ?? null,
+                                result: matchResult,
+                                formation,
+                              }),
+                              url: buildOnboardingShareUrl(),
+                            }}
+                            trackEventName="onboarding_match_result_shared"
+                            trackProps={{
+                              formation,
+                              result: matchResult,
+                            }}
+                          />
+                        </motion.div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -1423,6 +1451,32 @@ function PersonalizationCard({
                         <p className="mt-2 text-center text-[9px] text-gray-600">
                           {positionsLabel(formation, teammates.length + 1)}
                         </p>
+                        {/* Inline squad share — moves the share moment
+                            forward to the visualisable pitch reveal, not
+                            just the final brand step. Same <ShareLinks>
+                            primitive as the brand-step button. */}
+                        <div className="mt-3 flex flex-col items-center gap-1.5">
+                          <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">
+                            <Share2 className="h-3 w-3" />
+                            Send to the squad
+                          </p>
+                          <ShareLinks
+                            variant="ghost"
+                            payload={{
+                              text: buildSquadShareText({
+                                playerName,
+                                formation,
+                                teammates,
+                              }),
+                              url: buildOnboardingShareUrl(),
+                            }}
+                            trackEventName="onboarding_share_squad_inline"
+                            trackProps={{
+                              formation,
+                              teammates: teammates.length,
+                            }}
+                          />
+                        </div>
                       </div>
                     )}
                 </div>
