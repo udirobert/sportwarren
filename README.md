@@ -57,6 +57,8 @@ SportWarren transforms grassroots football into a progression system. Players ea
 | **[ONBOARDING.md](docs/ONBOARDING.md)** | Persona-first onboarding flow and context management. |
 | **[DESIGN_TOKENS.md](docs/DESIGN_TOKENS.md)** | Visual system: colors, typography, layout, animations. |
 
+> Internal/generated agent workspace output belongs under ignored tool directories like `.kimchi/`. Durable product/design docs that should be reviewed or kept in git should live in `docs/`.
+
 ---
 
 ## 🛠️ Quick Start
