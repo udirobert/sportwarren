@@ -9,6 +9,8 @@ export interface PendingPersonaContext {
   avatarBase64?: string;
   avatarMimeType?: string;
   attributeDeltas?: Partial<Record<AttributeKey, number>>;
+  squadNickname?: string;
+  squadColor?: string;
 }
 
 const STORAGE_KEY = "sw_pending_persona";
@@ -30,7 +32,9 @@ export function isPendingPersonaContext(value: unknown): value is PendingPersona
     (ctx.formation === undefined || (typeof ctx.formation === "string" && ctx.formation.length > 0 && ctx.formation.length <= 16)) &&
     (ctx.avatarBase64 === undefined || typeof ctx.avatarBase64 === "string") &&
     (ctx.avatarMimeType === undefined || typeof ctx.avatarMimeType === "string") &&
-    (ctx.attributeDeltas === undefined || (typeof ctx.attributeDeltas === "object" && ctx.attributeDeltas !== null && Object.values(ctx.attributeDeltas).every(v => typeof v === "number")))
+    (ctx.attributeDeltas === undefined || (typeof ctx.attributeDeltas === "object" && ctx.attributeDeltas !== null && Object.values(ctx.attributeDeltas).every(v => typeof v === "number"))) &&
+    (ctx.squadNickname === undefined || typeof ctx.squadNickname === "string") &&
+    (ctx.squadColor === undefined || typeof ctx.squadColor === "string")
   );
 }
 
@@ -70,4 +74,24 @@ export function consumePendingPersona(): PendingPersonaContext | null {
   const persona = getPendingPersona();
   if (persona) clearPendingPersona();
   return persona;
+}
+
+/** Merge partial updates into the existing pending persona without
+ *  overwriting unrelated fields (e.g. update squad color without
+ *  touching name/position). */
+export function patchPendingPersona(partial: Partial<Omit<PendingPersonaContext, 'savedAt'>>): void {
+  if (typeof window === "undefined") return;
+  const existing = getPendingPersona();
+  const next: PendingPersonaContext = {
+    displayName: existing?.displayName ?? partial.displayName ?? '',
+    position: existing?.position ?? partial.position ?? 'MF',
+    savedAt: Date.now(),
+    formation: partial.formation ?? existing?.formation,
+    avatarBase64: partial.avatarBase64 ?? existing?.avatarBase64,
+    avatarMimeType: partial.avatarMimeType ?? existing?.avatarMimeType,
+    attributeDeltas: partial.attributeDeltas ?? existing?.attributeDeltas,
+    squadNickname: partial.squadNickname ?? existing?.squadNickname,
+    squadColor: partial.squadColor ?? existing?.squadColor,
+  };
+  storePendingPersona(next);
 }

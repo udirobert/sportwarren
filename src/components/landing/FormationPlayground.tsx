@@ -10,6 +10,7 @@ import { useSquadDetails } from "@/hooks/squad/useSquad";
 import { useActiveSquad } from "@/contexts/ActiveSquadContext";
 import { FORMATIONS, getFormationsBySquadSize, getDefaultFormationForSize, PLAY_STYLE_LABELS } from "@/lib/formations";
 import { POSITIONS_BY_SQUAD_SIZE, DEFAULT_PLAYER_NAMES, SQUAD_SIZES, PLAY_STYLES, SQUAD_COLORS } from "@/lib/pitch.constants";
+import { patchPendingPersona, getPendingPersona } from "@/lib/claims/persona";
 import { decodeFormationFromUrl, syncStateToUrl, suggestCounterFormation, encodeChallengeUrl } from "@/lib/pitch/shareUrl";
 import type { PlaygroundFlow } from "@/lib/pitch/shareUrl";
 import type { Formation, PlayStyle, SquadSize, PlayerPosition } from "@/types";
@@ -65,6 +66,7 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
   );
   const [playStyle, setPlayStyle] = useState<PlayStyle>("balanced");
   const [primaryColor, setPrimaryColor] = useState("#10b981");
+  const [squadNickname, setSquadNickname] = useState("");
   const [urlStateReady, setUrlStateReady] = useState(false);
   const [pitchTheme, setPitchTheme] = useState<'premier-league' | 'sunday-league' | 'night-match' | 'easy-on-eyes'>('premier-league');
   const [enablePlayerMovement, setEnablePlayerMovement] = useState(false);
@@ -164,7 +166,18 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
       size: squadSize,
       names: personalization.names,
     });
-  }, [formation, playStyle, primaryColor, squadSize, personalization.names, flow, urlStateReady]);
+  // Load any pending persona squad branding into playground state
+  useEffect(() => {
+    const pending = getPendingPersona();
+    if (pending?.squadNickname) setSquadNickname(pending.squadNickname);
+    if (pending?.squadColor) setPrimaryColor(pending.squadColor);
+  }, []);
+
+  // Persist squad branding changes to localStorage (progressive commitment)
+  useEffect(() => {
+    if (!urlStateReady) return;
+    patchPendingPersona({ squadNickname, squadColor: primaryColor });
+  }, [squadNickname, primaryColor, urlStateReady]);
 
   // ── Emit formation changes to the parent (for persona prefill) ──
   // Gated on urlStateReady so the initial mount and the URL-settled value
@@ -895,6 +908,22 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
                   </button>
                 ))}
               </div>
+            </div>
+
+            {/* Squad Name (pre-auth branding — deepens investment) */}
+            <div>
+              <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-gray-400 mb-1.5 block">
+                <Users className="w-3 h-3 inline mr-1" />
+                Squad Name
+              </label>
+              <input
+                type="text"
+                placeholder="Your squad name"
+                maxLength={24}
+                value={squadNickname}
+                onChange={(e) => setSquadNickname(e.target.value)}
+                className="w-full rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-sm font-medium text-white placeholder-gray-500 outline-none transition focus:border-emerald-500/60 focus:ring-2 focus:ring-emerald-500/20"
+              />
             </div>
 
             {/* Kit Color */}
