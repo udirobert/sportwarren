@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
-import { X, Wallet, Loader2, Shield, ArrowRight } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { useState } from 'react';
+import { X, Wallet, Loader2, Shield, ArrowRight, Sparkles, AlertTriangle, CheckCircle2, Lock } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { useWallet } from '@/contexts/WalletContext';
@@ -9,6 +10,15 @@ import { useLens } from '@/contexts/LensContext';
 import { useToast } from '@/contexts/ToastContext';
 import { getJourneyContent } from '@/lib/journey/content';
 import { usePrivy } from '@privy-io/react-auth';
+import { trackAuthGateShown, trackAuthGateAbandoned, trackAuthGateConverted } from '@/lib/analytics';
+
+export interface LossAversionData {
+  playerName?: string;
+  position?: string;
+  attributeCount?: number;
+  avatarSet?: boolean;
+  formationSet?: boolean;
+}
 
 interface WalletConnectModalProps {
   isOpen: boolean;
@@ -17,6 +27,7 @@ interface WalletConnectModalProps {
   forceWalletSetup?: boolean;
   contextTitle?: string;
   contextDescription?: string;
+  lossAversionData?: LossAversionData;
 }
 
 export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
@@ -26,6 +37,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
   forceWalletSetup = false,
   contextTitle,
   contextDescription,
+  lossAversionData,
 }) => {
   const { connect, hasWallet, refreshAuthSignature, authStatus } = useWallet();
   const { login: privyLogin, authenticated, ready } = usePrivy();
@@ -46,6 +58,19 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
   const showLensSection = lensAvailable || lensConnected;
   const publicContent = getJourneyContent('public_visitor');
   const accountReadyContent = getJourneyContent('account_ready');
+
+  useEffect(() => {
+    if (isOpen && !authenticated) {
+      trackAuthGateShown(contextTitle || 'generic');
+    }
+  }, [isOpen, authenticated, contextTitle]);
+
+  const handleClose = () => {
+    if (!authenticated) {
+      trackAuthGateAbandoned(contextTitle || 'generic');
+    }
+    onClose();
+  };
 
   if (!isOpen) return null;
 
@@ -69,6 +94,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
     setError(null);
     try {
       await privyLogin();
+      trackAuthGateConverted(contextTitle || 'generic', 'privy');
       if (!forceWalletSetup) {
         onConnected?.();
         onClose();
@@ -118,7 +144,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
         <Card className="max-w-sm w-full relative animate-scale-in-bounce overflow-hidden p-0">
           <button
-            onClick={onClose}
+            onClick={handleClose}
             className="absolute top-4 right-4 p-2 rounded-lg hover:bg-gray-100 transition-colors z-10"
             aria-label="Close"
           >
@@ -126,7 +152,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
           </button>
 
           <div className="p-8">
-            <div className="text-center mb-8">
+            <div className="text-center mb-6">
               <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/20">
                 <span className="text-3xl">{contextTitle ? '🪪' : '⚽'}</span>
               </div>
@@ -139,6 +165,60 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
               <h2 className="text-2xl font-bold text-gray-900 mb-2">{publicContent.authModal.title}</h2>
               <p className="text-gray-600 text-sm">{publicContent.authModal.description}</p>
             </div>
+
+            {/* Loss-aversion panel: show what they'll lose if they abandon */}
+            {lossAversionData && (
+              <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                  <div className="flex-1">
+                    <p className="text-sm font-bold text-amber-800">
+                      Your card and progression will be lost if you leave
+                    </p>
+                    {lossAversionData.playerName && (
+                      <div className="mt-2 flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600 text-[10px] font-black text-white">
+                          {lossAversionData.position || '?'}
+                        </div>
+                        <span className="text-sm font-bold text-gray-900">{lossAversionData.playerName}</span>
+                      </div>
+                    )}
+                    <div className="mt-2 space-y-1">
+                      {[
+                        { label: 'Name set', done: !!lossAversionData.playerName },
+                        { label: 'Position chosen', done: !!lossAversionData.position },
+                        { label: 'Attributes customized', done: (lossAversionData.attributeCount || 0) > 0 },
+                        { label: 'Avatar uploaded', done: !!lossAversionData.avatarSet },
+                        { label: 'Formation picked', done: !!lossAversionData.formationSet },
+                      ].map((item) => (
+                        <div key={item.label} className="flex items-center gap-1.5 text-xs">
+                          {item.done ? (
+                            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
+                          ) : (
+                            <Lock className="h-3 w-3 text-gray-400" />
+                          )}
+                          <span className={item.done ? 'text-emerald-800 font-medium' : 'text-gray-500'}>
+                            {item.label}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[11px] font-bold text-amber-700">
+                      {(() => {
+                        const completed = [
+                          !!lossAversionData.playerName,
+                          !!lossAversionData.position,
+                          (lossAversionData.attributeCount || 0) > 0,
+                          !!lossAversionData.avatarSet,
+                          !!lossAversionData.formationSet,
+                        ].filter(Boolean).length;
+                        return `${completed}/5 steps — create an account to lock in your progress`;
+                      })()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">

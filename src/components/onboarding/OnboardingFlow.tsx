@@ -6,7 +6,7 @@ import { X, ChevronRight, ChevronLeft, Sparkles, MousePointer2, Check, Users, Us
 import { useUserPreferences } from '@/hooks/useUserPreferences';
 import { useWallet } from '@/contexts/WalletContext';
 import { useEnvironment } from '@/contexts/EnvironmentContext';
-import { trackEvent } from '@/lib/analytics';
+import { trackEvent, trackOnboardingProgressMilestone } from '@/lib/analytics';
 import { Card } from '@/components/ui/Card';
 import { TermTooltip, GlossaryButton } from '@/components/ui/TermTooltip';
 import { trpc } from '@/lib/trpc-client';
@@ -71,6 +71,10 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
   
   const [tourStep, setTourStep] = useState(-1);
   const [personalizationStep, setPersonalizationStep] = useState<'identity' | 'formation' | 'brand'>('identity');
+  const personalizationProgress = useMemo(() => {
+    const map: Record<typeof personalizationStep, number> = { identity: 33, formation: 66, brand: 90 };
+    return map[personalizationStep];
+  }, [personalizationStep]);
   const [showConfetti, setShowConfetti] = useState(false);
   const [hasCompletedTour, setHasCompletedTour] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -175,6 +179,13 @@ export function OnboardingFlow({ journeyStage = 'account_ready', onComplete, onV
   useEffect(() => {
     onVisibilityChange?.(showBanner || (phase === 'tour' && tourStep >= 0));
   }, [showBanner, phase, tourStep, onVisibilityChange]);
+
+  // Track onboarding progress milestones (goal gradient / Zeigarnik effect)
+  useEffect(() => {
+    if (phase === 'personalize') {
+      trackOnboardingProgressMilestone(personalizationProgress, personalizationStep);
+    }
+  }, [phase, personalizationStep, personalizationProgress]);
 
   // Tour handlers
   const startTour = useCallback(() => {
@@ -592,6 +603,34 @@ function PersonalizationCard({
         {step === 'identity' ? <User size={120} /> : step === 'formation' ? <Users size={120} /> : <Palette size={120} />}
       </div>
       
+      {/* Persistent progress indicator — goal gradient / Zeigarnik effect */}
+      {(() => {
+        const progress = step === 'identity' ? 33 : step === 'formation' ? 66 : 90;
+        return (
+          <div className="border-b border-white/10 px-8 py-3">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                {step === 'identity' ? 'Step 1 of 3 — Identity' : step === 'formation' ? 'Step 2 of 3 — Tactics' : 'Step 3 of 3 — Brand'}
+              </span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">
+                {progress}%
+              </span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-green-400 transition-all duration-700"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            {step === 'brand' && (
+              <p className="mt-1.5 text-[10px] font-bold text-amber-300">
+                ⚡ You&apos;re one step away from launching your season — lock it in!
+              </p>
+            )}
+          </div>
+        );
+      })()}
+
       <div className="p-8">
         {error && (
           <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200">
