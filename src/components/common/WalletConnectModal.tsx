@@ -175,107 +175,57 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
           <div className="p-8">
             <div className="text-center mb-6">
               <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-green-500/20">
-                <span className="text-3xl">{contextTitle ? "🪪" : "⚽"}</span>
+                <span className="text-3xl">{lossAversionData ? "🪪" : "⚽"}</span>
               </div>
-              {contextTitle && (
-                <div className="mb-3">
-                  <h2 className="text-lg font-black text-gray-900">
-                    {contextTitle}
-                  </h2>
-                  {contextDescription && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      {contextDescription}
-                    </p>
-                  )}
-                </div>
-              )}
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">
-                {publicContent.authModal.title}
-              </h2>
-              <p className="text-gray-600 text-sm">
-                {publicContent.authModal.description}
-              </p>
-            </div>
 
-            {/* Loss-aversion panel: show what they'll lose if they abandon */}
-            {lossAversionData && (
-              <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4">
-                <div className="flex items-start gap-3">
-                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-amber-800">
-                      Your card and progression will be lost if you leave
-                    </p>
-                    {lossAversionData.playerName && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600 text-[10px] font-black text-white">
-                          {lossAversionData.position || "?"}
-                        </div>
-                        <span className="text-sm font-bold text-gray-900">
-                          {lossAversionData.playerName}
-                        </span>
+              {lossAversionData ? (
+                /* Compact loss-aversion gate — ONE headline, preview, CTA */
+                <div className="space-y-3">
+                  <h2 className="text-2xl font-bold text-gray-900">
+                    {lossAversionData.playerName
+                      ? `Keep ${lossAversionData.playerName}’s card`
+                      : "Lock in your player card"}
+                  </h2>
+
+                  {/* Compact card preview */}
+                  {lossAversionData.playerName && (
+                    <div className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-600 text-[10px] font-black text-white">
+                        {lossAversionData.position || "?"}
                       </div>
-                    )}
-                    <div className="mt-2 space-y-1">
-                      {[
-                        {
-                          label: "Name set",
-                          done: !!lossAversionData.playerName,
-                        },
-                        {
-                          label: "Position chosen",
-                          done: !!lossAversionData.position,
-                        },
-                        {
-                          label: "Attributes customized",
-                          done: (lossAversionData.attributeCount || 0) > 0,
-                        },
-                        {
-                          label: "Avatar uploaded",
-                          done: !!lossAversionData.avatarSet,
-                        },
-                        {
-                          label: "Formation picked",
-                          done: !!lossAversionData.formationSet,
-                        },
-                      ].map((item) => (
-                        <div
-                          key={item.label}
-                          className="flex items-center gap-1.5 text-xs"
-                        >
-                          {item.done ? (
-                            <CheckCircle2 className="h-3 w-3 text-emerald-600" />
-                          ) : (
-                            <Lock className="h-3 w-3 text-gray-400" />
-                          )}
-                          <span
-                            className={
-                              item.done
-                                ? "text-emerald-800 font-medium"
-                                : "text-gray-500"
-                            }
-                          >
-                            {item.label}
-                          </span>
-                        </div>
-                      ))}
+                      <span className="text-sm font-bold text-gray-900">
+                        {lossAversionData.playerName}
+                      </span>
                     </div>
-                    <p className="mt-2 text-[11px] font-bold text-amber-700">
-                      {(() => {
-                        const completed = [
-                          !!lossAversionData.playerName,
-                          !!lossAversionData.position,
-                          (lossAversionData.attributeCount || 0) > 0,
-                          !!lossAversionData.avatarSet,
-                          !!lossAversionData.formationSet,
-                        ].filter(Boolean).length;
-                        return `${completed}/5 steps — create an account to lock in your progress`;
-                      })()}
-                    </p>
-                  </div>
+                  )}
+
+                  <p className="text-sm text-gray-600">
+                    {(() => {
+                      const done = [
+                        !!lossAversionData.playerName,
+                        !!lossAversionData.position,
+                        (lossAversionData.attributeCount || 0) > 0,
+                        !!lossAversionData.avatarSet,
+                        !!lossAversionData.formationSet,
+                      ].filter(Boolean).length;
+                      return done >= 3
+                        ? `You just built ${done} parts of your card — sign in to make it permanent.`
+                        : "Sign in to save your card and start building your football legacy.";
+                    })()}
+                  </p>
                 </div>
-              </div>
-            )}
+              ) : (
+                /* Generic gate when no card data */
+                <>
+                  <h2 className="text-2xl font-bold text-gray-900 mb-2">
+                    {contextTitle || publicContent.authModal.title}
+                  </h2>
+                  <p className="text-gray-600 text-sm">
+                    {contextDescription || publicContent.authModal.description}
+                  </p>
+                </>
+              )}
+            </div>
 
             {error && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">

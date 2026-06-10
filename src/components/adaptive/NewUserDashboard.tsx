@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Zap,
@@ -11,11 +11,14 @@ import {
   Users,
   Trophy,
   Activity,
+  Lock,
+  X,
 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { usePlatformStats } from "@/hooks/usePlatformStats";
 import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
+import { getPendingPersona } from "@/lib/claims/persona";
 import { buildTelegramDeepLink } from "@/lib/telegram/deep-links";
 import type {
   DashboardEntryAction,
@@ -200,6 +203,9 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
         </div>
       )}
 
+      {/* Soft auth nudge for guest users — deferred signup (progressive commitment) */}
+      {isGuest && <GuestAuthNudge />}
+
       <div className="mt-4">
         <OnboardingChecklist
           journeyStage={entryState.id}
@@ -248,3 +254,65 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
     </div>
   );
 };
+
+/** Soft, dismissible auth nudge for guest dashboard users.
+ *  Reads the pending persona from localStorage to show what they built.
+ *  Progressive commitment: they experience value before being asked to sign up. */
+function GuestAuthNudge() {
+  const [dismissed, setDismissed] = useState(false);
+  const [persona, setPersona] = useState<ReturnType<typeof getPendingPersona>>(null);
+
+  useEffect(() => {
+    setPersona(getPendingPersona());
+  }, []);
+
+  if (dismissed || !persona) return null;
+
+  const done = [
+    !!persona.displayName,
+    !!persona.position,
+    !!persona.attributeDeltas && Object.keys(persona.attributeDeltas).length > 0,
+    !!persona.avatarBase64,
+    !!persona.formation,
+  ].filter(Boolean).length;
+
+  return (
+    <div className="mt-4 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-4 relative">
+      <button
+        onClick={() => setDismissed(true)}
+        className="absolute top-3 right-3 p-1 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+        aria-label="Dismiss"
+      >
+        <X className="w-3.5 h-3.5" />
+      </button>
+      <div className="flex items-start gap-3">
+        <Lock className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+        <div className="flex-1">
+          <p className="text-sm font-bold text-gray-900 dark:text-white">
+            {persona.displayName
+              ? `Hey ${persona.displayName}, you built ${done} parts of your card as a guest.`
+              : `You built ${done} parts of your player card as a guest.`}
+          </p>
+          <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+            Sign in once to lock it in permanently, verify matches, and start earning XP.
+          </p>
+          <div className="mt-3 flex items-center gap-3">
+            <Link
+              href="/?connect=1"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-emerald-500 transition-colors"
+            >
+              <Lock className="w-3 h-3" />
+              Lock it in
+            </Link>
+            <button
+              onClick={() => setDismissed(true)}
+              className="text-xs font-bold text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
