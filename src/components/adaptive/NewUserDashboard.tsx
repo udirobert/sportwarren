@@ -1,9 +1,10 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Zap, ArrowRight, ExternalLink, Plus, CheckCircle2 } from 'lucide-react';
+import { Zap, ArrowRight, ExternalLink, Plus, CheckCircle2, Users, Trophy, Activity } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
+import { trackDashboardSocialProofSeen } from '@/lib/analytics';
 import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
 import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
 import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
@@ -43,6 +44,21 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
   renderEntryAction,
 }) => {
   const entryAccountLabel = isGuest ? 'Guest preview' : 'Signed in';
+  const [platformStats, setPlatformStats] = useState<{ totalPlayers?: number; matchesPlayedToday?: number; activeSquadsThisWeek?: number }>({});
+
+  useEffect(() => {
+    fetch('/api/platform/stats')
+      .then((r) => r.json())
+      .then((data) => {
+        setPlatformStats(data);
+        const counters = [];
+        if (data.matchesPlayedToday) counters.push('matches_played_today');
+        if (data.activeSquadsThisWeek) counters.push('active_squads_this_week');
+        if (data.totalPlayers) counters.push('total_players');
+        if (counters.length > 0) trackDashboardSocialProofSeen(counters);
+      })
+      .catch(() => setPlatformStats({}));
+  }, []);
 
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10 nav-spacer-top nav-spacer-bottom">
@@ -115,6 +131,33 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
           </div>
         </div>
       </Card>
+
+      {/* Social proof: live platform counters for new users */}
+      {(platformStats.totalPlayers || platformStats.matchesPlayedToday || platformStats.activeSquadsThisWeek) && (
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          {platformStats.totalPlayers ? (
+            <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3 text-center">
+              <Users className="mx-auto h-4 w-4 text-emerald-600 dark:text-emerald-400 mb-1" />
+              <div className="text-lg font-black tabular-nums text-emerald-700 dark:text-emerald-300">{platformStats.totalPlayers.toLocaleString()}</div>
+              <div className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Players</div>
+            </div>
+          ) : null}
+          {platformStats.matchesPlayedToday ? (
+            <div className="rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20 p-3 text-center">
+              <Trophy className="mx-auto h-4 w-4 text-sky-600 dark:text-sky-400 mb-1" />
+              <div className="text-lg font-black tabular-nums text-sky-700 dark:text-sky-300">{platformStats.matchesPlayedToday.toLocaleString()}</div>
+              <div className="text-[9px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">Matches today</div>
+            </div>
+          ) : null}
+          {platformStats.activeSquadsThisWeek ? (
+            <div className="rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/20 p-3 text-center">
+              <Activity className="mx-auto h-4 w-4 text-violet-600 dark:text-violet-400 mb-1" />
+              <div className="text-lg font-black tabular-nums text-violet-700 dark:text-violet-300">{platformStats.activeSquadsThisWeek.toLocaleString()}</div>
+              <div className="text-[9px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">Active squads</div>
+            </div>
+          ) : null}
+        </div>
+      )}
 
       <div className="mt-4">
         <OnboardingChecklist

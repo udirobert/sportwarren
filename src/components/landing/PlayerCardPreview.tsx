@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
-  Sparkles, ArrowRight, CheckCircle2, Lock, Camera,
+  Sparkles, ArrowRight, CheckCircle2, Lock, Camera, SlidersHorizontal, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { ATTRIBUTE_KEYS } from "@/server/services/personalization/twin-types";
+import type { AttributeKey } from "@/server/services/personalization/twin-types";
 import type { PlayerPosition } from "@/types";
-import { trackCoreGrowthEvent, trackFeatureUsed, trackEvent } from "@/lib/analytics";
-import { storePendingPersona } from "@/lib/claims/persona";
+import { trackCoreGrowthEvent, trackFeatureUsed, trackEvent, trackCardAttributeAdjusted, trackCardBuilderStepCompleted } from "@/lib/analytics";
+import { storePendingPersona, getPendingPersona } from "@/lib/claims/persona";
 import { ATTRIBUTE_DISPLAY, ATTRIBUTE_BAR_TONES } from "@/lib/attributes/display";
 import { PROVISIONAL_ATTRIBUTES, VERIFIED_DELTAS } from "@/lib/attributes/provisional";
 import { useAvatarUpload } from "@/hooks/useAvatarUpload";
@@ -59,7 +60,17 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
   const [name, setName] = useState("");
   const [position, setPosition] = useState<PlayerPosition>("MF");
   const [verified, setVerified] = useState(false);
+  const [attributeDeltas, setAttributeDeltas] = useState<Partial<Record<AttributeKey, number>>>({});
+  const [showCustomize, setShowCustomize] = useState(false);
   const avatar = useAvatarUpload();
+
+  // Load any previously saved pre-auth attribute tweaks (sunk-cost persistence)
+  useEffect(() => {
+    const pending = getPendingPersona();
+    if (pending?.attributeDeltas) {
+      setAttributeDeltas(pending.attributeDeltas);
+    }
+  }, []);
 
   const handleNameChange = (value: string) => {
     setName(value);
@@ -82,15 +93,26 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
     const delta = VERIFIED_DELTAS[position];
     return ATTRIBUTE_KEYS.map((key) => {
       const provisional = base[key];
-      const value = verified ? clamp(provisional + (delta[key] ?? 0)) : provisional;
-      return { key, provisional, value, delta: delta[key] ?? 0 };
+      const customDelta = attributeDeltas[key] ?? 0;
+      const value = verified
+        ? clamp(provisional + customDelta + (delta[key] ?? 0))
+        : clamp(provisional + customDelta);
+      return { key, provisional, value, delta: (delta[key] ?? 0) + customDelta };
     });
-  }, [position, verified]);
+  }, [position, verified, attributeDeltas]);
 
   const overall = useMemo(
     () => clamp(attributes.reduce((sum, a) => sum + a.value, 0) / attributes.length),
     [attributes],
   );
+
+  const handleAttributeDeltaChange = (key: AttributeKey, delta: number) => {
+    setAttributeDeltas((prev) => {
+      const next = { ...prev, [key]: delta };
+      trackCardAttributeAdjusted(key, delta, position);
+      return next;
+    });
+  };
 
   const handleSave = () => {
     storePendingPersona({
@@ -100,6 +122,7 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
       savedAt: Date.now(),
       avatarBase64: avatar.base64 ?? undefined,
       avatarMimeType: avatar.mimeType ?? undefined,
+      attributeDeltas: Object.keys(attributeDeltas).length > 0 ? attributeDeltas : undefined,
     });
     trackFeatureUsed("player_card_save_clicked", { position, named: name.trim().length > 0, formation: currentFormation ?? null, hasAvatar: !!avatar.base64 });
     trackCoreGrowthEvent("player_card_save_intent", { position, authed, formation: currentFormation ?? null });
@@ -234,6 +257,61 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
               </button>
             ))}
           </div>
+
+          {/* Attribute customization — deepening pre-auth investment (IKEA effect + sunk cost) */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowCustomize((s) => {
+                const next = !s;
+                if (next) trackCardBuilderStepCompleted('customize_attributes_opened', position);
+                return next;
+              });
+            }}
+            className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-bold text-emerald-300 transition hover:bg-white/[0.08]"
+          >
+            <span className="flex items-center gap-2">
+              <SlidersHorizontal className="h-3.5 w-3.5" />
+              Customize attributes
+              {Object.keys(attributeDeltas).length > 0 && (
+                <span className="rounded-full bg-emerald-500/20 px-1.5 py-0.5 text-[9px] font-black text-emerald-300">
+                  {Object.keys(attributeDeltas).length}
+                </span>
+              )}
+            </span>
+            {showCustomize ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          </button>
+
+          {showCustomize && (
+            <div className="space-y-3 rounded-lg border border-white/10 bg-white/[0.03] p-3">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                Fine-tune your provisional stats
+              </p>
+              {ATTRIBUTE_KEYS.map((key) => {
+                const meta = ATTRIBUTE_DISPLAY[key];
+                const Icon = meta.Icon;
+                const base = PROVISIONAL_ATTRIBUTES[position][key];
+                const currentDelta = attributeDeltas[key] ?? 0;
+                const currentValue = clamp(base + currentDelta);
+                return (
+                  <div key={key} className="flex items-center gap-2">
+                    <Icon className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <span className="w-16 text-[10px] font-bold uppercase tracking-wider text-slate-400">{meta.label}</span>
+                    <input
+                      type="range"
+                      min={-15}
+                      max={15}
+                      step={1}
+                      value={currentDelta}
+                      onChange={(e) => handleAttributeDeltaChange(key, parseInt(e.target.value, 10))}
+                      className="h-1 flex-1 appearance-none rounded-full bg-white/10 accent-emerald-400 outline-none"
+                    />
+                    <span className="w-8 text-right text-xs font-black tabular-nums text-white">{currentValue}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           <div className="flex flex-col gap-2 sm:flex-row">
             <button

@@ -1,3 +1,4 @@
+import type { AttributeKey } from "@/server/services/personalization/twin-types";
 import type { PlayerPosition } from "@/types";
 
 export interface PendingPersonaContext {
@@ -7,6 +8,7 @@ export interface PendingPersonaContext {
   formation?: string;
   avatarBase64?: string;
   avatarMimeType?: string;
+  attributeDeltas?: Partial<Record<AttributeKey, number>>;
 }
 
 const STORAGE_KEY = "sw_pending_persona";
@@ -27,7 +29,8 @@ export function isPendingPersonaContext(value: unknown): value is PendingPersona
     Number.isFinite(ctx.savedAt) &&
     (ctx.formation === undefined || (typeof ctx.formation === "string" && ctx.formation.length > 0 && ctx.formation.length <= 16)) &&
     (ctx.avatarBase64 === undefined || typeof ctx.avatarBase64 === "string") &&
-    (ctx.avatarMimeType === undefined || typeof ctx.avatarMimeType === "string")
+    (ctx.avatarMimeType === undefined || typeof ctx.avatarMimeType === "string") &&
+    (ctx.attributeDeltas === undefined || (typeof ctx.attributeDeltas === "object" && ctx.attributeDeltas !== null && Object.values(ctx.attributeDeltas).every(v => typeof v === "number")))
   );
 }
 
