@@ -7,7 +7,7 @@ import { useWallet } from '@/contexts/WalletContext';
 import { getJourneyContent } from '@/lib/journey/content';
 import { getJourneyStage } from '@/lib/journey/stage';
 import { AccountStatusControl } from '@/components/common/AccountStatusControl';
-import { FormationPlayground } from '@/components/landing/FormationPlayground';
+import { FormationPlayground, type PlaygroundStateSnapshot } from '@/components/landing/FormationPlayground';
 import { NaturalLanguageMatchSim } from '@/components/landing/NaturalLanguageMatchSim';
 import { PlayerCardPreview } from '@/components/landing/PlayerCardPreview';
 import { RivalPreviewCard } from '@/components/landing/RivalPreviewCard';
@@ -57,6 +57,10 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
   // context (and therefore onboarding prefill) can carry the formation
   // through Path D: playground → save card → personalize.
   const [cardFormation, setCardFormation] = useState<string | null>(null);
+  // Full playground state snapshot — piped into NL Match Sim and Rival Preview
+  // so the user's accumulated investment (formation, style, color, names, size)
+  // carries forward into the simulator surfaces.
+  const [playgroundState, setPlaygroundState] = useState<PlaygroundStateSnapshot | null>(null);
   const { loginAsGuest, hasAccount, hasWallet, isGuest, authStatus } = useWallet();
   const parallaxRef = useRef<HTMLDivElement>(null);
   const parallaxRef2 = useRef<HTMLDivElement>(null);
@@ -267,19 +271,79 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                 initialName={cardName}
                 initialPosition={cardPosition}
                 onFormationChange={setCardFormation}
+                onStateChange={setPlaygroundState}
               />
             </React.Suspense>
           </div>
 
           {/* NL Match Simulator — pre-auth value hook (curiosity gap) */}
           <div className="mb-6">
-            <NaturalLanguageMatchSim />
+            <NaturalLanguageMatchSim
+              formation={playgroundState?.formation}
+              style={playgroundState?.style}
+              names={playgroundState?.names}
+              color={playgroundState?.color}
+            />
           </div>
 
           {/* Rival Preview — social proof + competition hook */}
           <div className="mb-6">
-            <RivalPreviewCard />
+            <RivalPreviewCard
+              formation={playgroundState?.formation ?? '4-4-2'}
+              style={playgroundState?.style ?? 'balanced'}
+              color={playgroundState?.color ?? '#10b981'}
+              names={playgroundState?.names ?? []}
+              size={playgroundState?.size ?? 5}
+            />
           </div>
+
+          {/* Start my season CTA — summarises accumulated investment */}
+          {!hasAccount && isPublicVisitor && playgroundState && (
+            <div className="mx-auto mb-8 max-w-md overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 p-5 text-center shadow-2xl shadow-emerald-500/10">
+              <p className="mb-3 text-[10px] font-black uppercase tracking-[0.22em] text-emerald-300">
+                Your squad is ready
+              </p>
+              <div className="mb-4 flex flex-wrap items-center justify-center gap-1.5">
+                {cardName && (
+                  <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-bold text-white">
+                    {cardName}
+                  </span>
+                )}
+                {playgroundState.formation && (
+                  <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-bold text-emerald-300">
+                    {playgroundState.formation}
+                  </span>
+                )}
+                {playgroundState.style && (
+                  <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-bold text-emerald-300">
+                    {playgroundState.style}
+                  </span>
+                )}
+                {playgroundState.color && (
+                  <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-bold text-emerald-300">
+                    <span className="h-2 w-2 rounded-full border border-white/50" style={{ backgroundColor: playgroundState.color }} />
+                    Kit
+                  </span>
+                )}
+                {playgroundState.names && playgroundState.names.length > 0 && (
+                  <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-bold text-gray-400">
+                    {playgroundState.names.length} players named
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={handlePrimaryCta}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/30 transition hover:scale-[1.02]"
+              >
+                <Zap className="h-4 w-4" />
+                Start my season
+                <ArrowRight className="h-4 w-4" />
+              </button>
+              <p className="mt-3 text-[10px] text-gray-500">
+                No password required. We'll create a guest account and sync your setup.
+              </p>
+            </div>
+          )}
 
           {!hasAccount && isPublicVisitor && (
             <p className="text-center mb-16">

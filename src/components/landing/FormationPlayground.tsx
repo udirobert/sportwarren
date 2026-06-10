@@ -24,6 +24,14 @@ import { ExportPanel } from "@/components/landing/pitch/ExportPanel";
 import { ChallengeOverlay } from "@/components/landing/pitch/ChallengeOverlay";
 import { MatchResultCard, type MatchResultData } from "@/components/landing/pitch/MatchResultCard";
 
+export interface PlaygroundStateSnapshot {
+  formation: Formation;
+  style: PlayStyle;
+  color: string;
+  names: string[];
+  size: SquadSize;
+}
+
 interface FormationPlaygroundProps {
   initialName?: string;
   initialPosition?: PlayerPosition;
@@ -34,6 +42,12 @@ interface FormationPlaygroundProps {
    * personalize prefill).
    */
   onFormationChange?: (formation: Formation) => void;
+  /**
+   * Called whenever any playground state changes (formation, style, color,
+   * names, size). Used by the hero to pipe context into the NL Match Sim
+   * and Rival Preview so the user's accumulated investment carries forward.
+   */
+  onStateChange?: (state: PlaygroundStateSnapshot) => void;
 }
 
 const POSITION_TO_PITCH_INDEX: Record<PlayerPosition, number> = {
@@ -49,7 +63,7 @@ interface OpponentState {
   names: string[];
 }
 
-export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initialName, initialPosition, onFormationChange }) => {
+export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initialName, initialPosition, onFormationChange, onStateChange }) => {
   // ── Challenge flow ──
   const [flow, setFlow] = useState<PlaygroundFlow>("build");
   const [opponent, setOpponent] = useState<OpponentState | null>(null);
@@ -166,6 +180,8 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
       size: squadSize,
       names: personalization.names,
     });
+  }, [formation, playStyle, primaryColor, squadSize, personalization.names, flow, urlStateReady]);
+
   // Load any pending persona squad branding into playground state
   useEffect(() => {
     const pending = getPendingPersona();
@@ -187,6 +203,22 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
     if (urlStateReady) onFormationChange?.(formation);
     /* eslint-disable-next-line react-hooks/exhaustive-deps */
   }, [formation, urlStateReady]);
+
+  // ── Emit full playground state to parent (for NL sim + rival preview) ──
+  // Fires whenever any state that the downstream simulators consume changes.
+  // onStateChange intentionally NOT in deps — we only want to re-run when
+  // the values themselves change.
+  useEffect(() => {
+    if (!urlStateReady) return;
+    onStateChange?.({
+      formation,
+      style: playStyle,
+      color: primaryColor,
+      names: personalization.names.filter(Boolean),
+      size: squadSize,
+    });
+    /* eslint-disable-next-line react-hooks/exhaustive-deps */
+  }, [formation, playStyle, primaryColor, personalization.names, squadSize, urlStateReady]);
 
   // ── Derived ──
   const formationList = useMemo(
