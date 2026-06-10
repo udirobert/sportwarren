@@ -44,6 +44,7 @@ next-env.d.ts
 # Logs
 dev.log
 *.log
+pnpm-debug.log*
 
 # Environment files with secrets
 **/.env
@@ -78,14 +79,21 @@ dev.log
 /.qoder/
 /.qwen/
 /.pnpm/
+/.kimchi/
 # Locally installed agent skills (re-installable via `npx skills install`)
-.agents/
+/.agents/
 
 # Runtime build artifacts (large tarballs)
 /artifacts/
 contracts/**/artifacts/
 contracts/**/cache/
 contracts/**/.openzeppelin/
-docs/DEPLOY_HETZNER_RUNTIME.md
 
-.kite-passport/
+# Local/cache directories and generated exports
+/storage/
+
+# Auth/session tool state
+/.kite-passport/
+
+# Local deployment notes
+docs/DEPLOY_HETZNER_RUNTIME.md

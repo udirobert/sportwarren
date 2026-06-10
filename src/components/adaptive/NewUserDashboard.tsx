@@ -1,18 +1,36 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { Zap, ArrowRight, ExternalLink, Plus, CheckCircle2, Users, Trophy, Activity } from 'lucide-react';
-import { Card } from '@/components/ui/Card';
-import { trackDashboardSocialProofSeen } from '@/lib/analytics';
-import { OnboardingChecklist } from '@/components/onboarding/OnboardingChecklist';
-import { OnboardingFlow } from '@/components/onboarding/OnboardingFlow';
-import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
-import type { DashboardEntryAction, DashboardEntryStateId } from '@/lib/dashboard/entry-state';
-import type { ChecklistId } from '@/lib/onboarding/flow';
-import dynamic from 'next/dynamic';
+import React from "react";
+import Link from "next/link";
+import {
+  Zap,
+  ArrowRight,
+  ExternalLink,
+  Plus,
+  CheckCircle2,
+  Users,
+  Trophy,
+  Activity,
+} from "lucide-react";
+import { Card } from "@/components/ui/Card";
+import { usePlatformStats } from "@/hooks/usePlatformStats";
+import { OnboardingChecklist } from "@/components/onboarding/OnboardingChecklist";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
+import { buildTelegramDeepLink } from "@/lib/telegram/deep-links";
+import type {
+  DashboardEntryAction,
+  DashboardEntryStateId,
+} from "@/lib/dashboard/entry-state";
+import type { ChecklistId } from "@/lib/onboarding/flow";
+import dynamic from "next/dynamic";
 
-const AgenticConcierge = dynamic(() => import('@/components/adaptive/AgenticConcierge').then(m => ({ default: m.AgenticConcierge })), { ssr: false });
+const AgenticConcierge = dynamic(
+  () =>
+    import("@/components/adaptive/AgenticConcierge").then((m) => ({
+      default: m.AgenticConcierge,
+    })),
+  { ssr: false },
+);
 
 interface NewUserDashboardProps {
   entryState: {
@@ -30,7 +48,10 @@ interface NewUserDashboardProps {
   setIsTourActive: (active: boolean) => void;
   setPersonalizationDone: (done: boolean) => void;
   completeChecklistItem: (id: ChecklistId) => void;
-  renderEntryAction: (action: DashboardEntryAction | undefined, tone: 'primary' | 'secondary') => React.ReactNode;
+  renderEntryAction: (
+    action: DashboardEntryAction | undefined,
+    tone: "primary" | "secondary",
+  ) => React.ReactNode;
 }
 
 export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
@@ -43,22 +64,8 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
   completeChecklistItem,
   renderEntryAction,
 }) => {
-  const entryAccountLabel = isGuest ? 'Guest preview' : 'Signed in';
-  const [platformStats, setPlatformStats] = useState<{ totalPlayers?: number; matchesPlayedToday?: number; activeSquadsThisWeek?: number }>({});
-
-  useEffect(() => {
-    fetch('/api/platform/stats')
-      .then((r) => r.json())
-      .then((data) => {
-        setPlatformStats(data);
-        const counters = [];
-        if (data.matchesPlayedToday) counters.push('matches_played_today');
-        if (data.activeSquadsThisWeek) counters.push('active_squads_this_week');
-        if (data.totalPlayers) counters.push('total_players');
-        if (counters.length > 0) trackDashboardSocialProofSeen(counters);
-      })
-      .catch(() => setPlatformStats({}));
-  }, []);
+  const entryAccountLabel = isGuest ? "Guest preview" : "Signed in";
+  const platformStats = usePlatformStats();
 
   return (
     <div className="max-w-2xl mx-auto px-4 md:px-6 py-6 md:py-10 nav-spacer-top nav-spacer-bottom">
@@ -77,7 +84,15 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
           {entryState.primaryAction.href ? (
             <Link
               href={entryState.primaryAction.href}
-              onClick={() => completeChecklistItem(entryState.primaryAction.intent === 'log_match' ? 'log_match' : entryState.primaryAction.intent === 'preview_match' ? 'set_formation' : 'complete_card')}
+              onClick={() =>
+                completeChecklistItem(
+                  entryState.primaryAction.intent === "log_match"
+                    ? "log_match"
+                    : entryState.primaryAction.intent === "preview_match"
+                      ? "set_formation"
+                      : "complete_card",
+                )
+              }
               className="inline-flex items-center justify-center px-8 py-4 text-lg font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-xl shadow-green-500/30 hover:shadow-green-500/50 transition-all duration-200 hover:scale-[1.02]"
             >
               <Zap className="w-5 h-5 mr-2" />
@@ -85,12 +100,12 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
               <ArrowRight className="w-5 h-5 ml-2" />
             </Link>
           ) : (
-            renderEntryAction(entryState.primaryAction, 'primary')
+            renderEntryAction(entryState.primaryAction, "primary")
           )}
 
           {entryState.secondaryAction && (
             <div>
-              {renderEntryAction(entryState.secondaryAction, 'secondary')}
+              {renderEntryAction(entryState.secondaryAction, "secondary")}
             </div>
           )}
 
@@ -100,19 +115,31 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
                 {entryState.steps.map((step, i) => (
                   <React.Fragment key={step.number}>
                     {i > 0 && (
-                      <div className={`w-6 md:w-10 h-px ${step.completed ? 'bg-green-400' : 'bg-gray-300 dark:bg-gray-600'}`} />
+                      <div
+                        className={`w-6 md:w-10 h-px ${step.completed ? "bg-green-400" : "bg-gray-300 dark:bg-gray-600"}`}
+                      />
                     )}
                     <div className="flex flex-col items-center gap-1.5">
-                      <div className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-sm font-black transition-colors ${
-                        step.completed
-                          ? 'bg-green-500 text-white'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-2 border-gray-300 dark:border-gray-600'
-                      }`}>
-                        {step.completed ? <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" /> : step.number}
+                      <div
+                        className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center text-sm font-black transition-colors ${
+                          step.completed
+                            ? "bg-green-500 text-white"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 border-2 border-gray-300 dark:border-gray-600"
+                        }`}
+                      >
+                        {step.completed ? (
+                          <CheckCircle2 className="w-4 h-4 md:w-5 md:h-5" />
+                        ) : (
+                          step.number
+                        )}
                       </div>
-                      <span className={`text-[10px] md:text-xs font-bold uppercase tracking-wide ${
-                        step.completed ? 'text-green-600 dark:text-green-400' : 'text-gray-500 dark:text-gray-400'
-                      }`}>
+                      <span
+                        className={`text-[10px] md:text-xs font-bold uppercase tracking-wide ${
+                          step.completed
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-gray-500 dark:text-gray-400"
+                        }`}
+                      >
                         {step.label}
                       </span>
                     </div>
@@ -133,27 +160,41 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
       </Card>
 
       {/* Social proof: live platform counters for new users */}
-      {(platformStats.totalPlayers || platformStats.matchesPlayedToday || platformStats.activeSquadsThisWeek) && (
+      {(platformStats.totalPlayers ||
+        platformStats.matchesPlayedToday ||
+        platformStats.newSquadsThisWeek) && (
         <div className="mt-4 grid grid-cols-3 gap-3">
           {platformStats.totalPlayers ? (
             <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 p-3 text-center">
               <Users className="mx-auto h-4 w-4 text-emerald-600 dark:text-emerald-400 mb-1" />
-              <div className="text-lg font-black tabular-nums text-emerald-700 dark:text-emerald-300">{platformStats.totalPlayers.toLocaleString()}</div>
-              <div className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Players</div>
+              <div className="text-lg font-black tabular-nums text-emerald-700 dark:text-emerald-300">
+                {platformStats.totalPlayers.toLocaleString()}
+              </div>
+              <div className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                Players
+              </div>
             </div>
           ) : null}
           {platformStats.matchesPlayedToday ? (
             <div className="rounded-xl border border-sky-200 dark:border-sky-800 bg-sky-50 dark:bg-sky-900/20 p-3 text-center">
               <Trophy className="mx-auto h-4 w-4 text-sky-600 dark:text-sky-400 mb-1" />
-              <div className="text-lg font-black tabular-nums text-sky-700 dark:text-sky-300">{platformStats.matchesPlayedToday.toLocaleString()}</div>
-              <div className="text-[9px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">Matches today</div>
+              <div className="text-lg font-black tabular-nums text-sky-700 dark:text-sky-300">
+                {platformStats.matchesPlayedToday.toLocaleString()}
+              </div>
+              <div className="text-[9px] font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400">
+                Matches today
+              </div>
             </div>
           ) : null}
-          {platformStats.activeSquadsThisWeek ? (
+          {platformStats.newSquadsThisWeek ? (
             <div className="rounded-xl border border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/20 p-3 text-center">
               <Activity className="mx-auto h-4 w-4 text-violet-600 dark:text-violet-400 mb-1" />
-              <div className="text-lg font-black tabular-nums text-violet-700 dark:text-violet-300">{platformStats.activeSquadsThisWeek.toLocaleString()}</div>
-              <div className="text-[9px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">Active squads</div>
+              <div className="text-lg font-black tabular-nums text-violet-700 dark:text-violet-300">
+                {platformStats.newSquadsThisWeek.toLocaleString()}
+              </div>
+              <div className="text-[9px] font-bold uppercase tracking-wider text-violet-600 dark:text-violet-400">
+                New squads
+              </div>
             </div>
           ) : null}
         </div>
@@ -170,8 +211,13 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
         <div className="flex items-start gap-3">
           <span className="text-2xl">📱</span>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-blue-900 dark:text-blue-100">Get the best mobile experience</p>
-            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">Open SportWarren in Telegram for faster access and instant notifications.</p>
+            <p className="text-sm font-bold text-blue-900 dark:text-blue-100">
+              Get the best mobile experience
+            </p>
+            <p className="text-xs text-blue-700 dark:text-blue-300 mt-1">
+              Open SportWarren in Telegram for faster access and instant
+              notifications.
+            </p>
             <a
               href={buildTelegramDeepLink()}
               target="_blank"
@@ -185,11 +231,15 @@ export const NewUserDashboard: React.FC<NewUserDashboardProps> = ({
         </div>
       </div>
 
-      <OnboardingFlow onVisibilityChange={setIsTourActive} journeyStage={entryState.id} completeChecklistItem={completeChecklistItem} />
+      <OnboardingFlow
+        onVisibilityChange={setIsTourActive}
+        journeyStage={entryState.id}
+        completeChecklistItem={completeChecklistItem}
+      />
       {!isTourActive && <AgenticConcierge journeyStage={entryState.id} />}
 
       <Link
-        href={entryState.primaryAction.href || '/match?mode=capture'}
+        href={entryState.primaryAction.href || "/match?mode=capture"}
         className="fixed bottom-6 left-6 z-50 md:hidden bg-green-600 hover:bg-green-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl shadow-green-600/40 transition-all active:scale-95 animate-pulse"
         aria-label={entryState.primaryAction.label}
       >

@@ -2,15 +2,36 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import {
-  Sparkles, ArrowRight, CheckCircle2, Lock, Camera, SlidersHorizontal, ChevronDown, ChevronUp,
+  Sparkles,
+  ArrowRight,
+  CheckCircle2,
+  Lock,
+  Camera,
+  SlidersHorizontal,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { ATTRIBUTE_KEYS } from "@/server/services/personalization/twin-types";
 import type { AttributeKey } from "@/server/services/personalization/twin-types";
 import type { PlayerPosition } from "@/types";
-import { trackCoreGrowthEvent, trackFeatureUsed, trackEvent, trackCardAttributeAdjusted, trackCardBuilderStepCompleted } from "@/lib/analytics";
+import {
+  trackCoreGrowthEvent,
+  trackFeatureUsed,
+  trackEvent,
+} from "@/lib/analytics";
+import {
+  trackCardAttributeAdjusted,
+  trackCardBuilderStepCompleted,
+} from "@/lib/analytics-funnel";
 import { storePendingPersona, getPendingPersona } from "@/lib/claims/persona";
-import { ATTRIBUTE_DISPLAY, ATTRIBUTE_BAR_TONES } from "@/lib/attributes/display";
-import { PROVISIONAL_ATTRIBUTES, VERIFIED_DELTAS } from "@/lib/attributes/provisional";
+import {
+  ATTRIBUTE_DISPLAY,
+  ATTRIBUTE_BAR_TONES,
+} from "@/lib/attributes/display";
+import {
+  PROVISIONAL_ATTRIBUTES,
+  VERIFIED_DELTAS,
+} from "@/lib/attributes/provisional";
 import { useAvatarUpload } from "@/hooks/useAvatarUpload";
 
 const POSITION_LABELS: Record<PlayerPosition, string> = {
@@ -30,7 +51,10 @@ function clamp(n: number): number {
 function initialsFor(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "SW";
-  return parts.slice(0, 2).map((p) => p[0]?.toUpperCase()).join("");
+  return parts
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("");
 }
 
 interface PlayerCardPreviewProps {
@@ -56,11 +80,19 @@ interface PlayerCardPreviewProps {
  * turn an estimate into a real, trusted profile. Saving the card is the conversion
  * moment — it triggers account creation.
  */
-export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, authed = false, onNameChange, onPositionChange, currentFormation }) => {
+export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({
+  onSave,
+  authed = false,
+  onNameChange,
+  onPositionChange,
+  currentFormation,
+}) => {
   const [name, setName] = useState("");
   const [position, setPosition] = useState<PlayerPosition>("MF");
   const [verified, setVerified] = useState(false);
-  const [attributeDeltas, setAttributeDeltas] = useState<Partial<Record<AttributeKey, number>>>({});
+  const [attributeDeltas, setAttributeDeltas] = useState<
+    Partial<Record<AttributeKey, number>>
+  >({});
   const [showCustomize, setShowCustomize] = useState(false);
   const avatar = useAvatarUpload();
 
@@ -76,14 +108,14 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
     setName(value);
     onNameChange?.(value);
     if (value.trim().length > 0 && name.trim().length === 0) {
-      trackEvent('card_name_entered', { position });
+      trackEvent("card_name_entered", { position });
     }
   };
 
   const handlePositionChange = (value: PlayerPosition) => {
     setPosition(value);
     onPositionChange?.(value);
-    trackEvent('card_position_selected', { position: value });
+    trackEvent("card_position_selected", { position: value });
   };
 
   const displayName = name.trim() || "Your name";
@@ -97,12 +129,20 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
       const value = verified
         ? clamp(provisional + customDelta + (delta[key] ?? 0))
         : clamp(provisional + customDelta);
-      return { key, provisional, value, delta: (delta[key] ?? 0) + customDelta };
+      return {
+        key,
+        provisional,
+        value,
+        delta: (delta[key] ?? 0) + customDelta,
+      };
     });
   }, [position, verified, attributeDeltas]);
 
   const overall = useMemo(
-    () => clamp(attributes.reduce((sum, a) => sum + a.value, 0) / attributes.length),
+    () =>
+      clamp(
+        attributes.reduce((sum, a) => sum + a.value, 0) / attributes.length,
+      ),
     [attributes],
   );
 
@@ -122,10 +162,20 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
       savedAt: Date.now(),
       avatarBase64: avatar.base64 ?? undefined,
       avatarMimeType: avatar.mimeType ?? undefined,
-      attributeDeltas: Object.keys(attributeDeltas).length > 0 ? attributeDeltas : undefined,
+      attributeDeltas:
+        Object.keys(attributeDeltas).length > 0 ? attributeDeltas : undefined,
     });
-    trackFeatureUsed("player_card_save_clicked", { position, named: name.trim().length > 0, formation: currentFormation ?? null, hasAvatar: !!avatar.base64 });
-    trackCoreGrowthEvent("player_card_save_intent", { position, authed, formation: currentFormation ?? null });
+    trackFeatureUsed("player_card_save_clicked", {
+      position,
+      named: name.trim().length > 0,
+      formation: currentFormation ?? null,
+      hasAvatar: !!avatar.base64,
+    });
+    trackCoreGrowthEvent("player_card_save_intent", {
+      position,
+      authed,
+      formation: currentFormation ?? null,
+    });
     onSave?.();
   };
 
@@ -167,17 +217,25 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
               <p className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">
                 Your player card
               </p>
-              <h4 className="mt-0.5 truncate text-lg font-black text-white">{displayName}</h4>
+              <h4 className="mt-0.5 truncate text-lg font-black text-white">
+                {displayName}
+              </h4>
               <div className="mt-1.5 flex items-center gap-2">
                 <span className="rounded-md bg-white/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] text-white">
                   {position}
                 </span>
-                <span className="text-[10px] text-slate-400">{POSITION_LABELS[position]}</span>
+                <span className="text-[10px] text-slate-400">
+                  {POSITION_LABELS[position]}
+                </span>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-2xl font-black tabular-nums text-white transition-all duration-500">{overall}</div>
-              <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400">Overall</div>
+              <div className="text-2xl font-black tabular-nums text-white transition-all duration-500">
+                {overall}
+              </div>
+              <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-slate-400">
+                Overall
+              </div>
             </div>
           </div>
 
@@ -213,11 +271,15 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
                   </div>
                   <div className="flex w-10 items-center justify-end gap-1 text-xs font-black tabular-nums text-white">
                     {verified && attr.delta !== 0 && (
-                      <span className={`text-[9px] font-bold ${attr.delta > 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                      <span
+                        className={`text-[9px] font-bold ${attr.delta > 0 ? "text-emerald-400" : "text-rose-400"}`}
+                      >
                         {attr.delta > 0 ? `+${attr.delta}` : attr.delta}
                       </span>
                     )}
-                    <span className="transition-all duration-500">{attr.value}</span>
+                    <span className="transition-all duration-500">
+                      {attr.value}
+                    </span>
                   </div>
                 </div>
               );
@@ -264,7 +326,11 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
             onClick={() => {
               setShowCustomize((s) => {
                 const next = !s;
-                if (next) trackCardBuilderStepCompleted('customize_attributes_opened', position);
+                if (next)
+                  trackCardBuilderStepCompleted(
+                    "customize_attributes_opened",
+                    position,
+                  );
                 return next;
               });
             }}
@@ -279,7 +345,11 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
                 </span>
               )}
             </span>
-            {showCustomize ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+            {showCustomize ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
+            )}
           </button>
 
           {showCustomize && (
@@ -296,17 +366,26 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
                 return (
                   <div key={key} className="flex items-center gap-2">
                     <Icon className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                    <span className="w-16 text-[10px] font-bold uppercase tracking-wider text-slate-400">{meta.label}</span>
+                    <span className="w-16 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      {meta.label}
+                    </span>
                     <input
                       type="range"
                       min={-15}
                       max={15}
                       step={1}
                       value={currentDelta}
-                      onChange={(e) => handleAttributeDeltaChange(key, parseInt(e.target.value, 10))}
+                      onChange={(e) =>
+                        handleAttributeDeltaChange(
+                          key,
+                          parseInt(e.target.value, 10),
+                        )
+                      }
                       className="h-1 flex-1 appearance-none rounded-full bg-white/10 accent-emerald-400 outline-none"
                     />
-                    <span className="w-8 text-right text-xs font-black tabular-nums text-white">{currentValue}</span>
+                    <span className="w-8 text-right text-xs font-black tabular-nums text-white">
+                      {currentValue}
+                    </span>
                   </div>
                 );
               })}
@@ -327,7 +406,10 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({ onSave, au
               type="button"
               onClick={() => {
                 setVerified((v) => !v);
-                trackFeatureUsed("player_card_reveal_toggled", { position, toVerified: !verified });
+                trackFeatureUsed("player_card_reveal_toggled", {
+                  position,
+                  toVerified: !verified,
+                });
               }}
               className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2.5 text-xs font-bold text-gray-200 transition hover:bg-white/[0.1]"
             >
