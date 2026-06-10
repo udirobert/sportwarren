@@ -8,7 +8,9 @@ import { getJourneyContent } from '@/lib/journey/content';
 import { getJourneyStage } from '@/lib/journey/stage';
 import { AccountStatusControl } from '@/components/common/AccountStatusControl';
 import { FormationPlayground } from '@/components/landing/FormationPlayground';
+import { NaturalLanguageMatchSim } from '@/components/landing/NaturalLanguageMatchSim';
 import { PlayerCardPreview } from '@/components/landing/PlayerCardPreview';
+import { RivalPreviewCard } from '@/components/landing/RivalPreviewCard';
 import { ProblemSection } from '@/components/landing/ProblemSection';
 import { SolutionSection } from '@/components/landing/SolutionSection';
 import { HowItWorksSection } from '@/components/landing/HowItWorksSection';
@@ -267,6 +269,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                 onFormationChange={setCardFormation}
               />
             </React.Suspense>
+          </div>
+
+          {/* NL Match Simulator — pre-auth value hook (curiosity gap) */}
+          <div className="mb-6">
+            <NaturalLanguageMatchSim />
+          </div>
+
+          {/* Rival Preview — social proof + competition hook */}
+          <div className="mb-6">
+            <RivalPreviewCard />
           </div>
 
           {!hasAccount && isPublicVisitor && (

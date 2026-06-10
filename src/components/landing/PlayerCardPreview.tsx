@@ -155,6 +155,7 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({
   };
 
   const handleSave = () => {
+    const existing = getPendingPersona();
     storePendingPersona({
       displayName,
       position,
@@ -164,6 +165,8 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({
       avatarMimeType: avatar.mimeType ?? undefined,
       attributeDeltas:
         Object.keys(attributeDeltas).length > 0 ? attributeDeltas : undefined,
+      squadNickname: existing?.squadNickname,
+      squadColor: existing?.squadColor,
     });
     trackFeatureUsed("player_card_save_clicked", {
       position,
@@ -227,6 +230,16 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({
                 <span className="text-[10px] text-slate-400">
                   {POSITION_LABELS[position]}
                 </span>
+                {(() => {
+                  const pending = getPendingPersona();
+                  if (!pending?.squadNickname) return null;
+                  return (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-white/[0.08] px-2 py-0.5 text-[10px] font-bold text-gray-200">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: pending.squadColor || '#10b981' }} />
+                      {pending.squadNickname}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
             <div className="text-right">
