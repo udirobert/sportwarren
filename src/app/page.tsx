@@ -3,13 +3,12 @@
 import { HeroSection } from "@/components/common/HeroSection";
 import { useWallet } from "@/contexts/WalletContext";
 import { useEffect, useState } from "react";
-import { WalletConnectModal, type LossAversionData } from "@/components/common/WalletConnectModal";
+import { WalletConnectModal } from "@/components/common/WalletConnectModal";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { MessageSquare } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { decodePendingClaim, storePendingClaim } from "@/lib/claims/context";
-import { getPendingPersona } from "@/lib/claims/persona";
 
 export default function Home() {
   const { hasAccount } = useWallet();
@@ -18,7 +17,6 @@ export default function Home() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState(false);
   const [modalContext, setModalContext] = useState<{ title?: string; description?: string }>({});
-  const [lossAversionData, setLossAversionData] = useState<LossAversionData | undefined>(undefined);
   const hasRealSession = hasAccount || authenticated;
 
   useEffect(() => {
@@ -70,20 +68,10 @@ export default function Home() {
     if (hasRealSession) {
       router.push('/profile');
     } else {
-      const pending = getPendingPersona();
-      setLossAversionData({
-        playerName: pending?.displayName,
-        position: pending?.position,
-        attributeCount: pending?.attributeDeltas ? Object.keys(pending.attributeDeltas).length : 0,
-        avatarSet: !!pending?.avatarBase64,
-        formationSet: !!pending?.formation,
-      });
-      setModalContext({
-        title: 'Save your player card',
-        description: 'Create an account to keep your provisional stats and make them permanent.',
-      });
-      setPendingRedirect(true);
-      setShowWalletModal(true);
+      // Value-first flow: save card to guest state and enter the app.
+      // Auth is deferred to a protected action (log match, join squad, etc.)
+      // so the user experiences the product before committing.
+      router.push('/dashboard');
     }
   };
 
@@ -117,12 +105,10 @@ export default function Home() {
           setShowWalletModal(false);
           setPendingRedirect(false);
           setModalContext({});
-          setLossAversionData(undefined);
         }}
         onConnected={() => setPendingRedirect(true)}
         contextTitle={modalContext.title}
         contextDescription={modalContext.description}
-        lossAversionData={lossAversionData}
       />
     </>
   );

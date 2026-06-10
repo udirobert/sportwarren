@@ -399,7 +399,7 @@ export const PlayerCardPreview: React.FC<PlayerCardPreviewProps> = ({
               className="group inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-green-500/30 transition hover:scale-[1.02] hover:shadow-green-500/50"
             >
               <Sparkles className="h-4 w-4" />
-              {authed ? "Open my profile" : "Save my player card"}
+              {authed ? "Open my profile" : "Start my season →"}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </button>
             <button
