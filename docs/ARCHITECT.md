@@ -235,6 +235,44 @@ SportWarren is a first-class participant in the Kite Agentic Economy.
 | Per-squad daily | `KITE_SCOUT_MAX_USDC_SQUAD` (default $2.50) | Shared across squad members |
 | Platform payout | `KITE_DAILY_PAYOUT_BUDGET_USDC` (default $200) | Total agent-initiated spending |
 
+### x402 Client Architecture
+
+The `x402-client.ts` module implements a **dual-network routing** strategy — settlement requests resolve to either **Kite chain** (`eip155:2368`) or **GOAT Network** (`eip155:48816` / `eip155:2345`) based on the target network string:
+
+```
+resolveX402Config(targetNetwork?)
+    ├── "eip155:2345" | "eip155:48816"  → readGoatX402Config()
+    │     uses GOAT-specific facilitator, RPC, USDC address
+    └── anything else (default)          → readX402Config()
+          uses Kite chain Pieverse facilitator
+```
+
+The payment flow for any x402 service call:
+
+1. **Probe** — `GET`/`POST` request to the service URL with no payment header
+2. **402 Challenge** — Service responds `402 Payment Required` with `PaymentRequirements`
+3. **Route selection** — `resolveX402Config()` picks the right facilitator chain
+4. **Signing** — Platform wallet signs an EIP-3009 `TransferWithAuthorization` (or Kite Passport handles it for external merchants)
+5. **Settlement** — Signed envelope posted to the facilitator's `/v2/settle` endpoint
+6. **Access** — Paid request re-sent with `X-PAYMENT` + `PAYMENT-SIGNATURE` headers
+
+### x402 Service Endpoints
+
+SportWarren operates two x402 merchant endpoints that external agents can pay to call:
+
+| Endpoint | Price | What It Does |
+|----------|-------|-------------|
+| `POST /api/x402/scout` | 0.005 USDC | Generates AI scouting report, persists attestation, returns report + settlement tx |
+| `POST /api/x402/verify-match` | 0.10 USDC | Verifies match data against database, returns signed attestation hash |
+
+Both endpoints:
+- Return `402` with `PaymentRequirements` when no payment header is present
+- Accept `X-PAYMENT` or `PAYMENT-SIGNATURE` headers (v1/v2 compatible)
+- Settle via the Pieverse facilitator on Kite chain by default
+- Fall back to simulation mode when `KITE_X402_SIMULATE=true`
+
+> **Note:** The match verification flow currently writes attestations directly to the database rather than routing through the x402 endpoint. See [`GOAT_STRATEGY.md`](./GOAT_STRATEGY.md) for the deferred work item to make this the canonical path.
+
 ---
 
 ## 🏗️ Multi-Chain Architecture
