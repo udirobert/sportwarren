@@ -76,3 +76,17 @@ are the source of truth.
 - Path layouts: `players/<id>/avatar/<variant>.<ext>`, `squads/<id>/media/<mediaId>.<ext>`, `moments/<ownerType>/<id>/<momentId>.<ext>`
 - IPFS adapter stores opaque `ipfs/<cid>` keys; local adapter uses the layout above under `STORAGE_ROOT` (defaults `./storage`)
 - Legacy `squadId, mediaId` interface was removed in PR 2 (clean break; no users on greenfield)
+
+### Deferred scout settlement
+- `createScoutReport()` in `src/server/services/ai/scout-report.ts` is the single entry point for all scout reports (WhatsApp, Telegram, auto-scout cron, x402 API route)
+- Returns instantly with `settlementStatus: 'pending'` and `txHash: null` when no real settlement is provided
+- When a real `settlement.txHash` is provided (non-simulated, non-internal), writes `settlementStatus: 'settled'` immediately
+- `Attestation` model has 4 settlement columns: `settlementStatus` (pending/settled/failed), `settlementAttempts`, `settlementError`, `settledAt`
+- Settlement worker: `src/app/api/cron/scout-settle/route.ts` — drains pending attestations every 5 min via Vercel cron
+  - Redis distributed lock (`trySet` with NX+EX), 20-row batches, 3 retries, 10s per-job timeout, 24h cutoff
+  - Calls `createPlatformSettlement()` from `x402-client.ts` for each pending row
+  - Sends WhatsApp follow-up receipt via `sendSettlementNotification()` when settlement succeeds
+- User-visible state machine: scout response shows "Verifying on Kite" when pending, "Receipt confirmed" with explorer link when settled
+- `GET /api/x402/scout` and `GET /api/x402/verify-match` are public x402 discovery endpoints — DO NOT REMOVE (external agents probe these to receive 402 challenges)
+- `readGoatX402Config()` in `x402-client.ts` is `@unused` — wired through `resolveX402Config()` for GOAT Network, dormant until a GOAT merchant appears in ksearch catalog
+- User-facing strings must not mention x402, Kite, USDC, attestation, Yellow, or facilitator — see `docs/X402_CLEANUP_PLAN.md` Section 4 for the jargon-free copy deck

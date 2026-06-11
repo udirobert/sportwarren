@@ -8,12 +8,6 @@ import { kiteAIService } from './kite';
 
 export type SettlementStatus = 'pending' | 'settled' | 'failed';
 
-export function isDeferredSettlementEnabled(): boolean {
-  return ['1', 'true', 'yes'].includes(
-    (process.env.SCOUT_DEFERRED_SETTLEMENT || '').trim().toLowerCase(),
-  );
-}
-
 export interface ScoutReportInput {
   opponent: string;
   requestedBy?: string;
@@ -167,7 +161,6 @@ export async function createScoutReport(input: ScoutReportInput): Promise<ScoutR
   }
 
   const cfg = readX402Config();
-  const deferred = isDeferredSettlementEnabled();
 
   const hasRealSettlement = input.settlement
     && !input.settlement.simulated
@@ -175,9 +168,7 @@ export async function createScoutReport(input: ScoutReportInput): Promise<ScoutR
     && !input.settlement.txHash.startsWith('internal-');
 
   const txHash = hasRealSettlement ? input.settlement!.txHash! : null;
-  const settlementStatus: SettlementStatus = hasRealSettlement
-    ? 'settled'
-    : (deferred ? 'pending' : 'settled');
+  const settlementStatus: SettlementStatus = hasRealSettlement ? 'settled' : 'pending';
 
   const attestation = await prisma.attestation.create({
     data: {
@@ -186,15 +177,15 @@ export async function createScoutReport(input: ScoutReportInput): Promise<ScoutR
       kind: 'scout_report',
       payload: { opponent, summary, requestedBy: input.requestedBy ?? null } as Prisma.InputJsonValue,
       network: cfg.network,
-      txHash: deferred ? txHash : (input.settlement?.txHash ?? `internal-scout-${Date.now()}`),
+      txHash,
       facilitator: input.settlement?.facilitator,
       amountUsdc: input.priceUsdc,
-      settlementStatus: deferred ? settlementStatus : undefined,
+      settlementStatus,
       settledAt: hasRealSettlement ? new Date() : undefined,
     },
   });
 
-  if (deferred && settlementStatus === 'pending') {
+  if (settlementStatus === 'pending') {
     await enqueueScoutSettlement(attestation.id);
   }
 
@@ -207,8 +198,8 @@ export async function createScoutReport(input: ScoutReportInput): Promise<ScoutR
     opponent,
     summary,
     attestationId: attestation.id,
-    txHash: deferred ? txHash : (input.settlement?.txHash ?? `internal-scout-${Date.now()}`),
-    settlementStatus: deferred ? settlementStatus : 'settled',
+    txHash,
+    settlementStatus,
     simulated: input.settlement?.simulated ?? false,
     network: cfg.network,
     priceUsdc: input.priceUsdc,

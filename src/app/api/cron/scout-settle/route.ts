@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import { redisService } from '@/server/services/redis';
 import { prisma } from '@/lib/db';
 import { createPlatformSettlement } from '@/server/services/blockchain/x402-client';
-import { isDeferredSettlementEnabled } from '@/server/services/ai/scout-report';
 
 const LOCK_KEY = 'cron:scout-settle:lock';
 const LOCK_TTL = 60;
@@ -22,10 +21,6 @@ export async function GET(request: Request) {
   const expectedSecret = process.env.CRON_SECRET;
   if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  if (!isDeferredSettlementEnabled()) {
-    return NextResponse.json({ skipped: 'feature flag off' });
   }
 
   const acquired = await redisService.trySet(LOCK_KEY, '1', LOCK_TTL);

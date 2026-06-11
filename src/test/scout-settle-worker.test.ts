@@ -7,7 +7,6 @@ const mockPrismaUpdate = vi.hoisted(() => vi.fn());
 const mockPrismaFindUnique = vi.hoisted(() => vi.fn());
 const mockCreatePlatformSettlement = vi.hoisted(() => vi.fn());
 const mockNextResponseJson = vi.hoisted(() => vi.fn());
-const mockIsDeferredEnabled = vi.hoisted(() => vi.fn());
 
 vi.mock('@/server/services/redis', () => ({
   redisService: {
@@ -31,10 +30,6 @@ vi.mock('@/lib/db', () => ({
 
 vi.mock('@/server/services/blockchain/x402-client', () => ({
   createPlatformSettlement: mockCreatePlatformSettlement,
-}));
-
-vi.mock('@/server/services/ai/scout-report', () => ({
-  isDeferredSettlementEnabled: mockIsDeferredEnabled,
 }));
 
 vi.mock('next/server', () => ({
@@ -69,7 +64,6 @@ describe('scout-settle worker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     delete process.env.CRON_SECRET;
-    mockIsDeferredEnabled.mockReturnValue(true);
   });
 
   afterEach(() => {
@@ -83,14 +77,6 @@ describe('scout-settle worker', () => {
       expect(mockNextResponseJson).toHaveBeenCalledWith(
         expect.objectContaining({ error: 'Unauthorized' }),
         expect.objectContaining({ status: 401 }),
-      );
-    });
-
-    it('returns skipped when feature flag is off', async () => {
-      mockIsDeferredEnabled.mockReturnValue(false);
-      await GET(fakeRequest());
-      expect(mockNextResponseJson).toHaveBeenCalledWith(
-        expect.objectContaining({ skipped: 'feature flag off' }),
       );
     });
   });

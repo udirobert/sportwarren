@@ -115,10 +115,9 @@ export async function GET(request: Request) {
       for (const { squadId, squadName, opponentName } of pairs) {
         try {
           // Generate the scout report via the same in-process service the
-          // WhatsApp `scout` command uses. When SCOUT_DEFERRED_SETTLEMENT
-          // is on, settlement runs in the scout-settle worker; otherwise
-          // the report is written synchronously. In both cases the cron
-          // gets back a report immediately.
+          // WhatsApp `scout` command uses. Settlement runs asynchronously
+          // in the scout-settle worker; the cron gets back a report
+          // immediately.
           let report: Awaited<ReturnType<typeof createScoutReport>>;
           try {
             report = await createScoutReport({
@@ -126,8 +125,7 @@ export async function GET(request: Request) {
               requestedBy: `cron:auto-scout:${squadId}`,
               priceUsdc: SCOUT_AUTO_PRICE_USDC,
               // no `settlement` arg → createScoutReport writes a pending
-              // row (or a settled row if SCOUT_DEFERRED_SETTLEMENT is off
-              // and the helper provides its own legacy settlement).
+              // row; the scout-settle worker settles it asynchronously.
               enforceUserLimit: false,
               enforceSquadLimit: false,
             });
