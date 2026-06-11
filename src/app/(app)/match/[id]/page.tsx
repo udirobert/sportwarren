@@ -303,23 +303,18 @@ export default function PublicMatchPage() {
                     </Card>
                 )}
 
-                {/* Settlement summary — surfaces the Yellow fee rail and
-                    x402 attestation so users see the platform is genuinely
-                    settling value on their behalf, not just running a DB. */}
+                {/* Match Fee card — shows escrow status without
+                    exposing Yellow Network or x402 protocol names. */}
                 {isVerified && m.yellowFeeSessionId && (
                     <Card className="bg-gray-900 border-blue-500/30 p-4">
                         <h4 className="text-xs font-bold text-blue-300 uppercase tracking-wider mb-3 flex items-center gap-2">
-                            <Shield className="w-3 h-3" /> Settlement
+                            <Shield className="w-3 h-3" /> Match Fee
                         </h4>
                         <div className="space-y-2 text-xs">
                             <div className="flex items-center justify-between">
-                                <span className="text-gray-400">Fee rail</span>
-                                <span className="text-blue-300 font-bold uppercase">Yellow Network</span>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <span className="text-gray-400">Session ID</span>
-                                <span className="text-gray-500 font-mono text-[10px] truncate max-w-[12rem]" title={m.yellowFeeSessionId}>
-                                    {m.yellowFeeSessionId}
+                                <span className="text-gray-400">Status</span>
+                                <span className={m.yellowFeeSettledAt ? "text-emerald-300 font-bold" : "text-amber-300 font-bold"}>
+                                    {m.yellowFeeSettledAt ? "Settled" : "Locked (refunds if match disputed)"}
                                 </span>
                             </div>
                             {m.yellowFeeSettledAt && (
@@ -334,9 +329,8 @@ export default function PublicMatchPage() {
                     </Card>
                 )}
 
-                {/* x402 verification attestation badge — confirms the
-                    match was also recorded as a paid x402 attestation on
-                    the Kite chain (visible to external agents). */}
+                {/* Public result badge — confirms the match result is
+                    verifiable without exposing x402 protocol terminology. */}
                 {isVerified && (
                     <Card className="bg-gray-900 border-emerald-500/30 p-4">
                         <div className="flex items-center gap-3">
@@ -344,9 +338,9 @@ export default function PublicMatchPage() {
                                 <CheckCircle2 className="w-5 h-5 text-emerald-300" />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h4 className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Verified via x402</h4>
+                                <h4 className="text-xs font-bold text-emerald-300 uppercase tracking-wider">Public Result</h4>
                                 <p className="text-xs text-emerald-200/70 mt-0.5">
-                                    Match result recorded as a paid x402 attestation on the Kite agent economy. External agents can verify the same result for the standard fee.
+                                    Match result is publicly verifiable — other managers can request a copy through SportWarren.
                                 </p>
                             </div>
                         </div>

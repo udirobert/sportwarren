@@ -884,7 +884,7 @@ export default function SettingsPage() {
               <div>
                 <h2 className="text-lg font-bold text-gray-900 dark:text-white">Wallet Access</h2>
                 <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Wallets are optional until you need protected actions. Yellow settlement requires a verified <ChainLabel chain="goat" /> or <ChainLabel chain="lens" /> wallet.
+                  Wallets are optional until you need protected actions. Match fee escrow requires a verified <ChainLabel chain="goat" /> or <ChainLabel chain="lens" /> wallet.
                 </p>
               </div>
               {hasWallet && !needsVerification ? (
@@ -910,16 +910,16 @@ export default function SettingsPage() {
                     : isGuest
                       ? 'You are still exploring in preview mode. Start an account to keep progress.'
                       : hasAccount
-                        ? 'Your account is ready. Connect a wallet when you want treasury actions, on-chain progression, and Yellow settlement.'
+                        ? 'Your account is ready. Connect a wallet when you want treasury actions, on-chain progression, and match fee escrow.'
                         : 'Sign in first, then connect a wallet if you want protected actions.'}
                 </p>
               </div>
 
               <div className="rounded-xl border border-gray-200 p-4 dark:border-gray-700">
-                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-600 dark:text-gray-300"><ChainLabel chain="yellow" /> Rail</div>
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-gray-600 dark:text-gray-300">Match Fees</div>
                 <div className="mt-2 text-sm font-bold text-gray-900 dark:text-white">{yellowRailLabel}</div>
                 <p className="mt-2 text-sm text-gray-700 dark:text-gray-200">
-                  Treasury settlements, match fee locks, and transfer escrow only activate when the connected wallet can authorize Yellow on a supported EVM chain.
+                  Match fee escrow, treasury settlements, and transfer escrow only activate when the connected wallet can authorize these on a supported chain.
                 </p>
               </div>
             </div>
@@ -950,7 +950,7 @@ export default function SettingsPage() {
           {hasWallet && !hasYellowEligibleWallet && (
             <Card className="border-blue-300 bg-blue-100">
               <p className="text-sm text-blue-900">
-                <ChainLabel chain="algorand" /> wallets can still unlock SportWarren identity and protected data, but <ChainLabel chain="yellow" /> settlement currently requires <ChainLabel chain="goat" /> or <ChainLabel chain="lens" /> compatible wallets.
+                <ChainLabel chain="algorand" /> wallets can still unlock SportWarren identity and protected data, but match fee escrow currently requires <ChainLabel chain="goat" /> or <ChainLabel chain="lens" /> compatible wallets.
               </p>
             </Card>
           )}

@@ -1,7 +1,6 @@
 'use client';
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
-import { ChainLabel } from '@/components/common/ChainLabel';
 import { SoccerLoader } from '@/components/ui/SoccerLoader';
 import { Wallet, Zap, ShieldCheck, ChevronRight, Minus, Plus } from 'lucide-react';
 
@@ -12,8 +11,9 @@ interface TacticalSpendProps {
 }
 
 /**
- * TacticalSpend - Interactive UI for managing x402 autonomous budgets on Kite AI.
- * Demonstrates "Agentic Commerce" for the hackathon.
+ * TacticalSpend - Interactive budget control for the squad's autonomous scout agent.
+ * Lets players review and adjust how many scout reports their Digital Twin can
+ * commission per week.
  */
 export const TacticalSpend: React.FC<TacticalSpendProps> = ({
   currentBudget,
@@ -49,8 +49,8 @@ export const TacticalSpend: React.FC<TacticalSpendProps> = ({
               <Wallet className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
-              <h3 className="text-xs font-black uppercase tracking-widest">Tactical Spend</h3>
-              <p className="text-[9px] text-gray-500 uppercase font-bold tracking-tighter">x402 Autonomous Auth</p>
+              <h3 className="text-xs font-black uppercase tracking-widest">Scout Budget</h3>
+              <p className="text-[9px] text-gray-500 uppercase font-bold tracking-tighter">Weekly scout reports</p>
             </div>
           </div>
           <div className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-1">
@@ -63,8 +63,8 @@ export const TacticalSpend: React.FC<TacticalSpendProps> = ({
           <div className="space-y-6">
             <div className="space-y-2">
               <div className="flex justify-between items-end">
-                <span className="text-[10px] font-bold text-gray-400 uppercase">Weekly Delegation</span>
-                <span className="text-xl font-black text-white">${targetBudget.toFixed(2)} <span className="text-[10px] text-gray-500">USDC</span></span>
+                <span className="text-[10px] font-bold text-gray-400 uppercase">Weekly Allowance</span>
+                <span className="text-xl font-black text-white">{targetBudget.toFixed(0)} <span className="text-[10px] text-gray-500">scouts</span></span>
               </div>
               
               <div className="flex items-center gap-4">
@@ -97,8 +97,8 @@ export const TacticalSpend: React.FC<TacticalSpendProps> = ({
                 <div className="h-full bg-emerald-500" style={{ width: `${percentageSpent}%` }}></div>
               </div>
               <div className="flex justify-between items-center text-[9px] font-medium text-gray-500">
-                <span>Spent: ${spentThisWeek.toFixed(2)}</span>
-                <span>Available: ${remaining.toFixed(2)}</span>
+                <span>Used: {spentThisWeek.toFixed(0)} scouts</span>
+                <span>Remaining: {remaining.toFixed(0)} scouts</span>
               </div>
             </div>
 
@@ -106,7 +106,7 @@ export const TacticalSpend: React.FC<TacticalSpendProps> = ({
               onClick={() => setStep('confirm')}
               className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2"
             >
-              Update Authorization
+              Update Allowance
               <ChevronRight className="w-3 h-3" />
             </button>
           </div>
@@ -118,9 +118,9 @@ export const TacticalSpend: React.FC<TacticalSpendProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center justify-center gap-2 text-emerald-400">
                     <Zap className="w-3 h-3 animate-pulse" />
-                    <span className="text-[10px] font-black uppercase tracking-widest">Signing x402 Auth</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest">Updating Policy</span>
                   </div>
-                  <p className="text-[9px] text-gray-400 px-4">Updating your Digital Twin's autonomous spending policy on the <ChainLabel chain="kite" />.</p>
+                  <p className="text-[9px] text-gray-400 px-4">Updating your Digital Twin's autonomous spending policy.</p>
                 </div>
               </>
             ) : (
@@ -131,7 +131,7 @@ export const TacticalSpend: React.FC<TacticalSpendProps> = ({
                 <div className="space-y-2">
                   <h4 className="text-sm font-bold">Confirm Policy Change</h4>
                   <p className="text-[10px] text-gray-400 px-6 leading-relaxed">
-                    By confirming, you authorize your Twin Agent to spend up to <span className="text-white font-bold">${targetBudget} USDC</span> weekly for tactical services.
+                    By confirming, you authorize your Digital Twin to use up to <span className="text-white font-bold">{targetBudget} scouts</span> per week on opponent analysis.
                   </p>
                 </div>
                 <div className="flex flex-col w-full gap-2">

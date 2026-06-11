@@ -326,7 +326,7 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
                   <h3 className="text-xs font-black uppercase tracking-widest">Tactical Intelligence</h3>
                 </div>
                 <p className="text-[11px] leading-relaxed opacity-90 mb-4 font-medium">
-                  Your digital twin uses <span className="font-bold">x402 protocol</span> to autonomously hire scouts and analysts while you sleep.
+                  Your digital twin handles scouting and analysis automatically — it briefs you on opponents before each match.
                 </p>
                 <div className="flex items-center gap-2">
                   <SoccerLoader size={20} color1="white" color2="rgba(255,255,255,0.3)" color3="rgba(255,255,255,0.6)" />
