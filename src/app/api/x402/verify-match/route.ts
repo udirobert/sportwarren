@@ -67,6 +67,12 @@ function build402(): NextResponse {
   );
 }
 
+// DO NOT REMOVE — public x402 discovery endpoint.
+// External agents (other Kite Passport wallets, opposing manager twins) probe
+// this URL with GET to receive a 402 challenge with PaymentRequirements, sign
+// an EIP-3009 authorization, and retry with X-PAYMENT. Deleting the GET
+// handler removes SportWarren's match-verification service from Kite Passport
+// discovery.
 export async function GET() {
   return build402();
 }

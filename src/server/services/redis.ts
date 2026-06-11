@@ -77,6 +77,16 @@ export class RedisService {
     }
   }
 
+  async trySet(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    try {
+      const result = await this.client.set(key, value, 'EX', ttlSeconds, 'NX');
+      return result === 'OK';
+    } catch (error) {
+      console.warn('Redis trySet error:', error);
+      return false;
+    }
+  }
+
   async del(key: string): Promise<void> {
     try {
       await this.client.del(key);
