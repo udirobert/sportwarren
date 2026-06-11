@@ -4,11 +4,13 @@ import { HeroSection } from "@/components/common/HeroSection";
 import { useWallet } from "@/contexts/WalletContext";
 import { useEffect, useState } from "react";
 import { WalletConnectModal } from "@/components/common/WalletConnectModal";
+import type { LossAversionData } from "@/components/common/WalletConnectModal";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { Send } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { decodePendingClaim, storePendingClaim } from "@/lib/claims/context";
+import { getPendingPersona } from "@/lib/claims/persona";
 
 export default function Home() {
   const { hasAccount } = useWallet();
@@ -17,6 +19,11 @@ export default function Home() {
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState(false);
   const [modalContext, setModalContext] = useState<{ title?: string; description?: string }>({});
+  // Phase 0 / 0.1: surface the built-up card in the auth modal so the
+  // "Keep X's card" loss-aversion copy actually fires. Built fresh on
+  // every modal open from getPendingPersona() (PlayerCardPreview writes
+  // it on Save). Cleared on close to avoid stale name across sessions.
+  const [lossAversionData, setLossAversionData] = useState<LossAversionData | undefined>(undefined);
   const hasRealSession = hasAccount || authenticated;
 
   useEffect(() => {
@@ -58,6 +65,26 @@ export default function Home() {
     if (hasRealSession) {
       router.push('/dashboard');
     } else {
+      // Phase 0 / 0.1: read the in-progress persona from localStorage so
+      // the wallet modal can show "Keep [name]'s card" with a count of
+      // parts built. Filter out the placeholder "Your name" so the copy
+      // degrades to "Lock in your player card" when nothing is named.
+      const persona = getPendingPersona();
+      const realName = persona?.displayName?.trim();
+      const hasMeaningfulName = !!realName && realName !== "Your name";
+      setLossAversionData(
+        persona
+          ? {
+              playerName: hasMeaningfulName ? realName : undefined,
+              position: persona.position,
+              attributeCount: persona.attributeDeltas
+                ? Object.keys(persona.attributeDeltas).length
+                : 0,
+              avatarSet: !!persona.avatarBase64,
+              formationSet: !!persona.formation,
+            }
+          : undefined
+      );
       setModalContext({});
       setPendingRedirect(true);
       setShowWalletModal(true);
@@ -106,10 +133,12 @@ export default function Home() {
           setShowWalletModal(false);
           setPendingRedirect(false);
           setModalContext({});
+          setLossAversionData(undefined);
         }}
         onConnected={() => setPendingRedirect(true)}
         contextTitle={modalContext.title}
         contextDescription={modalContext.description}
+        lossAversionData={lossAversionData}
       />
     </>
   );

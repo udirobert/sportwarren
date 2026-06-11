@@ -174,7 +174,7 @@ export const playerRouter = createTRPCRouter({
     .input(z.object({
       profileId: z.string().min(1, 'Profile ID is required'),
     }))
-    .query(async ({ ctx, input }) => {
+    .query(async ({ input }) => {
       try {
         return await identityService.getPlayerIdentity(input.profileId);
       } catch (error) {

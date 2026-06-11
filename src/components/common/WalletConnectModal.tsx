@@ -452,7 +452,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
 
               <button
                 onClick={() => setShowWalletOptions(true)}
-                className="w-full py-3 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors"
+                className="w-full py-2 text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
               >
                 {accountReadyContent.authModal.secondaryActionLabel} →
               </button>

@@ -1,5 +1,5 @@
 import type { Formation, PlayStyle, SquadSize } from "@/types";
-import { FORMATIONS, getFormationsBySquadSize } from "@/lib/formations";
+import { FORMATIONS } from "@/lib/formations";
 
 export type PlaygroundFlow = "build" | "challenge_received" | "counter_setup" | "result";
 

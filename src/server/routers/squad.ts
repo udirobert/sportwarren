@@ -22,7 +22,7 @@ import { algorandService } from '../services/blockchain/algorand';
 import { getTwinService } from '../services/personalization/twin-service';
 import { generateSquadNarrative } from '../services/personalization/narrative';
 import { identityService } from '../services/personalization/identity';
-import { computeLevel, xpToNext } from '../services/personalization/twin-appliers';
+import { xpToNext } from '../services/personalization/twin-appliers';
 import {
   squadIdSchema,
   squadNameSchema,

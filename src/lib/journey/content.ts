@@ -285,7 +285,7 @@ export function getJourneyContent(
             'Log your first match to make stats real',
           ],
           primaryActionLabel: 'Complete My Card',
-          secondaryActionLabel: 'Add a wallet now',
+          secondaryActionLabel: 'Link a wallet (optional)',
         },
         assistant: {
           welcome: "Your account is ready. I'm Marcus, and the fastest way to make this worth returning to is one real result plus one verification link.",

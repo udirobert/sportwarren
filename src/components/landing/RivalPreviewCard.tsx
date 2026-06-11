@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { Swords, Zap, Trophy, Users } from "lucide-react";
+import { Swords, Zap, Trophy, Users, Check } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { TelegramContextualTip } from "@/components/common/TelegramContextualTip";
+import { trackFeatureUsed } from "@/lib/analytics";
 
 export interface RivalMatchResult {
   user: { name: string; formation: string; color: string; score: number };
@@ -21,6 +22,8 @@ interface RivalPreviewCardProps {
   size: number;
 }
 
+const RIVAL_PREVIEW_STORAGE_KEY = "sw_pending_rival_preview";
+
 export const RivalPreviewCard: React.FC<RivalPreviewCardProps> = ({
   formation,
   style,
@@ -31,6 +34,9 @@ export const RivalPreviewCard: React.FC<RivalPreviewCardProps> = ({
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<RivalMatchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Phase 0 / 0.3: deferred-gate — remember the matchup locally without
+  // redirecting to auth. Sign-up happens later at the first protected action.
+  const [savedToPlaybook, setSavedToPlaybook] = useState(false);
 
   const runSim = async () => {
     setLoading(true);
@@ -165,18 +171,54 @@ export const RivalPreviewCard: React.FC<RivalPreviewCardProps> = ({
                   ))}
                 </div>
 
-                {/* CTA */}
+                {/* CTA — Phase 0 / 0.3: deferred gate, no re-erected wall */}
                 <div className="pt-2 border-t border-white/10 text-center">
-                  <p className="text-xs text-gray-400 mb-2">
-                    Sign up to challenge this squad for real.
-                  </p>
-                  <a
-                    href="/?connect=1"
-                    className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-colors"
-                  >
-                    <Users className="h-3 w-3" />
-                    Challenge Rival
-                  </a>
+                  {!savedToPlaybook ? (
+                    <>
+                      <p className="text-xs text-gray-400 mb-2">
+                        Save to your browser — sign in later to challenge for real.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSavedToPlaybook(true);
+                          try {
+                            localStorage.setItem(
+                              RIVAL_PREVIEW_STORAGE_KEY,
+                              JSON.stringify({
+                                savedAt: Date.now(),
+                                formation,
+                                style,
+                                color,
+                                names,
+                                size,
+                                result,
+                              })
+                            );
+                          } catch {
+                            // Non-fatal; analytics still records intent.
+                          }
+                          trackFeatureUsed("rival_preview_saved", {
+                            formation,
+                            style,
+                            size,
+                            userScore: result.user.score,
+                            rivalScore: result.rival.score,
+                            winProbability: result.winProbability,
+                          });
+                        }}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-bold text-white hover:bg-emerald-500 transition-colors"
+                      >
+                        <Users className="h-3 w-3" />
+                        Save to playbook
+                      </button>
+                    </>
+                  ) : (
+                    <div className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs font-bold text-emerald-300">
+                      <Check className="h-3 w-3" />
+                      Saved in this browser
+                    </div>
+                  )}
                 </div>
 
                 {/* Verification loop anchor — once the user has seen a
