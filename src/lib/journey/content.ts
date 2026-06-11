@@ -102,11 +102,11 @@ export function getJourneyNavigationSubtitle(stage: JourneyStage): string {
 export function getJourneyNextAction(stage: JourneyStage): JourneyAction {
   switch (stage) {
     case 'guest_preview':
-      return { label: 'Claim your card', href: '/?connect=1' };
+      return { label: 'Start your own season', href: '/?connect=1' };
     case 'account_ready':
-      return { label: 'Complete your card', href: '/match/preview' };
+      return { label: 'Set up your tactics', href: '/match/preview' };
     case 'wallet_unverified':
-      return { label: 'Secure your card', href: '/settings?tab=wallet' };
+      return { label: 'Secure your wallet', href: '/settings?tab=wallet' };
     case 'verified_no_squad':
       return { label: 'Create squad', href: '/squad' };
     case 'season_kickoff':

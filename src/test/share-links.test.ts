@@ -34,7 +34,8 @@ describe('buildShareLinks', () => {
 
   it('suppresses attribution when set to empty string', () => {
     const { whatsapp } = buildShareLinks({
-      ...basePayload,
+      text: 'Come play Sunday 5-a-side',
+      url: 'https://sportwarren.com/squad/abc',
       attribution: '',
     });
     const decoded = decodeURIComponent(whatsapp.split('text=')[1]);
@@ -56,7 +57,7 @@ describe('buildShareLinks', () => {
     const { telegram } = buildShareLinks(basePayload);
     const decoded = decodeURIComponent(telegram);
     expect(decoded).toContain('t.me/share/url');
-    expect(decoded).toContain(basePayload.url);
+    expect(decoded).toContain(encodeURIComponent(basePayload.url));
   });
 
   it('builds a Web Share payload that does not leak the deep link', () => {

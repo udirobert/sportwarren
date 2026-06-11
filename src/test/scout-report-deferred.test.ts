@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const mockCheckUserSpending = vi.hoisted(() => vi.fn());
 const mockGetScoutUserDailyLimit = vi.hoisted(() => vi.fn());
@@ -43,8 +43,7 @@ vi.mock('@/server/services/blockchain/x402-client', () => ({
 
 import {
   createScoutReport,
-  isDeferredSettlementEnabled,
-  type ScoutReportResult,
+  type SettlementStatus,
 } from '@/server/services/ai/scout-report';
 
 describe('scout-report deferred settlement', () => {
@@ -67,36 +66,7 @@ describe('scout-report deferred settlement', () => {
     mockGetScoutUserDailyLimit.mockReturnValue(0.5);
   });
 
-  afterEach(() => {
-    delete process.env.SCOUT_DEFERRED_SETTLEMENT;
-  });
-
-  describe('isDeferredSettlementEnabled', () => {
-    it('returns false when env var is unset', () => {
-      expect(isDeferredSettlementEnabled()).toBe(false);
-    });
-
-    it('returns true when env var is "true"', () => {
-      process.env.SCOUT_DEFERRED_SETTLEMENT = 'true';
-      expect(isDeferredSettlementEnabled()).toBe(true);
-    });
-
-    it('returns true when env var is "1"', () => {
-      process.env.SCOUT_DEFERRED_SETTLEMENT = '1';
-      expect(isDeferredSettlementEnabled()).toBe(true);
-    });
-
-    it('returns false when env var is "false"', () => {
-      process.env.SCOUT_DEFERRED_SETTLEMENT = 'false';
-      expect(isDeferredSettlementEnabled()).toBe(false);
-    });
-  });
-
-  describe('deferred mode (flag on, no settlement provided)', () => {
-    beforeEach(() => {
-      process.env.SCOUT_DEFERRED_SETTLEMENT = 'true';
-    });
-
+  describe('no settlement provided', () => {
     it('writes attestation with settlementStatus=pending and txHash=null', async () => {
       const result = await createScoutReport({
         opponent: 'Arsenal',
@@ -144,11 +114,7 @@ describe('scout-report deferred settlement', () => {
     });
   });
 
-  describe('deferred mode with real settlement provided', () => {
-    beforeEach(() => {
-      process.env.SCOUT_DEFERRED_SETTLEMENT = 'true';
-    });
-
+  describe('real settlement provided', () => {
     it('writes attestation as settled when given a real txHash', async () => {
       const result = await createScoutReport({
         opponent: 'Chelsea',
@@ -171,8 +137,10 @@ describe('scout-report deferred settlement', () => {
       expect(result.settlementStatus).toBe('settled');
       expect(result.txHash).toBe('0xRealTxHash');
     });
+  });
 
-    it('writes attestation as pending when settlement is simulated', async () => {
+  describe('simulated settlement', () => {
+    it('writes attestation as pending (worker will settle for real)', async () => {
       const result = await createScoutReport({
         opponent: 'Chelsea',
         priceUsdc: 0.005,
@@ -195,8 +163,8 @@ describe('scout-report deferred settlement', () => {
     });
   });
 
-  describe('legacy mode (flag off)', () => {
-    it('preserves legacy behavior: settlement is written immediately', async () => {
+  describe('internal txHash (no real settlement)', () => {
+    it('writes attestation as pending with null txHash', async () => {
       const result = await createScoutReport({
         opponent: 'Liverpool',
         priceUsdc: 0.005,
@@ -207,24 +175,8 @@ describe('scout-report deferred settlement', () => {
         },
       });
 
-      expect(result.settlementStatus).toBe('settled');
-      expect(mockPrismaAttestationCreate).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            settlementStatus: undefined,
-          }),
-        }),
-      );
-    });
-
-    it('works without settlement provided (uses internal fallback)', async () => {
-      const result = await createScoutReport({
-        opponent: 'Liverpool',
-        priceUsdc: 0.005,
-      });
-
-      expect(result.settlementStatus).toBe('settled');
-      expect(mockPrismaAttestationCreate).toHaveBeenCalled();
+      expect(result.settlementStatus).toBe('pending');
+      expect(result.txHash).toBeNull();
     });
   });
 });

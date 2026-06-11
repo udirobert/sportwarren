@@ -44,12 +44,11 @@ export function buildTelegramDeepLink(options: DeepLinkOptions = {}): string {
  * @returns Telegram share URL
  */
 export function buildTelegramShareUrl(text: string, url?: string): string {
-  const params = new URLSearchParams();
-  params.set('text', text);
+  let query = `text=${encodeURIComponent(text)}`;
   if (url) {
-    params.set('url', url);
+    query += `&url=${encodeURIComponent(encodeURIComponent(url))}`;
   }
-  return `https://t.me/share/url?${params.toString()}`;
+  return `https://t.me/share/url?${query}`;
 }
 
 /**
