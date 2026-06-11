@@ -89,7 +89,7 @@ export function useTelegram() {
       } else {
         webApp?.expand();
       }
-    } catch (e) {
+    } catch {
       webApp?.expand();
     }
   }, [webApp]);
@@ -99,7 +99,7 @@ export function useTelegram() {
       if (webApp?.version && parseFloat(webApp.version) >= 7.0) {
         webApp.enableVerticalSwipes();
       }
-    } catch (e) {
+    } catch {
       console.warn('Vertical swipes not supported');
     }
   }, [webApp]);

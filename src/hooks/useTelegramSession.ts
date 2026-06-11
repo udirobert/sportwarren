@@ -17,7 +17,7 @@ interface UseTelegramSessionReturn {
 export function useTelegramSession(): UseTelegramSessionReturn {
   const searchParams = useSearchParams();
   const tokenFromUrl = searchParams.get('token') || '';
-  const { webApp, isReady, cloudStorage } = useTelegram();
+  const { webApp, isReady } = useTelegram();
 
   const [sessionToken, setSessionToken] = useState(tokenFromUrl);
   const [sessionBootstrapped, setSessionBootstrapped] = useState(Boolean(tokenFromUrl));

@@ -388,7 +388,6 @@ export function getFormationsBySquadSize(size: SquadSize): Formation[] {
  * Get the default formation for a squad size
  */
 export function getDefaultFormationForSize(size: SquadSize): Formation {
-  const formations = getFormationsBySquadSize(size);
   if (size === 11) return '4-4-2';
   if (size === 7) return '1-4-1';
   if (size === 6) return '1-3-1';

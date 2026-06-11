@@ -417,7 +417,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                   <div className="text-[10px] sm:text-xs text-gray-400">Matches</div>
                 </div>
               </div>
-              {stats.totalAgents > 0 && (
+              {stats.totalAgents > 10 && (
                 <div className="flex items-center space-x-2 group">
                   <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-purple-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Sparkles className="w-4 sm:w-5 h-4 sm:h-5 text-purple-400" aria-hidden="true" />
@@ -428,7 +428,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                   </div>
                 </div>
               )}
-              {stats.waitlistTotal && stats.waitlistTotal > 0 && (
+              {stats.waitlistTotal && stats.waitlistTotal > 50 && (
                 <div className="flex items-center space-x-2 group">
                   <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-amber-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Timer className="w-4 sm:w-5 h-4 sm:h-5 text-amber-300" aria-hidden="true" />

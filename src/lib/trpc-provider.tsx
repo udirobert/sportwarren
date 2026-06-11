@@ -26,7 +26,6 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
 
   // Re-create the TRPC client whenever the connected wallet changes.
   // This ensures all queries are re-issued under the new auth identity.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   const trpcClient = useMemo(() =>
     trpc.createClient({
       links: [
@@ -69,7 +68,7 @@ export function TRPCProvider({ children }: { children: React.ReactNode }) {
         }),
       ],
     }),
-    [address, chain, hasWallet, walletAddress, authStatus.state, authStatus.signedAt]); // re-create when wallet identity or auth state changes
+    [address, chain, hasWallet]); // re-create when wallet identity changes
 
   return (
     <trpc.Provider client={trpcClient} queryClient={queryClient}>

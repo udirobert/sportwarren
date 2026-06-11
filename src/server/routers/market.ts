@@ -13,7 +13,7 @@ import {
   listLiveMarketFeed,
 } from '../services/market-feed';
 import { createTRPCRouter, protectedProcedure, publicProcedure } from '../trpc';
-import { squadIdSchema, userIdSchema, treasuryAmountSchema } from '../lib/validation-schemas';
+import { squadIdSchema, userIdSchema } from '../lib/validation-schemas';
 
 export const marketRouter = createTRPCRouter({
   getPlayerValuation: publicProcedure

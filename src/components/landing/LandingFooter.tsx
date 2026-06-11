@@ -48,6 +48,17 @@ export const LandingFooter: React.FC = () => (
         <div className="flex items-center gap-2 sm:gap-4 text-[10px] sm:text-xs text-gray-600 w-full md:w-auto md:justify-end">
           <div className="hidden md:block">Built for 5-a-side warriors</div>
           <span className="hidden md:block w-1 h-1 rounded-full bg-gray-700" aria-hidden="true" />
+          {/* Phase 0 / 0.5: feedback provenance so the new landing gets
+              a real signal channel during rollout. */}
+          <a
+            href="https://t.me/sportwarren_support"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hover:text-gray-400 transition-colors"
+          >
+            Landing feedback: @sportwarren_support
+          </a>
+          <span className="hidden md:block w-1 h-1 rounded-full bg-gray-700" aria-hidden="true" />
           <div className="w-full md:w-auto">
             <WaitlistForm variant="footer" source="footer" />
           </div>
