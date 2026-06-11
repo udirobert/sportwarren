@@ -18,7 +18,7 @@ mkdir -p "$BUILD_DIR/.next" "$ARTIFACTS_DIR"
 
 # Build full Next.js app (required for API route compilation)
 # We'll prune frontend bloat after build
-DISABLE_SENTRY_BUILD=true NODE_OPTIONS='--max-old-space-size=8192' node_modules/.bin/next build . --webpack
+DISABLE_SENTRY_BUILD=true pnpm run build
 pnpm prisma generate
 
 if [ ! -d .next/standalone ]; then
