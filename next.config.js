@@ -1,8 +1,4 @@
 import { withSentryConfig } from "@sentry/nextjs";
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -43,18 +39,6 @@ const nextConfig = {
     minimumCacheTTL: 60 * 60, // 1 hour cache
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-  },
-  webpack: (config, { dev, isServer }) => {
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      '@/server': path.resolve(__dirname, 'src/server'),
-    };
-    
-    if (!dev && !isServer) {
-        config.optimization.minimize = true;
-    }
-
-    return config;
   },
   async rewrites() {
     const serverUrl = process.env.NEXT_PUBLIC_SERVER_URL || 'http://localhost:4000';
