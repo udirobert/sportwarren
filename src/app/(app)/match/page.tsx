@@ -270,14 +270,10 @@ export default function MatchPage() {
       longitude: result.evidence?.gps?.lng,
     });
 
-    // Surface the Yellow fee rail that was locked during submit. The fee
-    // is reserved (escrow) and will be split on verification per
-    // getMatchFeeDistribution (winner takes pool minus 20% platform fee).
-    const feeAmount = Number(process.env.NEXT_PUBLIC_YELLOW_MATCH_FEE_AMOUNT || 1);
     addToast({
       tone: "info",
-      title: "Fee session locked",
-      message: `${feeAmount.toFixed(2)} USDC reserved. Settles on opponent verification.`,
+      title: "Match fee locked",
+      message: `Refunds if the result is disputed.`,
     });
 
     const opponentName = availableOpponents.find((squad) => squad.id === selectedOpponentId)?.name || "unknown";
