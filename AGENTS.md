@@ -89,4 +89,4 @@ are the source of truth.
 - User-visible state machine: scout response shows "Verifying on Kite" when pending, "Receipt confirmed" with explorer link when settled
 - `GET /api/x402/scout` and `GET /api/x402/verify-match` are public x402 discovery endpoints — DO NOT REMOVE (external agents probe these to receive 402 challenges)
 - `readGoatX402Config()` in `x402-client.ts` is `@unused` — wired through `resolveX402Config()` for GOAT Network, dormant until a GOAT merchant appears in ksearch catalog
-- User-facing strings must not mention x402, Kite, USDC, attestation, Yellow, or facilitator — see `docs/X402_CLEANUP_PLAN.md` Section 4 for the jargon-free copy deck
+- User-facing strings must not mention x402, Kite, USDC, attestation, Yellow, or facilitator
