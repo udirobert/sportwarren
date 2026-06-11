@@ -24,6 +24,16 @@ fi
 # DATABASE_URL from .env to connect to the remote DB). If this fails, abort
 # before uploading so the server keeps the previous working release.
 echo "🗄️  Running prisma migrate deploy..."
+if [ -z "${DATABASE_URL:-}" ]; then
+  DATABASE_URL=$(node -e "const dotenv = require('dotenv'); dotenv.config({ path: '.env' }); dotenv.config({ path: '.env.local', override: true }); process.stdout.write(process.env.DATABASE_URL || '');")
+  export DATABASE_URL
+fi
+
+if [ -z "${DATABASE_URL:-}" ]; then
+  echo "❌ DATABASE_URL is not set. Add it to .env or export it before deploying."
+  exit 1
+fi
+
 if ! npx prisma migrate deploy; then
   echo "❌ Migration failed — aborting deploy to keep previous release live"
   exit 1
