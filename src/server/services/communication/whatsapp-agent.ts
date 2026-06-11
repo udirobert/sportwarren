@@ -113,26 +113,25 @@ export interface ResolvedActor {
 }
 
 const HELP = [
-  "🛰️ SportWarren · Kite Agent",
+  "SportWarren · Squad Manager",
   "",
-  "SportWarren gives your squad an on-chain manager agent on Kite Testnet. From WhatsApp you can scout opponents, check budget, review receipts, and trigger simple squad operations; Telegram handles account linking and treasury top-ups.",
+  "Marcus, your squad's Academy Director, runs your manager agent from WhatsApp. Scout opponents, check budget, review receipts, and trigger squad operations; Telegram handles account linking and treasury top-ups.",
   "",
   "Scouting",
-  `• \`scout <opponent>\`  – AI scouting report + SportWarren receipt (${SCOUT_PRICE_USDC.toFixed(3)} testnet token)`,
+  "• `scout <opponent>`  – get a tactical brief on your next opponent",
   "• `tinyfish scout <opponent>` – free real-web scouting report",
-  "• `scouts`           – show your recent reports with explorer links",
-  "• `budget`           – how much scout budget remains today",
+  "• `scouts`           – show your recent reports with receipts",
+  "• `budget`           – how many scouts you have left today",
   "• `topup`            – open Telegram treasury top-up flow",
   "• `trigger-auto-scout` – demo: auto-scout your next opponent now",
   "",
   "Actions",
-  "• `find <query>`     – discover paid x402 services",
+  "• `find <query>`     – discover paid agent services",
   "• `hire <id> [days]` – delegate to an agent",
-  "• `pay <wallet> <usdc>` – pay wages on Kite",
+  "• `pay <wallet> <amount>` – pay wages to a player wallet",
   "• `status`           – your agent analytics",
   "• `cost`             – pricing for all services",
-  "• `attestations`     – view recent on-chain attestations",
-  "• `kite-proof`       – demo Kite Passport payment (judge on-chain proof)",
+  "• `activity`         – view recent squad activity",
   "",
   "Web (TinyFish)",
   "• `tinyfish search <query>` – search the web (free)",
@@ -181,15 +180,15 @@ function isCapabilityQuestion(rawText: string): boolean {
 function buildLinkedOverview(actor: ResolvedActor): Reply {
   return [
     `You're linked as ${actor.displayName}${actor.squadId ? " and connected to a squad" : ""}.`,
-    "SportWarren gives your squad a WhatsApp command line for its on-chain manager agent on Kite Testnet: scout opponents, manage spend limits, review receipts, and coordinate treasury actions through Telegram.",
+    "Marcus runs your squad's manager agent from WhatsApp: scout opponents, manage spend limits, review receipts, and coordinate treasury actions through Telegram.",
     "",
     "Useful commands:",
-    "• `budget` – today's scout spend and remaining limit",
-    "• `scout <opponent>` – commission a paid Kite scouting report",
+    "• `budget` – today's scout reports remaining",
+    "• `scout <opponent>` – commission a scout brief",
     "• `scouts` – recent scouting reports",
     "• `tinyfish scout <opponent>` – free real-web scouting",
     "• `status` – squad agent activity",
-    "• `attestations` – recent on-chain receipts",
+    "• `activity` – recent squad activity",
     "• `topup` – open the Telegram treasury flow",
     "• `whoami` – confirm linked account and squad",
     "",
@@ -221,12 +220,14 @@ function fmtTx(txHash: string | undefined | null): string {
   return `${EXPLORER_BASE}/tx/${txHash}`;
 }
 
-function scoutSettlementLine(simulated: boolean, txHash: string | undefined | null): string {
-  const receipt = fmtTx(txHash);
-  if (!simulated && txHash && !txHash.startsWith("internal-")) {
-    return `✅ *Settled on Kite*\nReceipt: ${receipt}`;
+function scoutSettlementLine(txHash: string | undefined | null): string {
+  // The settlement worker writes a real on-chain txHash once it lands.
+  // Until then, every other state (null, internal-*, simulated) is "pending"
+  // and we tell the user a follow-up message is coming.
+  if (txHash && !txHash.startsWith('internal-')) {
+    return `✅ *Receipt confirmed*\nView: ${fmtTx(txHash)}`;
   }
-  return `📋 *SportWarren attestation* (off-chain receipt until facilitator settles)\nReceipt: ${receipt}`;
+  return `⏳ *Verifying receipt* — you'll get a follow-up message here once confirmed.`;
 }
 
 // ─── Link code consumption ───────────────────────────────────────────────────
@@ -253,8 +254,8 @@ async function consumeLinkCode(code: string, whatsappNumber: string): Promise<Re
 
 /** Allow-list of commands the AI can actually trigger via RUN: */
 const RUN_ALLOWED = new Set([
-  "help", "find", "search", "hire", "scout", "scouts", "budget", "pay", "status", "link", "kite-proof", "kiteproof",
-  "whoami", "unlink", "cost", "attestations", "trigger-auto-scout", "autonomy",
+  "help", "find", "search", "hire", "scout", "scouts", "budget", "pay", "status", "link",
+  "whoami", "unlink", "cost", "attestations", "activity", "trigger-auto-scout", "autonomy",
   "tinyfish", "topup", "top-up", "treasury",
 ]);
 
@@ -545,7 +546,7 @@ export async function dispatchWhatsAppCommand(
       reportSections.push({
         title: "Details",
         rows: [
-          { id: `scout_settle_${Date.now()}`, title: scoutSettlementLine(report.simulated, report.txHash).replace(/[*_`]/g, ''), description: "On-chain attestation" },
+          { id: `scout_settle_${Date.now()}`, title: scoutSettlementLine(report.txHash).replace(/[*_`]/g, ''), description: "Receipt status" },
           { id: `scout_data_${Date.now()}`, title: dataSourceLine, description: "Data sources used" },
           ...(userLimit > 0 ? [{ id: `scout_budget_${Date.now()}`, title: `Budget: ${remaining.remaining.toFixed(2)} left today`, description: "Daily scout spend remaining" }] : []),
         ],
@@ -564,6 +565,9 @@ export async function dispatchWhatsAppCommand(
     case "kite-proof":
     case "kiteproof":
     case "kite-demo": {
+      if (process.env.KITE_DEMO_MODE !== 'true') {
+        return "❌ Unknown command. Try `help` to see what's available.";
+      }
       const demo = await executeKiteDemoPayment();
       if (!demo.ok) {
         const err = (demo.error ?? "").toLowerCase();
@@ -674,7 +678,7 @@ export async function dispatchWhatsAppCommand(
         '',
         summary,
         '',
-        scoutSettlementLine(report.simulated, report.txHash),
+        scoutSettlementLine(report.txHash),
         dataSourceLine,
         `Price: ${SCOUT_PRICE_USDC.toFixed(2)} testnet token`,
         '',
@@ -746,14 +750,16 @@ export async function dispatchWhatsAppCommand(
         return "No scouting reports yet. Try `scout <opponent>` to commission one.";
       }
 
-      const lines = [`📋 *Recent Scouts (${uniq.length})*`, ""];
+      const lines = [`Recent scouts (${uniq.length})`, ""];
       for (const r of uniq) {
         const payload = r.payload as Record<string, string> | null;
         const name = payload?.opponent ?? "unknown";
         const date = r.createdAt.toLocaleDateString("en-GB", {
           day: "numeric", month: "short",
         });
-        const link = fmtTx(r.txHash);
+        const link = r.txHash && !r.txHash.startsWith('internal-')
+          ? `View: ${fmtTx(r.txHash)}`
+          : "Verifying receipt...";
         lines.push(`• ${date} — *${name}*`);
         lines.push(`  ${link}`);
       }
@@ -785,12 +791,13 @@ export async function dispatchWhatsAppCommand(
         tips.push("Limit resets tomorrow. `tinyfish scout <opponent>` is free while you wait.");
       }
 
+      const reportsLeft = userLimit > 0 ? Math.max(0, Math.floor(spending.remaining / SCOUT_PRICE_USDC)) : null;
+      const squadReportsLeft = squadLimit > 0 ? Math.max(0, Math.floor(squadSpending.remaining / SCOUT_PRICE_USDC)) : null;
+
       return [
-        `💳 *Scout Budget · Today*`,
-        `Per-user limit: ${userLimit > 0 ? `$${userLimit.toFixed(2)} USDC` : "unlimited"}`,
-        `Your spend: $${spending.spent.toFixed(2)} · Remaining: ${userLimit > 0 ? `$${spending.remaining.toFixed(2)}` : "unlimited"}`,
-        `Squad limit: ${squadLimit > 0 ? `$${squadLimit.toFixed(2)} USDC` : "unlimited"}`,
-        `Squad spend: $${squadSpending.spent.toFixed(2)} · Remaining: ${squadLimit > 0 ? `$${squadSpending.remaining.toFixed(2)}` : "unlimited"}`,
+        `Scout budget · today`,
+        `Your reports left: ${reportsLeft !== null ? `${reportsLeft} brief${reportsLeft === 1 ? '' : 's'}` : 'unlimited'}`,
+        `Squad reports left: ${squadReportsLeft !== null ? `${squadReportsLeft} brief${squadReportsLeft === 1 ? '' : 's'}` : 'unlimited'}`,
         userLimit > 0 ? `${bar}` : "",
         "",
         tips[0],
@@ -856,18 +863,18 @@ export async function dispatchWhatsAppCommand(
 
     case "cost": {
       return [
-        "💳 *Service Pricing*",
+        "Service pricing",
         "",
-        `• \`scout <opponent>\` — ${SCOUT_PRICE_USDC.toFixed(3)} testnet token (AI scouting report + SportWarren receipt)`,
+        `• \`scout <opponent>\` — 1 brief from your daily allowance`,
         "• `hire <id> [days]` — varies by agent (reputation-gated)",
-        "• `pay <wallet> <usdc>` — direct USDC transfer on Kite",
+        "• `pay <wallet> <usdc>` — direct payment to a player wallet",
         "",
-        "All prices in USDC on Kite Testnet. Daily budget limits apply per user and per squad.",
-        "Check `budget` for your remaining scout budget.",
+        "Daily report limits apply per user and per squad. Check `budget` for what's left today.",
       ].join("\n");
     }
 
-    case "attestations": {
+    case "attestations":
+    case "activity": {
       const atts = await prisma.attestation.findMany({
         where: {
           OR: [
@@ -882,17 +889,19 @@ export async function dispatchWhatsAppCommand(
         take: 10,
       });
       if (!atts.length) {
-        return "No on-chain attestations yet. Try `scout <opponent>` or `pay <wallet> <usdc>` to create one.";
+        return "No recent activity yet. Try `scout <opponent>` or `pay <wallet> <usdc>` to start.";
       }
-      const lines = [`📜 *Recent Attestations (${atts.length})*`, ""];
+      const lines = [`Recent activity (${atts.length})`, ""];
       for (const a of atts) {
         const date = a.createdAt.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-        const link = fmtTx(a.txHash);
-        const amount = a.amountUsdc ? ` ${a.amountUsdc.toFixed(2)}` : "";
+        const link = a.txHash && !a.txHash.startsWith('internal-')
+          ? `View: ${fmtTx(a.txHash)}`
+          : "Verifying receipt...";
+        const amount = a.amountUsdc ? ` ${a.amountUsdc.toFixed(2)} USDC` : "";
         lines.push(`• ${date} — *${a.kind}*${amount}`);
         lines.push(`  ${link}`);
       }
-      lines.push("", "`attestations` refreshes · `scouts` for scout reports only.");
+      lines.push("", "`activity` refreshes · `scouts` for scout reports only.");
       return lines.join("\n");
     }
 
@@ -1037,5 +1046,65 @@ export async function dispatchWhatsAppCommand(
       if (fallback) return fallback;
       return `Didn't quite catch that. Try \`help\` to see what I can do. — Marcus`;
     }
+  }
+}
+
+// ── Settlement receipt push (called by the /api/cron/scout-settle worker) ──
+
+/**
+ * Look up the original scout requester, find their linked WhatsApp number,
+ * and push a follow-up "Receipt confirmed" message.
+ *
+ * No-op when:
+ *   - WhatsApp is not configured on this deployment
+ *   - The requester has no linked WhatsApp identity (cron-triggered scout)
+ *   - The attestation has no `requestedBy` (anonymous scout)
+ *   - The settlement txHash is missing or still internal-* (defensive)
+ *
+ * Failures are logged, not thrown — the worker should not fail just because
+ * a receipt push was undeliverable.
+ */
+export async function sendSettlementReceipt(attestation: {
+  id: string;
+  txHash: string | null;
+  payload: unknown;
+}): Promise<{ pushed: boolean; reason?: string }> {
+  const payload = (attestation.payload ?? {}) as { opponent?: string; requestedBy?: string | null };
+  const requestedBy = payload.requestedBy;
+  if (!requestedBy) {
+    return { pushed: false, reason: 'no-requester' };
+  }
+  if (!attestation.txHash || attestation.txHash.startsWith('internal-')) {
+    return { pushed: false, reason: 'no-real-tx' };
+  }
+
+  const identity = await prisma.platformIdentity.findFirst({
+    where: { platform: 'whatsapp', userId: requestedBy },
+    select: { platformUserId: true },
+  });
+  if (!identity?.platformUserId) {
+    return { pushed: false, reason: 'no-whatsapp-identity' };
+  }
+
+  // Lazy import to avoid a circular dep: whatsapp.ts imports from whatsapp-agent.ts.
+  const { WhatsAppService } = await import('./whatsapp');
+  const whatsapp = new WhatsAppService();
+  if (!whatsapp.isConfigured()) {
+    return { pushed: false, reason: 'whatsapp-not-configured' };
+  }
+
+  const opponent = payload.opponent ?? 'opponent';
+  const receipt = `${EXPLORER_BASE}/tx/${attestation.txHash}`;
+  const message = [
+    `Receipt confirmed: scout-vs-${opponent}`,
+    `View: ${receipt}`,
+  ].join('\n');
+
+  try {
+    await whatsapp.sendText(identity.platformUserId, message);
+    return { pushed: true };
+  } catch (err) {
+    console.warn(`[whatsapp-agent] settlement receipt push failed for ${identity.platformUserId}: ${(err as Error).message}`);
+    return { pushed: false, reason: 'send-failed' };
   }
 }

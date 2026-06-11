@@ -6,11 +6,19 @@ import { AGENT_PERSONAS } from '@/server/services/ai/prompts';
 import { readX402Config, type SettlementResult } from '@/server/services/blockchain/x402-client';
 import { kiteAIService } from './kite';
 
+export type SettlementStatus = 'pending' | 'settled' | 'failed';
+
+export function isDeferredSettlementEnabled(): boolean {
+  return ['1', 'true', 'yes'].includes(
+    (process.env.SCOUT_DEFERRED_SETTLEMENT || '').trim().toLowerCase(),
+  );
+}
+
 export interface ScoutReportInput {
   opponent: string;
   requestedBy?: string;
   priceUsdc: number;
-  settlement: Pick<SettlementResult, 'txHash' | 'facilitator' | 'simulated'>;
+  settlement?: Pick<SettlementResult, 'txHash' | 'facilitator' | 'simulated'>;
   enforceUserLimit?: boolean;
   enforceSquadLimit?: boolean;
 }
@@ -20,12 +28,20 @@ export interface ScoutReportResult {
   summary: string;
   attestationId: string;
   txHash: string | null;
+  settlementStatus: SettlementStatus;
   simulated: boolean;
   network: string;
   priceUsdc: number;
   dataSources: string[];
   subjectType: string;
   subjectId: string;
+}
+
+async function enqueueScoutSettlement(attestationId: string): Promise<void> {
+  // The scout-settle cron worker polls the DB for pending rows; no Redis
+  // queue is needed. This function exists as a hook for future use
+  // (e.g., pushing to a priority queue for high-value settlements).
+  console.log(`[scout] enqueued settlement for attestation ${attestationId}`);
 }
 
 export async function createScoutReport(input: ScoutReportInput): Promise<ScoutReportResult> {
@@ -151,7 +167,18 @@ export async function createScoutReport(input: ScoutReportInput): Promise<ScoutR
   }
 
   const cfg = readX402Config();
-  const txHash = input.settlement.txHash ?? `internal-scout-${Date.now()}`;
+  const deferred = isDeferredSettlementEnabled();
+
+  const hasRealSettlement = input.settlement
+    && !input.settlement.simulated
+    && input.settlement.txHash
+    && !input.settlement.txHash.startsWith('internal-');
+
+  const txHash = hasRealSettlement ? input.settlement!.txHash! : null;
+  const settlementStatus: SettlementStatus = hasRealSettlement
+    ? 'settled'
+    : (deferred ? 'pending' : 'settled');
+
   const attestation = await prisma.attestation.create({
     data: {
       subjectType,
@@ -159,11 +186,17 @@ export async function createScoutReport(input: ScoutReportInput): Promise<ScoutR
       kind: 'scout_report',
       payload: { opponent, summary, requestedBy: input.requestedBy ?? null } as Prisma.InputJsonValue,
       network: cfg.network,
-      txHash,
-      facilitator: input.settlement.facilitator,
+      txHash: deferred ? txHash : (input.settlement?.txHash ?? `internal-scout-${Date.now()}`),
+      facilitator: input.settlement?.facilitator,
       amountUsdc: input.priceUsdc,
+      settlementStatus: deferred ? settlementStatus : undefined,
+      settledAt: hasRealSettlement ? new Date() : undefined,
     },
   });
+
+  if (deferred && settlementStatus === 'pending') {
+    await enqueueScoutSettlement(attestation.id);
+  }
 
   const dataSources: string[] = [];
   if (squadContext.includes('recent form')) dataSources.push('your squad recent match form');
@@ -174,8 +207,9 @@ export async function createScoutReport(input: ScoutReportInput): Promise<ScoutR
     opponent,
     summary,
     attestationId: attestation.id,
-    txHash,
-    simulated: input.settlement.simulated ?? false,
+    txHash: deferred ? txHash : (input.settlement?.txHash ?? `internal-scout-${Date.now()}`),
+    settlementStatus: deferred ? settlementStatus : 'settled',
+    simulated: input.settlement?.simulated ?? false,
     network: cfg.network,
     priceUsdc: input.priceUsdc,
     dataSources,

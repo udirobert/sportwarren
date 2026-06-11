@@ -60,7 +60,6 @@ WhatsApp reaches the broadest, least technical squad members. All messages are s
 | `whoami` | List your linked platform identities. |
 | `unlink` | Remove your WhatsApp connection from SportWarren. |
 | `cost` | View pricing for autonomous agent services. |
-| `kite-proof` | Agent pays Kite-listed service → real USDC tx (hackathon demo). |
 
 ---
 

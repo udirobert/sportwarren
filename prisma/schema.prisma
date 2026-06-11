@@ -1024,6 +1024,12 @@ model Attestation {
   facilitator String? // pieverse address used
   amountUsdc  Float?  @map("amount_usdc") // amount paid for this attestation, if any
 
+  // Deferred settlement tracking
+  settlementStatus   String?    @map("settlement_status") // 'pending' | 'settled' | 'failed'
+  settlementAttempts Int        @default(0) @map("settlement_attempts")
+  settlementError    String?    @map("settlement_error")
+  settledAt          DateTime?  @map("settled_at")
+
   // Optional link back to the spending session that paid for this attestation
   sessionId String?      @map("session_id")
   session   KiteSession? @relation(fields: [sessionId], references: [id])

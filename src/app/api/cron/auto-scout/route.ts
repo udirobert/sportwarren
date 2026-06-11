@@ -2,28 +2,33 @@
  * Auto-Scout - autonomous pre-match scouting loop.
  *
  * Finds matches scheduled ~24 hours from now, then for each squad the
- * match involves, the squad's manager agent autonomously commissions an
- * x402 scouting report on the opponent and pushes the result to any
- * linked WhatsApp user.
+ * match involves, the squad's manager agent commissions a scouting
+ * report on the opponent and pushes the result to any linked WhatsApp
+ * user or Telegram group.
  *
  * This is the "minimal human involvement" proof for the Kite hackathon:
  * the agent acts proactively without a human command.
  *
  * Cron schedule: every 6 hours.
  * The 22-26 hour window ensures we hit each match roughly once.
+ *
+ * The scout report is generated via the in-process `createScoutReport`
+ * service (same path WhatsApp `scout` uses) so behaviour is identical
+ * across surfaces. Settlement is deferred by default; the
+ * `/api/cron/scout-settle` worker fills in the on-chain receipt async.
  */
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
-import { kiteAIService } from '@/server/services/ai/kite';
+import { createScoutReport } from '@/server/services/ai/scout-report';
 import { tinyfishService, tinyfishConfigured } from '@/server/services/ai/tinyfish';
 import { WhatsAppService } from '@/server/services/communication/whatsapp';
 
 const EXPLORER_BASE = process.env.KITE_EXPLORER_URL || 'https://testnet.kitescan.ai';
 const SCOUT_AUTO_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || '0.005');
-const SCOUT_AUTO_MAX_USDC = Number(process.env.KITE_SCOUT_MAX_USDC || '0.50');
 
 function fmtTx(txHash: string | undefined | null): string {
-  if (!txHash) return '(no tx)';
+  if (!txHash) return '(verifying on Kite)';
+  if (txHash.startsWith('internal-')) return txHash;
   return `${EXPLORER_BASE}/tx/${txHash}`;
 }
 
@@ -109,40 +114,31 @@ export async function GET(request: Request) {
 
       for (const { squadId, squadName, opponentName } of pairs) {
         try {
-          const manager = await kiteAIService.upsertSquadManagerAgent(squadId);
-
+          // Generate the scout report via the same in-process service the
+          // WhatsApp `scout` command uses. When SCOUT_DEFERRED_SETTLEMENT
+          // is on, settlement runs in the scout-settle worker; otherwise
+          // the report is written synchronously. In both cases the cron
+          // gets back a report immediately.
+          let report: Awaited<ReturnType<typeof createScoutReport>>;
           try {
-            await kiteAIService.createSession({
-              agentId: manager.id,
-              taskSummary: `Auto-scout ${opponentName} for upcoming match`,
-              maxPerTxUsdc: SCOUT_AUTO_MAX_USDC,
-              maxTotalUsdc: SCOUT_AUTO_MAX_USDC * 5,
-              ttlSeconds: 3600,
-              scope: { source: 'auto-scout', matchId: match.id, opponent: opponentName },
-              approvedBy: 'cron:auto-scout',
+            report = await createScoutReport({
+              opponent: opponentName,
+              requestedBy: `cron:auto-scout:${squadId}`,
+              priceUsdc: SCOUT_AUTO_PRICE_USDC,
+              // no `settlement` arg → createScoutReport writes a pending
+              // row (or a settled row if SCOUT_DEFERRED_SETTLEMENT is off
+              // and the helper provides its own legacy settlement).
+              enforceUserLimit: false,
+              enforceSquadLimit: false,
             });
-          } catch {
-            /* session may already exist */
-          }
-
-          const res = await kiteAIService.executePaidRequest<{ summary?: string }>({
-            agentId: manager.id,
-            url: process.env.KITE_SCOUT_SERVICE_URL || '',
-            method: 'POST',
-            body: { opponent: opponentName, requestedBy: 'cron:auto-scout' },
-            maxAmountUsdc: SCOUT_AUTO_MAX_USDC,
-            subject: { type: 'squad', id: squadId },
-            kind: 'scout_report',
-          });
-
-          if (!res.ok) {
-            console.warn(`[Cron:auto-scout] Scout failed for ${squadName} vs ${opponentName}: ${res.error}`);
-            results.push({ matchId: match.id, opponent: opponentName, squadId, ok: false, error: res.error });
+          } catch (err) {
+            console.warn(`[Cron:auto-scout] Scout failed for ${squadName} vs ${opponentName}: ${(err as Error).message}`);
+            results.push({ matchId: match.id, opponent: opponentName, squadId, ok: false, error: (err as Error).message });
             continue;
           }
 
-          const txUrl = fmtTx(res.payment?.txHash);
-          const summary = res.data?.summary || 'No summary available.';
+          const txUrl = fmtTx(report.txHash);
+          const summary = report.summary || 'No summary available.';
           const matchTime = match.matchDate
             ? match.matchDate.toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
             : "TBC";
@@ -151,9 +147,9 @@ export async function GET(request: Request) {
           let webScoutSnippets: string[] = [];
           if (tinyfishConfigured()) {
             try {
-              const report = await tinyfishService.scout(opponentName);
-              if (report.sources.length > 0) {
-                const topPages = report.snippets.slice(0, 3)
+              const webReport = await tinyfishService.scout(opponentName);
+              if (webReport.sources.length > 0) {
+                const topPages = webReport.snippets.slice(0, 3)
                   .map((s) => `• ${s.snippet.slice(0, 150)}`)
                   .filter(Boolean);
                 if (topPages.length > 0) {
@@ -162,7 +158,7 @@ export async function GET(request: Request) {
                     `\u{1f41f} *Web data* (via TinyFish)`,
                     ...topPages,
                     '',
-                    `Sources: ${report.sources.slice(0, 2).map((s) => s.url).join(' · ')}`,
+                    `Sources: ${webReport.sources.slice(0, 2).map((s) => s.url).join(' · ')}`,
                   ];
                 }
               }
@@ -185,6 +181,9 @@ export async function GET(request: Request) {
           }
 
           if (whatsappNumbers.size > 0 && whatsapp.isConfigured()) {
+            const settleLine = report.txHash && !report.txHash.startsWith('internal-')
+              ? `✅ *Settled on Kite*\nReceipt: ${txUrl}`
+              : `⏳ *Verifying on Kite* — you'll get a follow-up message here once confirmed.`;
             const message = [
               `\u{1f6f0}\u{fe0f} *Auto-Scout Report*`,
               `Match: *${opponentName}* (${matchTime})`,
@@ -192,8 +191,7 @@ export async function GET(request: Request) {
               summary,
               ...webScoutSnippets,
               '',
-              `\u{2705} *Settled on Kite*`,
-              `Receipt: ${txUrl}`,
+              settleLine,
               `Price: ${SCOUT_AUTO_PRICE_USDC.toFixed(2)} USDC`,
               '',
               `Reply \`scout ${opponentName}\` for an AI report or \`tinyfish scout ${opponentName}\` for web data.`,
@@ -236,7 +234,9 @@ export async function GET(request: Request) {
                         summary,
                         ...webSection,
                         "",
-                        "*Settled on Kite*: " + txUrl,
+                        report.txHash && !report.txHash.startsWith('internal-')
+                          ? "*Receipt:* " + txUrl
+                          : "*Receipt:* verifying on Kite — will post here when confirmed",
                       ].join("\n");
                       await bot.sendMessage(group.chatId, tgMsg, { parse_mode: "Markdown" });
                       console.log(`[Cron:auto-scout] Pushed auto-scout to Telegram group ${group.chatId}`);
@@ -249,7 +249,7 @@ export async function GET(request: Request) {
             }
           }
 
-          results.push({ matchId: match.id, opponent: opponentName, squadId, ok: true, txHash: res.payment?.txHash });
+          results.push({ matchId: match.id, opponent: opponentName, squadId, ok: true, txHash: report.txHash });
         } catch (err) {
           console.error(`[Cron:auto-scout] Error processing squad ${squadId} vs ${opponentName}:`, err);
           results.push({ matchId: match.id, opponent: opponentName, squadId, ok: false, error: (err as Error).message });

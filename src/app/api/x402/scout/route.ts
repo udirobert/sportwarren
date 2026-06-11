@@ -66,6 +66,13 @@ function build402(): NextResponse {
   );
 }
 
+// DO NOT REMOVE — public x402 discovery endpoint.
+// External agents (Kite Passport wallets, x402-aware clients) probe this URL
+// with GET to receive a 402 challenge with PaymentRequirements, sign an
+// EIP-3009 authorization, and retry with X-PAYMENT. Deleting the GET handler
+// removes SportWarren from Kite Passport service discovery.
+// Internal WhatsApp / auto-scout code uses the in-process createScoutReport
+// service directly and does not route through here.
 export async function GET() {
   return build402();
 }

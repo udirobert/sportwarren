@@ -136,6 +136,17 @@ export function readX402Config(): X402Config {
   };
 }
 
+/**
+ * GOAT Network x402 config reader.
+ *
+ * @unused Awaiting first GOAT-network merchant in ksearch catalog.
+ * Wired through resolveX402Config (see below) so any merchant that
+ * advertises network `eip155:2345` or `eip155:48816` will hit this
+ * path automatically. Tested by injecting the env vars and calling
+ * resolveX402Config('eip155:2345') directly.
+ *
+ * @see https://docs.gokite.ai/kite-agent-passport/service-provider-guide
+ */
 export function readGoatX402Config(): X402Config {
   const isMainnet = Number(process.env.GOAT_CHAIN_ID || GOAT_TESTNET_CHAIN_ID) === GOAT_NETWORK_CHAIN_ID;
   return {
