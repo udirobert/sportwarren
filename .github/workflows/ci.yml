@@ -72,3 +72,26 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm run test
+
+  build:
+    name: Production Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm run build
+        env:
+          DISABLE_SENTRY_BUILD: "true"
+          NODE_OPTIONS: "--max-old-space-size=8192"
