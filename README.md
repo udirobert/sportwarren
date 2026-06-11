@@ -33,6 +33,8 @@ SportWarren transforms grassroots football into a progression system. Players ea
 - **Multi-Channel Access** — Full dashboard on web, Telegram Mini App for power users, WhatsApp for casual updates.
 - **Squad Management** — Invite teammates, coordinate matches, and build your squad's collective twin.
 - **On-Chain Reputation** — Soulbound tokens track your football legacy (abstracted away, no wallet required).
+- **Agentic Commerce** — Your squad's AI manager scouts opponents autonomously, pays for tactical intelligence via the Kite x402 marketplace, and manages its own budget — all from WhatsApp.
+- **GOAT Network Settlement** — Squad governance, agent identity (ERC-8004), and high-value digital assets secured by Bitcoin via BitVM2 on GOAT Network.
 
 ---
 
@@ -50,9 +52,10 @@ SportWarren transforms grassroots football into a progression system. Players ea
 
 | Document | Purpose |
 |----------|---------|
-| **[ARCHITECT.md](docs/ARCHITECT.md)** | Technical blueprint: match lifecycle, twin system, formations, onboarding. |
+| **[ARCHITECT.md](docs/ARCHITECT.md)** | Technical blueprint: match lifecycle, twin system, formations, onboarding, multi-chain architecture. |
 | **[PLATFORMS.md](docs/PLATFORMS.md)** | Channel guides for Telegram, WhatsApp, and web dashboard. |
-| **[BUILD.md](docs/BUILD.md)** | Development setup, deployment, tRPC routers, and cron endpoints. |
+| **[BUILD.md](docs/BUILD.md)** | Development setup, deployment, tRPC routers, cron endpoints, env vars. |
+| **[GOAT_STRATEGY.md](docs/GOAT_STRATEGY.md)** | GOAT Network integration strategy, ERC-8004 agent identity, x402 roadmap. |
 | **[FORMATIONS.md](docs/FORMATIONS.md)** | Formation playground, viral loop, and claim flow. |
 | **[ONBOARDING.md](docs/ONBOARDING.md)** | Persona-first onboarding flow and context management. |
 | **[DESIGN_TOKENS.md](docs/DESIGN_TOKENS.md)** | Visual system: colors, typography, layout, animations. |

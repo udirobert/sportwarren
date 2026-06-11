@@ -31,6 +31,31 @@ Squad Treasuries held on Goat Network can benefit from **Sustainable BTC Yield**
 3.  **x402 Facilitator:** Configure the `AgentEscrow` to use Goat's native micropayment facilitators.
 4.  **Testnet Deployment:** Deploy to BitVM2 Testnet and exercise cross-chain proofs from Algorand.
 
+## Dual-Network x402 Routing (Already in Code)
+
+The x402 client at `src/server/services/blockchain/x402-client.ts` already supports GOAT Network alongside Kite chain for settlement. This dual-routing is **code-complete and available** but currently **unused by default** — the scout and verify-match endpoints both default to Kite chain (`eip155:2368`).
+
+### How it works
+
+| Component | Kite Chain (default) | GOAT Network (configured) |
+|-----------|---------------------|--------------------------|
+| **Chain ID** | `2368` | `48816` (testnet3) / `2345` (mainnet) |
+| **Network string** | `eip155:2368` | `eip155:48816` / `eip155:2345` |
+| **Facilitator** | `facilitator.pieverse.io` | `facilitator.testnet3.goat.network` (auto-detected) |
+| **RPC** | `rpc-testnet.gokite.ai` | `rpc.testnet3.goat.network` / `rpc.goat.network` |
+| **USDC address** | `0x0fF5393387ad2f9f691FD6Fd28e07E3969e27e63` | Configurable via `GOAT_USDC_ADDRESS` |
+| **Resolution** | Default fallback | Triggered by GOAT network string |
+
+Routes are selected by `resolveX402Config(targetNetwork)` — pass an `eip155:48816` or `eip155:2345` string and all payment requirements, facilitator calls, and settlement envelopes switch to GOAT Network.
+
+### Activating GOAT x402
+
+To route an existing x402 endpoint through GOAT Network instead of Kite chain:
+
+1. Set `GOAT_CHAIN_ID`, `GOAT_RPC_URL`, `GOAT_FACILITATOR_URL`, and `GOAT_USDC_ADDRESS` in env
+2. Update the endpoint's `buildPaymentRequirements()` call to use GOAT's `network` string
+3. Test with `KITE_X402_SIMULATE=true` before enabling live settlement
+
 ## Deferred Work: x402 Verify-Match as Canonical Path
 
 **Status:** Roadmap item (not yet implemented). Captured 2026-06-09.

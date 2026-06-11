@@ -103,8 +103,8 @@ contracts/
 # Deploy Algorand contracts to testnet
 npm run deploy:contracts:algorand:testnet
 
-# Deploy Goat contracts to BitVM2 testnet
-npx hardhat run scripts/deploy.ts --network goat
+# Deploy Goat contracts to BitVM2 testnet (uses tsx + ethers.js)
+pnpm exec tsx ../scripts/deploy-to-goat.ts
 
 # Deploy to both chains
 npm run deploy:contracts:testnet
@@ -155,8 +155,8 @@ npm run deploy:contracts:algorand:local
 # Start local EVM dev environment
 npx hardhat node --network localhost
 
-# Deploy to local
-npx hardhat run scripts/deploy.ts --network localhost
+# Deploy to local (uses the hardhat deploy script inside contracts/goat/)
+cd goat && npx hardhat run scripts/deploy.ts --network localhost
 ```
 
 ## Chain Selection Guide

@@ -76,8 +76,22 @@ All require `Authorization: Bearer <CRON_SECRET>`.
 |---------|----------------|---------------|
 | **Kite AI** | Agents & Commerce | `KITE_API_KEY`, `WEB3_PRIVATE_KEY`, `KITE_SCOUT_PRICE_USDC`, `KITE_SCOUT_MAX_USDC`, `KITE_SCOUT_MAX_USDC_SQUAD` |
 | **Algorand** | Verification | `DEPLOYER_MNEMONIC`, `ALGORAND_APP_ID` |
-| **GOAT Network** | Governance | `GOAT_PRIVATE_KEY`, `GOAT_GOVERNOR_ADDRESS`, `GOAT_SQUAD_TOKEN_ADDRESS`, `GOAT_ACHIEVEMENT_NFT_ADDRESS` |
+| **GOAT Network** | Governance, ERC-8004 agent identity, x402 settlement | `GOAT_PRIVATE_KEY`, `GOAT_CHAIN_ID`, `GOAT_RPC_URL`, `GOAT_IDENTITY_REGISTRY_ADDRESS`, `GOAT_REPUTATION_REGISTRY_ADDRESS`, `GOAT_FACILITATOR_URL`, `GOAT_USDC_ADDRESS` |
 | **TON** | Telegram Wallet | `TONCENTER_API_KEY` |
+
+### x402 / Agentic Commerce Variables
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `WEB3_PRIVATE_KEY` | — | Platform wallet for EIP-3009 signing (Kite chain) |
+| `KITE_X402_VERSION` | `2` | x402 protocol version |
+| `KITE_FACILITATOR_URL` | `https://facilitator.pieverse.io` | Settlement facilitator endpoint |
+| `KITE_X402_SIMULATE` | `false` | Enable simulation mode (no real settlement) |
+| `KITE_SCOUT_PRICE_USDC` | `0.005` | Price per scout report |
+| `KITE_SCOUT_MAX_USDC` | `0.50` | Per-user daily scout budget |
+| `GOAT_FACILITATOR_URL` | auto-detected (mainnet/testnet) | GOAT Network settlement facilitator |
+| `GOAT_X402_NETWORK` | `eip155:48816` | GOAT Network identifier for x402 routing |
+
+The x402 client resolves settlement routes via `resolveX402Config()` — it uses Kite chain (`eip155:2368`) by default and switches to GOAT Network when the target network matches `eip155:2345` or `eip155:48816`. See [`GOAT_STRATEGY.md`](./GOAT_STRATEGY.md) for the full strategy and deferred work items.
 
 ---
 
