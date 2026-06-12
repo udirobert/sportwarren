@@ -64,14 +64,18 @@ export function generatePlayerNarrative(ctx: PlayerNarrativeContext): string {
     return `${ctx.name} is a fresh profile — no twin yet. Play matches, log results, and the digital twin comes online with the first attestation.`;
   }
   const attrs = topTwo(ctx.twin.baseAttributes);
-  return `${ctx.name} — Level ${ctx.twin.level} player twin, ${ctx.matches} match${ctx.matches === 1 ? '' : 'es'}, ${ctx.goals}G/${ctx.assists}A, reputation ${ctx.twin.reputation}. Standout attributes: ${attrs}. PR 3 wires this into the personalisation prompt layer.`;
+  return `${ctx.name} — Level ${ctx.twin.level} player twin, ${ctx.matches} match${
+    ctx.matches === 1 ? '' : 'es'
+  }, ${ctx.goals}G/${ctx.assists}A, reputation ${ctx.twin.reputation}. Standout attributes: ${attrs}.`;
 }
 
 export function generateSquadNarrative(ctx: SquadNarrativeContext): string {
   if (!ctx.twin) {
     return `${ctx.name} is a fresh squad — no twin yet. Add members and log your first verified match to bring the squad twin online.`;
   }
-  return `${ctx.name} — Level ${ctx.twin.level} squad twin, ${ctx.matches} verified match${ctx.matches === 1 ? '' : 'es'} on the books, prestige at ${ctx.twin.prestige}. Energy ${ctx.twin.energy}/${ctx.twin.energyMax}.`;
+  return `${ctx.name} — Level ${ctx.twin.level} squad twin, ${ctx.matches} verified match${
+    ctx.matches === 1 ? '' : 'es'
+  } on the books, prestige at ${ctx.twin.prestige}. Energy ${ctx.twin.energy}/${ctx.twin.energyMax}.`;
 }
 
 // ────────────────────────────────────────────────────────────────────────────
