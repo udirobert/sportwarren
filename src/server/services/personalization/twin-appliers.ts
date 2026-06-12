@@ -50,6 +50,16 @@ export const SIM_PODIUM_POSITIONS: ReadonlySet<number> = new Set([1, 2, 3]);
 
 const MS_PER_DAY = 86_400_000;
 
+/**
+ * Maps a specific attestation count milestone to its MilestoneKind.
+ * Milestones not listed here fall back to 'attestation_milestone'.
+ */
+const ATTESTATION_MILESTONE_KINDS: Partial<Record<number, MilestoneHint['kind']>> = {
+  100: 'attestation_100',
+  500: 'attestation_500',
+  1000: 'attestation_1000',
+};
+
 // ────────────────────────────────────────────────────────────────────────────
 // Public API
 // ────────────────────────────────────────────────────────────────────────────
@@ -180,14 +190,7 @@ function applyAttestation(state: TwinState, event: AttestationEvent): TwinDiff {
   for (const m of ATTESTATION_MILESTONES) {
     if (state.attestationCount < m && newAttestationCount >= m) {
       milestones.push({
-        kind:
-          m === 100
-            ? 'attestation_100'
-            : m === 500
-              ? 'attestation_500'
-              : m === 1000
-                ? 'attestation_1000'
-                : 'attestation_milestone',
+        kind: ATTESTATION_MILESTONE_KINDS[m] ?? 'attestation_milestone',
         payload: { count: m },
       });
     }
