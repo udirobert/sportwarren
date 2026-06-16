@@ -1,0 +1,11 @@
+{
+  "actions": [
+    {
+      "action": "create",
+      "model": "PlayerMatchStats",
+      "field": "teamSide",
+      "field_type": "String?",
+      "default": null
+    }
+  ]
+}

@@ -799,6 +799,10 @@ model PlayerMatchStats {
   profileId String        @map("profile_id")
   profile   PlayerProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
 
+  // Side tracking (for player-to-player rivalries)
+  // 'home' = player was on the home team, 'away' = player was on the away team
+  teamSide String? @map("team_side")
+
   // Stats
   goals         Int     @default(0)
   assists       Int     @default(0)
