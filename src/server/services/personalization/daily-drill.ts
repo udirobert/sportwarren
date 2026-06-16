@@ -111,11 +111,6 @@ export async function completeDrill(
     drill,
   });
 
-  await prisma.playerTwin.update({
-    where: { id: profile.twin.id },
-    data: { lastDailyDrillAt: now },
-  });
-
   return {
     drill,
     newLevel: result.diff.newLevel,
