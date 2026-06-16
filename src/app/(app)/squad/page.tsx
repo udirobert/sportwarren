@@ -30,6 +30,7 @@ import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useSquadDetails } from "@/hooks/squad/useSquad";
 import { useWallet } from "@/contexts/WalletContext";
 import SquadMomentsGallery from "@/components/moments/SquadMomentsGallery";
+import CompositionInsightsCard from "@/components/squad/CompositionInsightsCard";
 import { getJourneyActionGate } from "@/lib/journey/action-gates";
 import { describeMatchForSquad } from "@/lib/match/summary";
 import { useJourneyState } from "@/hooks/useJourneyState";
@@ -939,6 +940,11 @@ export default function SquadPage() {
               </div>
             </div>
           </motion.div>
+
+          {/* Composition Insights — pair win rates, defensive partnerships */}
+          {activeSquadId && !showSample && (
+            <CompositionInsightsCard squadId={activeSquadId} />
+          )}
         </div>
       )}
 

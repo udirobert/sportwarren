@@ -344,6 +344,14 @@ export async function submitMatchResult({
     }
   }
 
+    // Capture formations from SquadTactics at submission time
+    const [homeTactics, awayTactics] = await Promise.all([
+      prisma.squadTactics.findUnique({ where: { squadId: homeSquadId } }),
+      prisma.squadTactics.findUnique({ where: { squadId: awaySquadId } }),
+    ]);
+    const homeFormation = homeTactics?.formation ?? null;
+    const awayFormation = awayTactics?.formation ?? null;
+
     const match = await createPendingMatchSubmission({
       prisma,
       homeSquadId,
@@ -362,6 +370,8 @@ export async function submitMatchResult({
       sessionId,
       isSoftVerified: socialTrust,
       hasKeeper,
+      homeFormation,
+      awayFormation,
     });
 
     if (socialTrust) {
@@ -765,6 +775,27 @@ export async function verifyMatchResult({
     }
 
     if (newStatus === 'verified' || newStatus === 'disputed') {
+      // Capture formations if not already set (e.g. from created-by-verified flow)
+      if (!resultMatch.homeFormation || !resultMatch.awayFormation) {
+        const [captureHomeTactics, captureAwayTactics] = await Promise.all([
+          prisma.squadTactics.findUnique({ where: { squadId: resultMatch.homeSquadId } }),
+          prisma.squadTactics.findUnique({ where: { squadId: resultMatch.awaySquadId } }),
+        ]);
+        const formationUpdates: Record<string, string> = {};
+        if (!resultMatch.homeFormation && captureHomeTactics?.formation) {
+          formationUpdates.homeFormation = captureHomeTactics.formation;
+        }
+        if (!resultMatch.awayFormation && captureAwayTactics?.formation) {
+          formationUpdates.awayFormation = captureAwayTactics.formation;
+        }
+        if (Object.keys(formationUpdates).length > 0) {
+          await prisma.match.update({
+            where: { id: matchId },
+            data: formationUpdates,
+          });
+        }
+      }
+
       try {
         if (verifiedSettlement) {
           const settlementResult = await settleMatchFee(
