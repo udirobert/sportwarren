@@ -1,7 +1,13 @@
 import type { Metadata } from "next";
+import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 import { CookieConsent } from "@/components/legal/CookieConsent";
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ["latin"],
+  variable: "--font-space-grotesk",
+});
 
 const appBaseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://sportwarren.com";
 
@@ -43,7 +49,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="antialiased bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-200">
+      <body className={`${spaceGrotesk.variable} antialiased bg-white text-gray-900 dark:bg-gray-950 dark:text-gray-100 transition-colors duration-200`}>
         <a href="#main-content" className="skip-link">
           Skip to main content
         </a>
