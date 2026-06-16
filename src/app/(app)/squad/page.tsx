@@ -551,21 +551,27 @@ export default function SquadPage() {
 
       {/* New squad welcome banner */}
       {isNewSquad && (
-        <Card className="border-green-200 bg-green-50/70 py-4">
-          <div className="flex items-start gap-3">
-            <div className="w-8 h-8 bg-green-600 rounded-lg flex items-center justify-center shrink-0">
-              <Shield className="w-4 h-4 text-white" />
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-950/40 via-gray-900 to-gray-900"
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(52,211,153,0.06)_0%,transparent_60%)]" />
+          <div className="relative flex items-start gap-3 px-5 py-4">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+              <Shield className="w-4 h-4 text-emerald-400" />
             </div>
-            <div className="flex-1">
-              <p className="font-semibold text-green-900">Squad created! Here's what to do next.</p>
-              <p className="mt-1 text-sm text-green-700">
-                Set your <button onClick={() => setActiveTab('tactics')} className="underline font-medium">formation</button>,
-                fund your <button onClick={() => setActiveTab('treasury')} className="underline font-medium">treasury</button>,
-                then <Link href="/match?mode=capture" className="underline font-medium">log your first match</Link> to start building reputation.
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white">Squad created! Here&apos;s what to do next.</p>
+              <p className="mt-1 text-sm text-gray-400">
+                Set your <button onClick={() => setActiveTab('tactics')} className="font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2">formation</button>,
+                fund your <button onClick={() => setActiveTab('treasury')} className="font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2">treasury</button>,
+                then <Link href="/match?mode=capture" className="font-semibold text-emerald-400 hover:text-emerald-300 underline underline-offset-2">log your first match</Link> to start building reputation.
               </p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button size="sm" variant="secondary" onClick={handleShareSquadInvite}>
-                  <UserPlus className="w-4 h-4 mr-2" />
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button size="sm" variant="secondary" className="bg-white/[0.08] text-white hover:bg-white/[0.12] border-white/[0.12]" onClick={handleShareSquadInvite}>
+                  <UserPlus className="w-4 h-4 mr-1.5" />
                   {inviteShareState === "shared"
                     ? "Invite Shared"
                     : inviteShareState === "copied"
@@ -574,60 +580,81 @@ export default function SquadPage() {
                 </Button>
               </div>
               {inviteShareState === "error" && (
-                <p className="mt-2 text-xs text-red-600">
+                <p className="mt-2 text-xs text-red-400">
                   Couldn&apos;t copy the invite link on this device. Open the squad on mobile and share again.
                 </p>
               )}
             </div>
-            <button onClick={() => setIsNewSquad(false)} className="shrink-0 text-green-600 hover:text-green-800 text-lg leading-none" aria-label="Dismiss banner">×</button>
+            <button onClick={() => setIsNewSquad(false)} className="shrink-0 flex items-center justify-center h-6 w-6 rounded-md text-gray-500 hover:text-white hover:bg-white/[0.08] transition-colors" aria-label="Dismiss banner">×</button>
           </div>
-        </Card>
+        </motion.div>
       )}
 
+      {/* Imported plan banner */}
       {importedPlan && (
-        <Card className="border-emerald-200 bg-emerald-50/80 py-4">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="font-semibold text-emerald-900">Playground setup imported</p>
-              <p className="mt-1 text-sm text-emerald-700">
-                {importedPlan.size}v{importedPlan.size} · {importedPlan.formation} · {PLAY_STYLE_LABELS[importedPlan.style]} is ready in Tactics.
-              </p>
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut', delay: 0.08 }}
+          className="relative overflow-hidden rounded-2xl border border-indigo-500/20 bg-gradient-to-r from-indigo-950/40 via-gray-900 to-gray-900"
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(99,102,241,0.06)_0%,transparent_60%)]" />
+          <div className="relative flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-500/10 border border-indigo-500/20">
+                <Target className="w-4 h-4 text-indigo-400" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-white">Playground setup imported</p>
+                <p className="mt-0.5 text-sm text-gray-400">
+                  {importedPlan.size}v{importedPlan.size} · {importedPlan.formation} · {PLAY_STYLE_LABELS[importedPlan.style]} is ready in Tactics.
+                </p>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2 shrink-0">
               <Button
                 size="sm"
+                className="bg-white/[0.08] text-white hover:bg-white/[0.12] border border-white/[0.12]"
                 onClick={() => setActiveTab('tactics')}
               >
                 Review tactics
               </Button>
               <Button
                 size="sm"
-                variant="outline"
+                className="bg-white/[0.08] text-white hover:bg-white/[0.12] border border-white/[0.12]"
                 onClick={handleShareSquadInvite}
               >
                 Invite teammates
               </Button>
             </div>
           </div>
-        </Card>
+        </motion.div>
       )}
 
       {/* First-visit hint — shown until the user has opened the office/staff room */}
       {!squadChecklistDone && (
-        <Card className="border-blue-200 bg-blue-50/70 py-4">
-          <div className="flex items-start gap-3">
-            <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
-            <div className="flex-1">
-              <p className="font-semibold text-blue-900">Set up your squad</p>
-              <p className="mt-1 text-sm text-blue-700">
-                Use the <strong>Tactics</strong> tab to set your formation, <strong>Treasury</strong> to manage finances, and <strong>Transfers</strong> to respond to incoming offers. Head to the Dashboard to open the Staff Office.
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.35, ease: 'easeOut', delay: 0.16 }}
+          className="relative overflow-hidden rounded-2xl border border-sky-500/20 bg-gradient-to-r from-sky-950/40 via-gray-900 to-gray-900"
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(14,165,233,0.06)_0%,transparent_60%)]" />
+          <div className="relative flex items-start gap-3 px-5 py-4">
+            <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-sky-500/10 border border-sky-500/20">
+              <Info className="w-4 h-4 text-sky-400" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-bold text-white">Set up your squad</p>
+              <p className="mt-0.5 text-sm text-gray-400">
+                Use the <strong className="text-white">Tactics</strong> tab to set your formation, <strong className="text-white">Treasury</strong> to manage finances, and <strong className="text-white">Transfers</strong> to respond to incoming offers. Head to the Dashboard to open the Staff Office.
               </p>
             </div>
-            <Link href="/dashboard" className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors">
-              Go to Dashboard
+            <Link href="/dashboard" className="shrink-0 rounded-lg bg-sky-600 px-3 py-2 text-xs font-bold text-white hover:bg-sky-500 transition-colors">
+              Dashboard
             </Link>
           </div>
-        </Card>
+        </motion.div>
       )}
 
       {/* Navigation Tabs — scrollable on mobile */}
