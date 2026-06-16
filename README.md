@@ -1,70 +1,67 @@
 # SportWarren
 
-**Your football journey, powered by AI.** Every match, every drill, every rating builds your digital twin — a living record of your football career that grows with you.
+**The spreadsheet is a love letter. We built a better home for it.**
 
-SportWarren transforms grassroots football into a progression system. Players earn XP, develop FIFA-style attributes through peer consensus, complete daily drills, and compete in seasons. Squads get their own AI twin that learns from match history, builds tactical identity, and unlocks coaching intelligence. No crypto complexity, no app installs — just play, and your twin evolves.
+There's a group in Scotland that has been playing football together for thirty years. Fathers and sons. Friendships that outlasted jobs, marriages, injuries. Every week, same pitch, same natter about who's going in goal. And for thirty years, someone maintained a spreadsheet. Goals scored. Attendance. Form. Head-to-head records going back to the nineties. No prize for it. The spreadsheet will never be seen by anyone outside the group. But it keeps going — because the alternative (letting it all disappear) feels like a small betrayal of something that matters.
 
----
+SportWarren is that spreadsheet, but it doesn't depend on anyone's dad still being alive to maintain it.
 
-## 🎯 The Platform
+Professional football has Opta, Wyscout, and entire analytics departments. Meanwhile, 265 million registered amateur footballers worldwide — and multiples of that playing informally — have a WhatsApp group and a fading memory of last week's scoreline. That gap is what SportWarren closes.
 
-**Player Twins** — Every player gets a digital brain that tracks their journey. Attributes (Pace, Shooting, Passing, Dribbling, Defending, Physical) grow through match performance and peer ratings. XP accumulates, levels unlock, and reputation builds over time.
+**Every player gets a living record that grows with their career.** After every verified match, teammates rate each other's performance — pace, shooting, passing, defending — and those ratings feed into your record through a consensus system that filters noise and rewards accuracy. Over time, it becomes something real: a portrait of how you play, built by the people who know your game best.
 
-**Squad Twins** — Your team develops its own identity. Tactical preferences, match history, and collective performance shape a squad twin that evolves with every game. Hire AI coaches from the marketplace to unlock tactical buffs and strategic insights.
-
-**Match Day Experience** — Log matches, verify results with teammates, and watch your twin react. Post-match reactions show XP gains, attribute changes, and level-up celebrations. Every verified match leaves a permanent mark on your football legacy.
-
-**Daily Rituals** — Complete training drills to boost your twin's stats. Build streaks, earn XP, and watch your attributes grow even between matches.
-
-**Peer Consensus** — Teammates rate each other's performance after every match. Consensus logic filters noise and rewards accurate scouts. Your attributes reflect what your squad actually sees on the pitch.
-
-**Seasons & Competition** — Compete in structured seasons, climb leaderboards, and earn prestige. Every season ends with moments that capture your squad's journey.
+No app install required. No complexity visible. Just play, and your record evolves.
 
 ---
 
-## 🚀 Key Features
+## What SportWarren preserves
 
-- **Interactive Dashboard** — See your twin's level, XP progress, top attributes, and active coaching effects at a glance.
-- **Post-Match Reactions** — Animated feedback showing XP gains, attribute changes, and level-up celebrations after verified matches.
-- **Daily Drills** — Training exercises that boost your twin's stats and build streaks.
-- **Coaching Marketplace** — Hire AI coaches to unlock time-limited tactical buffs and strategic insights.
-- **Formation Playground** — Set tactics, simulate matchups, and share challenge links with opponents.
-- **Peer Rating System** — Post-match player ratings that drive attribute progression.
-- **Multi-Channel Access** — Full dashboard on web, Telegram Mini App for power users, WhatsApp for casual updates.
-- **Squad Management** — Invite teammates, coordinate matches, and build your squad's collective twin.
-- **On-Chain Reputation** — Soulbound tokens track your football legacy (abstracted away, no wallet required).
-- **Agentic Commerce** — Your squad's AI manager scouts opponents autonomously, pays for tactical intelligence via the Kite x402 marketplace, and manages its own budget — all from WhatsApp.
-- **GOAT Network Settlement** — Squad governance, agent identity (ERC-8004), and high-value digital assets secured by Bitcoin via BitVM2 on GOAT Network.
+**Your career, not a gamified profile.** The record is yours. Built onchain so it outlasts any platform — not dependent on SportWarren surviving as a company or any service changing its rules. Every match, every rating, every moment is stored permanently. That's not a feature. It's the point.
+
+**Your squad's history.** Grassroots football isn't professional football. The lineup is never fixed. Every week is a different configuration depending on who shows up. SportWarren tracks who played together, how often, what the result was — the kind of stat Match of the Day reserves for Premier League players ("when these two start together, the win rate is 73%") becomes something any Sunday league captain can pull up from WhatsApp.
+
+**The moments that matter.** A last-minute winner. A midfielder who ran the whole game. A comeback nobody saw coming. These shouldn't vanish by Saturday. Every verified match produces a moment — a shareable card designed to be saved, screenshotted, looked at years later.
+
+**The connections between matches.** A run logged on Strava, a training session completed, a recovery day tracked — all of it feeds in. And when your passing rating has plateaued, the system doesn't just record it. It suggests what to work on. Less trophy cabinet, more personal coach.
 
 ---
 
-## 🛰️ Try It
+## How it works
 
-**Web:** [api.sportwarren.com](https://api.sportwarren.com) — Full dashboard with twin visualization, match logging, and squad management.
-
-**Telegram:** [@SportWarrenBot](https://t.me/SportWarrenBot) — Mini App with match coordination, ratings, and squad chat.
-
-**WhatsApp:** Text **+1 (201) 534-5384** — Casual match logging and squad updates.
+| Layer | What it does |
+|-------|-------------|
+| **Match logging** | Log results via WhatsApp, Telegram, or web. Teammates verify and rate each other's performance. |
+| **Living record** | Every match, every rating, every drill builds your permanent football career. Attributes evolve through peer consensus. |
+| **Squad history** | Head-to-head records, combination stats, and season-by-season archives. The spreadsheet, made alive. |
+| **Multi-channel access** | Full dashboard on web, Telegram Mini App for power users, WhatsApp for casual updates. Meet your squad where they already are. |
+| **Onchain permanence** | Your record is soulbound to you — non-transferable, not dependent on any platform, stored permanently. No wallet required. |
 
 ---
 
-## 📚 Documentation
+## Access
+
+**Web:** [sportwarren.com](https://www.sportwarren.com) — Full dashboard with your career record, squad history, and match logging.
+
+**Telegram:** [@SportWarrenBot](https://t.me/SportWarrenBot) — Mini App for match coordination, ratings, and squad chat.
+
+**WhatsApp:** Text **+1 (201) 534-5384** — Log results, get squad updates, stay connected without leaving your group chat.
+
+---
+
+## Documentation
 
 | Document | Purpose |
 |----------|---------|
-| **[ARCHITECT.md](docs/ARCHITECT.md)** | Technical blueprint: match lifecycle, twin system, formations, onboarding, multi-chain architecture. |
+| **[ARCHITECT.md](docs/ARCHITECT.md)** | Technical blueprint: match lifecycle, twin system, formations, multi-channel architecture. |
 | **[PLATFORMS.md](docs/PLATFORMS.md)** | Channel guides for Telegram, WhatsApp, and web dashboard. |
 | **[BUILD.md](docs/BUILD.md)** | Development setup, deployment, tRPC routers, cron endpoints, env vars. |
-| **[GOAT_STRATEGY.md](docs/GOAT_STRATEGY.md)** | GOAT Network integration strategy, ERC-8004 agent identity, x402 roadmap. |
-| **[FORMATIONS.md](docs/FORMATIONS.md)** | Formation playground, viral loop, and claim flow. |
-| **[ONBOARDING.md](docs/ONBOARDING.md)** | Persona-first onboarding flow and context management. |
+| **[FORMATIONS.md](docs/FORMATIONS.md)** | Formation playground — pre-auth viral loop for squad discovery. |
+| **[ONBOARDING.md](docs/ONBOARDING.md)** | Captain-first onboarding flow and context management. |
 | **[DESIGN_TOKENS.md](docs/DESIGN_TOKENS.md)** | Visual system: colors, typography, layout, animations. |
-
-> Internal/generated agent workspace output belongs under ignored tool directories like `.kimchi/`. Durable product/design docs that should be reviewed or kept in git should live in `docs/`.
 
 ---
 
-## 🛠️ Quick Start
+## Quick Start
 
 ```bash
 git clone https://github.com/udirobert/sportwarren.git
@@ -74,11 +71,11 @@ cp .env.example .env.local
 pnpm run dev
 ```
 
-**Web Dashboard:** http://localhost:3000  
+**Web Dashboard:** http://localhost:3000
 **API:** http://localhost:3000/api/trpc
 
 ---
 
-**Built with ❤️ for footballers everywhere.**
+**Built for the guy with the spreadsheet, for the fifteen-year-old in São Paulo playing his first competitive match, and for every game that deserves to be remembered.**
 
 ⚽ **SportWarren** — Every match leaves a mark.

@@ -89,8 +89,8 @@ function transformProfile(profile: any): PlayerAttributes {
     professionalInterest,
     scoutXP: profile.scoutXP || 0,
     scoutTier: profile.scoutTier || 'rookie',
-    // Kite AI Passport
-    kitePassport: profile.twin?.agent ? {
+    // On-chain record (permanence infrastructure)
+    onchainRecord: profile.twin?.agent ? {
       agentId: profile.twin.agent.agentId,
       passportId: profile.twin.agent.passportId,
       reputation: profile.twin.agent.reputation,

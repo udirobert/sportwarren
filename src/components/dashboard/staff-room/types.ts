@@ -5,7 +5,7 @@ export interface StaffMember {
   avatar: string;
   mood: 'focused' | 'happy' | 'stressed' | 'busy';
   biography: string;
-  kitePassportId?: string;
+  agentId?: string;
   walletAddress?: string;
 }
 

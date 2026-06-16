@@ -34,8 +34,9 @@ cp -R prisma "$BUILD_DIR/prisma"
 [ -f prisma.config.ts ] && cp prisma.config.ts "$BUILD_DIR/prisma.config.ts"
 
 # Copy deploy script and configs
-mkdir -p "$BUILD_DIR/scripts"
+mkdir -p "$BUILD_DIR/scripts/maintenance"
 cp scripts/deploy-runtime-release.sh "$BUILD_DIR/scripts/deploy-runtime-release.sh"
+cp scripts/maintenance/*.ts "$BUILD_DIR/scripts/maintenance/"
 cp package.json "$BUILD_DIR/package.json"
 cp ecosystem.config.cjs "$BUILD_DIR/ecosystem.config.cjs"
 
@@ -81,6 +82,12 @@ if tar --help 2>/dev/null | grep -q -- '--no-xattrs'; then
 else
   tar -C "$BUILD_DIR" -czf "$ARTIFACT_PATH" .
 fi
+
+# ── PRUNING ──
+# Keep only the most recent 5 artifacts to save disk space
+echo "🧹 Pruning old artifacts (keeping last 5)..."
+# List by time, exclude directories, skip first 5, delete remaining
+ls -tp "$ARTIFACTS_DIR"/sportwarren-api-*.tar.gz 2>/dev/null | grep -v '/$' | tail -n +6 | xargs -I {} rm -- {} || true
 
 # Report size reduction
 ORIGINAL_SIZE=$(du -sh .next/standalone 2>/dev/null | cut -f1 || echo "unknown")

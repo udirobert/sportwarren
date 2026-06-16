@@ -414,13 +414,10 @@ export class TwinService {
         }
       });
     } else {
-      // NOTE: `energy` is also written by `squad-energy.ts` (RSVP recompute).
-      // Two-writer condition is a known issue tracked alongside the vision
-      // doc pass — until then, sim-driven deductions can be overwritten by
-      // the next RSVP refresh.
-      const newEnergy = state.energy !== undefined && diff.energyDelta !== undefined
-        ? Math.max(0, Math.min(state.energyMax ?? 100, state.energy + diff.energyDelta))
-        : state.energy;
+      // Energy is a squad-level operational metric managed by
+      // `squad-energy.ts` (RSVP recompute). TwinService does NOT write
+      // SquadTwin.energy — the sim_completed events that carry energyDelta
+      // belong to the deferred agentic-commerce surface.
       await this.db.$transaction(async (tx) => {
         await tx.squadTwin.update({
           where: { id: row.id },
@@ -429,7 +426,6 @@ export class TwinService {
             xp: newXp,
             prestige: newPrestige,
             baseAttributes: newBase as any,
-            energy: newEnergy,
             reputation: newReputation,
             attestationCount: newAttestationCount,
           },

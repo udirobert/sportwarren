@@ -148,8 +148,8 @@ export interface PlayerAttributes {
   // Scout fields
   scoutXP: number;
   scoutTier: 'rookie' | 'trusted' | 'elite';
-  // Kite AI Integration
-  kitePassport?: {
+  // On-chain record (permanence infrastructure — invisible to users)
+  onchainRecord?: {
     agentId: string;
     passportId: string;
     reputation: number;
