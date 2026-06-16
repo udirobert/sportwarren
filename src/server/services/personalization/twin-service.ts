@@ -387,6 +387,9 @@ export class TwinService {
             reputation: newReputation,
             attestationCount: newAttestationCount,
             lastAttestationAt: event.kind === 'attestation' ? now : state.lastAttestationAt ? new Date(state.lastAttestationAt) : null,
+            // Cooldown for daily_drill is part of the same transaction as the
+            // XP mutation — otherwise a partial failure lets the player spam.
+            ...(event.kind === 'daily_drill' ? { lastDailyDrillAt: now } : {}),
           },
         });
 
@@ -411,6 +414,10 @@ export class TwinService {
         }
       });
     } else {
+      // NOTE: `energy` is also written by `squad-energy.ts` (RSVP recompute).
+      // Two-writer condition is a known issue tracked alongside the vision
+      // doc pass — until then, sim-driven deductions can be overwritten by
+      // the next RSVP refresh.
       const newEnergy = state.energy !== undefined && diff.energyDelta !== undefined
         ? Math.max(0, Math.min(state.energyMax ?? 100, state.energy + diff.energyDelta))
         : state.energy;

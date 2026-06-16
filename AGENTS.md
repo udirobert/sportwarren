@@ -41,7 +41,7 @@ are the source of truth.
 
 ### Personalization domain
 - Single source of truth for skin + brain lives in `src/server/services/personalization/`
-  - `twin-types.ts` (TwinState, TwinEvent 9-variant union, TwinDiff, MilestoneHint, MomentHint)
+  - `twin-types.ts` (TwinState, TwinEvent 10-variant union, TwinDiff, MilestoneHint, MomentHint)
   - `twin-appliers.ts` (pure `applyEvent` + `computeLevel` / `xpToNext` / `clampAttributeDeltas` / `buildInitialTwinState` / `dropExpiredModifiers`; no Prisma, no clock injection, table-tested)
   - `twin-service.ts` (`TwinService.recordEvent` — the only public mutation entry point; hydrates state, delegates to `applyEvent`, persists diff + attestation in one tx, signs via Kite, creates moment, dispatches notifications)
   - `notify.ts` (channel-tiered delivery: in-app bus + WhatsApp 3/twin/day cap + Telegram per-kind opt-in via `TwinSignalPreference`; Telegram resolves chatId from PlatformIdentity/SquadGroup, sends via TelegramService bot; signal preferences: tRPC `communication.getSignalPreferences`/`setSignalPreference`)

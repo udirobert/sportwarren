@@ -7,7 +7,7 @@
  *
  * Usage:
  *   import { isEnabled, FLAGS } from '@/lib/feature-flags';
- *   if (isEnabled('PREDICTION_MARKETS')) { ... }
+ *   if (isEnabled('DIGITAL_TWIN_3D')) { ... }
  */
 
 export const FLAGS = {
@@ -26,7 +26,7 @@ export const FLAGS = {
   DIGITAL_TWIN_3D:     { default: false, description: 'Optional 3D broadcast view for digital twin match simulations' },
 
   // ── Post-MVP (disabled) ─────────────────────────────────────────────
-  PREDICTION_MARKETS:  { default: false, description: 'TON prediction markets' },
+  COACHING:            { default: false, description: 'Coaching marketplace — deferred to phase 2' },
   DAO_GOVERNANCE:      { default: false, description: 'On-chain DAO voting (GOAT Network)' },
   TRANSFER_MARKET:     { default: false, description: 'Player transfer offers between squads' },
   AI_STAFF_CHAT:       { default: false, description: 'AI persona staff advisors' },
@@ -78,7 +78,8 @@ export function getFlagForRoute(pathname: string): FeatureFlag | null {
   if (!segment) return null;
 
   const routeFlagMap: Record<string, FeatureFlag> = {
-    predict:       'PREDICTION_MARKETS',
+    broadcast:     'DIGITAL_TWIN_3D',
+    coaching:      'COACHING',
     community:     'COMMUNITY',
     analytics:     'ANALYTICS',
     rivalries:     'TERRITORY_CONTROL',

@@ -13,6 +13,14 @@
  * Why a separate module: the brief calls energy a "squad-level operational
  * metric, not a twin brain metric". Keeping it out of the event stream keeps
  * the orchestrator focused on twin mutations.
+ *
+ * KNOWN ISSUE — shared column with TwinService:
+ * `SquadTwin.energy` is also written by `TwinService.persistDiff` for
+ * `sim_completed` events (via `diff.energyDelta`). The two writers race:
+ * a sim deduction can be silently overwritten by the next RSVP recompute,
+ * or vice versa. Resolution depends on a vision decision (do twin sims
+ * stay in the product?) and is tracked alongside the AGENTS.md / VISION.md
+ * pass. For now, RSVP recompute wins because it runs more often.
  */
 
 import type { PrismaClient } from '@prisma/client';

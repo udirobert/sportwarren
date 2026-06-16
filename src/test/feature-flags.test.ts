@@ -15,13 +15,12 @@ describe('Feature Flags', () => {
     it('returns default value when no env var is set', () => {
       expect(isEnabled('MATCH_SUBMISSION')).toBe(true);
       expect(isEnabled('DIGITAL_TWIN_3D')).toBe(false);
-      expect(isEnabled('PREDICTION_MARKETS')).toBe(false);
       expect(isEnabled('DAO_GOVERNANCE')).toBe(false);
     });
 
     it('env var override takes precedence over default', () => {
-      process.env.FF_PREDICTION_MARKETS = 'true';
-      expect(isEnabled('PREDICTION_MARKETS')).toBe(true);
+      process.env.FF_DIGITAL_TWIN_3D = 'true';
+      expect(isEnabled('DIGITAL_TWIN_3D')).toBe(true);
     });
 
     it('env var "1" is treated as enabled', () => {
@@ -54,13 +53,12 @@ describe('Feature Flags', () => {
       expect(Object.keys(flags).length).toBe(Object.keys(FLAGS).length);
       expect(flags.MATCH_SUBMISSION).toBe(true);
       expect(flags.DIGITAL_TWIN_3D).toBe(false);
-      expect(flags.PREDICTION_MARKETS).toBe(false);
     });
   });
 
   describe('getFlagForRoute', () => {
     it('returns correct flag for gated routes', () => {
-      expect(getFlagForRoute('/predict')).toBe('PREDICTION_MARKETS');
+      expect(getFlagForRoute('/broadcast')).toBe('DIGITAL_TWIN_3D');
       expect(getFlagForRoute('/community')).toBe('COMMUNITY');
       expect(getFlagForRoute('/analytics')).toBe('ANALYTICS');
     });
@@ -73,7 +71,7 @@ describe('Feature Flags', () => {
     });
 
     it('handles nested paths', () => {
-      expect(getFlagForRoute('/predict/123')).toBe('PREDICTION_MARKETS');
+      expect(getFlagForRoute('/broadcast/abc')).toBe('DIGITAL_TWIN_3D');
     });
   });
 });
