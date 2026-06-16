@@ -24,6 +24,10 @@ import { generateSquadNarrative } from '../services/personalization/narrative';
 import { identityService } from '../services/personalization/identity';
 import { xpToNext } from '../services/personalization/twin-appliers';
 import {
+  fetchSquadMatchParticipation,
+  computeCompositionInsights,
+} from '../services/squad/composition-insights';
+import {
   squadIdSchema,
   squadNameSchema,
   shortNameSchema,
@@ -2468,5 +2472,55 @@ export const squadRouter = createTRPCRouter({
       if (!membership) throw new TRPCError({ code: 'FORBIDDEN', message: 'Not a squad member' });
       await autonomyPolicy.resetSquadConfig(input.squadId);
       return { success: true };
+    }),
+
+  // ============================================================================
+  // COMPOSITION INSIGHTS (Phase 5)
+  // ============================================================================
+
+  /**
+   * Returns fluid squad composition insights:
+   *   - Player pair win rates (the "When Dave + Sami start together" stat)
+   *   - Defensive pair clean sheet rates
+   *   - Player scoring impact
+   *   - A shareable headline insight
+   *
+   * Public (no auth) — the squad page needs this for the overview tab, and
+   * share links may reference it. Sensitive data is match-level only.
+   */
+  getCompositionInsights: publicProcedure
+    .input(z.object({ squadId: squadIdSchema }))
+    .query(async ({ ctx, input }) => {
+      try {
+        const { matches, playerMap } = await fetchSquadMatchParticipation(
+          ctx.prisma,
+          input.squadId,
+        );
+
+        if (matches.length < 2) {
+          return {
+            topPairs: [],
+            topDefensivePairs: [],
+            topTrios: [],
+            formationStats: [],
+            topScoringImpact: [],
+            headlineInsight: null,
+            meta: { totalMatches: matches.length, totalPlayers: playerMap.size },
+          };
+        }
+
+        return computeCompositionInsights({ matches, playerMap });
+      } catch (error) {
+        console.error('[COMPOSITION] Failed to compute insights:', error);
+        return {
+          topPairs: [],
+          topDefensivePairs: [],
+          topTrios: [],
+          formationStats: [],
+          topScoringImpact: [],
+          headlineInsight: null,
+          meta: { totalMatches: 0, totalPlayers: 0 },
+        };
+      }
     }),
 });

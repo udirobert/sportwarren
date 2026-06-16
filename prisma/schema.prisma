@@ -700,6 +700,10 @@ model Match {
   peerRatingsClosed  Boolean   @default(false) @map("peer_ratings_closed")
   peerRatingsCloseAt DateTime? @map("peer_ratings_close_at")
 
+  // Formation per side (captured at submission time from SquadTactics)
+  homeFormation String? @map("home_formation") // e.g. "4-4-2", "4-3-3"
+  awayFormation String? @map("away_formation") // e.g. "4-4-2", "4-3-3"
+
   // Relations
   verifications MatchVerification[]
   playerStats   PlayerMatchStats[]
