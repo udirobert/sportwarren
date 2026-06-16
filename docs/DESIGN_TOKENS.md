@@ -31,6 +31,15 @@ Toggled via `.dark` class on `<html>`. All components must support `dark:` varia
 
 ## Typography
 
+### Font Family
+**Primary Font**: [Space Grotesk](https://fonts.google.com/specimen/Space+Grotesk) (variable weight 300–700)
+- Loaded via `next/font/google` in `src/app/layout.tsx` as a CSS variable `--font-space-grotesk`
+- Applied globally via `globals.css`: `font-family: var(--font-space-grotesk), system-ui, sans-serif`
+- Chosen for its geometric, distinctive letterforms — intentionally different from Inter/Arial to avoid "generic AI" aesthetics
+
+**Why not Inter/Segoe/System?**
+Inter and system fonts are overused in AI-generated UIs. Space Grotesk gives a sport-tech character that aligns with the brand. If a specific component needs a different font (e.g., monospace for data), use `font-mono`.
+
 ### Scale (from tailwind.config.js)
 | Name | Size | Line Height | Usage |
 |------|------|-------------|-------|
@@ -89,7 +98,23 @@ PageShell enforces:
 ## Component Patterns
 
 ### Cards
-Use `<Card>` from `src/components/ui/Card` for content sections. Never use Card as page-level wrapper.
+Use `<Card>` from `src/components/ui/Card` for **content sections** with dense information. Never use Card as a page-level wrapper or as the default container for every section.
+
+**Anti-patterns to avoid ("AI slop" guardrails):**
+- ❌ Uniform grids of identical Cards with borders/shadows + white backgrounds
+- ❌ Wrapping every list item, stat, or section in a `<Card>`
+- ❌ Using Card as the default approach for new sections
+
+**Preferred alternatives:**
+- **Stats/metrics**: Use a `stat-ribbon` pattern (gradient background, grid cells with light dividers) instead of a grid of Cards — see the squad page overview tab
+- **List items**: Use `bg-white/[0.02] border border-white/[0.06]` with hover states instead of wrapping each item in `<Card>` — see `SquadMomentsGallery` list items
+- **Empty states**: Use an atmospheric gradient container (`bg-gradient-to-br from-...`) with subtle overlays instead of a `<Card>` wrapper — see `SquadMomentsGallery` empty state
+- **Featured sections**: Use full-width gradient banners with grid overlays instead of Card containers — see the HeroSection on the landing page
+
+**When to use `<Card>`:**
+- Information-dense content panels (forms, detail views, settings)
+- Content that needs clear separation from surrounding elements
+- When the default white/slate-900 background with border is appropriate for the context
 
 ### Loading States
 Every route should have a `loading.tsx` with:

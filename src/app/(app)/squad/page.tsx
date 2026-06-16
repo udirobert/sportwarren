@@ -13,7 +13,8 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {
   Users, Target, ArrowRightLeft, Wallet,
-  Shield, Vote, Activity, Info, UserPlus, CheckCircle2, MessageCircle, Diamond, Settings
+  Shield, Vote, Activity, Info, UserPlus, CheckCircle2, MessageCircle, Diamond, Settings,
+  CalendarDays,
 } from "lucide-react";
 import { useOnboarding } from "@/hooks/useOnboarding";
 import { CreateSquadFlow } from "@/components/squad/CreateSquadFlow";
@@ -24,9 +25,11 @@ import { useTreasury } from "@/hooks/squad/useTreasury";
 import { useTransfers } from "@/hooks/squad/useTransfers";
 import { PendingActionsPanel } from "@/components/operations/PendingActionsPanel";
 import { SquadAutonomySettings } from "@/components/squad/SquadAutonomySettings";
+import { motion } from 'framer-motion';
 import { usePullToRefresh } from "@/hooks/usePullToRefresh";
 import { useSquadDetails } from "@/hooks/squad/useSquad";
 import { useWallet } from "@/contexts/WalletContext";
+import SquadMomentsGallery from "@/components/moments/SquadMomentsGallery";
 import { getJourneyActionGate } from "@/lib/journey/action-gates";
 import { describeMatchForSquad } from "@/lib/match/summary";
 import { useJourneyState } from "@/hooks/useJourneyState";
@@ -39,7 +42,7 @@ import type { AvatarPresentation } from "@/lib/avatar/types";
 import { buildTacticalPlanQuery, parseTacticalPlanSearchParams, tacticalPlanToTactics, type ImportedTacticalPlan } from "@/lib/pitch/tacticalPlan";
 import { trackCoreGrowthEvent, trackFeatureUsed } from "@/lib/analytics";
 
-type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance" | "settings";
+type SquadTab = "overview" | "tactics" | "transfers" | "treasury" | "governance" | "settings" | "moments";
 
 const PLAY_STYLE_LABELS: Record<PlayStyle, string> = {
   balanced: "Balanced",
@@ -635,6 +638,7 @@ export default function SquadPage() {
           { key: 'transfers', label: 'Transfers', icon: ArrowRightLeft },
           { key: 'treasury', label: 'Treasury', icon: Wallet },
           { key: 'governance', label: 'Governance', icon: Vote },
+          { key: 'moments', label: 'Moments', icon: CalendarDays },
           { key: 'settings', label: 'Settings', icon: Settings },
         ].map(({ key, label, icon: Icon }) => (
           <button
@@ -655,223 +659,259 @@ export default function SquadPage() {
       {/* Tab Content */}
       {activeTab === 'overview' && (
         <div className="space-y-6">
-          {/* Quick Stats — moved here so tab bar is near the top on mobile */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="text-center py-3">
-              <div className="text-2xl font-bold text-gray-900">{squadSize}</div>
-              <div className="text-sm text-gray-600">Players</div>
-            </Card>
-            <Card className="text-center py-3">
-              <div className="text-2xl font-bold text-green-600">{squadBalance.toLocaleString()}</div>
-              <div className="text-sm text-gray-600">{squadCurrency} Balance</div>
-            </Card>
-            <Card className="text-center py-3">
-              <div className="text-2xl font-bold text-blue-600">{initialTactics?.formation ?? 'Unset'}</div>
-              <div className="text-sm text-gray-600">Formation</div>
-            </Card>
-            <Card className="text-center py-3">
-              <div className="text-2xl font-bold text-purple-600">{recentRecord.label}</div>
-              <div className="text-sm text-gray-600">Recent Record</div>
-            </Card>
+          {/* Stat Ribbon — broadcast-style metrics bar */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900">
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+            <div className="relative grid grid-cols-2 md:grid-cols-4">
+              <div className="flex flex-col items-center justify-center px-4 py-4 md:py-5 border-r border-b md:border-b-0 border-white/[0.06] last:border-r-0">
+                <span className="text-2xl md:text-3xl font-bold tracking-tight text-white">{squadSize}</span>
+                <span className="mt-0.5 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Players</span>
+              </div>
+              <div className="flex flex-col items-center justify-center px-4 py-4 md:py-5 border-r border-b md:border-b-0 border-white/[0.06] last:border-r-0">
+                <span className="text-2xl md:text-3xl font-bold tracking-tight text-emerald-400">{squadBalance.toLocaleString()}</span>
+                <span className="mt-0.5 text-[11px] font-semibold uppercase tracking-widest text-gray-400">{squadCurrency} Balance</span>
+              </div>
+              <div className="flex flex-col items-center justify-center px-4 py-4 md:py-5 border-r border-white/[0.06] last:border-r-0">
+                <span className="text-2xl md:text-3xl font-bold tracking-tight text-sky-400">{initialTactics?.formation ?? '—'}</span>
+                <span className="mt-0.5 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Formation</span>
+              </div>
+              <div className="flex flex-col items-center justify-center px-4 py-4 md:py-5 border-r border-white/[0.06] last:border-r-0">
+                <span className="text-2xl md:text-3xl font-bold tracking-tight text-amber-400">{recentRecord.label}</span>
+                <span className="mt-0.5 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Recent Form</span>
+              </div>
+            </div>
           </div>
 
           <PendingActionsPanel squadId={activeSquadId} variant="compact" />
 
-          <Card>
-            <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">{activeSquad?.name ?? "Squad Overview"}</h2>
-                <p className="mt-1 text-sm text-gray-600">
-                  Live operating view across squad setup, recent fixtures, treasury movement, and market activity.
-                </p>
-              </div>
-              <div className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-gray-700">
-                {recentMatchesLoading || scoutingFeedLoading ? 'Syncing live data' : 'Live data connected'}
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-4 lg:grid-cols-2">
-              <div className="rounded-2xl border border-gray-200 bg-gray-50/80 p-4">
-                <h3 className="font-semibold text-gray-900">Squad Profile</h3>
-                {leadershipShowcase.length > 0 && (
-                  <div className="mt-4 flex flex-wrap items-center gap-3 rounded-2xl border border-gray-200 bg-white p-3">
-                    {leadershipShowcase.map((member) => {
-                      if (!member) return null;
-                      const avatarPresentation = buildSquadMemberAvatar(member as any);
-
-                      return (
-                        <div key={member.id} className="flex items-center gap-2 rounded-xl bg-gray-50 px-2.5 py-2">
-                          <PlayerAvatar
-                            presentation={avatarPresentation}
-                            size="sm"
-                            showBadge={false}
-                          />
-                          <div className="min-w-0">
-                            <div className="truncate text-xs font-bold text-gray-900">{member.name}</div>
-                            <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                              {member.role === 'captain' ? 'Captain' : 'Vice captain'}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                <dl className="mt-4 space-y-3 text-sm">
-                  <div className="flex items-start justify-between gap-4">
-                    <dt className="text-gray-500">Founded</dt>
-                    <dd className="text-right font-medium text-gray-900">
-                      {activeSquad?.founded
-                        ? formatDateLabel(activeSquad.founded, { month: 'short', year: 'numeric' })
-                        : 'Not available'}
-                    </dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <dt className="text-gray-500">Home ground</dt>
-                    <dd className="text-right font-medium text-gray-900">{activeSquad?.homeGround || 'Not set yet'}</dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <dt className="text-gray-500">Leadership</dt>
-                    <dd className="text-right font-medium text-gray-900">
-                      {captain
-                        ? `${captain.name}${viceCaptains.length > 0 ? ` + ${viceCaptains.length} vice captain${viceCaptains.length > 1 ? 's' : ''}` : ''}`
-                        : 'No captain assigned yet'}
-                    </dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <dt className="text-gray-500">Coverage</dt>
-                    <dd className="text-right font-medium text-gray-900">
-                      {coveredPositions}/5 positions covered{rotationGap > 0 ? ` • ${rotationGap} short of full rotation` : ' • full rotation'}
-                    </dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <dt className="text-gray-500">Recent form</dt>
-                    <dd className="text-right font-medium text-gray-900">{recentRecord.form}</dd>
-                  </div>
-                  <div className="flex items-start justify-between gap-4">
-                    <dt className="text-gray-500">Average level</dt>
-                    <dd className="text-right font-medium text-gray-900">{averageLevel ?? 'Building data'}</dd>
-                  </div>
-                </dl>
-              </div>
-
-              <div className="rounded-2xl border border-gray-200 bg-white p-4">
-                <h3 className="font-semibold text-gray-900">Live Activity</h3>
-                <div className="mt-4 space-y-3">
-                  {overviewEvents.length > 0 ? overviewEvents.map((event) => (
-                    <Link
-                      key={event.id}
-                      href={event.href}
-                      className="block rounded-xl border border-gray-200 px-4 py-3 transition-colors hover:border-blue-200 hover:bg-blue-50/60"
-                    >
-                      <p className="font-medium text-gray-900">{event.title}</p>
-                      <p className="mt-1 text-sm text-gray-600">{event.detail}</p>
-                    </Link>
-                  )) : (
-                    <div className="rounded-xl border border-dashed border-gray-200 px-4 py-6 text-center">
-                      <p className="font-medium text-gray-900">
-                        {recentMatchesLoading ? 'Loading squad activity...' : 'No live squad activity yet'}
-                      </p>
-                      <p className="mt-1 text-sm text-gray-600">
-                        Log a match, move in the market, or use the treasury to start building the squad timeline.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-blue-200 bg-blue-50/80 p-4">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          {/* Squad Profile + Live Activity — atmospheric two-col panel */}
+          <div className="relative overflow-hidden rounded-2xl border border-white/[0.06] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(99,102,241,0.06)_0%,transparent_60%)]" />
+            <div className="relative">
+              {/* Panel header */}
+              <div className="flex flex-col gap-3 border-b border-white/[0.06] px-5 py-4 md:flex-row md:items-center md:justify-between">
                 <div>
-                  <div className="flex items-center gap-2 text-blue-900">
-                    <UserPlus className="w-4 h-4" />
-                    <h3 className="font-semibold">Invite teammates before kickoff</h3>
-                  </div>
-                  <p className="mt-1 text-sm text-blue-800">
-                    Share the squad invite so players can connect a wallet, join the squad, and make tonight&apos;s result count toward their record.
+                  <h2 className="text-lg font-bold tracking-tight text-white">{activeSquad?.name ?? "Squad Overview"}</h2>
+                  <p className="mt-0.5 text-sm text-gray-400">
+                    Squad profile, recent fixtures, and live activity
                   </p>
                 </div>
-                <div className="flex items-center gap-3">
-                  <Button size="sm" variant="secondary" onClick={handleShareSquadInvite}>
-                    {inviteShareState === "shared"
-                      ? "Invite Shared"
-                      : inviteShareState === "copied"
-                        ? "Invite Copied"
-                        : "Copy Invite Link"}
-                  </Button>
-                  {inviteShareState === "copied" && (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-700">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      Ready for Chat Share                    </span>
-                  )}
+                <div className="inline-flex items-center rounded-full bg-white/[0.06] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400">
+                  {recentMatchesLoading || scoutingFeedLoading ? 'Syncing' : 'Live'}
                 </div>
               </div>
-              {inviteShareState === "error" && (
-                <p className="mt-2 text-xs text-red-600">
-                  We couldn&apos;t copy the squad invite on this device. Try again from a browser with clipboard access.
-                </p>
-              )}
+
+              {/* Two-column content */}
+              <div className="grid gap-px bg-white/[0.06] lg:grid-cols-2">
+                {/* Squad Profile */}
+                <div className="bg-gray-900 p-5">
+                  <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Squad Profile</h3>
+                  {leadershipShowcase.length > 0 && (
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {leadershipShowcase.map((member) => {
+                        if (!member) return null;
+                        const avatarPresentation = buildSquadMemberAvatar(member as any);
+                        return (
+                          <div key={member.id} className="flex items-center gap-2 rounded-xl bg-white/[0.06] px-2.5 py-2 border border-white/[0.06]">
+                            <PlayerAvatar
+                              presentation={avatarPresentation}
+                              size="sm"
+                              showBadge={false}
+                            />
+                            <div className="min-w-0">
+                              <div className="truncate text-xs font-bold text-white">{member.name}</div>
+                              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                                {member.role === 'captain' ? 'Captain' : 'Vice captain'}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <dl className="mt-4 space-y-2.5 text-sm">
+                    {[
+                      { label: 'Founded', value: activeSquad?.founded ? formatDateLabel(activeSquad.founded, { month: 'short', year: 'numeric' }) : 'Not available' },
+                      { label: 'Home ground', value: activeSquad?.homeGround || 'Not set yet' },
+                      { label: 'Leadership', value: captain ? `${captain.name}${viceCaptains.length > 0 ? ` + ${viceCaptains.length} vice captain${viceCaptains.length > 1 ? 's' : ''}` : ''}` : 'No captain assigned yet' },
+                      { label: 'Coverage', value: `${coveredPositions}/5 positions covered${rotationGap > 0 ? ` • ${rotationGap} short of full rotation` : ' • full rotation'}` },
+                      { label: 'Form', value: recentRecord.form },
+                      { label: 'Avg. Level', value: averageLevel ?? 'Building data' },
+                    ].map(({ label, value }) => (
+                      <div key={label} className="flex items-start justify-between gap-4">
+                        <dt className="text-gray-500">{label}</dt>
+                        <dd className="text-right font-medium text-white">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </div>
+
+                {/* Live Activity */}
+                <div className="bg-gray-900 p-5">
+                  <h3 className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Live Activity</h3>
+                  <div className="mt-3 space-y-2">
+                    {overviewEvents.length > 0 ? overviewEvents.map((event) => (
+                      <Link
+                        key={event.id}
+                        href={event.href}
+                        className="block rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 transition-all hover:border-indigo-500/30 hover:bg-indigo-500/5"
+                      >
+                        <p className="text-sm font-bold text-white">{event.title}</p>
+                        <p className="mt-0.5 text-xs text-gray-400">{event.detail}</p>
+                      </Link>
+                    )) : (
+                      <div className="rounded-xl border border-dashed border-white/[0.06] px-4 py-6 text-center">
+                        <p className="text-sm font-semibold text-gray-300">
+                          {recentMatchesLoading ? 'Loading squad activity...' : 'No live squad activity yet'}
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Log a match, move in the market, or use the treasury to start building the timeline.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Invite section — attached at the bottom */}
+              <div className="border-t border-white/[0.06] bg-indigo-950/30 px-5 py-4">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2 text-indigo-300">
+                      <UserPlus className="w-4 h-4" />
+                      <h3 className="text-sm font-bold">Invite teammates before kickoff</h3>
+                    </div>
+                    <p className="mt-0.5 text-xs text-indigo-400/80">
+                      Share the invite so players can connect a wallet and make tonight&apos;s result count toward their record.
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Button size="sm" variant="secondary" className="bg-white/[0.08] text-white hover:bg-white/[0.12] border-white/[0.12]" onClick={handleShareSquadInvite}>
+                      {inviteShareState === "shared"
+                        ? "Invite Shared"
+                        : inviteShareState === "copied"
+                          ? "Invite Copied"
+                          : "Copy Invite Link"}
+                    </Button>
+                    {inviteShareState === "copied" && (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-300">
+                        <CheckCircle2 className="w-3 h-3" />
+                        Ready for chat share
+                      </span>
+                    )}
+                  </div>
+                </div>
+                {inviteShareState === "error" && (
+                  <p className="mt-2 text-[10px] text-red-400">
+                    Couldn&apos;t copy the squad invite on this device. Try again from a browser with clipboard access.
+                  </p>
+                )}
+              </div>
             </div>
-          </Card>
-
-          <div className="grid md:grid-cols-2 gap-6">
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('tactics')}>
-              <div className="flex items-center space-x-3 mb-3">
-                <Target className="w-6 h-6 text-green-600" />
-                <h3 className="font-semibold text-gray-900">Current Tactics</h3>
-              </div>
-              <p className="text-gray-600">Formation: {initialTactics?.formation ?? 'Not saved yet'}</p>
-              <p className="text-gray-600">Style: {initialTactics ? PLAY_STYLE_LABELS[initialTactics.style] : 'Choose a play style'}</p>
-              <p className="text-gray-600">{lineupSlots > 0 ? `${lineupSlots} lineup slots assigned` : 'No lineup saved yet'}</p>
-              <Button variant="outline" className="mt-4 w-full">
-                Edit Tactics
-              </Button>
-            </Card>
-
-            <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setActiveTab('transfers')}>
-              <div className="flex items-center space-x-3 mb-3">
-                <ArrowRightLeft className="w-6 h-6 text-blue-600" />
-                <h3 className="font-semibold text-gray-900">Market Pulse</h3>
-              </div>
-              <p className="text-gray-600">Incoming offers: {transfersState.incomingOffers.length}</p>
-              <p className="text-gray-600">Live squad targets: {scoutingFeed?.listings.length ?? 0}</p>
-              <p className="text-gray-600">
-                {missingPositions.length > 0
-                  ? `Priority: add ${missingPositions.join(', ')} depth`
-                  : `Priority: upgrade quality across ${activeOffers} active market thread${activeOffers === 1 ? '' : 's'}`}
-              </p>
-              <Button variant="outline" className="mt-4 w-full">
-                Open Market
-              </Button>
-            </Card>
           </div>
 
-          <Card>
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <div className="mb-2 flex items-center space-x-3">
-                  <Activity className="w-6 h-6 text-emerald-600" />
-                  <h3 className="font-semibold text-gray-900">Match Operations</h3>
+          {/* CTA tiles — Tactics + Market Pulse with staggered entrance */}
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{ visible: { transition: { staggerChildren: 0.1 } } }}
+            className="grid md:grid-cols-2 gap-4"
+          >
+            <motion.button
+              variants={{
+                hidden: { opacity: 0, y: 16 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+              }}
+              onClick={() => setActiveTab('tactics')}
+              className="group relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/40 via-gray-900 to-gray-900 p-5 text-left transition-all hover:border-emerald-500/40 hover:from-emerald-950/60 active:scale-[0.99]"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(52,211,153,0.06)_0%,transparent_60%)]" />
+              <div className="relative">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <Target className="w-5 h-5 text-emerald-400" />
                 </div>
-                <p className="text-gray-600">
-                  {pendingReviewCount > 0
-                    ? `${pendingReviewCount} match ${pendingReviewCount === 1 ? 'is' : 'are'} waiting for review.`
-                    : 'No matches are waiting for review right now.'} {settledRecentMatches.length > 0
-                    ? `${settledRecentMatches.length} recent verified result${settledRecentMatches.length === 1 ? '' : 's'} are already shaping squad form.`
-                    : 'Log your next result to start building the live performance record.'}
-                </p>
+                <h3 className="text-base font-bold text-white group-hover:text-emerald-300 transition-colors">Current Tactics</h3>
+                <div className="mt-2 space-y-1">
+                  <p className="text-sm text-gray-400">Formation: <span className="font-semibold text-gray-200">{initialTactics?.formation ?? 'Not saved'}</span></p>
+                  <p className="text-sm text-gray-400">Style: <span className="font-semibold text-gray-200">{initialTactics ? PLAY_STYLE_LABELS[initialTactics.style] : 'Choose'}</span></p>
+                  <p className="text-sm text-gray-400">{lineupSlots > 0 ? `${lineupSlots} lineup slots assigned` : 'No lineup saved yet'}</p>
+                </div>
+                <div className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-400 transition-colors group-hover:bg-emerald-500/20">
+                  Edit Tactics
+                  <span className="text-emerald-500 transition-transform group-hover:translate-x-0.5">→</span>
+                </div>
               </div>
-              <div className="flex gap-3">
+            </motion.button>
+
+            <motion.button
+              variants={{
+                hidden: { opacity: 0, y: 16 },
+                visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+              }}
+              onClick={() => setActiveTab('transfers')}
+              className="group relative overflow-hidden rounded-2xl border border-sky-500/20 bg-gradient-to-br from-sky-950/40 via-gray-900 to-gray-900 p-5 text-left transition-all hover:border-sky-500/40 hover:from-sky-950/60 active:scale-[0.99]"
+            >
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,rgba(14,165,233,0.06)_0%,transparent_60%)]" />
+              <div className="relative">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500/10 border border-sky-500/20">
+                  <ArrowRightLeft className="w-5 h-5 text-sky-400" />
+                </div>
+                <h3 className="text-base font-bold text-white group-hover:text-sky-300 transition-colors">Market Pulse</h3>
+                <div className="mt-2 space-y-1">
+                  <p className="text-sm text-gray-400">Incoming offers: <span className="font-semibold text-gray-200">{transfersState.incomingOffers.length}</span></p>
+                  <p className="text-sm text-gray-400">Live targets: <span className="font-semibold text-gray-200">{scoutingFeed?.listings.length ?? 0}</span></p>
+                  <p className="text-sm text-gray-400">
+                    {missingPositions.length > 0
+                      ? `Priority: add ${missingPositions.join(', ')} depth`
+                      : `${activeOffers} active market thread${activeOffers === 1 ? '' : 's'}`}
+                  </p>
+                </div>
+                <div className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-sky-500/10 px-3 py-1.5 text-xs font-bold text-sky-400 transition-colors group-hover:bg-sky-500/20">
+                  Open Market
+                  <span className="text-sky-500 transition-transform group-hover:translate-x-0.5">→</span>
+                </div>
+              </div>
+            </motion.button>
+          </motion.div>
+
+          {/* Match Operations — action ribbon with delayed entrance */}
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4, ease: 'easeOut', delay: 0.25 }}
+            className="relative overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-r from-emerald-950/40 via-gray-900 to-gray-900"
+          >
+            <div className="absolute inset-0 bg-[linear-gradient(rgba(52,211,153,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(52,211,153,0.03)_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+            <div className="relative flex flex-col gap-4 px-5 py-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                  <Activity className="w-4 h-4 text-emerald-400" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white">Match Operations</h3>
+                  <p className="mt-0.5 text-sm text-gray-400 max-w-xl">
+                    {pendingReviewCount > 0
+                      ? `${pendingReviewCount} match${pendingReviewCount === 1 ? '' : 'es'} waiting for review.`
+                      : 'No matches waiting for review.'} {settledRecentMatches.length > 0
+                      ? `${settledRecentMatches.length} recent verified result${settledRecentMatches.length === 1 ? '' : 's'} shaping form.`
+                      : 'Log your next result to start building the live record.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-2 shrink-0">
                 <Link href="/match?mode=verify">
-                  <Button variant="outline">Review Matches</Button>
+                  <Button size="sm" variant="secondary" className="bg-white/[0.08] text-white hover:bg-white/[0.12] border-white/[0.12]">
+                    Review Matches
+                  </Button>
                 </Link>
                 <Link href="/match?mode=capture">
-                  <Button>Open Match Center</Button>
+                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white">
+                    Match Center
+                  </Button>
                 </Link>
               </div>
             </div>
-          </Card>
+          </motion.div>
         </div>
       )}
 
@@ -944,6 +984,10 @@ export default function SquadPage() {
         ) : (
           <SquadDAO />
         )
+      )}
+
+      {activeTab === 'moments' && (
+        <SquadMomentsGallery subjectType="squad" subjectId={activeSquadId ?? ''} />
       )}
 
       {activeTab === 'settings' && (

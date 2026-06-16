@@ -3,6 +3,7 @@
 import React from 'react';
 import { trpc } from '@/lib/trpc-client';
 import { PlayerIdentityCard } from '@/components/identity/PlayerIdentityCard';
+import SquadMomentsGallery from '@/components/moments/SquadMomentsGallery';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 function ProfileSkeleton() {
@@ -60,8 +61,12 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto p-4">
+    <div className="max-w-lg mx-auto p-4 space-y-6">
       <PlayerIdentityCard identity={identity} />
+
+      {identity.skin.profileId && (
+        <SquadMomentsGallery subjectType="player" subjectId={identity.skin.profileId} />
+      )}
     </div>
   );
 }

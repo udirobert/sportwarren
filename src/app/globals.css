@@ -1,8 +1,6 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities;
-
-/* Design Tokens - Single Source of Truth */
+@tailwind utilities;/* Design Tokens - Single Source of Truth */
 @layer base {
   :root {
     /* ── Design Token Variables ────────────────────────────── */
@@ -72,6 +70,7 @@
     /* Use dvh on mobile to account for browser chrome */
     min-height: 100vh;
     min-height: 100dvh;
+    font-family: var(--font-space-grotesk), system-ui, sans-serif;
   }
 
   body {
