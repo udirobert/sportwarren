@@ -520,6 +520,7 @@ export async function submitMatchResult({
 /**
  * Ensures PlayerMatchStats exist for all squad members for a match.
  * Default to 90 mins, 0 goals, 0 assists (participation).
+ * Sets teamSide to 'home' or 'away' based on which squad the player belongs to.
  */
 export async function ensureMatchParticipationStats(
   prisma: PrismaClient,
@@ -538,33 +539,60 @@ export async function ensureMatchParticipationStats(
   // This prevents overwriting manual CRE/Capture entries if they did exist
   if (match.playerStats.length > 0) return;
 
-  const members = await prisma.squadMember.findMany({
-    where: {
-      squadId: { in: [match.homeSquadId, match.awaySquadId] },
-    },
-    include: {
-      user: {
-        include: { playerProfile: { select: { id: true } } },
+  // Fetch home and away members separately to track which side each player was on
+  const [homeMembers, awayMembers] = await Promise.all([
+    prisma.squadMember.findMany({
+      where: { squadId: match.homeSquadId },
+      include: {
+        user: {
+          include: { playerProfile: { select: { id: true } } },
+        },
       },
-    },
-  });
+    }),
+    prisma.squadMember.findMany({
+      where: { squadId: match.awaySquadId },
+      include: {
+        user: {
+          include: { playerProfile: { select: { id: true } } },
+        },
+      },
+    }),
+  ]);
 
-  const profilesToSeed = members
+  const homeProfiles = homeMembers
     .filter((m) => m.user?.playerProfile?.id)
     .map((m) => m.user.playerProfile!.id);
 
-  if (profilesToSeed.length === 0) return;
+  const awayProfiles = awayMembers
+    .filter((m) => m.user?.playerProfile?.id)
+    .map((m) => m.user.playerProfile!.id);
 
-  // Bulk create participation stats
-  await prisma.playerMatchStats.createMany({
-    data: profilesToSeed.map((profileId) => ({
+  if (homeProfiles.length === 0 && awayProfiles.length === 0) return;
+
+  // Bulk create participation stats with teamSide tracking
+  const statsData = [
+    ...homeProfiles.map((profileId) => ({
       matchId,
       profileId,
+      teamSide: 'home' as const,
       minutesPlayed: 90,
       goals: 0,
       assists: 0,
       cleanSheet: false,
     })),
+    ...awayProfiles.map((profileId) => ({
+      matchId,
+      profileId,
+      teamSide: 'away' as const,
+      minutesPlayed: 90,
+      goals: 0,
+      assists: 0,
+      cleanSheet: false,
+    })),
+  ];
+
+  await prisma.playerMatchStats.createMany({
+    data: statsData,
     skipDuplicates: true,
   });
 }

@@ -11,6 +11,7 @@ import { generateTacticalInsights } from '../../lib/ai/tactical-insights';
 import { identityService } from '../services/personalization/identity';
 import { verifyShareClaimToken } from '../services/tactical-claim-token';
 import { resolveEnsWithFallback } from '../services/ens-resolver';
+import { computePlayerRivalries, computePlayerDuos } from '../services/squad/player-head-to-head';
 
 const AttributeType = z.enum([
   'pace', 'shooting', 'passing', 'dribbling', 'defending', 'physical',
@@ -1172,6 +1173,48 @@ export const playerRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to fetch recent match reaction',
+          cause: error,
+        });
+      }
+    }),
+
+  // ── Player Head-to-Head ────────────────────────────────────────────────
+
+  /**
+   * Get rivalries for a player — opponents they've faced across all matches.
+   * Sorted by intensity (matches × competitiveness).
+   */
+  getRivalries: publicProcedure
+    .input(z.object({
+      profileId: z.string().min(1, 'Profile ID is required'),
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await computePlayerRivalries(ctx.prisma, input.profileId);
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to compute rivalries',
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Get best duos for a player — teammates they've played with across all matches.
+   * Sorted by win rate descending, minimum 3 matches together.
+   */
+  getDuos: publicProcedure
+    .input(z.object({
+      profileId: z.string().min(1, 'Profile ID is required'),
+    }))
+    .query(async ({ ctx, input }) => {
+      try {
+        return await computePlayerDuos(ctx.prisma, input.profileId);
+      } catch (error) {
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to compute duos',
           cause: error,
         });
       }
