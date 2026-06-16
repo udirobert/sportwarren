@@ -109,8 +109,9 @@ Avatar upload available during personalization step
 SportWarren uses a **persona-first** onboarding that prioritizes the formation playground as the primary conversion surface.
 
 ### Flow Stages
-1. **Landing** — Hero section with FormationPlayground, value prop grid
-2. **Squad Creation** — Create or join a squad (soft wallet gate)
+1. **Landing** — Hero section with FormationPlayground, value prop grid, and Import CTA
+2. **Squad Creation or Import** — Create/join a squad manually (soft wallet gate), or
+   import an existing squad from a CSV/TSV spreadsheet (captain-first flow)
 3. **Formation Setup** — Set tactical preferences (pre-fill from claim context if applicable)
 4. **Avatar Upload** — Optional photo upload (stored in PendingPersonaContext)
 5. **Personalization** — FIFA-style attribute selection
@@ -119,6 +120,7 @@ SportWarren uses a **persona-first** onboarding that prioritizes the formation p
 ### Key Components
 - `OnboardingFlow` — Multi-step wizard with progress indicator
 - `SquadCreationModal` — Create/join squad inline
+- `SquadImportWizard` — 5-step CSV import wizard (upload, column mapping, review, confirm, invite links)
 - `PendingPersonaContext` — Stores avatar + preferences in localStorage (24h TTL)
 - `PendingClaimContext` — Bridges anonymous claim to authenticated profile
 - `AdaptiveDashboard` — Persona-aware dashboard (NewUserDashboard vs. returning user)
@@ -152,9 +154,9 @@ Match verification settlement uses Yellow as the operational payment rail.
 
 | Route | Purpose |
 |-------|---------|
-| `/` | Landing page with FormationPlayground |
+| `/` | Landing page with FormationPlayground + Import CTA |
 | `/play/[slug]` | Claim formation position (viral entry) |
-| `/join/[squadId]` | Join squad from invite |
+| `/join/[squadId]` | Join squad from invite or claim imported spot (`?player=` param) |
 | `/match` | Match center (logging, history) |
 | `/match/preview` | Pre-match AI briefing |
 | `/match/[id]/rate` | Peer rating interface |

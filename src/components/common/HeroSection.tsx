@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Trophy, Zap, Users, Target, Sparkles, ArrowRight, CheckCircle2, Timer } from 'lucide-react';
+import { Trophy, Zap, Users, Target, Sparkles, ArrowRight, CheckCircle2, Timer, FileSpreadsheet } from 'lucide-react';
 import Link from 'next/link';
 import { useWallet } from '@/contexts/WalletContext';
 import { getJourneyContent } from '@/lib/journey/content';
@@ -20,6 +20,7 @@ import { LandingFooter } from '@/components/landing/LandingFooter';
 import { ShareLinks } from '@/components/common/ShareLinks';
 import { usePlatform } from '@/hooks/usePlatform';
 import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
+import SquadImportWizard from '@/components/import/SquadImportWizard';
 import type { PlayerPosition } from '@/types';
 
 interface HeroSectionProps {
@@ -266,6 +267,26 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
               </button>
             )}
+
+          {/* Captain import CTA — second entry path for squad leaders
+              who already have a roster in a spreadsheet. Low-emphasis so
+              the primary funnel (build card → personalize) stays dominant. */}
+          <p className="mt-3 text-center">
+            <button
+              onClick={() => {
+                // Scroll to the import wizard section or open modal
+                const el = document.getElementById('squad-import-wizard');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              className="group inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4 decoration-gray-700 hover:decoration-gray-400 transition-colors"
+            >
+              <FileSpreadsheet className="w-3 h-3" />
+              Already have a squad?
+              <span className="font-bold text-emerald-400 group-hover:text-emerald-300">Import your roster</span>
+            </button>
+          </p>
           </div>
 
           {journeyContent.hero.stageLine && (
@@ -472,6 +493,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
           </div>
         </div>
       </section>
+
+      {/* Captain import wizard — hidden section revealed by the "Import your roster" CTA */}
+      <div id="squad-import-wizard" className="scroll-mt-20">
+        <section className="py-16 sm:py-24">
+          <div className="mx-auto max-w-lg px-4">
+            <SquadImportWizard />
+          </div>
+        </section>
+      </div>
 
       <ProblemSection />
       <SolutionSection />

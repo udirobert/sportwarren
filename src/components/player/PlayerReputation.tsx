@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ChainLabel } from '@/components/common/ChainLabel';
 import Link from 'next/link';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
@@ -12,7 +11,7 @@ import { FormIndicator, FormBadge } from './FormIndicator';
 import type { PlayerAttributes as PlayerReputationData } from '@/types';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
 import { buildAvatarPresentationFromPlayerAttributes } from '@/lib/avatar/adapters';
-import { KiteVerificationBadge } from '@/components/ui/KiteVerificationBadge';
+import { VerifiedRecordBadge } from '@/components/ui/VerifiedRecordBadge';
 import { AttestationTimeline } from '@/components/ui/AttestationTimeline';
 import { SoccerLoader } from '@/components/ui/SoccerLoader';
 import { TacticalSpend } from './TacticalSpend';
@@ -138,10 +137,10 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
                   {attributesToUse.verifiedStats && (
                     <CheckCircle className="w-5 h-5 text-green-600" />
                   )}
-                  {attributesToUse.kitePassport && (
-                    <KiteVerificationBadge 
-                      passportId={attributesToUse.kitePassport.passportId} 
-                      verified={attributesToUse.kitePassport.verified}
+                  {attributesToUse.onchainRecord && (
+                    <VerifiedRecordBadge 
+                      agentId={attributesToUse.onchainRecord.agentId} 
+                      verified={attributesToUse.onchainRecord.verified}
                       onPing={handlePingTwin}
                     />
                   )}
@@ -283,27 +282,22 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
             <Card>
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
+              <div className="flex items-center justify-between mb-6">                  <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                     <History className="w-5 h-5 text-emerald-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">Agentic History</h3>
-                    <p className="text-xs text-gray-500">Cryptographically verifiable on-chain attestations</p>
+                    <h3 className="text-lg font-bold text-gray-900">Verified History</h3>
+                    <p className="text-xs text-gray-500">Every match, rating, and moment is permanently recorded</p>
                   </div>
                 </div>
-                <button className="text-[10px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-700 transition-colors flex items-center gap-1">
-                  <Zap className="w-3 h-3" />
-                  Scan <ChainLabel chain="kite" />
-                </button>
               </div>
 
               <AttestationTimeline 
-                attestations={attributesToUse.kitePassport?.attestations || []} 
+                attestations={attributesToUse.onchainRecord?.attestations || []} 
                 marcusCommentary={attributesToUse.reputationScore > 500 ? 
-                  "Your twin's on-chain data is impeccable. I've authorized higher x402 limits for your autonomous scouting sessions." : 
-                  "We're seeing solid baseline data, but I want to see more consistent performance verification before we scale your agent's budget."
+                  "Strong verification history. Your record is building well — keep logging matches and the data gets richer." : 
+                  "Good baseline data. Consistent match logging will build a stronger picture of your game over time."
                 }
               />
             </Card>
@@ -312,8 +306,8 @@ export const PlayerReputation: React.FC<PlayerReputationProps> = ({
           <div className="space-y-6">
             {/* Tactical Spend (x402 Budget Management) */}
             <TacticalSpend 
-              currentBudget={attributesToUse.kitePassport?.weeklyBudgetUsdc || 5}
-              spentThisWeek={attributesToUse.kitePassport?.spentUsdc || 0}
+              currentBudget={attributesToUse.onchainRecord?.weeklyBudgetUsdc || 5}
+              spentThisWeek={attributesToUse.onchainRecord?.spentUsdc || 0}
               onUpdateBudget={handleUpdateBudget}
             />
 

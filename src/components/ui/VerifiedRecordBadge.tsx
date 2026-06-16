@@ -1,22 +1,21 @@
 import React, { useState } from 'react';
 import { ShieldCheck, Info, Zap, Loader2 } from 'lucide-react';
-import { ChainLabel } from '@/components/common/ChainLabel';
 
-interface KiteVerificationBadgeProps {
+interface VerifiedRecordBadgeProps {
   verified?: boolean;
-  passportId?: string;
+  agentId?: string;
   className?: string;
   onPing?: () => Promise<void>;
 }
 
 /**
- * KiteVerificationBadge - Displays the verification status of an AI Agent on the Kite Chain.
- * High-signal indicator for the Kites Hackathon.
- * Now includes a "Ping" action for Proof of Liveness.
+ * VerifiedRecordBadge — Shows that a player's match record is
+ * permanently anchored and verified. The on-chain infrastructure
+ * is invisible; the badge just communicates trust.
  */
-export const KiteVerificationBadge: React.FC<KiteVerificationBadgeProps> = ({
+export const VerifiedRecordBadge: React.FC<VerifiedRecordBadgeProps> = ({
   verified = true,
-  passportId,
+  agentId,
   className = "",
   onPing,
 }) => {
@@ -47,7 +46,7 @@ export const KiteVerificationBadge: React.FC<KiteVerificationBadgeProps> = ({
       </div>
       
       <span className="text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-        Kite Verified {passportId && <span className="opacity-40 ml-1">#{passportId}</span>}
+        Verified Record {agentId && <span className="opacity-40 ml-1">#{agentId}</span>}
       </span>
 
       {onPing && (
@@ -55,7 +54,7 @@ export const KiteVerificationBadge: React.FC<KiteVerificationBadgeProps> = ({
           onClick={handlePing}
           disabled={isPinging}
           className="ml-1 pl-1.5 border-l border-emerald-500/20 text-emerald-500 hover:text-emerald-400 disabled:opacity-50 transition-colors"
-          title="Proof of Liveness Check"
+          title="Check record status"
         >
           {isPinging ? (
             <Loader2 className="w-3 h-3 animate-spin" />
@@ -70,19 +69,15 @@ export const KiteVerificationBadge: React.FC<KiteVerificationBadgeProps> = ({
         <div className="flex items-start gap-2">
           <Info className="w-3 h-3 text-emerald-400 shrink-0 mt-0.5" />
           <p className="leading-tight">
-            This agent identity is anchored on the <span className="text-emerald-400 font-bold"><ChainLabel chain="kite" /></span>. All actions are cryptographically signed and verifiable.
+            This player's match record is permanently anchored. Every result, rating, and moment is independently verifiable.
           </p>
         </div>
         {lastPing && (
           <div className="mt-1.5 px-2 py-1 rounded bg-emerald-500/10 text-emerald-400 flex items-center gap-1.5">
             <Zap className="w-2.5 h-2.5" />
-            <span>Last liveness check: {lastPing}</span>
+            <span>Last verified: {lastPing}</span>
           </div>
         )}
-        <div className="mt-1.5 pt-1.5 border-t border-white/10 flex justify-between items-center text-[8px] font-mono">
-          <span className="opacity-60 text-emerald-300">KITE PASSPORT</span>
-          <span className="font-bold">0x...{passportId?.slice(-4) || 'ACTIVE'}</span>
-        </div>
         <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-gray-900"></div>
       </div>
     </div>

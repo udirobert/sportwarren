@@ -27,19 +27,39 @@ User lands on hero section with embedded FormationPlayground.
 - Hero headline: "Every match leaves a mark"
 - FormationPlayground (interactive, no auth required)
 - Value prop grid: XP, Attributes, Seasons, Squad Twin
-- CTA: "Start Building Your Squad"
+- Primary CTA: "Start Building Your Squad"
+- Secondary CTA: "Already have a squad? Import your roster" (scrolls to import wizard)
 
-**Conversion:** User clicks CTA → proceeds to squad creation
+**Conversion:** User clicks primary CTA → proceeds to squad creation; clicks import CTA → proceeds to import wizard
 
 ---
 
-### Stage 2: Squad Creation
+### Stage 2: Squad Creation or Import
+
+Users can either create a squad manually or import one from a spreadsheet.
+
+#### Option A: Manual Squad Creation
 **Component:** `SquadCreationModal`
 
 **Options:**
 - **Create Squad** — Enter squad name, create new squad
 - **Join Squad** — Enter invite code or search
 - **Skip for now** — Continue without squad (soft gate)
+
+#### Option B: Spreadsheet Import
+**Component:** `SquadImportWizard`
+
+A 5-step wizard that converts an existing CSV/TSV roster into a fully-initialized squad:
+1. **Upload** — Upload a file or paste tabular data
+2. **Column Mapping** — Auto-detected columns (name, position, goals, assists, matches played), user-adjustable
+3. **Preview & Name** — Review detected players, name the squad
+4. **Confirm** — Summary with player count, stats columns, auth guard
+5. **Complete** — Squad created, invite links generated (copy-all, CSV download, WhatsApp/Telegram share)
+
+**Optional match-history import** (after squad creation):
+- Upload a separate CSV with match results (date, opponent, goals for/against)
+- Each row becomes a Moment (kind: `match_imported`) in the squad's gallery
+- Label format: "W 4-2 vs North London FC"
 
 **Soft Wallet Gate:**
 - Squad invites work without wallet connection
@@ -91,6 +111,21 @@ User lands on hero section with embedded FormationPlayground.
 - `PendingClaimContext` consumed for pre-filled squad/position
 - Both contexts cleared after successful profile creation
 
+**Import Claim Flow** (teammate claiming their spot from an import):
+```
+Captain imports squad → share invite link (?player=<name>)
+    ↓
+Teammate opens /join/[squadId]?player=<name>
+    ↓
+GET /api/import/claim/[squadId]?player=<name>
+    ↓
+Claim card shows player name, position, 'Claim my spot' button
+    ↓
+POST /api/import/claim/[squadId]  (transfers SquadMember + context from placeholder)
+    ↓
+Success → redirect to dashboard or squad page
+```
+
 ---
 
 ### Stage 6: Dashboard
@@ -115,6 +150,7 @@ User lands on hero section with embedded FormationPlayground.
 |-----------|---------|
 | `OnboardingFlow` | Multi-step wizard with progress indicator |
 | `SquadCreationModal` | Create/join squad inline |
+| `SquadImportWizard` | 5-step CSV import wizard (upload, mapping, preview, confirm, complete) + optional match-history sub-wizard |
 | `PendingPersonaContext` | Stores avatar + preferences in localStorage |
 | `PendingClaimContext` | Bridges anonymous claim to authenticated profile |
 | `AdaptiveDashboard` | Persona-aware dashboard switching |
@@ -126,7 +162,7 @@ User lands on hero section with embedded FormationPlayground.
 
 ## Context Flows
 
-### Claim Flow
+### Formation Claim Flow
 ```
 /play/[slug] → ClaimablePitch → teammate claims position
     ↓
@@ -140,6 +176,36 @@ Profile created with claimed role
     ↓
 Context cleared
 ```
+
+### Import Claim Flow
+```
+Captain shares /join/[squadId]?player=<name>
+    ↓
+Teammate opens link → page detects `?player=` param
+    ↓
+Fetches pending player info (name, position, isPlaceholder)
+    ↓
+Claim card renders with player details + 'Claim my spot' button
+    ↓
+POST claim API → one tx: transfer SquadMember + SquadPlayerContext,
+    update user name/position, delete placeholder user
+    ↓
+Success → redirect to squad dashboard
+```
+
+### Import Match-History Flow
+```
+Squad created via import → 'Import match history' CTA in complete step
+    ↓
+Upload CSV (date, opponent, goals for/against, optional: competition, venue)
+    ↓
+Auto-detect columns, preview, confirm
+    ↓
+POST /api/import/matches/[squadId]
+    ↓
+Creates Moment rows (kind: 'match_imported') with createdAt = match date
+    ↓
+Moments appear in squad gallery (rendered by moment-render cron)
 
 ### Avatar Flow
 ```

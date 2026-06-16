@@ -18,6 +18,7 @@ import {
   Plus,
   CheckCircle2,
   Share2,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useUserPreferences } from "@/hooks/useUserPreferences";
 import { useWallet } from "@/contexts/WalletContext";
@@ -58,6 +59,7 @@ import {
   VERIFIED_DELTAS,
 } from "@/lib/attributes/provisional";
 import { FORMATIONS } from "@/lib/formations";
+import SquadImportWizard from "@/components/import/SquadImportWizard";
 
 const FORMATION_OPTIONS = [
   {
@@ -178,7 +180,11 @@ export function OnboardingFlow({
   const [nickname, setNickname] = useState<string>(
     preferences.squadBranding?.nickname || "",
   );
+  const [showImportWizard, setShowImportWizard] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
+  const skipBrandStep =
+    journeyStage !== "season_kickoff" &&
+    journeyStage !== "returning_manager";
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const updateProfile = trpc.player.updateProfile.useMutation();
@@ -458,6 +464,19 @@ export function OnboardingFlow({
 
   // Personalization card
   if (phase === "personalize") {
+    if (showImportWizard) {
+      return (
+        <>
+          <div className="max-w-lg mx-auto mt-8">
+            <SquadImportWizard
+              onComplete={handleCompletePersonalization}
+              onClose={() => setShowImportWizard(false)}
+            />
+          </div>
+        </>
+      );
+    }
+
     return (
       <>
         <PersonalizationCard
@@ -481,10 +500,8 @@ export function OnboardingFlow({
           hasPendingPersona={hasPendingPersona}
           pendingClaimPosition={pendingClaimPosition}
           completeChecklistItem={completeChecklistItem}
-          skipBrandStep={
-            journeyStage !== "season_kickoff" &&
-            journeyStage !== "returning_manager"
-          }
+          skipBrandStep={skipBrandStep}
+          onStartImport={() => setShowImportWizard(true)}
         />
         <ConfettiOverlay />
       </>
@@ -661,6 +678,7 @@ interface PersonalizationCardProps {
   pendingClaimPosition?: PlayerPosition | null;
   completeChecklistItem?: (id: ChecklistId) => void;
   skipBrandStep?: boolean;
+  onStartImport?: () => void;
 }
 
 function PersonalizationCard({
@@ -685,6 +703,7 @@ function PersonalizationCard({
   pendingClaimPosition,
   completeChecklistItem,
   skipBrandStep,
+  onStartImport,
 }: PersonalizationCardProps) {
   const [matchResult, setMatchResult] = useState<
     "won" | "drew" | "lost" | null
@@ -866,6 +885,25 @@ function PersonalizationCard({
       })()}
 
       <div className="p-8">
+        {/* Import squad toggle — visible at the top of personalization
+            for captains who already have a roster. Low-emphasis link so
+            the primary "build your card" path stays dominant. */}
+        {onStartImport && step === 'identity' && !hasPendingPersona && (
+          <div className="mb-5 flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/[0.04] px-4 py-3">
+            <div>
+              <p className="text-xs font-bold text-emerald-300">Already have a roster?</p>
+              <p className="text-[10px] text-gray-500">Import your squad from a spreadsheet</p>
+            </div>
+            <button
+              onClick={onStartImport}
+              className="flex items-center gap-1.5 rounded-lg bg-emerald-500/20 px-3 py-2 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/30 transition-colors"
+            >
+              <FileSpreadsheet className="w-3 h-3" />
+              Import
+            </button>
+          </div>
+        )}
+
         {error && (
           <div className="mb-5 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-200">
             {error}

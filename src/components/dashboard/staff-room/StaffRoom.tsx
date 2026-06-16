@@ -344,10 +344,10 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                 <div className="flex items-center space-x-4">
                   <div className="text-3xl relative">
                     {selectedStaff?.avatar}
-                    {selectedStaff?.kitePassportId && (
+                    {selectedStaff?.agentId && (
                       <div
                         className="absolute -bottom-1 -right-1 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center border-2 border-gray-900 shadow-lg"
-                        title="Kite Verified Identity"
+                        title="Verified Identity"
                       >
                         <ShieldCheck className="w-2 h-2 text-white" />
                       </div>
@@ -358,10 +358,10 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                       <h3 className="text-lg font-black text-white uppercase italic">
                         {selectedStaff?.name}
                       </h3>
-                      {selectedStaff?.kitePassportId && (
+                      {selectedStaff?.agentId && (
                         <span className="px-1.5 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 text-[9px] font-black text-blue-400 uppercase tracking-widest flex items-center gap-1">
                           <ShieldCheck className="w-2 h-2" />
-                          Kite Verified
+                          Verified
                         </span>
                       )}
                     </div>
@@ -369,16 +369,16 @@ export const StaffRoom: React.FC<StaffRoomProps> = ({ squadId, onClose }) => {
                       <p className="text-xs text-blue-400 font-bold uppercase tracking-widest">
                         {selectedStaff?.role}
                       </p>
-                      {selectedStaff?.kitePassportId && (
+                      {selectedStaff?.agentId && (
                         <>
                           <span className="text-gray-600">|</span>
                           <a
-                            href={`https://explorer.gokite.ai/passport/${selectedStaff.kitePassportId}`}
+                            href={`https://explorer.gokite.ai/passport/${selectedStaff.agentId}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-[10px] text-gray-500 hover:text-blue-400 font-mono transition-colors underline decoration-dotted"
                           >
-                            {selectedStaff.kitePassportId}
+                            {selectedStaff.agentId}
                           </a>
                         </>
                       )}

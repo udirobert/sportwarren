@@ -55,6 +55,14 @@ SportWarren uses a role-specific multi-chain system. Fallback **Simulation Mode*
 
 All require `Authorization: Bearer <CRON_SECRET>`.
 
+### REST API Routes (Import)
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/api/import/squad` | POST | Create squad + placeholder users + invite links from CSV/TSV |
+| `/api/import/matches/[squadId]` | POST | Import match history as Moment rows for an existing squad |
+| `/api/import/claim/[squadId]` | GET | Look up pending imported player by name (for claim flow) |
+| `/api/import/claim/[squadId]` | POST | Claim an imported placeholder spot (transfer records) |
+
 ### tRPC Routers
 | Router | Purpose |
 |--------|---------|

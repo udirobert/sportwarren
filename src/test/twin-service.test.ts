@@ -181,7 +181,7 @@ describe('TwinService.recordEvent', () => {
     expect(momentService.create).not.toHaveBeenCalled();
   });
 
-  it('emits a ghost_match event for a squad twin and decrements energy', async () => {
+  it('emits a ghost_match event for a squad twin without writing energy (energy is owned by squad-energy.ts)', async () => {
     const { db, squadTwinUpdate } = createDbStub();
     const service = new TwinService(db, () => NOW);
 
@@ -192,10 +192,12 @@ describe('TwinService.recordEvent', () => {
     };
 
     const result = await service.recordEvent(event);
+    // applyEvent still computes energyDelta for the diff, but TwinService
+    // does NOT persist it — energy is owned by squad-energy.ts.
     expect(result.diff.energyDelta).toBe(-40);
     expect(squadTwinUpdate).toHaveBeenCalled();
     const args = squadTwinUpdate.mock.calls[0][0];
-    expect(args.data.energy).toBe(60);
+    expect(args.data.energy).toBeUndefined();
   });
 
   it('rejects unknown twin ids', async () => {

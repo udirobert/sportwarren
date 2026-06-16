@@ -8,6 +8,30 @@ are the source of truth.
 
 <!-- END:nextjs-agent-rules -->
 
+## Product vision
+
+SportWarren is a **preservation product**, not a progression game. The core
+insight is that grassroots footballers have been maintaining spreadsheets
+for decades — not because they want gamified stats, but because the game
+matters to them and the alternative (letting it all disappear) feels like
+a betrayal of something real. SportWarren builds a better, permanent home
+for that impulse.
+
+- **Primary wedge:** The captain who already maintains a spreadsheet. They
+  bring 10–15 players with them when they adopt.
+- **Core promise:** "Every match leaves a mark." The record outlasts the
+  platform — stored onchain so it's yours permanently, not dependent on
+  SportWarren surviving as a company.
+- **Onchain narrative:** Durability infrastructure, not a feature. "Your
+  record outlasts the platform" — not agentic commerce.
+- **Multi-channel:** Meet squads where they already are. WhatsApp for
+  casual logging, Telegram for deeper engagement, web for the full record.
+- **Deferred to phase 2:** Coaching marketplace, tournaments/championship
+  ladder, agentic-commerce UI. These are optimization layers, not core to
+  the preservation thesis.
+
+Read `VISION.md` for the full articulation.
+
 ## Project-specific guidance
 
 ### Stack
@@ -28,6 +52,52 @@ are the source of truth.
 - API routes in `src/app/api/`
 - Components in `src/components/`
 - Storage abstraction in `src/server/services/storage/`
+
+### Squad import (P2.1–P2.3)
+The import system lets a captain paste in their existing spreadsheet (CSV/TSV)
+and have their squad, players, and match history materialize instantly.
+
+- `src/server/services/import/squad-import.ts` — Server-side import service:
+  - CSV/TSV parser with auto-delimiter detection and quoted-field support
+  - `parseImportPreview()` — parses raw text into structured rows for the mapping UI
+  - `parseMatchImportPreview()` — same but for match-history columns (date, opponent, score)
+  - `commitSquadImport()` — creates squad, captain membership, squad twin, placeholder
+    users, pending members, and squad-player contexts in one atomic transaction
+  - `commitMatchHistoryImport()` — creates Moment rows (kind: `match_imported`) for
+    each historical match, linked to the squad, with `createdAt` set to the match date
+  - Column-mapping auto-detection for both player fields (name, position, goals, assists,
+    matchesPlayed) and match fields (date, opponent, goalsFor, goalsAgainst, competition, venue)
+
+- `src/components/import/SquadImportWizard.tsx` — Client wizard with 5 steps:
+  Upload → Column Mapping → Preview & Name Squad → Confirm → Complete
+  - After squad creation, offers optional match-history import as a 4-step sub-wizard
+  - All parsing + mapping duplicated client-side for instant preview (mirrors server logic)
+  - Invite link management: copy-all, CSV download, WhatsApp/Telegram share
+
+- API routes:
+  - `POST /api/import/squad` — validates input, looks up captain by wallet address,
+    delegates to `commitSquadImport`
+  - `POST /api/import/matches/[squadId]` — validates squad + mapping, delegates to
+    `commitMatchHistoryImport`
+  - `GET /api/import/claim/[squadId]` — looks up squad + pending player by name
+    (case-insensitive), returns player info + `isPlaceholder` flag
+  - `POST /api/import/claim/[squadId]` — claims the spot for an imported player in one
+    transaction: transfers SquadMember + SquadPlayerContext from placeholder to real user,
+    cleans up placeholder. Handles: already a member, already has context, guest users.
+
+- Entry points:
+  - HeroSection (`src/components/common/HeroSection.tsx`): secondary CTA
+    "Already have a squad? Import your roster" scrolls to the wizard
+  - OnboardingFlow (`src/components/onboarding/OnboardingFlow.tsx`): import toggle in
+    the personalization card's identity step ("Already have a roster? Import")
+  - Invite landing (`src/app/join/[squadId]/page.tsx`): detects `?player=` search param
+    to switch between normal join flow and import claim flow
+
+- Placeholder user lifecycle:
+  - When importing, each player gets a `User` row with `walletAddress` = `imported_<uuid>`
+  - The placeholder user has a pending `SquadMember` and `SquadPlayerContext` with imported stats
+  - When the real user claims via `/join/[squadId]?player=<name>`, the POST claim API
+    transfers records and deletes the placeholder in a single transaction
 
 ### Build commands
 - `pnpm run build` — production build
@@ -55,12 +125,12 @@ are the source of truth.
   - `narrative.ts` (two-tier: fast sync stubs `generatePlayerNarrative`/`generateSquadNarrative` for hot paths + LLM-driven `buildRichPlayerNarrative`/`buildRichSquadNarrative` with Redis 1h cache keyed on content hash; consumes `generateInference` from `@/lib/ai/inference`)
   - `identity.ts` (`IdentityService.getPlayerIdentity` / `getSquadIdentity` — single read API joining skin (User/Squad) + brain (PlayerTwin/SquadTwin) + moments + attestations + match stats + sync narrative; tRPC: `player.getIdentity`/`player.getMyIdentity`, `squad.getIdentity`)
 - Player identity surface: `src/components/identity/PlayerIdentityCard.tsx` + `SquadIdentityCard.tsx` — Tailwind + lucide-react cards consuming `PlayerIdentity`/`SquadIdentity` from `identity.ts`; profile page at `src/app/(app)/profile/page.tsx` calls `player.getMyIdentity`
-- Coaching marketplace: `src/app/(app)/coaching/page.tsx` — coach listing grid + hire modal + active effects with cancel; consumes `coaching.listCoaches`/`getActiveEffects`/`hireCoach`/`cancelEffect`
+- Coaching marketplace (phase 2, gated behind `COACHING` flag): `src/app/(app)/coaching/page.tsx` — coach listing grid + hire modal + active effects with cancel; consumes `coaching.listCoaches`/`getActiveEffects`/`hireCoach`/`cancelEffect`
 - Signal preferences: `src/app/(app)/settings/page.tsx` — Twin Signals card in notifications tab (visible when Telegram connected); consumes `communication.getSignalPreferences`/`setSignalPreference`
 - Season overview: `src/app/(app)/stats/page.tsx` — SeasonOverviewCard showing active season progress + history; consumes `tournament.getActiveSeason`/`listSeasons`
 - Moment render cron: `src/app/api/cron/moment-render/route.ts` — picks up unrendered moments, generates PNGs every 6h
 - Twin sim cron: `src/app/api/cron/twin-sim/route.ts` — runs pending overnight sims daily; tRPC: `tournament.createTwinSim`/`enterTwinSim`/`getTwinSimResults`/`listTwinSims`
-- Coaching expiry: `src/app/api/cron/digital-twin/route.ts` — sweeps expired CoachingEffect rows for both player and squad twins, fires coaching_expired events; tRPC: `coaching.listCoaches`/`hireCoach`/`getActiveEffects`/`cancelEffect`
+- Coaching expiry (phase 2): `src/app/api/cron/digital-twin/route.ts` — sweeps expired CoachingEffect rows for both player and squad twins, fires coaching_expired events; tRPC: `coaching.listCoaches`/`hireCoach`/`getActiveEffects`/`cancelEffect`
 - Season end cron: `src/app/api/cron/season/route.ts` — auto-ends seasons past endDate, fires season_end for all active twins
 - Admin twin adjustment: `player.adminAdjustTwin` — admin-only pass-through to TwinService for manual attribute/XP/reputation fixes
 - All twin state mutations go through `TwinService.recordEvent({ kind, ... })` — no direct Prisma writes to `PlayerTwin` or `SquadTwin` fields from call sites
@@ -77,16 +147,20 @@ are the source of truth.
 - IPFS adapter stores opaque `ipfs/<cid>` keys; local adapter uses the layout above under `STORAGE_ROOT` (defaults `./storage`)
 - Legacy `squadId, mediaId` interface was removed in PR 2 (clean break; no users on greenfield)
 
-### Deferred scout settlement
-- `createScoutReport()` in `src/server/services/ai/scout-report.ts` is the single entry point for all scout reports (WhatsApp, Telegram, auto-scout cron, x402 API route)
-- Returns instantly with `settlementStatus: 'pending'` and `txHash: null` when no real settlement is provided
-- When a real `settlement.txHash` is provided (non-simulated, non-internal), writes `settlementStatus: 'settled'` immediately
-- `Attestation` model has 4 settlement columns: `settlementStatus` (pending/settled/failed), `settlementAttempts`, `settlementError`, `settledAt`
+### Onchain attestation (permanence infrastructure)
+The onchain layer is **durability infrastructure**, not a product feature.
+The promise is "your record outlasts the platform" — every match, rating,
+and moment is attested onchain so it's permanently owned by the player.
+
+- `createScoutReport()` in `src/server/services/ai/scout-report.ts` is the single entry point for scout reports (WhatsApp, Telegram, auto-scout cron)
+- `Attestation` model tracks the onchain anchor for each twin event:
+  `settlementStatus` (pending/settled/failed), `settlementAttempts`,
+  `settlementError`, `settledAt`
 - Settlement worker: `src/app/api/cron/scout-settle/route.ts` — drains pending attestations every 5 min via Vercel cron
   - Redis distributed lock (`trySet` with NX+EX), 20-row batches, 3 retries, 10s per-job timeout, 24h cutoff
-  - Calls `createPlatformSettlement()` from `x402-client.ts` for each pending row
-  - Sends WhatsApp follow-up receipt via `sendSettlementNotification()` when settlement succeeds
-- User-visible state machine: scout response shows "Verifying on Kite" when pending, "Receipt confirmed" with explorer link when settled
-- `GET /api/x402/scout` and `GET /api/x402/verify-match` are public x402 discovery endpoints — DO NOT REMOVE (external agents probe these to receive 402 challenges)
-- `readGoatX402Config()` in `x402-client.ts` is `@unused` — wired through `resolveX402Config()` for GOAT Network, dormant until a GOAT merchant appears in ksearch catalog
-- User-facing strings must not mention x402, Kite, USDC, attestation, Yellow, or facilitator
+  - Calls `createPlatformSettlement()` for each pending row
+  - Sends WhatsApp follow-up receipt when settlement succeeds
+- `GET /api/x402/scout` and `GET /api/x402/verify-match` are public x402 discovery endpoints — keep wired for when the protocol matures; currently dormant
+- `readGoatX402Config()` is dormant until a GOAT merchant appears in ksearch catalog
+
+**User-facing strings must never mention:** x402, Kite, USDC, attestation, Yellow, facilitator, or any protocol jargon. Use plain language: "verified", "receipt confirmed", "permanent record".
