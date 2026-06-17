@@ -55,6 +55,10 @@ interface SubmitMatchResultInput {
   sessionId?: string;
   isSociallyTrusted?: boolean;
   hasKeeper?: boolean;
+
+  // Fluid session: which players were on which team
+  // When present, overrides squad-membership-based teamSide derivation
+  teamAssignments?: { home: string[]; away: string[] };
 }
 
 interface VerifyMatchResultInput {
@@ -281,9 +285,9 @@ export async function submitMatchResult({
   latitude,
   longitude,
   yellowSettlement,
-  sessionId,
-  isSociallyTrusted = false,
+  sessionId,      isSociallyTrusted = false,
   hasKeeper,
+  teamAssignments,
 }: SubmitMatchResultInput) {
   const [homeSquad, awaySquad] = await Promise.all([
     prisma.squad.findUnique({ where: { id: homeSquadId } }),
@@ -372,6 +376,7 @@ export async function submitMatchResult({
       hasKeeper,
       homeFormation,
       awayFormation,
+      teamAssignments,
     });
 
     if (socialTrust) {
@@ -520,7 +525,8 @@ export async function submitMatchResult({
 /**
  * Ensures PlayerMatchStats exist for all squad members for a match.
  * Default to 90 mins, 0 goals, 0 assists (participation).
- * Sets teamSide to 'home' or 'away' based on which squad the player belongs to.
+ * When teamAssignments is present on the match (fluid session format),
+ * uses that to determine teamSide instead of deriving from squad membership.
  */
 export async function ensureMatchParticipationStats(
   prisma: PrismaClient,
@@ -539,33 +545,43 @@ export async function ensureMatchParticipationStats(
   // This prevents overwriting manual CRE/Capture entries if they did exist
   if (match.playerStats.length > 0) return;
 
-  // Fetch home and away members separately to track which side each player was on
-  const [homeMembers, awayMembers] = await Promise.all([
-    prisma.squadMember.findMany({
-      where: { squadId: match.homeSquadId },
-      include: {
-        user: {
-          include: { playerProfile: { select: { id: true } } },
-        },
-      },
-    }),
-    prisma.squadMember.findMany({
-      where: { squadId: match.awaySquadId },
-      include: {
-        user: {
-          include: { playerProfile: { select: { id: true } } },
-        },
-      },
-    }),
-  ]);
+  let homeProfiles: string[] = [];
+  let awayProfiles: string[] = [];
 
-  const homeProfiles = homeMembers
-    .filter((m) => m.user?.playerProfile?.id)
-    .map((m) => m.user.playerProfile!.id);
+  // If teamAssignments is present (fluid session format), use it directly
+  if (match.teamAssignments) {
+    const assignments = match.teamAssignments as { home?: string[]; away?: string[] };
+    homeProfiles = assignments.home ?? [];
+    awayProfiles = assignments.away ?? [];
+  } else {
+    // Standard fixed-squad format: derive from squad membership
+    const [homeMembers, awayMembers] = await Promise.all([
+      prisma.squadMember.findMany({
+        where: { squadId: match.homeSquadId },
+        include: {
+          user: {
+            include: { playerProfile: { select: { id: true } } },
+          },
+        },
+      }),
+      prisma.squadMember.findMany({
+        where: { squadId: match.awaySquadId },
+        include: {
+          user: {
+            include: { playerProfile: { select: { id: true } } },
+          },
+        },
+      }),
+    ]);
 
-  const awayProfiles = awayMembers
-    .filter((m) => m.user?.playerProfile?.id)
-    .map((m) => m.user.playerProfile!.id);
+    homeProfiles = homeMembers
+      .filter((m) => m.user?.playerProfile?.id)
+      .map((m) => m.user.playerProfile!.id);
+
+    awayProfiles = awayMembers
+      .filter((m) => m.user?.playerProfile?.id)
+      .map((m) => m.user.playerProfile!.id);
+  }
 
   if (homeProfiles.length === 0 && awayProfiles.length === 0) return;
 
