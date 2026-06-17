@@ -10,7 +10,7 @@ import {
   Calendar, Users, Trophy, Swords, Target,
   Clock, Plus, Check, RotateCw, Zap,
   Circle, ArrowRight, ListChecks, RefreshCw,
-  UserPlus, Shield, Flag, AlertCircle,
+  UserPlus, Shield, Flag, AlertCircle, ZapOff,
 } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────
@@ -106,6 +106,7 @@ export default function SessionDetailPage() {
   const [matchTeamHome, setMatchTeamHome] = useState<string[]>([]);
   const [matchTeamAway, setMatchTeamAway] = useState<string[]>([]);
   const [winnerStaysOn, setWinnerStaysOn] = useState(false);
+  const [quickLogMode, setQuickLogMode] = useState(false);
 
   // Toggle a player between teams: unassigned → home → away → unassigned
   const togglePlayer = useCallback((profileId: string) => {
@@ -139,6 +140,27 @@ export default function SessionDetailPage() {
 
   const canGenerateTeams = session?.status === 'open' && attendees.length >= 2;
   const canSubmitMatch = matchTeamHome.length > 0 && matchTeamAway.length > 0;
+
+  // Shared handler for after a match is submitted (used by both quick log and full form)
+  const handleMatchSubmitted = useCallback(() => {
+    if (winnerStaysOn && homeScore !== awayScore) {
+      const winners = homeScore > awayScore ? matchTeamHome : matchTeamAway;
+      const allProfileIds: string[] = attendees
+        .map((a) => a.profileId || a.profile?.id)
+        .filter(Boolean) as string[];
+      const remaining = allProfileIds.filter((id) => !winners.includes(id));
+      const suggestedAway = remaining.slice(0, winners.length);
+      setMatchTeamHome(winners);
+      setMatchTeamAway(suggestedAway);
+    } else {
+      setMatchTeamHome([]);
+      setMatchTeamAway([]);
+    }
+    setHomeScore(0);
+    setAwayScore(0);
+    setHasKeeper(true);
+    refetch();
+  }, [winnerStaysOn, homeScore, awayScore, matchTeamHome, matchTeamAway, attendees, refetch]);
 
   if (isLoading) {
     return (
@@ -186,7 +208,23 @@ export default function SessionDetailPage() {
           <StatusBadge status={session.status} />
         </div>
 
-        {/* ── Attendee Roster ─────────────────────────────────────── */}
+        {/* Quick Log toggle */}
+        <button
+          onClick={() => setQuickLogMode(!quickLogMode)}
+          className={`w-full flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${
+            quickLogMode
+              ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/25'
+              : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+          }`}
+        >
+          {quickLogMode ? (
+            <><Zap className="w-4 h-4" /> Quick Log Active — tap players on roster to assign</>
+          ) : (
+            <><ZapOff className="w-4 h-4" /> Quick Log — assign players directly on roster</>
+          )}
+        </button>
+
+        {/* ── Attendee Roster (quick-log interactive) ──────────────── */}
         <section>
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -196,7 +234,14 @@ export default function SessionDetailPage() {
                 ({attendees.length})
               </span>
             </h2>
-            {bibsCount > 0 && (
+            {quickLogMode && matchTeamHome.length + matchTeamAway.length > 0 && (
+              <span className="text-xs font-bold text-rose-600 dark:text-rose-400">
+                <span className="text-emerald-600 dark:text-emerald-400">{matchTeamHome.length}H</span>
+                <span className="mx-1">·</span>
+                <span className="text-sky-600 dark:text-sky-400">{matchTeamAway.length}A</span>
+              </span>
+            )}
+            {!quickLogMode && bibsCount > 0 && (
               <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
                 <span className="flex items-center gap-1">
                   <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -219,22 +264,42 @@ export default function SessionDetailPage() {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
             {sortedAttendees.map((a) => {
               const name = a.profile?.user?.name ?? 'Player';
-              const isBibs = a.teamPreference === 'bibs';
-              const isNoBibs = a.teamPreference === 'no_bibs';
-              const assigned = isBibs || isNoBibs;
+              const profileId = a.profileId || a.profile?.id;
+
+              // In quick log mode, show match assignment overlay colors
+              const quickHome = quickLogMode && profileId && matchTeamHome.includes(profileId);
+              const quickAway = quickLogMode && profileId && matchTeamAway.includes(profileId);
+
+              // Normal mode uses session team preference colors
+              const isBibs = !quickLogMode && a.teamPreference === 'bibs';
+              const isNoBibs = !quickLogMode && a.teamPreference === 'no_bibs';
+              const assigned = quickLogMode ? (quickHome || quickAway) : (isBibs || isNoBibs);
+
               return (
-                <div
+                <button
                   key={a.id}
-                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all ${
-                    isBibs
+                  onClick={() => {
+                    if (!quickLogMode || !profileId) return;
+                    togglePlayer(profileId);
+                  }}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm transition-all text-left ${
+                    !quickLogMode && isBibs
                       ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800'
-                      : isNoBibs
+                      : !quickLogMode && isNoBibs
                       ? 'bg-sky-50 dark:bg-sky-900/20 border-sky-200 dark:border-sky-800'
+                      : quickHome
+                      ? 'bg-emerald-100 dark:bg-emerald-900/40 border-emerald-400 dark:border-emerald-600 shadow-sm ring-1 ring-emerald-400/50'
+                      : quickAway
+                      ? 'bg-sky-100 dark:bg-sky-900/40 border-sky-400 dark:border-sky-600 shadow-sm ring-1 ring-sky-400/50'
                       : 'bg-gray-50 dark:bg-gray-800/50 border-gray-100 dark:border-gray-700'
-                  }`}
+                  } ${quickLogMode ? 'cursor-pointer active:scale-[0.97] transition-transform' : ''}`}
                 >
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
-                    isBibs
+                    quickHome
+                      ? 'bg-emerald-500 text-white'
+                      : quickAway
+                      ? 'bg-sky-500 text-white'
+                      : isBibs
                       ? 'bg-emerald-500 text-white'
                       : isNoBibs
                       ? 'bg-sky-500 text-white'
@@ -247,9 +312,11 @@ export default function SessionDetailPage() {
                   }`}>
                     {name}
                   </span>
-                  {isBibs && <span className="ml-auto text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">B</span>}
-                  {isNoBibs && <span className="ml-auto text-[10px] font-bold text-sky-600 dark:text-sky-400 shrink-0">N</span>}
-                </div>
+                  {quickHome && <span className="ml-auto text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">H</span>}
+                  {quickAway && <span className="ml-auto text-[10px] font-bold text-sky-600 dark:text-sky-400 shrink-0">A</span>}
+                  {!quickLogMode && isBibs && <span className="ml-auto text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">B</span>}
+                  {!quickLogMode && isNoBibs && <span className="ml-auto text-[10px] font-bold text-sky-600 dark:text-sky-400 shrink-0">N</span>}
+                </button>
               );
             })}
             {attendees.length === 0 && (
@@ -258,6 +325,95 @@ export default function SessionDetailPage() {
               </div>
             )}
           </div>
+
+          {/* ── Quick Log Score Bar ───────────────────────────────── */}
+          {quickLogMode && (
+            <div className="mt-4 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block mb-1">
+                    Home Score
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={99}
+                    value={homeScore}
+                    onChange={(e) => setHomeScore(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-sky-600 dark:text-sky-400 uppercase tracking-wider block mb-1">
+                    Away Score
+                  </label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={99}
+                    value={awayScore}
+                    onChange={(e) => setAwayScore(Math.max(0, parseInt(e.target.value) || 0))}
+                    className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                {/* Has keeper toggle */}
+                <button
+                  onClick={() => setHasKeeper(!hasKeeper)}
+                  className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${
+                    hasKeeper ? 'bg-violet-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <span className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
+                    style={{ transform: hasKeeper ? 'translateX(16px)' : 'translateX(0)' }} />
+                </button>
+                <span className="text-xs text-gray-600 dark:text-gray-400">
+                  {hasKeeper ? 'With goalkeeper' : 'No goalkeeper'}
+                </span>
+
+                <div className="flex-1" />
+
+                {/* Quick submit */}
+                <button
+                  onClick={() => {
+                    if (!canSubmitMatch) return;
+                    submitMicroMatch.mutate(
+                      {
+                        sessionId: session.id,
+                        homeScore,
+                        awayScore,
+                        teamHome: matchTeamHome,
+                        teamAway: matchTeamAway,
+                        hasKeeper,
+                      },
+                      {
+                        onSuccess: handleMatchSubmitted,
+                      },
+                    );
+                  }}
+                  disabled={!canSubmitMatch || submitMicroMatch.isPending}
+                  className="py-2.5 px-5 rounded-xl font-bold text-sm bg-rose-600 hover:bg-rose-500 text-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors flex items-center gap-2 shrink-0"
+                >
+                  {submitMicroMatch.isPending ? (
+                    <RotateCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <><Zap className="w-4 h-4" /> Log Match</>
+                  )}
+                </button>
+              </div>
+
+              {submitMicroMatch.isSuccess && (
+                <p className="text-xs text-emerald-600 dark:text-emerald-400 text-center">Match logged!</p>
+              )}
+              {submitMicroMatch.isError && (
+                <p className="text-xs text-red-600 dark:text-red-400 text-center">
+                  {submitMicroMatch.error?.message ?? 'Failed.'}
+                </p>
+              )}
+            </div>
+          )}
         </section>
 
         {/* ── Team Management ─────────────────────────────────────── */}
@@ -330,7 +486,8 @@ export default function SessionDetailPage() {
           </Card>
         </section>
 
-        {/* ── Micro-Match Submission ──────────────────────────────── */}
+        {/* ── Micro-Match Submission (collapsed in quick log mode) ── */}
+        {!quickLogMode && (
         <section>
           <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
             <Zap className="w-4 h-4 text-rose-500" />
@@ -507,29 +664,7 @@ export default function SessionDetailPage() {
                       hasKeeper,
                     },
                     {
-                      onSuccess: () => {
-                        // Use local state — same values that were just submitted
-                        if (winnerStaysOn && homeScore !== awayScore) {
-                          const winners = homeScore > awayScore ? matchTeamHome : matchTeamAway;
-                          const allProfileIds: string[] = attendees
-                            .map((a) => a.profileId || a.profile?.id)
-                            .filter(Boolean) as string[];
-                          const remaining = allProfileIds.filter((id) => !winners.includes(id));
-                          const awayCount = winners.length;
-                          const suggestedAway = remaining.slice(0, awayCount);
-
-                          setMatchTeamHome(winners);
-                          setMatchTeamAway(suggestedAway);
-                        } else {
-                          setMatchTeamHome([]);
-                          setMatchTeamAway([]);
-                        }
-
-                        setHomeScore(0);
-                        setAwayScore(0);
-                        setHasKeeper(true);
-                        refetch();
-                      },
+                      onSuccess: handleMatchSubmitted,
                     },
                   );
                 }}
@@ -567,6 +702,7 @@ export default function SessionDetailPage() {
             </div>
           </Card>
         </section>
+        )}
 
         {/* ── Match History ────────────────────────────────────────── */}
         <section>
