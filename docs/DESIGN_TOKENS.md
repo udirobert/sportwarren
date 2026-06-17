@@ -2,6 +2,12 @@
 
 ## Color System
 
+These tokens are also published as a Figma variable collection in the
+[**SportWarren — Moment Cards**](https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ)
+library, so design and code share the same source of truth. See
+[`docs/makeathon/REPRODUCE.md`](makeathon/REPRODUCE.md) for how the
+binding is maintained.
+
 ### Semantic Colors (CSS Custom Properties)
 Defined in `src/app/globals.css` and mapped to Tailwind in `tailwind.config.js`.
 

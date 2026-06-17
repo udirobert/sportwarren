@@ -58,6 +58,36 @@ No app install required. No complexity visible. Just play, and your record evolv
 | **[FORMATIONS.md](docs/FORMATIONS.md)** | Formation playground — pre-auth viral loop for squad discovery. |
 | **[ONBOARDING.md](docs/ONBOARDING.md)** | Captain-first onboarding flow and context management. |
 | **[DESIGN_TOKENS.md](docs/DESIGN_TOKENS.md)** | Visual system: colors, typography, layout, animations. |
+| **[docs/makeathon/REPRODUCE.md](docs/makeathon/REPRODUCE.md)** | The Figma ↔ code workflow that built the moment-card library — reusable for any shareable-card surface. |
+
+---
+
+## Moment card library — reproduce this build
+
+The shareable PNG cards that get generated for every match moment
+(record broken, level up, season end, …) are built through a
+write-heavy Figma ↔ code workflow that lives in
+[`.claude/skills/sw-moments/`](.claude/skills/sw-moments/) as a Claude
+Code agent skill. The workflow:
+
+1. **Read** the existing renderer + design tokens via the Figma MCP.
+2. **Generate** a Figma component set per moment kind, bound to the
+   project's design tokens (Space Grotesk, semantic colors, tier ornaments).
+3. **Map** the Figma nodes to TS card components via a manifest
+   (a Pro-tier substitute for first-party Code Connect).
+4. **Swap** the satori renderer to pull from a CARDS registry, so each
+   moment kind renders through its own archetype rather than one
+   hardcoded template.
+
+The full step-by-step is in
+[`docs/makeathon/REPRODUCE.md`](docs/makeathon/REPRODUCE.md). The
+candid build log — including pivots, blockers, and the satori-html
+bug discovery — is in
+[`docs/makeathon/build-log.md`](docs/makeathon/build-log.md). Sample
+before/after PNGs live in `docs/makeathon/assets/`.
+
+The Figma library is published at
+[**SportWarren — Moment Cards**](https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ).
 
 ---
 

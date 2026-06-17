@@ -1,0 +1,54 @@
+{
+  "$comment": "Hand-maintained Figma↔code mapping for the moment-card library. Equivalent to Code Connect, which requires Org/Enterprise — this file is the Pro-tier substitute. Update when a card kind gets a Figma component or a TS implementation. Sourced and rendered by `src/server/services/personalization/moment-render-v2.ts`.",
+  "figmaFile": {
+    "key": "xTaynEAGCjhhmcmQdPG0JZ",
+    "name": "SportWarren — Moment Cards",
+    "url": "https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ"
+  },
+  "designTokensFile": "docs/DESIGN_TOKENS.md",
+  "mappings": [
+    {
+      "kind": "record_broken",
+      "figmaNodeId": "7:65",
+      "figmaNodeName": "MomentCard / Record Broken",
+      "figmaUrl": "https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ?node-id=7-65",
+      "component": "RecordBrokenCard",
+      "source": "src/components/moments/cards/RecordBrokenCard.tsx",
+      "variantProperty": "Tier",
+      "variantValues": ["Standard", "Premium", "Streak", "Partner", "Internal"],
+      "archetype": "Emphatic, dramatic — oversized type as imagery, destructive red against dark surface, broken horizontal rule motif.",
+      "designSystemBindings": {
+        "color/background": "TOKENS.background",
+        "color/destructive": "TOKENS.destructive",
+        "color/foreground": "TOKENS.foreground",
+        "color/xp-gold": "TOKENS.xpGold (premium tier border)",
+        "color/success": "TOKENS.success (streak tier pulse + pip)"
+      },
+      "textStyles": ["text/kicker", "text/4xl", "text/sm", "text/xs"]
+    },
+    {
+      "kind": "level_up",
+      "figmaNodeId": "11:86",
+      "figmaNodeName": "MomentCard / Level Up",
+      "figmaUrl": "https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ?node-id=11-86",
+      "component": "LevelUpCard",
+      "source": "src/components/moments/cards/LevelUpCard.tsx",
+      "variantProperty": "Tier",
+      "variantValues": ["Standard", "Premium", "Streak", "Partner", "Internal"],
+      "archetype": "Kinetic, ascending — giant level numeral as hero, xp-gold/amber palette, emerald chevron-stack motif suggesting growth.",
+      "designSystemBindings": {
+        "color/background": "TOKENS.background",
+        "color/xp-gold": "TOKENS.xpGold (hero numeral + kicker pill)",
+        "color/success": "TOKENS.success (chevron stack + streak pulse + pip)",
+        "color/foreground": "TOKENS.foreground"
+      },
+      "textStyles": ["text/kicker", "text/sm", "text/xs", "(inline 220px Bold for numeral hero)"]
+    }
+  ],
+  "fallback": {
+    "kind": "*",
+    "component": "DefaultCard",
+    "source": "src/components/moments/cards/DefaultCard.tsx",
+    "note": "Applies to any moment kind without a dedicated archetype entry above. Keeps the design system (Space Grotesk + dark surface + token-based tier color) but mirrors the v1 template composition. Replace with per-kind archetypes as they're added."
+  }
+}
