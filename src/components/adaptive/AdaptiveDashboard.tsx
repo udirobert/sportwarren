@@ -36,6 +36,7 @@ import { SoccerLoader } from '@/components/ui/SoccerLoader';
 import { summarizeAvatarUpgrade } from '@/lib/avatar/diff';
 
 import { QuickLogWidget } from '@/components/dashboard/QuickLogWidget';
+import { RecentSessionWidget } from '@/components/dashboard/RecentSessionWidget';
 import { MatchCoordinationWidget } from '@/components/dashboard/MatchCoordinationWidget';
 import { PeerRatingTaskCard } from '@/components/dashboard/PeerRatingTaskCard';
 import { SquadDigitalTwinWidget } from '@/components/dashboard/SquadDigitalTwinWidget';
@@ -304,6 +305,16 @@ export const AdaptiveDashboard: React.FC = () => {
         category: 'matches',
         component: (
           <MatchCoordinationWidget squadId={primarySquadId} />
+        ),
+      });
+
+      widgets.push({
+        id: 'recent-session',
+        priority: 456,
+        requiredLevel: 'basic',
+        category: 'squad',
+        component: (
+          <RecentSessionWidget squadId={primarySquadId} />
         ),
       });
 
@@ -1317,7 +1328,7 @@ export const AdaptiveDashboard: React.FC = () => {
 
       {(() => {
         const todayIds = ['quick-log', 'onboarding-checklist', 'pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine', 'quick-stats', 'achievements', 'upcoming-fixtures', 'coach-kite'];
-        const squadIds = ['governance', 'squad-dynamics', 'captains-log', 'communication-hub', 'squad-digital-twin', 'digital-twin-3d-gate'];
+        const squadIds = ['governance', 'squad-dynamics', 'captains-log', 'communication-hub', 'recent-session', 'squad-digital-twin', 'digital-twin-3d-gate'];
         const progressIds = ['training', 'scouting-report', 'lens-social', 'nearby-squads', 'territory'];
 
         const todayWidgets = visibleWidgets.filter(w => todayIds.includes(w.id));

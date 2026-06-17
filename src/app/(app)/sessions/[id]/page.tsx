@@ -25,12 +25,23 @@ interface Attendee {
   };
 }
 
+interface MatchPlayerStat {
+  id: string;
+  profileId: string;
+  teamSide: string | null;
+  profile: {
+    id: string;
+    user: { name: string | null } | null;
+  };
+}
+
 interface MatchSummary {
   id: string;
   homeScore: number | null;
   awayScore: number | null;
   status: string;
   teamAssignments: unknown;
+  playerStats: MatchPlayerStat[];
   createdAt: string;
 }
 
@@ -50,13 +61,26 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function SquadBadge({ label }: { label: string }) {
-  const colorMap: Record<string, string> = {
-    bibs: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800',
-    no_bibs: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-400 border-sky-200 dark:border-sky-800',
-  };
-  const cls = colorMap[label] ?? 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400';
-  return <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${cls}`}>{label === 'bibs' ? 'Bibs' : 'No Bibs'}</span>;
+function relativeTime(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+function ResultBadge({ home, away }: { home: number | null; away: number | null }) {
+  if (home === null || away === null) return null;
+  if (home > away) {
+    return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400">H</span>;
+  }
+  if (away > home) {
+    return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400">A</span>;
+  }
+  return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400">D</span>;
 }
 
 // ── Loading State ──────────────────────────────────────────────────────────
@@ -98,6 +122,13 @@ export default function SessionDetailPage() {
 
   // Micro-match mutation — onSuccess is passed per-call so closures are fresh
   const submitMicroMatch = trpc.session.submitMicroMatch.useMutation();
+
+  // Complete session mutation
+  const completeSession = trpc.session.complete.useMutation({
+    onSuccess: () => {
+      refetch();
+    },
+  });
 
   // Micro-match form state
   const [homeScore, setHomeScore] = useState(0);
@@ -704,17 +735,61 @@ export default function SessionDetailPage() {
         </section>
         )}
 
+        {/* ── Complete Session ──────────────────────────────────────── */}
+        {session.status !== 'completed' && (
+          <section>
+            <Card padding="sm">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Flag className="w-4 h-4 text-gray-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                      {matches.length === 0 ? 'End this session?' : 'Wrap up this session?'}
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {matches.length === 0
+                        ? 'No matches recorded yet. Completing will prevent further submissions.'
+                        : `${matches.length} match${matches.length === 1 ? ' was' : 'es were'} played. Completing locks the session.`}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    if (completeSession.isPending) return;
+                    completeSession.mutate({ sessionId: session.id });
+                  }}
+                  disabled={completeSession.isPending}
+                  className="py-2 px-4 rounded-lg text-xs font-bold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600 hover:text-gray-900 dark:hover:text-white disabled:opacity-40 transition-colors shrink-0"
+                >
+                  {completeSession.isPending ? (
+                    <span className="flex items-center gap-1"><RotateCw className="w-3.5 h-3.5 animate-spin" /> Completing</span>
+                  ) : (
+                    'Complete'
+                  )}
+                </button>
+              </div>
+            </Card>
+          </section>
+        )}
+
         {/* ── Match History ────────────────────────────────────────── */}
         <section>
-          <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-            <ListChecks className="w-4 h-4 text-emerald-500" />
-            Match History
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <ListChecks className="w-4 h-4 text-emerald-500" />
+              Match History
+              {matches.length > 0 && (
+                <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
+                  ({matches.length})
+                </span>
+              )}
+            </h2>
             {matches.length > 0 && (
-              <span className="text-sm font-normal text-gray-500 dark:text-gray-400">
-                ({matches.length})
+              <span className="text-[10px] text-gray-400">
+                {matches.filter(m => m.status === 'verified').length} verified
               </span>
             )}
-          </h2>
+          </div>
           {matches.length === 0 ? (
             <Card>
               <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
@@ -723,59 +798,91 @@ export default function SessionDetailPage() {
             </Card>
           ) : (
             <div className="space-y-2">
-              {[...matches].reverse().map((m) => {
+              {[...matches].reverse().map((m, idx) => {
                 const ta = m.teamAssignments as { home?: string[]; away?: string[] } | null;
+                const stats = m.playerStats as MatchPlayerStat[];
+
+                // Resolve player names from the match's own playerStats (more
+                // accurate than cross-referencing session attendees, because the
+                // attendee roster can change between rotations).
+                const homePlayers = stats
+                  .filter(s => s.teamSide === 'home')
+                  .map(s => s.profile?.user?.name ?? '?')
+                  .filter(Boolean);
+                const awayPlayers = stats
+                  .filter(s => s.teamSide === 'away')
+                  .map(s => s.profile?.user?.name ?? '?')
+                  .filter(Boolean);
+
+                // Fallback to teamAssignments + attendees if playerStats not available
+                const fallbackHomeNames = homePlayers.length > 0 ? [] : (ta?.home?.slice(0, 4)?.map(pid => {
+                  const a = attendees.find(att => att.profileId === pid || att.profile?.id === pid);
+                  return a?.profile?.user?.name?.split(' ')[0];
+                })?.filter(Boolean) ?? []);
+                const fallbackAwayNames = awayPlayers.length > 0 ? [] : (ta?.away?.slice(0, 4)?.map(pid => {
+                  const a = attendees.find(att => att.profileId === pid || att.profile?.id === pid);
+                  return a?.profile?.user?.name?.split(' ')[0];
+                })?.filter(Boolean) ?? []);
+
+                const displayHome = homePlayers.length > 0 ? homePlayers.slice(0, 4) : fallbackHomeNames;
+                const displayAway = awayPlayers.length > 0 ? awayPlayers.slice(0, 4) : fallbackAwayNames;
+                const homeMore = (homePlayers.length > 0 ? homePlayers.length : (ta?.home?.length ?? 0)) - 4;
+                const awayMore = (awayPlayers.length > 0 ? awayPlayers.length : (ta?.away?.length ?? 0)) - 4;
+
+                const homeScore = m.homeScore ?? 0;
+                const awayScore = m.awayScore ?? 0;
+
                 return (
                   <Card key={m.id} padding="sm">
-                    <div className="flex items-center gap-3">
-                      {/* Score */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="text-lg font-black text-gray-900 dark:text-white">
-                          {m.homeScore ?? '?'}
-                        </span>
-                        <span className="text-xs text-gray-400">-</span>
-                        <span className="text-lg font-black text-gray-900 dark:text-white">
-                          {m.awayScore ?? '?'}
-                        </span>
+                    <div className="flex items-start gap-3">
+                      {/* Result block */}
+                      <div className="flex flex-col items-center gap-1 shrink-0 w-14">
+                        <div className="flex items-center gap-1">
+                          <span className={`text-xl font-black ${homeScore > awayScore ? 'text-emerald-600 dark:text-emerald-400' : homeScore === awayScore ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {homeScore}
+                          </span>
+                          <span className="text-xs text-gray-400">:</span>
+                          <span className={`text-xl font-black ${awayScore > homeScore ? 'text-sky-600 dark:text-sky-400' : awayScore === homeScore ? 'text-gray-500' : 'text-gray-400'}`}>
+                            {awayScore}
+                          </span>
+                        </div>
+                        <ResultBadge home={m.homeScore} away={m.awayScore} />
                       </div>
-
-                      {/* Status */}
-                      <StatusBadge status={m.status} />
 
                       {/* Team composition */}
-                      <div className="flex-1 min-w-0">
-                        {ta ? (
-                          <div className="flex flex-wrap gap-0.5">
-                            {ta.home?.slice(0, 3).map((pid) => {
-                              const a = attendees.find((att) => att.profileId === pid || att.profile?.id === pid);
-                              return (
-                                <span key={pid} className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 truncate max-w-[80px]">
-                                  {a?.profile?.user?.name?.split(' ')[0] ?? '?'}
-                                </span>
-                              );
-                            })}
-                            <span className="text-[10px] text-gray-400 self-center mx-0.5">vs</span>
-                            {ta.away?.slice(0, 3).map((pid) => {
-                              const a = attendees.find((att) => att.profileId === pid || att.profile?.id === pid);
-                              return (
-                                <span key={pid} className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 truncate max-w-[80px]">
-                                  {a?.profile?.user?.name?.split(' ')[0] ?? '?'}
-                                </span>
-                              );
-                            })}
-                            {(ta.home?.length ?? 0) > 3 && (
-                              <span className="text-[10px] text-gray-400">+{ta.home!.length - 3}</span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400 italic">Fixed squads</span>
-                        )}
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex flex-wrap gap-0.5">
+                          {displayHome.map((name, i) => (
+                            <span key={`h-${i}`} className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 truncate max-w-[90px]">
+                              {name}
+                            </span>
+                          ))}
+                          {homeMore > 0 && (
+                            <span className="text-[10px] text-gray-400 self-center">+{homeMore}</span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-0.5">
+                          {displayAway.map((name, i) => (
+                            <span key={`a-${i}`} className="text-[10px] px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300 truncate max-w-[90px]">
+                              {name}
+                            </span>
+                          ))}
+                          {awayMore > 0 && (
+                            <span className="text-[10px] text-gray-400 self-center">+{awayMore}</span>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Timestamp */}
-                      <span className="text-[10px] text-gray-400 shrink-0">
-                        {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      {/* Status + time side bar */}
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <StatusBadge status={m.status} />
+                        <span
+                          className="text-[10px] text-gray-400 whitespace-nowrap"
+                          title={new Date(m.createdAt).toLocaleString()}
+                        >
+                          {relativeTime(m.createdAt)}
+                        </span>
+                      </div>
                     </div>
                   </Card>
                 );
