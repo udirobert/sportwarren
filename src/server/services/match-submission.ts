@@ -23,6 +23,10 @@ export interface PendingMatchSubmissionInput {
   hasKeeper?: boolean;
   homeFormation?: string | null;
   awayFormation?: string | null;
+
+  // Fluid session: which players (by profileId) were on which team
+  // { home: string[], away: string[] }
+  teamAssignments?: { home: string[]; away: string[] } | null;
 }
 
 export async function createPendingMatchSubmission({
@@ -45,6 +49,7 @@ export async function createPendingMatchSubmission({
   hasKeeper,
   homeFormation,
   awayFormation,
+  teamAssignments,
 }: PendingMatchSubmissionInput) {
   const shareSlug = randomBytes(4).toString('base64url');
 
@@ -69,6 +74,7 @@ export async function createPendingMatchSubmission({
       hasKeeper: hasKeeper ?? true,
       homeFormation,
       awayFormation,
+      teamAssignments: teamAssignments ?? undefined,
     } as any,
     include: {
       homeSquad: true,

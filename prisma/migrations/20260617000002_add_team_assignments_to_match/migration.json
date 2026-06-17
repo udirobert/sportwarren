@@ -1,0 +1,4 @@
+{
+  "version": "5.2",
+  "migration_name": "20260617000002_add_team_assignments_to_match"
+}

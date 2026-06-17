@@ -696,6 +696,10 @@ model Match {
   yellowFeeSessionId String?   @map("yellow_fee_session_id")
   yellowFeeSettledAt DateTime? @map("yellow_fee_settled_at")
 
+  // Fluid session: which players (by profileId) were on which team for this match
+  // {"home": ["profileId1", "profileId2", ...], "away": ["profileId3", "profileId4", ...]}
+  teamAssignments Json? @map("team_assignments")
+
   // Peer Rating Window
   peerRatingsClosed  Boolean   @default(false) @map("peer_ratings_closed")
   peerRatingsCloseAt DateTime? @map("peer_ratings_close_at")

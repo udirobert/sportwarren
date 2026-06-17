@@ -70,6 +70,11 @@ export const matchRouter = createTRPCRouter({
       yellowSettlement: yellowMatchSettlementSchema.optional(),
       isSociallyTrusted: z.boolean().optional(),
       hasKeeper: z.boolean().optional(),
+      // Fluid session: which players were on which team
+      teamAssignments: z.object({
+        home: z.array(z.string()),
+        away: z.array(z.string()),
+      }).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -101,6 +106,7 @@ export const matchRouter = createTRPCRouter({
           yellowSettlement: input.yellowSettlement,
           isSociallyTrusted: input.isSociallyTrusted,
           hasKeeper: input.hasKeeper,
+          teamAssignments: input.teamAssignments,
         });
       } catch (error) {
         throw toTRPCError(error);
