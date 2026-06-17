@@ -37,7 +37,7 @@ const TIER_COLORS: Record<string, string> = {
   internal: '#3b82f6',
 };
 
-function buildHtml(moment: { kind: string; tier: string; label: string; detail: string | null; createdAt: Date; subjectType: string }): string {
+export function buildHtml(moment: { kind: string; tier: string; label: string; detail: string | null; createdAt: Date; subjectType: string }): string {
   const tierColor = TIER_COLORS[moment.tier] ?? '#6b7280';
   const date = moment.createdAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 
