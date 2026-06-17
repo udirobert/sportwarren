@@ -187,6 +187,10 @@ export default function SquadPage() {
     { squadId: showSample ? undefined : activeSquadId, limit: 5 },
     { enabled: !!activeSquadId && !showSample, staleTime: 30 * 1000 }
   );
+  const { data: sessionActivity, isLoading: sessionActivityLoading } = trpc.session.listBySquadWithMatches.useQuery(
+    { squadId: activeSquadId || '', limit: 5 },
+    { enabled: !!activeSquadId && !showSample, staleTime: 30 * 1000 }
+  );
   const { data: scoutingFeed, isLoading: scoutingFeedLoading } = trpc.market.listScoutingFeed.useQuery(
     { squadId: activeSquadId || '' },
     { enabled: !!activeSquadId && isVerified, staleTime: 30 * 1000 }
@@ -946,6 +950,105 @@ export default function SquadPage() {
               </div>
             </div>
           </motion.div>
+
+          {/* Session Activity — aggregate all session-based matches */}
+          {activeSquadId && !showSample && (
+            <div className="relative overflow-hidden rounded-2xl border border-violet-500/20 bg-gradient-to-br from-violet-950/40 via-gray-900 to-gray-900">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(139,92,246,0.06)_0%,transparent_60%)]" />
+              <div className="relative px-5 py-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4 text-violet-400" />
+                    <h3 className="text-sm font-bold text-white">Session Activity</h3>
+                  </div>
+                  <Link href="/sessions" className="text-[10px] font-bold uppercase tracking-wider text-violet-400 hover:text-violet-300 transition-colors">
+                    View All
+                  </Link>
+                </div>
+
+                {sessionActivityLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2].map(i => (
+                      <div key={i} className="h-16 rounded-xl bg-white/[0.04] animate-pulse" />
+                    ))}
+                  </div>
+                ) : sessionActivity && sessionActivity.length > 0 ? (
+                  <div className="space-y-2">
+                    {sessionActivity.slice(0, 4).map(session => {
+                      const totalGoals = session.matches.reduce((sum, m) => sum + (m.homeScore ?? 0) + (m.awayScore ?? 0), 0);
+                      const completedMatches = session.matches.filter(m => m.status === 'verified' || m.status === 'finalized').length;
+                      return (
+                        <Link
+                          key={session.id}
+                          href={`/sessions/${session.id}`}
+                          className="block rounded-xl border border-white/[0.06] bg-white/[0.02] px-4 py-3 transition-all hover:border-violet-500/30 hover:bg-violet-500/5"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-white truncate">{session.name}</p>
+                              <div className="mt-1 flex items-center gap-2 text-xs text-gray-400">
+                                <span>{session.attendeeCount} player{session.attendeeCount === 1 ? '' : 's'}</span>
+                                <span className="text-gray-600">·</span>
+                                <span>{session.matchCount} match{session.matchCount === 1 ? '' : 'es'}</span>
+                                <span className="text-gray-600">·</span>
+                                <span>{totalGoals} goal{totalGoals === 1 ? '' : 's'}</span>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                session.status === 'completed'
+                                  ? 'bg-gray-500/20 text-gray-400'
+                                  : session.status === 'balanced'
+                                  ? 'bg-amber-500/20 text-amber-400'
+                                  : 'bg-blue-500/20 text-blue-400'
+                              }`}>
+                                {session.status}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Mini match results */}
+                          {session.matches.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {session.matches.slice(0, 3).map(m => (
+                                <span
+                                  key={m.id}
+                                  className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[10px] font-semibold ${
+                                    m.status === 'verified' || m.status === 'finalized'
+                                      ? 'bg-emerald-500/15 text-emerald-400'
+                                      : 'bg-gray-500/10 text-gray-500'
+                                  }`}
+                                >
+                                  {m.homeScore ?? '?'}:{m.awayScore ?? '?'}
+                                </span>
+                              ))}
+                              {session.matches.length > 3 && (
+                                <span className="text-[10px] text-gray-500 self-center">
+                                  +{session.matches.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          )}
+
+                          {session.matches.length === 0 && (
+                            <p className="mt-1 text-[11px] text-gray-500 italic">No matches recorded</p>
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-dashed border-white/[0.06] px-4 py-6 text-center">
+                    <CalendarDays className="w-6 h-6 mx-auto mb-2 text-gray-500" />
+                    <p className="text-sm font-semibold text-gray-300">No session activity yet</p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      Create a session to organize rotating bibs/no-bibs games.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Composition Insights — pair win rates, defensive partnerships */}
           {activeSquadId && !showSample && (

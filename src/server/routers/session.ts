@@ -73,8 +73,21 @@ export const sessionRouter = createTRPCRouter({
                 },
               },
             },
-          },
-          matches: true,
+          },            matches: {
+              include: {
+                playerStats: {
+                  include: {
+                    profile: {
+                      include: {
+                        user: {
+                          select: { name: true },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
         },
       });
 
@@ -255,6 +268,76 @@ export const sessionRouter = createTRPCRouter({
   // Submit a micro-match for an ongoing rotation session (winner-stays-on format)
   // Takes explicit team assignments per rotation — no need to re-generate teams
   // between micro-matches. All profile IDs must be attendees of the session.
+  // List sessions with their matches for the squad overview page
+  listBySquadWithMatches: publicProcedure
+    .input(z.object({ squadId: squadIdSchema, limit: z.number().int().min(1).max(20).optional().default(10) }))
+    .query(async ({ ctx, input }) => {
+      const sessions = await ctx.prisma.session.findMany({
+        where: { squadId: input.squadId },
+        orderBy: { date: 'desc' },
+        take: input.limit,
+        include: {
+          matches: {
+            select: {
+              id: true,
+              homeScore: true,
+              awayScore: true,
+              status: true,
+              createdAt: true,
+            },
+          },
+          _count: {
+            select: { attendees: true },
+          },
+        },
+      });
+
+      return sessions.map(session => ({
+        id: session.id,
+        name: session.name,
+        date: session.date,
+        status: session.status,
+        attendeeCount: session._count.attendees,
+        matchCount: session.matches.length,
+        matches: session.matches,
+      }));
+    }),
+
+  // Complete a session — marks it as finished so no more micro-matches can be submitted
+  complete: protectedProcedure
+    .input(z.object({ sessionId: z.string().min(1, 'Session ID is required') }))
+    .mutation(async ({ ctx, input }) => {
+      const session = await ctx.prisma.session.findUnique({
+        where: { id: input.sessionId },
+        select: { id: true, squadId: true, status: true },
+      });
+
+      if (!session) {
+        throw new TRPCError({ code: 'NOT_FOUND', message: 'Session not found' });
+      }
+
+      if (session.status === 'completed') {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Session is already completed',
+        });
+      }
+
+      // Verify the caller is a captain of the session's squad
+      const membership = await getSquadMembership(ctx.prisma, session.squadId, ctx.userId!);
+      if (!membership || !isSquadLeader(membership.role)) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Only squad captains can complete sessions',
+        });
+      }
+
+      return await ctx.prisma.session.update({
+        where: { id: input.sessionId },
+        data: { status: 'completed' },
+      });
+    }),
+
   submitMicroMatch: protectedProcedure
     .input(z.object({
       sessionId: z.string().min(1, 'Session ID is required'),
