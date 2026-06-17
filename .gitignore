@@ -72,7 +72,8 @@ pnpm-debug.log*
 /.bolt/
 /.blackboxcli/
 /.junie/
-/.claude/
+/.claude/*
+!/.claude/skills/
 /.antigravitycli/
 /.commandcode/
 /.openclaude/

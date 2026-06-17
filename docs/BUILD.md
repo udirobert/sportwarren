@@ -41,6 +41,7 @@ SportWarren uses a role-specific multi-chain system. Fallback **Simulation Mode*
 - `KAPSO_API_KEY`: For WhatsApp delivery.
 - `CRON_SECRET`: Bearer token for `/api/cron/*` endpoints. Required.
 - `RATE_TOKEN_SECRET`: Signs WhatsApp rate links. Falls back to `CRON_SECRET` if unset.
+- `MOMENT_RENDER_V1_FALLBACK` (optional): Set to `true`/`1` to force the moment-render cron back to the v1 renderer (`moment-render.ts`). Default is v2 (`moment-render-v2.ts` — per-archetype CARDS registry). Applies to both the Next.js API route (`/api/cron/moment-render`) and the Hetzner production cron (`scripts/maintenance/moment-render.ts`). The Next.js route also accepts `?v=1|2` as a single-run override.
 
 ### Cron Endpoints
 | Endpoint | Schedule | Purpose |
@@ -48,7 +49,7 @@ SportWarren uses a role-specific multi-chain system. Fallback **Simulation Mode*
 | `/api/cron/verification-expiry` | Every 15 min | Expires unverified pending matches |
 | `/api/cron/consensus` | Every 15 min | Closes expired rating windows |
 | `/api/cron/rating-reminders` | Every 2h | DMs players who haven't rated teammates |
-| `/api/cron/moment-render` | Every 6h | Generates PNG renders for unrendered moments |
+| `/api/cron/moment-render` | Every 6h | Generates PNG renders for unrendered moments. Production cron runs from Hetzner (`scripts/maintenance/moment-render.ts`); the API route is a parallel manual-trigger surface. Defaults to v2 (per-archetype CARDS registry); set `MOMENT_RENDER_V1_FALLBACK=true` to roll back. |
 | `/api/cron/twin-sim` | Daily | Runs overnight round-robin tournaments |
 | `/api/cron/digital-twin` | Daily | Sweeps expired coaching effects, fires events |
 | `/api/cron/season` | Daily | Auto-ends seasons past endDate |
