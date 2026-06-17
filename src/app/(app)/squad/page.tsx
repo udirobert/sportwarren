@@ -926,7 +926,7 @@ export default function SquadPage() {
                   </p>
                 </div>
               </div>
-              <div className="flex gap-2 shrink-0">
+              <div className="flex gap-2 shrink-0 flex-wrap">
                 <Link href="/match?mode=verify">
                   <Button size="sm" variant="secondary" className="bg-white/[0.08] text-white hover:bg-white/[0.12] border-white/[0.12]">
                     Review Matches
@@ -935,6 +935,12 @@ export default function SquadPage() {
                 <Link href="/match?mode=capture">
                   <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white">
                     Match Center
+                  </Button>
+                </Link>
+                <Link href="/sessions">
+                  <Button size="sm" variant="secondary" className="bg-violet-600/20 text-violet-300 hover:bg-violet-600/30 border-violet-500/30 hover:border-violet-500/50">
+                    <CalendarDays className="w-4 h-4" />
+                    Sessions
                   </Button>
                 </Link>
               </div>

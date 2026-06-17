@@ -302,10 +302,12 @@ export async function submitMatchResult({
     throw new MatchWorkflowError('NOT_FOUND', 'Away squad not found');
   }
 
-  if (homeSquadId === awaySquadId) {
+  // Allow same-squad matches for fluid session formats (bibs vs no-bibs)
+  // Only permitted when a sessionId is provided with explicit teamAssignments
+  if (homeSquadId === awaySquadId && !sessionId) {
     throw new MatchWorkflowError(
       'BAD_REQUEST',
-      'Home and away squads must be different',
+      'Home and away squads must be different outside of a session context',
     );
   }
 
@@ -378,6 +380,27 @@ export async function submitMatchResult({
       awayFormation,
       teamAssignments,
     });
+
+    // Internal session scrimmage (bibs vs no-bibs, same squad): skip all
+    // squad-level automation (twin sync, rewards, energy, fee lock) because
+    // the squad didn't win or lose as a team — players did. Without this
+    // early return, all that logic would run twice against the same
+    // SquadTwin / SquadTreasury.
+    // We *do* still seed participation stats + apply XP for individual
+    // player progression.
+    if (homeSquadId === awaySquadId) {
+      await ensureMatchParticipationStats(prisma, match.id);
+      try {
+        await applyMatchXP(prisma, match.id);
+      } catch (xpErr) {
+        console.warn('applyMatchXP failed for session match:', xpErr);
+      }
+      return {
+        ...match,
+        creResult: verificationDetails,
+        requiredVerifications: getRequiredMatchVerifications(match),
+      };
+    }
 
     if (socialTrust) {
       try {
