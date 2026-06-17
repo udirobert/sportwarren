@@ -484,14 +484,15 @@ this skill session.
   session-6 "v2 is the default" claim)
 
 **Why this matters for the submission**
-The build-log claim is now defensible. *"v2 is the default cron
-renderer; v1 is the rollback"* is true for both:
+The build-log claim is now defensible in *code*. *"v2 is the default
+cron renderer; v1 is the rollback"* is the on-disk truth for both:
 - The Next.js API route (session 6 work)
-- The Hetzner production cron (this session)
+- The Hetzner production cron (this session — `scripts/maintenance/moment-render.ts`)
 
-Judges who SSH into the box (unlikely) or who skim the maintenance
-scripts in the repo (possible) won't find a mismatch between the
-narrative and the code.
+**Correction added retrospectively in session 8:** the production
+*deploy* of this change did not land in this session — see session 8
+for the post-mortem. The code is correct; the production cron is still
+running v1 until the next clean deploy.
 
 **Architecture notes for future sessions**
 - pm2 dashboard via `ssh snel-bot 'pm2 list'`
@@ -501,3 +502,134 @@ narrative and the code.
   `deploy-runtime-release.sh /path/to/artifact.tar.gz`
 - Env: `/opt/sportwarren-api/shared/.env` (shared across releases via
   the release/symlink pattern)
+
+---
+
+## 2026-06-17 — Session 8: deploy attempt, two bugs surfaced, rollback
+
+**Intent**
+Build artifact locally, scp to snel-bot, run `deploy-runtime-release.sh`,
+confirm v2 is the production default for the cron path. Verify with a
+manual run.
+
+**What actually happened**
+
+The deploy did not land. The build attempt surfaced two real bugs in
+the deployment pipeline, both worth fixing but out of scope for this
+session. Production is rolled back to the previous working release;
+net change to production: zero.
+
+### Bug 1 — Next.js standalone path leak from CWD case
+
+`pnpm deploy:runtime:build` produced a tarball whose
+`.next/standalone/` contained a `Dev/sportwarren/` prefix:
+
+```
+.next/standalone/Dev/sportwarren/server.js
+.next/standalone/Dev/sportwarren/node_modules/
+.next/standalone/Dev/sportwarren/.next/server/...
+```
+
+The expected layout (and the layout of every previous successful
+deploy) is files directly under `.next/standalone/`. The pm2
+`ecosystem.config.cjs` references `'.next/standalone/server.js'`
+relative to `cwd`, so the new release booted with `[PM2][ERROR]
+Error: Script not found`.
+
+Root cause appears to be the build's CWD: my primary working tree is
+at `/Users/udingethe/Dev/sportwarren/` (uppercase D). macOS APFS is
+case-insensitive but case-preserving — Bash and other tools read the
+preserved case, and Next.js 16.2's standalone tracer captured the
+literal case in chunk names. Previous builds were presumably run from
+a path that didn't produce this prefix (lowercase variant, or a
+symlink, or different `outputFileTracingRoot` resolution).
+
+**Mitigation attempted (partial):** flattened the contents up to
+`.next/standalone/` and restarted pm2. The process started, but the
+Turbopack-compiled chunks had `Dev_sportwarren_*` baked into chunk
+imports — those don't resolve at runtime even after file flattening.
+Hitting `/api/cron/moment-render` returned 500 due to the chunk leak.
+
+**Proper fix (deferred):** ensure builds are produced from a CWD that
+matches the historical pattern (likely `/Users/udingethe/dev/...`
+lowercase, or use `outputFileTracingRoot` to anchor under the project
+root explicitly). Probably worth adding a guard at the top of
+`scripts/build-runtime-artifact.sh` that fails fast if the CWD case
+will produce a prefix in the standalone output.
+
+### Bug 2 — `.env` line 10 unquoted mnemonic breaks `set -o allexport`
+
+While diagnosing, I noticed the moment-render cron log on the box was
+filled with:
+
+```
+/opt/sportwarren-api/shared/.env: line 10: provide: command not found
+```
+
+Line 10 of `shared/.env` is `ALGORAND_PRIVATE_KEY=dose provide steel ...`
+— a 12-word BIP-39 mnemonic stored unquoted. Bash's `set -o allexport`
++ `source` interprets the second word `provide` as a command.
+
+This blocks `run-cron.sh` (which uses `set -euo pipefail` and sources
+`.env` before running the maintenance script). So the moment-render
+cron has been failing-fast at env load time for some time — independent
+of the v1 vs. v2 distinction. Node's dotenv parser handles this case
+differently, so the Next.js process running under pm2 has the
+mnemonic loaded correctly; the cron path is the only thing affected.
+
+**Proper fix (deferred, requires care with secrets):**
+- Single-line fix on the box: wrap line 10 value in single quotes
+  `ALGORAND_PRIVATE_KEY='dose provide steel ...'`
+- Or relax `run-cron.sh`: drop `set -e` around the `source` so
+  partial env load doesn't abort the whole run
+
+### Rollback
+
+```
+ln -sfn /opt/sportwarren-api/releases/20260617-151227 /opt/sportwarren-api/current
+pm2 delete sportwarren-api
+pm2 start /opt/sportwarren-api/current/ecosystem.config.cjs --only sportwarren-api --update-env
+pm2 save
+```
+
+Then re-copied the v1-only maintenance script back to
+`shared/scripts/maintenance/moment-render.ts` so the cron path also
+matches the rolled-back release.
+
+Final state:
+- `pm2 list` shows `sportwarren-api` online (pid 178)
+- `GET /api/health` returns 200 with DB / Redis / AI / payments all
+  healthy
+- `GET /api/cron/moment-render` returns 500 (was already 500 before
+  the deploy attempt — consistent with the v1 satori-html bug
+  discovered in session 6 — this is pre-existing, not a regression)
+- The Vercel-served frontend is unaffected (different runtime)
+
+### Bonus discovery
+
+The "moment-render cron broke silently in production" finding in
+session 6 is reinforced: even if the bash env issue weren't blocking,
+v1's `satori(htmlString)` call would have crashed every invocation.
+The cron has been **doubly broken** — failing at env load (Bug 2) and
+on the renderer call (the original v1 bug). v2 fixes the renderer; the
+env issue is independent.
+
+### Implications for the submission
+
+- The video does not need a live production cron run. The demo
+  flow is code → Figma → before/after PNGs → build log. All four are
+  in the repo + on the branch + at the Figma URL.
+- The build log is more honest *with* this entry than it would be
+  without. Build-in-Public reads as "here's what we built, here's
+  what we discovered, here's what we left for the next PR" rather
+  than "everything worked perfectly."
+- The committed code on `config-makeathon` is correct: v2 is the
+  default in both cron entry points, with `MOMENT_RENDER_V1_FALLBACK`
+  as the rollback. A future PR that addresses the path-leak +
+  env-quoting issues can land this cleanly in one deploy.
+
+### Files (this session)
+- `docs/makeathon/build-log.md` — this entry + session 7 correction.
+- No code changes. The two-commit feature work from session 6 + 7
+  remains on `config-makeathon` (pushed to origin) and is the
+  artifact judges will browse.
