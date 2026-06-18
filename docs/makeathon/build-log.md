@@ -1524,10 +1524,47 @@ All three formats:
   same slot as the streak_reward indicator pulse. Moved flag to the
   upper-left so both can co-exist on streak-tier achievement cards.
 
+### Figma sync (post-pass, same session)
+
+Inspected `xTaynEAGCjhhmcmQdPG0JZ` and discovered that only **one**
+archetype (`MomentCard / Record Broken`, node 7:65) ever existed as
+a real Figma component — the other 9 cards shipped TS-only. So the
+sync scope collapsed to one variant set with 5 tier variants
+(Standard / Premium / Streak / Partner / Internal).
+
+Each tier variant got:
+- Background fill swapped from flat SOLID slate to the 135°
+  slate-900 → slate-800 → slate-900 `GRADIENT_LINEAR` matching
+  `SURFACE_GRADIENT` in `tokens.ts`.
+- `PitchTexture` overlay (halfway line + center circle + center dot,
+  all at 4% white opacity), inserted as the variant's first child
+  with `layoutPositioning = 'ABSOLUTE'` so it sits behind Top/Footer
+  without joining the auto-layout flow.
+- `ScoreboardChip` ("28 / GOALS"), absolute-positioned at x=440 y=152
+  inside Top so it sits to the right of the broken rule. Same idiom
+  as the TS card.
+- `FootballMark` (12px ellipse with darker inner panel) inserted as
+  child 0 of Footer's horizontal auto-layout — it now flows before
+  SPORTWARREN naturally.
+
+The cover frame's instance (9:8) auto-propagated the changes.
+
+### Sync bug caught in flight
+
+First `use_figma` pass inserted PitchTexture / ScoreboardChip /
+FootballMark as flow children. The variant root is VERTICAL
+auto-layout, so the new 600×400 PitchTexture frame got slotted into
+the flow and pushed Top down to y=432 and Footer to y=669 — a
+double-height card. Fix: set `layoutPositioning = 'ABSOLUTE'` on
+PitchTexture and ScoreboardChip; insert FootballMark at index 0 of
+the Footer's horizontal flow (where being a flow child is correct).
+
 ### What's deferred
 
-Figma source-of-truth `.fig` file (`xTaynEAGCjhhmcmQdPG0JZ`) still
-shows the v1 archetype components (no pitch texture / no football
-mark). Code is now the authoritative render path — the Figma file is
-design documentation. Figma sync is task #58, queued for a separate
-pass.
+Building Figma components for the other 9 archetypes (level_up,
+season_end, twin_created, achievement, sim_complete,
+attestation_milestone, coaching_hired, coaching_expired,
+match_imported) is a *new library scope*, not a sync — they have
+never existed in Figma. The code-connect manifest already documents
+where they would map. Worth doing if the team wants the full Figma
+library as a design reference, but it's net-new work, not cleanup.
