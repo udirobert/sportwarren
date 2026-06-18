@@ -32,10 +32,9 @@ import {
   MomentCardProps,
   MomentTier,
 } from './types';
-import { TOKENS, TIER_ORNAMENT, alpha, formatCardDate } from './tokens';
+import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from './tokens';
 
 const FONT = 'Space Grotesk';
-const VIOLET = '#8b5cf6';
 
 const CONSTELLATION: Array<{ x: number; y: number; size: number; opacity: number }> = [
   { x: 380, y: 60, size: 4, opacity: 0.6 },
@@ -67,17 +66,26 @@ export function TwinCreatedCard({ moment }: MomentCardProps) {
         flexDirection: 'column',
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
-        background: TOKENS.background,
+        background: SURFACE_GRADIENT,
         borderRadius: 16,
         padding: 32,
         fontFamily: FONT,
         color: TOKENS.foreground,
-        border: cardBorder,
+        border: cardBorder === 'none' ? `1px solid ${alpha(TOKENS.foreground, 0.06)}` : cardBorder,
         justifyContent: 'space-between',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          inset: 0,
+          background: `radial-gradient(circle at 70% 40%, ${alpha(TOKENS.identity, 0.16)} 0%, transparent 55%)`,
+          pointerEvents: 'none',
+        }}
+      />
       {CONSTELLATION.map((dot, i) => (
         <div
           key={i}
@@ -89,7 +97,7 @@ export function TwinCreatedCard({ moment }: MomentCardProps) {
             width: dot.size,
             height: dot.size,
             borderRadius: dot.size / 2,
-            background: VIOLET,
+            background: TOKENS.identity,
             opacity: dot.opacity,
           }}
         />
@@ -115,8 +123,8 @@ export function TwinCreatedCard({ moment }: MomentCardProps) {
         style={{
           display: 'flex',
           padding: '4px 10px',
-          background: alpha(VIOLET, 0.22),
-          border: `1px solid ${alpha(VIOLET, 0.5)}`,
+          background: alpha(TOKENS.identity, 0.22),
+          border: `1px solid ${alpha(TOKENS.identity, 0.5)}`,
           borderRadius: 999,
           alignSelf: 'flex-start',
         }}
@@ -154,7 +162,7 @@ export function TwinCreatedCard({ moment }: MomentCardProps) {
               display: 'flex',
               fontSize: 18,
               fontWeight: 300,
-              color: alpha(VIOLET, 0.9),
+              color: alpha(TOKENS.identity, 0.9),
               letterSpacing: '0.06em',
               textTransform: 'uppercase',
             }}

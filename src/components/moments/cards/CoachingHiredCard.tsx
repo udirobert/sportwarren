@@ -20,10 +20,9 @@ import {
   MomentCardProps,
   MomentTier,
 } from './types';
-import { TOKENS, TIER_ORNAMENT, alpha, formatCardDate } from './tokens';
+import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from './tokens';
 
 const FONT = 'Space Grotesk';
-const INDIGO = '#6366f1';
 
 export function CoachingHiredCard({ moment }: MomentCardProps) {
   const tier = (moment.tier as MomentTier) ?? 'standard';
@@ -43,12 +42,12 @@ export function CoachingHiredCard({ moment }: MomentCardProps) {
         flexDirection: 'column',
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
-        background: TOKENS.background,
+        background: SURFACE_GRADIENT,
         borderRadius: 16,
         padding: 32,
         fontFamily: FONT,
         color: TOKENS.foreground,
-        border: cardBorder,
+        border: cardBorder === 'none' ? `1px solid ${alpha(TOKENS.foreground, 0.06)}` : cardBorder,
         justifyContent: 'space-between',
         position: 'relative',
         overflow: 'hidden',
@@ -63,7 +62,7 @@ export function CoachingHiredCard({ moment }: MomentCardProps) {
           width: 360,
           height: 360,
           borderRadius: 180,
-          background: `radial-gradient(circle, ${alpha(INDIGO, 0.18)} 0%, ${alpha(INDIGO, 0)} 70%)`,
+          background: `radial-gradient(circle, ${alpha(TOKENS.welcome, 0.22)} 0%, ${alpha(TOKENS.welcome, 0)} 70%)`,
         }}
       />
 
@@ -88,8 +87,8 @@ export function CoachingHiredCard({ moment }: MomentCardProps) {
           style={{
             display: 'flex',
             padding: '4px 10px',
-            background: alpha(INDIGO, 0.22),
-            border: `1px solid ${alpha(INDIGO, 0.5)}`,
+            background: alpha(TOKENS.welcome, 0.22),
+            border: `1px solid ${alpha(TOKENS.welcome, 0.5)}`,
             borderRadius: 999,
             alignSelf: 'flex-start',
           }}
@@ -114,7 +113,7 @@ export function CoachingHiredCard({ moment }: MomentCardProps) {
               fontSize: 48,
               fontWeight: 700,
               lineHeight: 0.75,
-              color: alpha(INDIGO, 0.85),
+              color: alpha(TOKENS.welcome, 0.85),
             }}
           >
             “
@@ -137,7 +136,7 @@ export function CoachingHiredCard({ moment }: MomentCardProps) {
               display: 'flex',
               fontSize: 16,
               fontWeight: 300,
-              color: alpha(INDIGO, 0.8),
+              color: alpha(TOKENS.welcome, 0.8),
               letterSpacing: '0.04em',
               textTransform: 'uppercase',
               marginTop: 4,

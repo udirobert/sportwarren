@@ -32,7 +32,7 @@ import {
   MomentCardProps,
   MomentTier,
 } from './types';
-import { TOKENS, TIER_ORNAMENT, alpha, formatCardDate } from './tokens';
+import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from './tokens';
 
 const FONT = 'Space Grotesk';
 
@@ -77,16 +77,26 @@ export function MatchImportedCard({ moment }: MomentCardProps) {
         flexDirection: 'column',
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
-        background: TOKENS.background,
+        background: SURFACE_GRADIENT,
         borderRadius: 16,
         padding: 32,
         fontFamily: FONT,
         color: TOKENS.foreground,
-        border: cardBorder,
+        border: cardBorder === 'none' ? `1px solid ${alpha(TOKENS.foreground, 0.06)}` : cardBorder,
         justifyContent: 'space-between',
         position: 'relative',
+        overflow: 'hidden',
       }}
     >
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          inset: 0,
+          background: `radial-gradient(circle at 50% 35%, ${alpha(TOKENS.foreground, 0.06)} 0%, transparent 60%)`,
+          pointerEvents: 'none',
+        }}
+      />
       {showPulse && (
         <div
           style={{

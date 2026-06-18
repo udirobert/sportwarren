@@ -28,10 +28,9 @@ import {
   MomentCardProps,
   MomentTier,
 } from './types';
-import { TOKENS, TIER_ORNAMENT, alpha, formatCardDate } from './tokens';
+import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from './tokens';
 
 const FONT = 'Space Grotesk';
-const SKY = '#38bdf8';
 
 function extractCount(label: string): string {
   const m = label.match(/(\d+)/);
@@ -58,16 +57,26 @@ export function AttestationMilestoneCard({ moment }: MomentCardProps) {
         flexDirection: 'column',
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
-        background: TOKENS.background,
+        background: SURFACE_GRADIENT,
         borderRadius: 16,
         padding: 32,
         fontFamily: FONT,
         color: TOKENS.foreground,
-        border: cardBorder,
+        border: cardBorder === 'none' ? `1px solid ${alpha(TOKENS.foreground, 0.06)}` : cardBorder,
         justifyContent: 'space-between',
         position: 'relative',
+        overflow: 'hidden',
       }}
     >
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          inset: 0,
+          background: `radial-gradient(circle at 25% 35%, ${alpha(TOKENS.verified, 0.14)} 0%, transparent 55%)`,
+          pointerEvents: 'none',
+        }}
+      />
       {showPulse && (
         <div
           style={{
@@ -89,8 +98,8 @@ export function AttestationMilestoneCard({ moment }: MomentCardProps) {
           style={{
             display: 'flex',
             padding: '4px 10px',
-            background: alpha(SKY, 0.22),
-            border: `1px solid ${alpha(SKY, 0.5)}`,
+            background: alpha(TOKENS.verified, 0.22),
+            border: `1px solid ${alpha(TOKENS.verified, 0.5)}`,
             borderRadius: 999,
             alignSelf: 'flex-start',
           }}
@@ -115,8 +124,8 @@ export function AttestationMilestoneCard({ moment }: MomentCardProps) {
               position: 'relative',
               width: 150,
               height: 100,
-              background: alpha(SKY, 0.1),
-              border: `1.5px solid ${alpha(SKY, 0.6)}`,
+              background: alpha(TOKENS.verified, 0.1),
+              border: `1.5px solid ${alpha(TOKENS.verified, 0.6)}`,
               borderRadius: 6,
               transform: 'rotate(-3deg)',
             }}
@@ -129,7 +138,7 @@ export function AttestationMilestoneCard({ moment }: MomentCardProps) {
                 left: 8,
                 width: 134,
                 height: 84,
-                border: `1px solid ${alpha(SKY, 0.35)}`,
+                border: `1px solid ${alpha(TOKENS.verified, 0.35)}`,
                 borderRadius: 3,
               }}
             />
@@ -142,7 +151,7 @@ export function AttestationMilestoneCard({ moment }: MomentCardProps) {
                 fontSize: 44,
                 fontWeight: 700,
                 lineHeight: 1,
-                color: alpha(SKY, 0.95),
+                color: alpha(TOKENS.verified, 0.95),
                 letterSpacing: '-0.03em',
               }}
             >
@@ -156,7 +165,7 @@ export function AttestationMilestoneCard({ moment }: MomentCardProps) {
                 left: 22,
                 fontSize: 11,
                 fontWeight: 700,
-                color: alpha(SKY, 0.8),
+                color: alpha(TOKENS.verified, 0.8),
                 letterSpacing: '0.1em',
                 textTransform: 'uppercase',
               }}

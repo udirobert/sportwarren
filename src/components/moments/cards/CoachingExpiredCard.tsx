@@ -22,10 +22,9 @@ import {
   MomentCardProps,
   MomentTier,
 } from './types';
-import { TOKENS, TIER_ORNAMENT, alpha, formatCardDate } from './tokens';
+import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from './tokens';
 
 const FONT = 'Space Grotesk';
-const ROSE = '#f43f5e';
 
 export function CoachingExpiredCard({ moment }: MomentCardProps) {
   const tier = (moment.tier as MomentTier) ?? 'standard';
@@ -45,16 +44,26 @@ export function CoachingExpiredCard({ moment }: MomentCardProps) {
         flexDirection: 'column',
         width: CARD_WIDTH,
         height: CARD_HEIGHT,
-        background: TOKENS.background,
+        background: SURFACE_GRADIENT,
         borderRadius: 16,
         padding: 32,
         fontFamily: FONT,
         color: TOKENS.foreground,
-        border: cardBorder,
+        border: cardBorder === 'none' ? `1px solid ${alpha(TOKENS.foreground, 0.06)}` : cardBorder,
         justifyContent: 'space-between',
         position: 'relative',
+        overflow: 'hidden',
       }}
     >
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          inset: 0,
+          background: `radial-gradient(circle at 80% 70%, ${alpha(TOKENS.closing, 0.10)} 0%, transparent 60%)`,
+          pointerEvents: 'none',
+        }}
+      />
       {showPulse && (
         <div
           style={{
@@ -76,8 +85,8 @@ export function CoachingExpiredCard({ moment }: MomentCardProps) {
           style={{
             display: 'flex',
             padding: '4px 10px',
-            background: alpha(ROSE, 0.16),
-            border: `1px solid ${alpha(ROSE, 0.4)}`,
+            background: alpha(TOKENS.closing, 0.16),
+            border: `1px solid ${alpha(TOKENS.closing, 0.4)}`,
             borderRadius: 999,
             alignSelf: 'flex-start',
           }}
@@ -113,7 +122,7 @@ export function CoachingExpiredCard({ moment }: MomentCardProps) {
               display: 'flex',
               width: 180,
               height: 1,
-              background: alpha(ROSE, 0.5),
+              background: alpha(TOKENS.closing, 0.5),
             }}
           />
         </div>
