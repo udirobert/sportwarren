@@ -125,5 +125,8 @@
     "overrides": {
       "form-data@<2.5.4": ">=2.5.4"
     }
+  },
+  "optionalDependencies": {
+    "@resvg/resvg-js-linux-x64-gnu": "2.6.2"
   }
 }
