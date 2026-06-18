@@ -189,9 +189,14 @@ maintenance scripts via `shared/scripts/maintenance/run-cron.sh`:
 
 **Manual cron trigger** (handy for verifying a fresh deploy):
 ```bash
-ssh snel-bot 'SECRET=$(grep "^CRON_SECRET=" /opt/sportwarren-api/shared/.env | cut -d= -f2 | tr -d "\""); \
+ssh snel-bot 'SECRET=$(grep "^CRON_SECRET=" /opt/sportwarren-api/shared/.env | sed "s/^CRON_SECRET=//" | tr -d "\n\""); \
   curl -s -H "Authorization: Bearer $SECRET" "http://localhost:5200/api/cron/moment-render?v=2" | jq'
 ```
+
+> The `sed`-based extraction (rather than `cut -d= -f2`) is required because
+> `CRON_SECRET` is a base64-encoded value and may contain literal `=`
+> characters that `cut` would truncate. The same pattern works for any
+> potentially-base64 env value.
 
 The response payload from v2 includes `processed`, `byKind`, and
 `fallbackCount` — useful for confirming which archetypes are landing

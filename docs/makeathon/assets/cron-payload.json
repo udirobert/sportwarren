@@ -1,0 +1,16 @@
+{
+  "_meta": {
+    "captured_at": "2026-06-18T11:35:00Z",
+    "endpoint": "/api/cron/moment-render?v=2",
+    "host": "snel-bot (Hetzner production)",
+    "release": "20260618-075142",
+    "http_status": 200,
+    "note": "Live response from the production v2 cron. processed=0 means the queue was empty at the moment of the call — the cron is healthy and caught up. v2HandledKinds lists archetypes registered in the deployed bundle (season_end was added post-deploy; will appear in the list after the next redeploy)."
+  },
+  "processed": 0,
+  "renderer": "v2",
+  "v2HandledKinds": ["record_broken", "level_up"],
+  "byKind": {},
+  "fallbackCount": 0,
+  "failed": 0
+}
