@@ -124,10 +124,8 @@
       "archetype": "Identity-forward, generative, mysterious — subject's name dominates as hero, constellation of low-opacity violet dots as generative motif.",
       "designSystemBindings": {
         "color/background": "TOKENS.background",
-        "color/foreground": "TOKENS.foreground (hero name)"
-      },
-      "nonTokenColors": {
-        "violet": "#8b5cf6 (violet-500) — kicker pill, role line, constellation dots. Not in design tokens yet; introduce a color/identity token if more archetypes need it."
+        "color/foreground": "TOKENS.foreground (hero name)",
+        "color/identity": "TOKENS.identity (kicker pill + role line + constellation dots)"
       },
       "textStyles": ["text/kicker", "text/sm", "text/xs", "(inline 56px Bold for hero name, 18px Light for role line)"],
       "dataShape": {
@@ -170,10 +168,8 @@
       "archetype": "Civic, official, certificate-led — slightly-rotated stamp with the milestone count + 'VERIFIED', title and subtitle on the right. Ties to the onchain preservation thesis.",
       "designSystemBindings": {
         "color/background": "TOKENS.background",
-        "color/foreground": "TOKENS.foreground (title + body)"
-      },
-      "nonTokenColors": {
-        "sky": "#38bdf8 (sky-400) — stamp fill/stroke + count + kicker. Not in design tokens; could introduce color/verified."
+        "color/foreground": "TOKENS.foreground (title + body)",
+        "color/verified": "TOKENS.verified (stamp fill/stroke + count + kicker)"
       },
       "textStyles": ["text/kicker", "text/sm", "text/xs", "(inline 44px Bold for stamp count, 24px Bold for title)"],
       "dataShape": {
@@ -193,10 +189,8 @@
       "archetype": "Welcoming, warm, introductory — coach name as if quoted/signed, soft indigo portrait-light radial gradient on the right. Start date prominent in footer.",
       "designSystemBindings": {
         "color/background": "TOKENS.background",
-        "color/foreground": "TOKENS.foreground (coach name + start date)"
-      },
-      "nonTokenColors": {
-        "indigo": "#6366f1 (indigo-500) — kicker pill, quote mark, role line, portrait-light radial. Not in design tokens."
+        "color/foreground": "TOKENS.foreground (coach name + start date)",
+        "color/welcome": "TOKENS.welcome (kicker pill, quote mark, role line, portrait-light radial)"
       },
       "textStyles": ["text/kicker", "text/xs", "(inline 48px Bold for quote mark, 44px Bold for coach name)"],
       "dataShape": {
@@ -217,10 +211,8 @@
       "archetype": "Quiet, valedictory, archival — restrained type weight, thin rose closing line under the coach name. Mood is 'closing' not 'celebrating'. Pairs with coaching_hired.",
       "designSystemBindings": {
         "color/background": "TOKENS.background",
-        "color/foreground": "TOKENS.foreground (coach name + body)"
-      },
-      "nonTokenColors": {
-        "rose": "#f43f5e (rose-500) — kicker pill, closing line, attribute-delta line. Not in design tokens."
+        "color/foreground": "TOKENS.foreground (coach name + body)",
+        "color/closing": "TOKENS.closing (kicker pill, closing line, attribute-delta line)"
       },
       "textStyles": ["text/kicker", "text/sm", "text/xs", "(inline 30px Medium for coach name — smaller than hired, intentionally)"],
       "dataShape": {

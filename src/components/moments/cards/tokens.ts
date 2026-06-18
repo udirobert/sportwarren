@@ -26,7 +26,28 @@ export const TOKENS = {
   teamHome: '#1f9d52',
   teamAway: '#dc2626',
   xpGold: '#f59e0b',
+
+  // Archetype-specific accents (promoted from non-token literals in session 13).
+  // Mirrored in the Figma Color collection as `color/<name>`.
+  identity: '#8b5cf6', // violet-500 — twin_created
+  verified: '#38bdf8', // sky-400 — attestation_milestone
+  welcome: '#6366f1',  // indigo-500 — coaching_hired
+  closing: '#f43f5e',  // rose-500 — coaching_expired
+
+  // Surface gradient stops. The canonical card surface, matching the
+  // website's bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900
+  // (used by HeroSection, SquadIdentityCard, PlayerIdentityCard).
+  surfaceGradientStart: '#0f172a',
+  surfaceGradientMid: '#1e293b',
+  surfaceGradientEnd: '#0f172a',
 } as const;
+
+/**
+ * Canonical card surface. Drop into `background:` on the top-level card
+ * frame instead of `TOKENS.background`. Brings every moment card into
+ * visual sync with the rest of the SportWarren UI surfaces.
+ */
+export const SURFACE_GRADIENT = `linear-gradient(135deg, ${TOKENS.surfaceGradientStart} 0%, ${TOKENS.surfaceGradientMid} 50%, ${TOKENS.surfaceGradientEnd} 100%)`;
 
 /**
  * Tier ornament rules — orthogonal layer applied on top of any archetype.
