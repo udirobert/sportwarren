@@ -38,6 +38,11 @@ import {
   SOCIAL_WIDTH,
   SOCIAL_HEIGHT,
 } from '@/components/moments/cards/social';
+import {
+  CARDS_STORIES,
+  STORY_WIDTH,
+  STORY_HEIGHT,
+} from '@/components/moments/cards/stories';
 
 const FONT_FAMILY = 'Space Grotesk';
 const IE_UA =
@@ -222,5 +227,35 @@ describe('moment-render v2 — social-format registry + renders', () => {
       expect(png[2]).toBe(0x4e);
       expect(png[3]).toBe(0x47);
     }, 20_000);
+  }
+});
+
+describe('moment-render v2 — story-format registry + renders', () => {
+  it('CARDS_STORIES has parity with CARDS (same kinds, both directions)', () => {
+    expect(Object.keys(CARDS_STORIES).sort()).toEqual(Object.keys(CARDS).sort());
+  });
+
+  for (const kind of Object.keys(CARDS_STORIES)) {
+    it(`renders ${kind} at 1080×1920 to a non-empty PNG`, async () => {
+      if (!networkAvailable || !fonts) return;
+      const Card = CARDS_STORIES[kind];
+      const element = React.createElement(Card, { moment: syntheticMoment(kind) });
+      const svg = await satori(element, {
+        width: STORY_WIDTH,
+        height: STORY_HEIGHT,
+        fonts: [
+          { name: FONT_FAMILY, data: fonts.regular, weight: 400, style: 'normal' },
+          { name: FONT_FAMILY, data: fonts.bold, weight: 700, style: 'normal' },
+        ],
+      });
+      const png = Buffer.from(
+        new Resvg(svg, { fitTo: { mode: 'width', value: STORY_WIDTH } }).render().asPng(),
+      );
+      expect(png.length).toBeGreaterThan(1000);
+      expect(png[0]).toBe(0x89);
+      expect(png[1]).toBe(0x50);
+      expect(png[2]).toBe(0x4e);
+      expect(png[3]).toBe(0x47);
+    }, 25_000);
   }
 });
