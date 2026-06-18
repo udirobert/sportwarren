@@ -36,6 +36,7 @@
     "postinstall": "prisma generate",
     "test": "vitest run",
     "test:watch": "vitest",
+    "assets:moments": "tsx scripts/render-before-after.tsx",
     "goat:demo": "tsx scripts/goat-agent-demo.ts",
     "goat:deploy:dry-run": "tsx scripts/deploy-to-goat.ts",
     "prepare": "husky"
