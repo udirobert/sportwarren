@@ -1559,12 +1559,45 @@ double-height card. Fix: set `layoutPositioning = 'ABSOLUTE'` on
 PitchTexture and ScoreboardChip; insert FootballMark at index 0 of
 the Footer's horizontal flow (where being a flow child is correct).
 
-### What's deferred
+### Full library build (same session)
 
-Building Figma components for the other 9 archetypes (level_up,
-season_end, twin_created, achievement, sim_complete,
-attestation_milestone, coaching_hired, coaching_expired,
-match_imported) is a *new library scope*, not a sync — they have
-never existed in Figma. The code-connect manifest already documents
-where they would map. Worth doing if the team wants the full Figma
-library as a design reference, but it's net-new work, not cleanup.
+After the sync, scoped up to build the missing 9 archetypes as
+proper Figma components so the Community publication shows the
+*full* library, not just record_broken plus nine code-connect stubs.
+Each is a standalone Tier=Standard component on its own page,
+matching the existing `MomentCard / Record Broken` page convention:
+
+- `MomentCard / Level Up` — jersey-frame around big "13" numeral,
+  chevron stack, gold ball mark
+- `MomentCard / Achievement` — corner-flag pennant top-left,
+  concentric crest centered, success ball mark
+- `MomentCard / Twin Created` — uppercase name hero, violet role
+  line, scattered constellation dots, identity ball mark
+- `MomentCard / Season End` — gold "SPRING '26" title, metallic
+  divider row (dot/line/diamond/line/dot), stats stack, gold ball
+- `MomentCard / Match Imported` — monochromatic date-as-hero (18
+  JUN / 2026) + result chip + opponent line, muted ball
+- `MomentCard / Sim Complete` — mini-pitch with home (teamHome)
+  and away (destructive) formation dots, W-D-L stat panel
+- `MomentCard / Attestation Milestone` — rotated sky-blue stamp
+  with "100 / VERIFIED", permanence tagline, verified ball
+- `MomentCard / Coaching Hired` — large indigo radial warmth
+  upper-right, quoted coach name, role subtitle, welcome ball,
+  STARTED + date footer
+- `MomentCard / Coaching Expired` — restrained title, thin rose
+  closing rule, valedictory detail, closing ball, ENDED date
+
+These are Standard-tier only. The full 5-tier variant treatment
+that record_broken has (Standard / Premium / Streak / Partner /
+Internal) is deferred — the visual library is the priority for the
+Community showcase; tier ornaments are documented in tokens.ts and
+can be applied per-archetype later if needed.
+
+Built via 8 `use_figma` calls, several in parallel batches. Each
+new page was a fresh `figma.createPage()` + `setCurrentPageAsync`
++ component build, all in one self-contained call.
+
+The Community publication at
+`figma.com/community/file/1649363477700031990` needs a manual
+re-publish (Figma → File → Publish to community → Update) to make
+the new components visible to the gallery.
