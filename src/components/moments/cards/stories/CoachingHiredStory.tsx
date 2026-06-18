@@ -7,6 +7,8 @@ import React from 'react';
 import { STORY_WIDTH, STORY_HEIGHT, StoryCardProps } from './types';
 import { MomentTier } from '../types';
 import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from '../tokens';
+import { PitchTexture } from '../PitchTexture';
+import { FootballMark } from '../FootballMark';
 
 const FONT = 'Space Grotesk';
 
@@ -20,6 +22,7 @@ export function CoachingHiredStory({ moment }: StoryCardProps) {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: STORY_WIDTH, height: STORY_HEIGHT, background: SURFACE_GRADIENT, padding: '120px 80px', fontFamily: FONT, color: TOKENS.foreground, border: cardBorder === 'none' ? `1px solid ${alpha(TOKENS.foreground, 0.06)}` : cardBorder, justifyContent: 'space-between', position: 'relative', overflow: 'hidden' }}>
+      <PitchTexture cardWidth={STORY_WIDTH} cardHeight={STORY_HEIGHT} opacity={0.04} />
       <div style={{ display: 'flex', position: 'absolute', top: -200, right: -300, width: 960, height: 960, borderRadius: 480, background: `radial-gradient(circle, ${alpha(TOKENS.welcome, 0.34)} 0%, ${alpha(TOKENS.welcome, 0)} 70%)` }} />
       {showPulse && (
         <div style={{ position: 'absolute', top: 80, right: 80, width: 28, height: 28, borderRadius: 14, background: TOKENS.success, boxShadow: `0 0 40px 6px ${alpha(TOKENS.success, 0.6)}`, display: 'flex' }} />
@@ -52,7 +55,10 @@ export function CoachingHiredStory({ moment }: StoryCardProps) {
           <span style={{ fontSize: 22, fontWeight: 600, color: alpha(TOKENS.foreground, 0.4), letterSpacing: '0.10em' }}>STARTED</span>
           <span style={{ fontSize: 30, fontWeight: 700, color: alpha(TOKENS.foreground, 0.85), letterSpacing: '0.06em' }}>{formatCardDate(moment.createdAt)}</span>
         </div>
-        <span style={{ fontSize: 38, fontWeight: 700, color: alpha(TOKENS.foreground, 0.85), letterSpacing: '0.18em' }}>SPORTWARREN</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <FootballMark size={32} color={TOKENS.welcome} />
+          <span style={{ fontSize: 38, fontWeight: 700, color: alpha(TOKENS.foreground, 0.85), letterSpacing: '0.18em' }}>SPORTWARREN</span>
+        </div>
         <span style={{ fontSize: 18, fontWeight: 600, color: alpha(TOKENS.foreground, 0.45), letterSpacing: '0.06em' }}>sportwarren.com</span>
       </div>
     </div>

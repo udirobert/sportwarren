@@ -7,6 +7,7 @@ import React from 'react';
 import { STORY_WIDTH, STORY_HEIGHT, StoryCardProps } from './types';
 import { MomentTier } from '../types';
 import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from '../tokens';
+import { FootballMark } from '../FootballMark';
 
 const FONT = 'Space Grotesk';
 
@@ -77,7 +78,10 @@ export function SimCompleteStory({ moment }: StoryCardProps) {
             <span style={{ fontSize: 16, fontWeight: 700, color: alpha(TOKENS.foreground, 0.95), letterSpacing: '0.14em' }}>{pipText}</span>
           </div>
         )}
-        <span style={{ fontSize: 38, fontWeight: 700, color: alpha(TOKENS.foreground, 0.85), letterSpacing: '0.18em' }}>SPORTWARREN</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <FootballMark size={32} color={TOKENS.teamHome} />
+          <span style={{ fontSize: 38, fontWeight: 700, color: alpha(TOKENS.foreground, 0.85), letterSpacing: '0.18em' }}>SPORTWARREN</span>
+        </div>
         <span style={{ fontSize: 18, fontWeight: 600, color: alpha(TOKENS.foreground, 0.45), letterSpacing: '0.06em' }}>sportwarren.com · {formatCardDate(moment.createdAt)}</span>
       </div>
     </div>

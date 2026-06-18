@@ -22,6 +22,8 @@ import {
   MomentTier,
 } from './types';
 import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from './tokens';
+import { PitchTexture } from './PitchTexture';
+import { FootballMark } from './FootballMark';
 
 const FONT = 'Space Grotesk';
 
@@ -72,6 +74,7 @@ export function LevelUpCard({ moment }: MomentCardProps) {
         overflow: 'hidden',
       }}
     >
+      <PitchTexture cardWidth={CARD_WIDTH} cardHeight={CARD_HEIGHT} opacity={0.04} />
       <div
         style={{
           display: 'flex',
@@ -128,17 +131,28 @@ export function LevelUpCard({ moment }: MomentCardProps) {
           gap: 20,
         }}
       >
+        {/* Jersey-number frame around the numeral */}
         <div
           style={{
             display: 'flex',
-            fontSize: 220,
-            fontWeight: 700,
-            lineHeight: 1,
-            color: TOKENS.xpGold,
-            letterSpacing: '-0.08em',
+            position: 'relative',
+            padding: '0 24px 8px 24px',
+            border: `2px solid ${alpha(TOKENS.xpGold, 0.4)}`,
+            borderRadius: 6,
           }}
         >
-          {numeral}
+          <div
+            style={{
+              display: 'flex',
+              fontSize: 220,
+              fontWeight: 700,
+              lineHeight: 1,
+              color: TOKENS.xpGold,
+              letterSpacing: '-0.08em',
+            }}
+          >
+            {numeral}
+          </div>
         </div>
         <div
           style={{
@@ -197,6 +211,7 @@ export function LevelUpCard({ moment }: MomentCardProps) {
               </span>
             </div>
           )}
+          <FootballMark size={12} color={TOKENS.xpGold} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span
               style={{

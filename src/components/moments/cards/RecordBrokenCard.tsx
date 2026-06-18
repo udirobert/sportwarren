@@ -24,6 +24,8 @@ import {
   MomentTier,
 } from './types';
 import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from './tokens';
+import { PitchTexture } from './PitchTexture';
+import { FootballMark } from './FootballMark';
 
 const FONT = 'Space Grotesk';
 
@@ -57,6 +59,7 @@ export function RecordBrokenCard({ moment }: MomentCardProps) {
         overflow: 'hidden',
       }}
     >
+      <PitchTexture cardWidth={CARD_WIDTH} cardHeight={CARD_HEIGHT} opacity={0.04} />
       <div
         style={{
           display: 'flex',
@@ -121,11 +124,48 @@ export function RecordBrokenCard({ moment }: MomentCardProps) {
           {moment.label}
         </div>
 
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-          <div style={{ display: 'flex', width: 140, height: 3, background: TOKENS.destructive }} />
-          <div style={{ display: 'flex', width: 60, height: 3, background: alpha(TOKENS.destructive, 0.5) }} />
-          <div style={{ display: 'flex', width: 180, height: 3, background: TOKENS.destructive }} />
-          <div style={{ display: 'flex', width: 40, height: 3, background: alpha(TOKENS.destructive, 0.35) }} />
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+          {/* Broken rule motif */}
+          <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            <div style={{ display: 'flex', width: 100, height: 3, background: TOKENS.destructive }} />
+            <div style={{ display: 'flex', width: 40, height: 3, background: alpha(TOKENS.destructive, 0.5) }} />
+            <div style={{ display: 'flex', width: 140, height: 3, background: TOKENS.destructive }} />
+          </div>
+          {/* Scoreboard-style stat chip */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '4px 10px',
+              background: alpha(TOKENS.foreground, 0.08),
+              border: `1px solid ${alpha(TOKENS.foreground, 0.18)}`,
+              borderRadius: 4,
+            }}
+          >
+            <span
+              style={{
+                display: 'flex',
+                fontSize: 16,
+                fontWeight: 700,
+                color: alpha(TOKENS.foreground, 0.95),
+                letterSpacing: '0.04em',
+              }}
+            >
+              28
+            </span>
+            <span
+              style={{
+                display: 'flex',
+                fontSize: 10,
+                fontWeight: 700,
+                color: alpha(TOKENS.foreground, 0.55),
+                letterSpacing: '0.18em',
+              }}
+            >
+              GOALS
+            </span>
+          </div>
         </div>
 
         {moment.detail && (
@@ -172,6 +212,7 @@ export function RecordBrokenCard({ moment }: MomentCardProps) {
               </span>
             </div>
           )}
+          <FootballMark size={12} />
           <span
             style={{
               fontSize: 12,

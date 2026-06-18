@@ -24,6 +24,8 @@ import {
   alpha,
   formatCardDate,
 } from '../tokens';
+import { PitchTexture } from '../PitchTexture';
+import { FootballMark } from '../FootballMark';
 
 const FONT = 'Space Grotesk';
 
@@ -55,6 +57,7 @@ export function RecordBrokenSocial({ moment }: SocialCardProps) {
         overflow: 'hidden',
       }}
     >
+      <PitchTexture cardWidth={SOCIAL_WIDTH} cardHeight={SOCIAL_HEIGHT} opacity={0.04} />
       <div
         style={{
           display: 'flex',
@@ -120,11 +123,26 @@ export function RecordBrokenSocial({ moment }: SocialCardProps) {
           {moment.label}
         </div>
 
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ display: 'flex', width: 280, height: 5, background: TOKENS.destructive }} />
-          <div style={{ display: 'flex', width: 120, height: 5, background: alpha(TOKENS.destructive, 0.5) }} />
-          <div style={{ display: 'flex', width: 360, height: 5, background: TOKENS.destructive }} />
-          <div style={{ display: 'flex', width: 80, height: 5, background: alpha(TOKENS.destructive, 0.35) }} />
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', width: 220, height: 5, background: TOKENS.destructive }} />
+            <div style={{ display: 'flex', width: 80, height: 5, background: alpha(TOKENS.destructive, 0.5) }} />
+            <div style={{ display: 'flex', width: 280, height: 5, background: TOKENS.destructive }} />
+          </div>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 14,
+              padding: '8px 18px',
+              background: alpha(TOKENS.foreground, 0.08),
+              border: `1px solid ${alpha(TOKENS.foreground, 0.2)}`,
+              borderRadius: 6,
+            }}
+          >
+            <span style={{ display: 'flex', fontSize: 30, fontWeight: 700, color: alpha(TOKENS.foreground, 0.95), letterSpacing: '0.04em' }}>28</span>
+            <span style={{ display: 'flex', fontSize: 16, fontWeight: 700, color: alpha(TOKENS.foreground, 0.55), letterSpacing: '0.18em' }}>GOALS</span>
+          </div>
         </div>
 
         {moment.detail && (
@@ -172,16 +190,19 @@ export function RecordBrokenSocial({ moment }: SocialCardProps) {
               </span>
             </div>
           )}
-          <span
-            style={{
-              fontSize: 28,
-              fontWeight: 700,
-              color: alpha(TOKENS.foreground, 0.85),
-              letterSpacing: '0.18em',
-            }}
-          >
-            SPORTWARREN
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <FootballMark size={26} color={TOKENS.destructive} />
+            <span
+              style={{
+                fontSize: 28,
+                fontWeight: 700,
+                color: alpha(TOKENS.foreground, 0.85),
+                letterSpacing: '0.18em',
+              }}
+            >
+              SPORTWARREN
+            </span>
+          </div>
           <span
             style={{
               fontSize: 16,

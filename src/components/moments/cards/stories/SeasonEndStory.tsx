@@ -7,6 +7,8 @@ import React from 'react';
 import { STORY_WIDTH, STORY_HEIGHT, StoryCardProps } from './types';
 import { MomentTier } from '../types';
 import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from '../tokens';
+import { PitchTexture } from '../PitchTexture';
+import { FootballMark } from '../FootballMark';
 
 const FONT = 'Space Grotesk';
 
@@ -42,6 +44,7 @@ export function SeasonEndStory({ moment }: StoryCardProps) {
         overflow: 'hidden',
       }}
     >
+      <PitchTexture cardWidth={STORY_WIDTH} cardHeight={STORY_HEIGHT} opacity={0.04} />
       <div style={{ display: 'flex', position: 'absolute', inset: 0, background: `radial-gradient(circle at 70% 25%, ${alpha(TOKENS.xpGold, 0.26)} 0%, transparent 55%)`, pointerEvents: 'none' }} />
       {showPulse && (
         <div style={{ position: 'absolute', top: 80, right: 80, width: 28, height: 28, borderRadius: 14, background: TOKENS.success, boxShadow: `0 0 40px 6px ${alpha(TOKENS.success, 0.6)}`, display: 'flex' }} />
@@ -85,7 +88,10 @@ export function SeasonEndStory({ moment }: StoryCardProps) {
             <span style={{ fontSize: 16, fontWeight: 700, color: alpha(TOKENS.foreground, 0.95), letterSpacing: '0.14em' }}>{pipText}</span>
           </div>
         )}
-        <span style={{ fontSize: 38, fontWeight: 700, color: alpha(TOKENS.foreground, 0.85), letterSpacing: '0.18em' }}>SPORTWARREN</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+          <FootballMark size={32} color={TOKENS.xpGold} />
+          <span style={{ fontSize: 38, fontWeight: 700, color: alpha(TOKENS.foreground, 0.85), letterSpacing: '0.18em' }}>SPORTWARREN</span>
+        </div>
         <span style={{ fontSize: 18, fontWeight: 600, color: alpha(TOKENS.foreground, 0.45), letterSpacing: '0.06em' }}>sportwarren.com · {formatCardDate(moment.createdAt)}</span>
       </div>
     </div>

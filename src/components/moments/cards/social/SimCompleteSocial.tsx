@@ -8,6 +8,7 @@ import React from 'react';
 import { SOCIAL_WIDTH, SOCIAL_HEIGHT, SocialCardProps } from './types';
 import { MomentTier } from '../types';
 import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from '../tokens';
+import { FootballMark } from '../FootballMark';
 
 const FONT = 'Space Grotesk';
 
@@ -100,7 +101,10 @@ export function SimCompleteSocial({ moment }: SocialCardProps) {
               <span style={{ fontSize: 14, fontWeight: 700, color: alpha(TOKENS.foreground, 0.95), letterSpacing: '0.12em' }}>{pipText}</span>
             </div>
           )}
-          <span style={{ fontSize: 28, fontWeight: 700, color: alpha(TOKENS.foreground, 0.85), letterSpacing: '0.18em' }}>SPORTWARREN</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <FootballMark size={26} color={TOKENS.teamHome} />
+            <span style={{ fontSize: 28, fontWeight: 700, color: alpha(TOKENS.foreground, 0.85), letterSpacing: '0.18em' }}>SPORTWARREN</span>
+          </div>
         </div>
         <span style={{ display: 'flex', fontSize: 18, fontWeight: 600, color: alpha(TOKENS.foreground, 0.5), letterSpacing: '0.08em' }}>
           {formatCardDate(moment.createdAt)}

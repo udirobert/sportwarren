@@ -36,6 +36,8 @@ import {
   MomentTier,
 } from './types';
 import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from './tokens';
+import { PitchTexture } from './PitchTexture';
+import { FootballMark } from './FootballMark';
 
 const FONT = 'Space Grotesk';
 
@@ -81,6 +83,7 @@ export function SeasonEndCard({ moment }: MomentCardProps) {
         overflow: 'hidden',
       }}
     >
+      <PitchTexture cardWidth={CARD_WIDTH} cardHeight={CARD_HEIGHT} opacity={0.04} />
       <div
         style={{
           display: 'flex',
@@ -227,6 +230,7 @@ export function SeasonEndCard({ moment }: MomentCardProps) {
               </span>
             </div>
           )}
+          <FootballMark size={12} color={TOKENS.xpGold} />
           <span
             style={{
               fontSize: 12,
