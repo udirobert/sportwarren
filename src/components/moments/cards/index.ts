@@ -10,6 +10,7 @@
 import React from 'react';
 import { RecordBrokenCard } from './RecordBrokenCard';
 import { LevelUpCard } from './LevelUpCard';
+import { SeasonEndCard } from './SeasonEndCard';
 import { DefaultCard } from './DefaultCard';
 import { MomentCardProps } from './types';
 
@@ -18,6 +19,7 @@ type MomentCardComponent = (props: MomentCardProps) => React.ReactElement;
 export const CARDS: Record<string, MomentCardComponent> = {
   record_broken: RecordBrokenCard,
   level_up: LevelUpCard,
+  season_end: SeasonEndCard,
 };
 
 export const FALLBACK_CARD: MomentCardComponent = DefaultCard;
@@ -26,5 +28,5 @@ export function resolveCard(kind: string): MomentCardComponent {
   return CARDS[kind] ?? FALLBACK_CARD;
 }
 
-export { RecordBrokenCard, LevelUpCard, DefaultCard };
+export { RecordBrokenCard, LevelUpCard, SeasonEndCard, DefaultCard };
 export type { MomentCardProps, MomentForRender } from './types';

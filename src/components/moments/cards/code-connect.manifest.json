@@ -43,6 +43,28 @@
         "color/foreground": "TOKENS.foreground"
       },
       "textStyles": ["text/kicker", "text/sm", "text/xs", "(inline 220px Bold for numeral hero)"]
+    },
+    {
+      "kind": "season_end",
+      "figmaNodeId": "15:102",
+      "figmaNodeName": "MomentCard / Season End",
+      "figmaUrl": "https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ?node-id=15-102",
+      "component": "SeasonEndCard",
+      "source": "src/components/moments/cards/SeasonEndCard.tsx",
+      "variantProperty": "Tier",
+      "variantValues": ["Standard", "Premium", "Streak", "Partner", "Internal"],
+      "archetype": "Retrospective, trophied — poster format with longer body text, xp-gold + emerald palette, metallic divider with star glyph.",
+      "designSystemBindings": {
+        "color/background": "TOKENS.background",
+        "color/xp-gold": "TOKENS.xpGold (season hero + kicker pill + metallic divider)",
+        "color/success": "TOKENS.success (top-scorer stat accent + streak pulse + pip)",
+        "color/foreground": "TOKENS.foreground (squad subtitle + body stats + footer)"
+      },
+      "textStyles": ["text/kicker", "text/sm", "text/xs", "(inline 52px Bold for season hero, 18px Medium for squad subtitle)"],
+      "dataShape": {
+        "label": "Season name (e.g. 'Spring \\'26')",
+        "detail": "Multi-line: squad name on first line, stats summary on subsequent lines (2nd stat line is rendered with --success accent)"
+      }
     }
   ],
   "fallback": {

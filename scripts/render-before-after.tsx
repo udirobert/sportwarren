@@ -225,6 +225,15 @@ const SAMPLE_MOMENTS: SyntheticMoment[] = [
     createdAt: new Date('2026-06-15T15:30:00Z'),
     subjectType: 'player',
   },
+  {
+    kind: 'season_end',
+    tier: 'standard',
+    label: "Spring '26",
+    detail:
+      'Brockenhurst Rovers\n14 played · 9 won · 3 drawn · 2 lost\nTop scorer: Marcus Tate — 28 goals\nComeback of the season: 3-2 vs. Ballygally, Apr 12',
+    createdAt: new Date('2026-06-15T15:30:00Z'),
+    subjectType: 'squad',
+  },
 ];
 
 async function main() {
