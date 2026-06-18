@@ -89,15 +89,42 @@ import { renderPendingBatch as renderV2 } from '...moment-render-v2.js';
 
 ---
 
-## Close · 1:25–1:30
+## Live cron proof · 1:25–1:35
+
+**On screen:** Terminal window showing the curl command and the live payload from `docs/makeathon/assets/cron-payload.json`:
+
+```bash
+$ curl -H "Authorization: Bearer $SECRET" \
+    https://api.sportwarren.com/api/cron/moment-render?v=2
+{
+  "processed": 0,
+  "renderer": "v2",
+  "v2HandledKinds": ["record_broken", "level_up"],
+  "byKind": {},
+  "fallbackCount": 0,
+  "failed": 0
+}
+HTTP 200
+```
+
+Highlight `"renderer": "v2"` and `"v2HandledKinds"`.
+
+**VO:**
+> "This isn't a mock. The production cron is running v2 right now. The response payload tells you which archetypes are routed through dedicated cards, which fall back to the default — observable rollout to a fully-mapped library."
+
+---
+
+## Close · 1:35–1:45
 
 **On screen:** End card. Centered text:
 
 ```
 SportWarren — Every match leaves a mark.
 
-github.com/udirobert/sportwarren
-figma.com/design/xTaynEAGCjhhmcmQdPG0JZ
+Live:        sportwarren.com
+Repo:        github.com/udirobert/sportwarren
+Library:     figma.com/community/file/1649363477700031990
+Working:     figma.com/design/xTaynEAGCjhhmcmQdPG0JZ
 
 #ConfigMakeathon  ·  @figma
 ```
@@ -118,16 +145,130 @@ figma.com/design/xTaynEAGCjhhmcmQdPG0JZ
   - `docs/makeathon/assets/record_broken-v2.png`
   - `docs/makeathon/assets/level_up-v1.png`
   - `docs/makeathon/assets/level_up-v2.png`
+  - `docs/makeathon/assets/season_end-v1.png`
+  - `docs/makeathon/assets/season_end-v2.png`
+  - `docs/makeathon/assets/cron-payload.json` (for the live cron beat)
 - **Captions:** Loom auto-captions. Review them — "satori" and "Hetzner" will mis-transcribe.
 
-## Social post (companion)
+## Social post — three platform variants
 
-The Tweet/LinkedIn/Instagram caption can be derived from the script's cold open + the close:
+### X / Twitter (single post, ≤280 chars)
 
-> "Built for the 265 million footballers nobody films.
->
-> SportWarren shipped one card template for every match moment — generic gradient, generic font. So I built an AI design pipeline: Figma MCP reads the codebase, generates a per-archetype library, swaps it into the satori renderer. v2 is now the production cron.
->
-> Full build log + reproducible skill in the repo.
->
-> #ConfigMakeathon @figma"
+```
+Built for the 265M grassroots footballers Opta will never measure.
+
+SportWarren shipped one shareable card per match. I rebuilt the renderer through a Figma MCP ↔ code loop — design-system-bound, per-archetype, now live in production.
+
+🎬 [video link]
+🧵 [thread link]
+
+#ConfigMakeathon @figma
+```
+
+### X / Twitter (thread version, recommended)
+
+```
+1/ Built for the 265 million grassroots footballers Opta will never
+   measure.
+
+   SportWarren preserves every Sunday-league match. Their card
+   renderer was generic AI slop. I rebuilt it through a Figma MCP
+   workflow.
+
+   [v1-vs-v2 image]
+
+   #ConfigMakeathon @figma
+
+2/ The old template:
+   • One layout for every kind of moment
+   • Inter — explicitly rejected by their own design tokens
+   • 135° gradient — the AI slop default
+   • Silently broken in prod (satori 0.26 doesn't parse HTML strings)
+
+   [v1 PNG]
+
+3/ The new pipeline:
+   → MCP reads the codebase + design tokens
+   → Agent generates a Figma library, one archetype per kind
+   → A manifest binds Figma nodes to TS components (Pro-tier
+     substitute for Code Connect)
+   → satori renders the cards using the design system
+
+   [v2 PNGs]
+
+4/ 3 of 10 archetypes shipped. Each visually distinct:
+
+   🔴 Record broken — type as imagery
+   🟡 Level up — giant numeral hero
+   🟢 Season end — retrospective poster
+
+   Production cron is running v2 right now. v1 is the rollback.
+
+   [variant set screenshot]
+
+5/ Everything reproducible:
+
+   Skill: github.com/udirobert/sportwarren/tree/main/.claude/skills/sw-moments
+   Build log: github.com/udirobert/sportwarren/blob/main/docs/makeathon/build-log.md
+   Figma library: figma.com/community/file/1649363477700031990
+
+   Same workflow applies to any project with a shareable-card surface.
+```
+
+### LinkedIn (long-form)
+
+```
+Built for the 265 million grassroots footballers Opta will never measure.
+
+SportWarren is a preservation product — every Sunday-league match logged, every moment shareable. Their card renderer was generic AI slop: one Inter+gradient template for every kind of moment, in a product whose own design docs explicitly reject Inter.
+
+For Config Makeathon I rebuilt the renderer through a Figma MCP ↔ code workflow:
+
+→ MCP reads the existing codebase + design tokens
+→ Claude Code generates a Figma library, one archetype per moment kind
+→ A hand-maintained manifest binds Figma nodes to TS components (Pro-tier substitute for Code Connect, which requires Org/Enterprise)
+→ A new satori renderer pulls the right card per kind, falls back gracefully for unmapped ones
+→ Webpack-standalone artifact, native binaries injected for Linux, CI smoke test, all of it
+
+3 of 10 archetypes shipped end-to-end — record broken (type-as-imagery), level up (numeral-as-hero), season end (poster). Production cron is running v2 right now; v1 is the documented rollback.
+
+The build log documents 11 working sessions, including the bugs we surfaced along the way: a silently-broken Inter font URL, a satori-0.26 string-vs-VNode regression, a Turbopack chunk-name path leak. Honest about what worked and what didn't.
+
+Workflow is reusable — anyone with a shareable-card surface (achievement screens, social cards, certificate generators) can clone the skill and apply it. Recipe in the repo.
+
+Figma library: lnkd.in/[community-link]
+Repo: github.com/udirobert/sportwarren
+Live: sportwarren.com
+
+#ConfigMakeathon @Figma
+
+Built with @Anthropic Claude Code, Figma MCP, and Figma's Design Agent.
+```
+
+### Instagram (caption — works for reel or carousel)
+
+```
+Every match leaves a mark. Even the Sunday-league ones nobody filmed.
+
+🎯 Built for the 265 million grassroots footballers Opta will never measure.
+
+SportWarren records every match, every rating, every moment — and turns them into shareable cards. The renderer used to be generic AI slop. I rebuilt it through a Figma ↔ code loop with the MCP server: code reads → library generates → manifest binds → cards ship.
+
+3 of 10 archetypes shipped. Production cron is live with the new pipeline. Build log + reusable skill in the repo so anyone can copy the workflow.
+
+Repo: github.com/udirobert/sportwarren
+Figma library: link in bio
+Live: sportwarren.com
+
+Made for #ConfigMakeathon — @figma
+.
+.
+.
+#designsystems #figma #figmadesign #designtools #grassrootsfootball #amateurfootball #footballdesign #sportstech #buildinpublic #aiworkflow #anthropic #claudecode #generativedesign #shareablemoments #footballmoments #everymatchleavesamark
+```
+
+### Hashtag variants (pick per platform)
+
+- **Always include (qualifying):** `#ConfigMakeathon` `@figma`
+- **Discovery boosters (X, IG):** `#FigmaMCP` `#BuildInPublic` `#SportsTech` `#DesignSystems`
+- **Audience-specific (LinkedIn):** `@Anthropic` `@Vercel` `#FigmaAgent`
