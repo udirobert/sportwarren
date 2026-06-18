@@ -1623,3 +1623,25 @@ accent color, tilted into an editorial spread.
 
 Both files now lead with a cover that reframes them as *systems*
 rather than collections of nice frames.
+
+### Post-submission roadmap (explicit defer)
+
+Two integrations would compound this work but were deliberately
+deferred — the makeathon is judged on what exists, and these need
+real engineering scope:
+
+1. **Moment share URLs** (`/m/[momentId]` with OG image, share
+   buttons) — turns every existing moment in production into an
+   inbound funnel. ~1 day.
+2. **Squad Recruitment auto-generation** — bake squad name +
+   invite link into the Figma template via the satori pipeline,
+   ship it as a "Share recruitment post" button in the onboarding
+   flow. Directly compounds the captain wedge from `VISION.md`.
+   ~1 day.
+
+The other Marketing Toolkit templates (Captain Spotlight, Squad
+of the Week, Landing Hero, Feature Explainer) stay as
+captain-self-service Figma assets — they don't have an event
+trigger or stats automation to justify dynamic generation yet.
+
+Full plan in [post-submission-roadmap.md](./post-submission-roadmap.md).
