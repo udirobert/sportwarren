@@ -99,67 +99,53 @@ done
 # server. The standalone trace doesn't include them because they're resolved
 # dynamically based on process.platform. We download and inject them directly.
 
-# @resvg/resvg-js-linux-x64-gnu — required by @resvg/resvg-js for PNG rendering
-# on the Hetzner server (Linux x64, glibc). Install via npm pack to bypass
-# platform checks that block npm/pnpm on macOS.
-_RESVG_LINUX_PKG="@resvg/resvg-js-linux-x64-gnu"
-_RESVG_LINUX_VER=$(node -e "try { const p = require('@resvg/resvg-js/package.json'); console.log(p.version); } catch(e) { console.log('2.6.2'); }" 2>/dev/null)
-_RESVG_LINUX_TGZ="/tmp/resvg-resvg-js-linux-x64-gnu-"${_RESVG_LINUX_VER}".tgz"
-if [ ! -f "$_RESVG_LINUX_TGZ" ]; then
-  echo "  📥 Downloading $_RESVG_LINUX_PKG@$_RESVG_LINUX_VER..."
-  (cd /tmp && npm pack "${_RESVG_LINUX_PKG}@${_RESVG_LINUX_VER}" 2>/dev/null)
-fi
-if [ -f "$_RESVG_LINUX_TGZ" ]; then
-  _RESVG_TARGET_DIR="$BUILD_DIR/.next/standalone/node_modules/.pnpm/${_RESVG_LINUX_PKG}@${_RESVG_LINUX_VER}/node_modules/${_RESVG_LINUX_PKG}"
-  mkdir -p "$_RESVG_TARGET_DIR"
-  tar -xzf "$_RESVG_LINUX_TGZ" -C "$_RESVG_TARGET_DIR" --strip-components=1 2>/dev/null
-  rm -rf "$BUILD_DIR/.next/standalone/node_modules/${_RESVG_LINUX_PKG}"
-  mkdir -p "$BUILD_DIR/.next/standalone/node_modules/@resvg"
-  ln -sfn "../.pnpm/${_RESVG_LINUX_PKG}@${_RESVG_LINUX_VER}/node_modules/${_RESVG_LINUX_PKG}" "$BUILD_DIR/.next/standalone/node_modules/${_RESVG_LINUX_PKG}"
-  echo "  ✓ injected $_RESVG_LINUX_PKG@$_RESVG_LINUX_VER"
-else
-  echo "  ⚠ WARNING: Could not download $_RESVG_LINUX_PKG — moment-render will fail on Linux"
-fi
+# Reusable helper: download a platform-specific native binary from npm registry
+# and symlink it into the artifact's .pnpm store at top-level node_modules.
+# Usage: _inject_native_pkg <package-name> <version-command> <fallback-version> <warning-message>
+_inject_native_pkg() {
+  local _pkg="$1" _ver_cmd="$2" _fallback_ver="$3" _warning="$4"
+  # Derive tarball name by replacing @scope/name with scope-name
+  local _tgz_name=$(echo "$_pkg" | sed 's|@||; s|/|-|')
+  local _ver=$(node -e "$_ver_cmd" 2>/dev/null) || local _ver="$_fallback_ver"
+  local _tgz_path="/tmp/${_tgz_name}-${_ver}.tgz"
+  
+  if [ ! -f "$_tgz_path" ]; then
+    echo "  📥 Downloading $_pkg@$_ver..."
+    (cd /tmp && npm pack "${_pkg}@${_ver}" 2>/dev/null)
+  fi
+  
+  if [ -f "$_tgz_path" ]; then
+    local _target_dir="$BUILD_DIR/.next/standalone/node_modules/.pnpm/${_pkg}@${_ver}/node_modules/${_pkg}"
+    mkdir -p "$_target_dir"
+    tar -xzf "$_tgz_path" -C "$_target_dir" --strip-components=1 2>/dev/null
+    # Create parent scope directory if needed (e.g. @resvg, @img)
+    local _scope_dir=$(dirname "$BUILD_DIR/.next/standalone/node_modules/$_pkg")
+    rm -rf "$BUILD_DIR/.next/standalone/node_modules/$_pkg"
+    mkdir -p "$_scope_dir"
+    ln -sfn "../.pnpm/${_pkg}@${_ver}/node_modules/${_pkg}" "$BUILD_DIR/.next/standalone/node_modules/$_pkg"
+    echo "  ✓ injected $_pkg@$_ver"
+  else
+    echo "  ⚠ WARNING: Could not download $_pkg — $_warning"
+  fi
+}
 
-# @img/sharp-linux-x64 — required by sharp for image processing on Hetzner
-_SHARP_LINUX_PKG="@img/sharp-linux-x64"
-_SHARP_LINUX_VER=$(node -e "try { const p = require('@img/sharp-darwin-arm64/package.json'); console.log(p.version); } catch(e) { console.log('0.34.5'); }" 2>/dev/null)
-_SHARP_LINUX_TGZ="/tmp/img-sharp-linux-x64-"${_SHARP_LINUX_VER}".tgz"
-if [ ! -f "$_SHARP_LINUX_TGZ" ]; then
-  echo "  📥 Downloading $_SHARP_LINUX_PKG@$_SHARP_LINUX_VER..."
-  (cd /tmp && npm pack "${_SHARP_LINUX_PKG}@${_SHARP_LINUX_VER}" 2>/dev/null)
-fi
-if [ -f "$_SHARP_LINUX_TGZ" ]; then
-  _SHARP_TARGET_DIR="$BUILD_DIR/.next/standalone/node_modules/.pnpm/${_SHARP_LINUX_PKG}@${_SHARP_LINUX_VER}/node_modules/${_SHARP_LINUX_PKG}"
-  mkdir -p "$_SHARP_TARGET_DIR"
-  tar -xzf "$_SHARP_LINUX_TGZ" -C "$_SHARP_TARGET_DIR" --strip-components=1 2>/dev/null
-  rm -rf "$BUILD_DIR/.next/standalone/node_modules/${_SHARP_LINUX_PKG}"
-  mkdir -p "$BUILD_DIR/.next/standalone/node_modules/@img"
-  ln -sfn "../.pnpm/${_SHARP_LINUX_PKG}@${_SHARP_LINUX_VER}/node_modules/${_SHARP_LINUX_PKG}" "$BUILD_DIR/.next/standalone/node_modules/${_SHARP_LINUX_PKG}"
-  echo "  ✓ injected $_SHARP_LINUX_PKG@$_SHARP_LINUX_VER"
-else
-  echo "  ⚠ WARNING: Could not download $_SHARP_LINUX_PKG — image processing will fail on Linux"
-fi
+_inject_native_pkg \
+  "@resvg/resvg-js-linux-x64-gnu" \
+  "try { const p = require('@resvg/resvg-js/package.json'); console.log(p.version); } catch(e) { console.log('2.6.2'); }" \
+  "2.6.2" \
+  "moment-render will fail on Linux"
 
-# @img/sharp-libvips-linux-x64 — libvips binary required by sharp
-_SHARP_VIPS_LINUX_PKG="@img/sharp-libvips-linux-x64"
-_SHARP_VIPS_LINUX_VER=$(node -e "try { const p = require('@img/sharp-libvips-darwin-arm64/package.json'); console.log(p.version); } catch(e) { console.log('1.2.4'); }" 2>/dev/null)
-_SHARP_VIPS_LINUX_TGZ="/tmp/img-sharp-libvips-linux-x64-"${_SHARP_VIPS_LINUX_VER}".tgz"
-if [ ! -f "$_SHARP_VIPS_LINUX_TGZ" ]; then
-  echo "  📥 Downloading $_SHARP_VIPS_LINUX_PKG@$_SHARP_VIPS_LINUX_VER..."
-  (cd /tmp && npm pack "${_SHARP_VIPS_LINUX_PKG}@${_SHARP_VIPS_LINUX_VER}" 2>/dev/null)
-fi
-if [ -f "$_SHARP_VIPS_LINUX_TGZ" ]; then
-  _SHARP_VIPS_TARGET_DIR="$BUILD_DIR/.next/standalone/node_modules/.pnpm/${_SHARP_VIPS_LINUX_PKG}@${_SHARP_VIPS_LINUX_VER}/node_modules/${_SHARP_VIPS_LINUX_PKG}"
-  mkdir -p "$_SHARP_VIPS_TARGET_DIR"
-  tar -xzf "$_SHARP_VIPS_LINUX_TGZ" -C "$_SHARP_VIPS_TARGET_DIR" --strip-components=1 2>/dev/null
-  rm -rf "$BUILD_DIR/.next/standalone/node_modules/${_SHARP_VIPS_LINUX_PKG}"
-  mkdir -p "$BUILD_DIR/.next/standalone/node_modules/@img"
-  ln -sfn "../.pnpm/${_SHARP_VIPS_LINUX_PKG}@${_SHARP_VIPS_LINUX_VER}/node_modules/${_SHARP_VIPS_LINUX_PKG}" "$BUILD_DIR/.next/standalone/node_modules/${_SHARP_VIPS_LINUX_PKG}"
-  echo "  ✓ injected $_SHARP_VIPS_LINUX_PKG@$_SHARP_VIPS_LINUX_VER"
-else
-  echo "  ⚠ WARNING: Could not download $_SHARP_VIPS_LINUX_PKG — sharp libvips will fail on Linux"
-fi
+_inject_native_pkg \
+  "@img/sharp-linux-x64" \
+  "try { const p = require('@img/sharp-darwin-arm64/package.json'); console.log(p.version); } catch(e) { console.log('0.34.5'); }" \
+  "0.34.5" \
+  "image processing will fail on Linux"
+
+_inject_native_pkg \
+  "@img/sharp-libvips-linux-x64" \
+  "try { const p = require('@img/sharp-libvips-darwin-arm64/package.json'); console.log(p.version); } catch(e) { console.log('1.2.4'); }" \
+  "1.2.4" \
+  "sharp libvips will fail on Linux"
 
 # ── ARTIFACT VALIDATION ──
 # Sanity-check that critical modules resolve before shipping the artifact.

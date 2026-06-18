@@ -54,6 +54,12 @@ if [ -d "$RELEASE_DIR/.next/standalone/node_modules" ]; then
   ln -sfn "$RELEASE_DIR/.next/standalone/node_modules" "$RELEASE_DIR/node_modules"
 fi
 
+# Save previous current link for rollback if PM2 start fails
+_PREVIOUS_CURRENT=""
+if [ -L "$CURRENT_LINK" ]; then
+  _PREVIOUS_CURRENT=$(readlink "$CURRENT_LINK")
+fi
+
 ln -sfn "$RELEASE_DIR" "$CURRENT_LINK"
 
 # pm2 caches `cwd` on first start; a reload won't move it to the new release.
@@ -62,6 +68,19 @@ if pm2 describe "$APP_NAME" >/dev/null 2>&1; then
   pm2 delete "$APP_NAME" >/dev/null
 fi
 pm2 start "$APP_ROOT/current/ecosystem.config.cjs" --only "$APP_NAME" --update-env
+
+# If pm2 start failed, rewind current to previous release
+if ! pm2 describe "$APP_NAME" >/dev/null 2>&1; then
+  echo "⚠️  PM2 start failed — rolling back to previous release"
+  if [ -n "$_PREVIOUS_CURRENT" ] && [ -d "$_PREVIOUS_CURRENT" ]; then
+    ln -sfn "$_PREVIOUS_CURRENT" "$CURRENT_LINK"
+    pm2 start "$APP_ROOT/current/ecosystem.config.cjs" --only "$APP_NAME" --update-env || true
+    echo "⚠️  Rolled back to $_PREVIOUS_CURRENT"
+  else
+    echo "❌ No previous release to roll back to — manual recovery needed"
+  fi
+  exit 1
+fi
 
 pm2 save
 
