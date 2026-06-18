@@ -1601,3 +1601,25 @@ The Community publication at
 `figma.com/community/file/1649363477700031990` needs a manual
 re-publish (Figma → File → Publish to community → Update) to make
 the new components visible to the gallery.
+
+### Covers (final polish)
+
+Rebuilt the Moment Cards cover (1920×1080) as a *design-system*
+artifact rather than a gallery page: oversized MOMENT/CARDS title,
+three system-property pills ("10 ARCHETYPES" / "3 FORMATS" /
+"CODE-AUTHORITATIVE"), tagline, full archetype name list, and a
+right-side stack of three real card instances (record_broken,
+level_up, achievement) tilted into an editorial spread.
+
+The Marketing Toolkit (`XgOGYay09gxABzEUPtJFdN`) had **no cover** —
+the Cover page existed but was empty. Built one at 1920×1080
+matching the visual register of the Moment Cards cover: SPORTWARREN
+identity, "GTM TOOLKIT" kicker, oversized MARKETING/TOOLKIT title,
+three pills ("5 TEMPLATES" / "SOCIAL + WEB" / "CAPTAIN-FIRST"),
+tagline, template names list, and a right-side gallery of 5
+stylized preview tiles (Squad Recruitment, Captain Spotlight, Squad
+of the Week, Landing Hero, Feature Explainer) — each in its archetype
+accent color, tilted into an editorial spread.
+
+Both files now lead with a cover that reframes them as *systems*
+rather than collections of nice frames.
