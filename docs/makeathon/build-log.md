@@ -633,3 +633,96 @@ env issue is independent.
 - No code changes. The two-commit feature work from session 6 + 7
   remains on `config-makeathon` (pushed to origin) and is the
   artifact judges will browse.
+
+---
+
+## 2026-06-18 — Session 9: two of three session-8 bugs closed by hand
+
+**Intent**
+Address the deferred bugs documented at the end of session 8 before the
+makeathon submission so the build log's narrative ends with closure
+rather than a punch list.
+
+**What landed**
+
+The user fixed two of the three session-8 bugs directly. Documenting
+here so the punch list reads as resolved rather than open.
+
+### Bug 2 (.env unquoted mnemonic) — fixed on the box
+
+Quoted three lines in `/opt/sportwarren-api/shared/.env` whose values
+were multi-word BIP-39 mnemonics, breaking `set -o allexport`:
+- line 10 — `ALGORAND_PRIVATE_KEY`
+- line 26 — `NEXT_PUBLIC_YELLOW_EIP712_DOMAIN_NAME`
+- line 34 — `DEPLOYER_MNEMONIC`
+
+Originals backed up as `shared/.env.bak.prequote*`. Verified the file
+now sources cleanly under `set -euo pipefail`, which means
+`run-cron.sh` no longer aborts at env-load time. The moment-render
+maintenance cron can now actually invoke its script — though the
+script's import path still points at `../../src/server/...` which
+isn't present in the deployed standalone tree (a separate problem
+that affects the v2 maintenance-script path but not the API route).
+
+### v1 satori-html bug + dead Inter URL — fixed in code
+
+Two separate fixes shipped in one commit (`fix: v1 moment-render +
+keepsake satori-0.26 compat + dead Inter URL`):
+
+- **Dead gstatic font URL.** v1's `loadFont()` hardcoded a v18 Inter
+  WOFF URL that Google has since removed. The 404 HTML body was being
+  handed to satori as font bytes, producing *"Unsupported OpenType
+  signature <!DO"* — the cause of the persistent /api/cron/moment-render
+  500. Replaced with the same Google Fonts CSS API resolver pattern v2
+  uses (forces WOFF via IE user-agent because satori 0.26 doesn't
+  support WOFF2).
+- **satori 0.26 string-vs-VNode.** Added `satori-html` and wrap
+  `buildHtml(moment)` with `html(...)` before handing to satori. Same
+  fix applied to `src/app/api/keepsake/[matchId]/route.ts` which had
+  the identical bug pattern. With these in, both routes render valid
+  PNGs (91 KB moment, 88 KB keepsake — verified locally with no markup
+  leakage).
+
+Surfaced one new satori-0.26 rule worth recording for the next
+contributor: any `<div>` wrapping another element must declare
+`display: flex` (or `contents` / `none`). Two team-name wrappers in
+the keepsake template needed it.
+
+### What's still open
+
+**Bug 1 from session 8 (Next.js standalone path leak) remains the
+only blocker** between the committed v2 work and a successful
+production deploy. Build is still producing
+`.next/standalone/Dev/sportwarren/server.js` rather than
+`.next/standalone/server.js`. Likely fix: anchor `outputFileTracingRoot`
+explicitly in `next.config.*` so the standalone tracer doesn't capture
+the case-preserved CWD, or run the build from a CWD that doesn't
+produce the prefix. Not addressed in this session — out of scope for
+the submission window and deserves its own PR + verification.
+
+### Production state after this session
+
+- v1 satori bug is fixed in code (this commit), not yet deployed.
+- `.env` quoting is fixed on the box.
+- Production cron will start rendering correctly once the path-leak is
+  resolved and a clean v2 deploy lands.
+- Until then, the API route at `/api/cron/moment-render` would return
+  200 if a Next.js build ran successfully — both bugs that previously
+  caused 500 are eliminated in code, only the build/path issue
+  remains.
+
+### Files (this session)
+- `package.json`, `pnpm-lock.yaml` — added `satori-html@0.3.2`
+- `src/server/services/personalization/moment-render.ts` — CSS API
+  font resolver + satori-html wrap + `buildHtml` continues to be
+  exported for the comparison script
+- `src/app/api/keepsake/[matchId]/route.ts` — same fixes + wrapper
+  `display: flex`
+- `docs/makeathon/build-log.md` — this entry
+
+### Submission impact
+
+The build log narrative now ends *"two bugs closed, one open, here's
+the plan for the third"* instead of *"three bugs deferred, see you
+later"*. That's a meaningful shift in tone for Build-in-Public — the
+work converges instead of trailing off.
