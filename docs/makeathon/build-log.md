@@ -1131,3 +1131,176 @@ The production v2 cron (Hetzner) will pick up the new card components
 on the next runtime deploy. Until then, unmapped kinds at runtime still
 flow through `DefaultCard` — which carries the design system, just not
 the archetype-specific composition. Safe.
+
+---
+
+## 2026-06-18 — Session 13: brand unification + 1080×1080 social pack
+
+**Intent**
+With the moment-card library complete (10/10), and the makeathon
+submission already in, this session burns the remaining Figma AI
+credits (expiring tomorrow) on two GTM-shaped pieces of work that
+ladder up to the 0→100-teams phase of growth:
+
+1. Make the moment cards visually consistent with the rest of the
+   SportWarren brand. Audit surfaced that the cards were stylistically
+   tame relative to the website's gradient + glassmorphic surfaces.
+2. Adapt the 10 archetypes to 1080×1080 social-post format so the
+   captain-acquisition channels can post them without manual reformat.
+
+### Phase 1 — Tokens promoted, gradient stops added
+
+Four archetype-specific colors were promoted from per-file literal
+hex (with a non-token note in the manifest) to first-class tokens in
+the Figma `Color` collection AND in `src/components/moments/cards/tokens.ts`:
+
+| Token | Hex | Used by |
+|---|---|---|
+| `color/identity` | `#8b5cf6` (violet-500) | `twin_created` |
+| `color/verified` | `#38bdf8` (sky-400)    | `attestation_milestone` |
+| `color/welcome`  | `#6366f1` (indigo-500) | `coaching_hired` |
+| `color/closing`  | `#f43f5e` (rose-500)   | `coaching_expired` |
+
+Plus three gradient-surface stops matching the website's
+`from-slate-900 via-slate-800 to-slate-900` pattern:
+
+| Token | Hex |
+|---|---|
+| `color/surface-gradient-start` | `#0f172a` (slate-900) |
+| `color/surface-gradient-mid`   | `#1e293b` (slate-800) |
+| `color/surface-gradient-end`   | `#0f172a` (slate-900) |
+
+`tokens.ts` now exports a `SURFACE_GRADIENT` constant ready to drop
+into satori `background:` declarations:
+
+```ts
+export const SURFACE_GRADIENT = `linear-gradient(135deg, ${...start} 0%, ${...mid} 50%, ${...end} 100%)`;
+```
+
+The Foundations page (`12:15`) was extended downward by ~520px to add
+two new sections:
+- *Archetype accents* — 4 swatches showing the 4 promoted tokens with
+  hex + intended use.
+- *Surface gradient* — a wide specimen showing the slate ramp.
+
+Manifest cleaned up: the four `nonTokenColors` fields are gone;
+their colors now appear as `designSystemBindings` entries.
+
+### Phase 2 — Energy pass on all 10 archetypes
+
+Every card component swept once. Each card now:
+
+1. **Background** swapped from solid `TOKENS.background` (`#0a0a0a`)
+   to `SURFACE_GRADIENT` (`from-slate-900 via-slate-800 to-slate-900`).
+   The cards visually match `SquadIdentityCard`, `PlayerIdentityCard`,
+   `HeroSection`'s landing gradient, and the rest of the in-app
+   surfaces. Captain experience is unified across the funnel.
+
+2. **Per-archetype radial glow** added as the first absolutely-positioned
+   child. Subtle (`alpha 0.06–0.22`), pointer-events-none, color
+   matches the archetype's accent mood (destructive on record_broken,
+   xpGold on level_up + season_end, success on achievement, identity
+   on twin_created, teamHome on sim_complete, verified on
+   attestation_milestone, welcome on coaching_hired, closing on
+   coaching_expired, foreground on match_imported's monochromatic
+   register).
+
+3. **Subtle 1px border** (`foreground @ 0.06`) when no tier border
+   applies. Matches the website's `border-white/10` glassmorphic edge.
+
+4. **`overflow: hidden`** on the card root for clean glow containment.
+
+5. **Literal hex references** in 4 cards (VIOLET / SKY / INDIGO / ROSE)
+   swapped to `TOKENS.identity` / `.verified` / `.welcome` / `.closing`
+   imports.
+
+Per-archetype editorial compositions preserved — each card still
+reads as its archetype. Visual change is brand language, not
+composition.
+
+### Phase 3 — 1080×1080 social adaptations
+
+New sibling library: `src/components/moments/cards/social/`. Each of
+the 10 archetypes has a `*Social.tsx` component sized for Instagram
+post / X image / LinkedIn post. Same archetype palette, motif, and
+mood — reflowed for square aspect ratio with:
+
+- 72px padding (vs 32px on landscape)
+- Hero type 1.8–2.5× larger (e.g. `level_up` numeral from 220px → 380px)
+- More vertical breathing room
+- Stronger SPORTWARREN wordmark + "Every match leaves a mark" tagline
+  in the footer (the card *is* the post, not a row in a gallery)
+
+Plus:
+- `CARDS_SOCIAL` registry mirroring `CARDS`, in
+  `src/components/moments/cards/social/index.ts`
+- `scripts/render-social.tsx` and a new `pnpm assets:social` script
+  that produces all 10 PNGs in `docs/makeathon/assets/social/`
+- 11 new vitest assertions: 1 parity check between CARDS and
+  CARDS_SOCIAL + 10 render assertions per kind at 1080×1080
+
+### What the captain-acquisition workflow gets
+
+A captain or squad-account social media post used to need:
+- A landscape moment card from `docs/makeathon/assets/*-v2.png`
+- Reformatting in Figma / Canva / Photoshop for Instagram
+- Manual SPORTWARREN footer adjustment for visibility on the
+  smaller-aspect-ratio crop
+
+It now needs:
+- `docs/makeathon/assets/social/<kind>-social.png`
+
+That's it. Direct post. For 3 months of weekly content, this removes
+the formatting tax entirely.
+
+### Verification
+
+- `pnpm run typecheck` clean
+- `pnpm test` — **65 tests passing** (3 registry + 50 landscape render +
+  1 fallback + 1 social-registry + 10 social render)
+- All 10 social PNGs render cleanly via `pnpm assets:social`
+- All 20 v1/v2 PNGs regenerated via `pnpm assets:moments` (the energy
+  pass made the v2 outputs richer; file sizes ~3–5× larger because of
+  the gradient + radial dither)
+
+### Library state after session 13
+
+```
+                       │ Figma  │ TS card  │ Social │ Tests │ Asset │
+├──────────────────────┼────────┼──────────┼────────┼───────┼───────┤
+│ record_broken        │ 7:65   │ ✓        │ ✓      │ ✓     │ ✓ + S │
+│ level_up             │ 11:86  │ ✓        │ ✓      │ ✓     │ ✓ + S │
+│ season_end           │ 15:102 │ ✓        │ ✓      │ ✓     │ ✓ + S │
+│ match_imported       │ 21:78  │ ✓        │ ✓      │ ✓     │ ✓ + S │
+│ achievement          │ 25:70  │ ✓        │ ✓      │ ✓     │ ✓ + S │
+│ twin_created         │ 27:102 │ ✓        │ ✓      │ ✓     │ ✓ + S │
+│ sim_complete         │ 29:146 │ ✓        │ ✓      │ ✓     │ ✓ + S │
+│ attestation_milestone│ 32:82  │ ✓        │ ✓      │ ✓     │ ✓ + S │
+│ coaching_hired       │ 34:78  │ ✓        │ ✓      │ ✓     │ ✓ + S │
+│ coaching_expired     │ 36:74  │ ✓        │ ✓      │ ✓     │ ✓ + S │
+```
+
+Plus: Cover frame, Foundations page (15 color tokens, 9 text styles),
+`DefaultCard` fallback, manifest, vitest harness (65 tests),
+30 PNG assets (`<kind>-v1.png`, `<kind>-v2.png`, `<kind>-social.png`
+each).
+
+### Open follow-ups (not gating)
+
+- **Figma source components** still have the v1 flat background and
+  the pre-promotion literal hex values. The TS satori output is the
+  authoritative render path; the Figma file is design documentation.
+  Sync the Figma components on the next focused design session.
+- **CSS variables**: `--identity`, `--verified`, `--welcome`,
+  `--closing`, `--surface-gradient-*` aren't in `globals.css` yet.
+  When non-card UI surfaces (settings page, account screen, etc.)
+  want these accents, add them then.
+- **1080×1920 portrait stories**: the next obvious social-format
+  addition. Stories are tall, so the compositions will need a
+  different recipe than the squares.
+- **Marketing toolkit file**: landing hero, captain recruitment,
+  squad-of-the-week templates. Separate Figma file from the moment
+  library.
+- **Production redeploy**: the Hetzner cron's `v2HandledKinds`
+  reflects the snapshot at last deploy. Re-deploy when convenient
+  to surface the full library count.

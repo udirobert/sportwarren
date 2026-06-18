@@ -33,6 +33,11 @@ import {
   CARD_HEIGHT,
   type MomentForRender,
 } from '@/components/moments/cards/types';
+import {
+  CARDS_SOCIAL,
+  SOCIAL_WIDTH,
+  SOCIAL_HEIGHT,
+} from '@/components/moments/cards/social';
 
 const FONT_FAMILY = 'Space Grotesk';
 const IE_UA =
@@ -184,4 +189,38 @@ describe('moment-render v2 — card components render via satori', () => {
     expect(png.length).toBeGreaterThan(1000);
     expect(png[0]).toBe(0x89);
   }, 15_000);
+});
+
+describe('moment-render v2 — social-format registry + renders', () => {
+  it('CARDS_SOCIAL has parity with CARDS (same kinds, both directions)', () => {
+    expect(Object.keys(CARDS_SOCIAL).sort()).toEqual(Object.keys(CARDS).sort());
+  });
+
+  // One render per kind in the square format. Skips tier matrix to keep the
+  // total suite runtime manageable — tier-variant correctness is validated
+  // on the landscape cards above and the social cards share the same
+  // TIER_ORNAMENT resolution path.
+  for (const kind of Object.keys(CARDS_SOCIAL)) {
+    it(`renders ${kind} at 1080×1080 to a non-empty PNG`, async () => {
+      if (!networkAvailable || !fonts) return;
+      const Card = CARDS_SOCIAL[kind];
+      const element = React.createElement(Card, { moment: syntheticMoment(kind) });
+      const svg = await satori(element, {
+        width: SOCIAL_WIDTH,
+        height: SOCIAL_HEIGHT,
+        fonts: [
+          { name: FONT_FAMILY, data: fonts.regular, weight: 400, style: 'normal' },
+          { name: FONT_FAMILY, data: fonts.bold, weight: 700, style: 'normal' },
+        ],
+      });
+      const png = Buffer.from(
+        new Resvg(svg, { fitTo: { mode: 'width', value: SOCIAL_WIDTH } }).render().asPng(),
+      );
+      expect(png.length).toBeGreaterThan(1000);
+      expect(png[0]).toBe(0x89);
+      expect(png[1]).toBe(0x50);
+      expect(png[2]).toBe(0x4e);
+      expect(png[3]).toBe(0x47);
+    }, 20_000);
+  }
 });
