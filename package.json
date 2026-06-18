@@ -38,6 +38,7 @@
     "test:watch": "vitest",
     "assets:moments": "tsx scripts/render-before-after.tsx",
     "assets:social": "tsx scripts/render-social.tsx",
+    "assets:stories": "tsx scripts/render-stories.tsx",
     "goat:demo": "tsx scripts/goat-agent-demo.ts",
     "goat:deploy:dry-run": "tsx scripts/deploy-to-goat.ts",
     "prepare": "husky"

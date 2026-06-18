@@ -1304,3 +1304,145 @@ each).
 - **Production redeploy**: the Hetzner cron's `v2HandledKinds`
   reflects the snapshot at last deploy. Re-deploy when convenient
   to surface the full library count.
+
+---
+
+## 2026-06-18 — Session 14: GTM toolkit — Marketing Figma file + 1080×1920 stories
+
+**Intent**
+Two of the three remaining follow-ups from session 13 land this session.
+With the moment-card library at 10 of 10 archetypes and 1080×1080 social
+adaptations done, the next pieces serving the 0→100-teams phase are:
+
+1. A separate Figma file for **GTM templates** (recruitment, weekly
+   content, landing hero, feature explainers) — assets the marketing
+   team can customise per post for the next 3 months.
+2. A **1080×1920 portrait stories** format extending the moment-card
+   library to Instagram Stories / TikTok / YouTube Shorts.
+
+### Marketing Toolkit Figma file (new)
+
+- **File:** `SportWarren — Marketing Toolkit`
+  (`XgOGYay09gxABzEUPtJFdN`)
+- **URL:** https://www.figma.com/design/XgOGYay09gxABzEUPtJFdN
+- **Pages:** Cover, ———, Squad Recruitment, Squad-of-the-Week,
+  Captain Spotlight, Landing Hero, Feature Explainer, ———
+
+Five templates shipped:
+
+| Template | Page | Format | Use |
+|----------|------|--------|-----|
+| Squad Recruitment / Square | `1:3` | 1080×1080 | Captain shares to invite players. Core viral mechanic. |
+| Squad Recruitment / Story | `1:3` | 1080×1920 | Story-format variant for IG/TikTok. |
+| Squad of the Week / Square | `1:4` | 1080×1080 | Weekly featured-squad post. Gold accent, "NO. 12" issue number. |
+| Captain Spotlight / Square | `1:5` | 1080×1080 | Recurring captain feature with photo slot + signature quote. Indigo register. |
+| Landing Hero / Widescreen | `1:6` | 1920×1080 | A/B test variant for sportwarren.com hero. Mirrors the existing HeroSection pattern: twin parallax blobs, gradient text on the second headline line, dual CTA (claim card + import spreadsheet). |
+| Feature Explainer / Square | `1:7` | 1080×1080 | "HOW IT WORKS" template for product features. Concentric circle icon, 3 numbered bullets, sky-accent register. |
+
+All use the same gradient surface (`from-slate-900 via-slate-800 to-slate-900`)
++ Space Grotesk + per-archetype accent colours as the moment-card
+library. Brand language consistent across both files.
+
+The toolkit file is the source of truth for these templates;
+designers open it, swap squad name / stats / photo / copy, export
+PNG, post. No reformat tax.
+
+### 1080×1920 stories — extends the moment library
+
+New sibling directory: `src/components/moments/cards/stories/`. Ten
+new `*Story.tsx` components — one per archetype, mirroring the
+naming convention from the existing `*Social.tsx` set.
+
+Each composition reflows top-to-bottom for portrait aspect ratio:
+- Kicker pinned top-left
+- Hero element large + centered in upper-middle
+- Stat/detail block lower-middle
+- SPORTWARREN footer + `sportwarren.com` URL at the bottom (where the
+  swipe-up action sits on Stories)
+
+Type sizes scale up for thumbnail readability (e.g. `level_up` numeral
+360px → 560px, `record_broken` hero 108px → 160px, `match_imported`
+date hero 200px → 360px). Per-archetype radial glow accents preserved
++ slightly intensified for the larger canvas.
+
+New plumbing:
+- `src/components/moments/cards/stories/types.ts`
+  (`STORY_WIDTH = 1080`, `STORY_HEIGHT = 1920`, `StoryCardProps`)
+- `src/components/moments/cards/stories/index.ts`
+  (`CARDS_STORIES` registry mirroring `CARDS` + `resolveStoryCard`)
+- `scripts/render-stories.tsx` (asset regeneration)
+- `pnpm assets:stories` named script
+
+### Verification
+
+- `pnpm run typecheck` clean
+- `pnpm test` — **76 tests passing** (was 65 after session 13; +1
+  stories registry-parity assertion + 10 per-archetype story
+  renders)
+- `pnpm assets:stories` produces all 10 story PNGs in
+  `docs/makeathon/assets/stories/` (~150–320 KB each)
+
+### Library state after session 14
+
+```
+                       │ Figma │ TS  │ Social │ Story │ Tests │ Assets    │
+├──────────────────────┼───────┼─────┼────────┼───────┼───────┼───────────┤
+│ record_broken        │  ✓    │  ✓  │   ✓    │   ✓   │   ✓   │ v1 v2 S T │
+│ level_up             │  ✓    │  ✓  │   ✓    │   ✓   │   ✓   │ v1 v2 S T │
+│ season_end           │  ✓    │  ✓  │   ✓    │   ✓   │   ✓   │ v1 v2 S T │
+│ match_imported       │  ✓    │  ✓  │   ✓    │   ✓   │   ✓   │ v1 v2 S T │
+│ achievement          │  ✓    │  ✓  │   ✓    │   ✓   │   ✓   │ v1 v2 S T │
+│ twin_created         │  ✓    │  ✓  │   ✓    │   ✓   │   ✓   │ v1 v2 S T │
+│ sim_complete         │  ✓    │  ✓  │   ✓    │   ✓   │   ✓   │ v1 v2 S T │
+│ attestation_milestone│  ✓    │  ✓  │   ✓    │   ✓   │   ✓   │ v1 v2 S T │
+│ coaching_hired       │  ✓    │  ✓  │   ✓    │   ✓   │   ✓   │ v1 v2 S T │
+│ coaching_expired     │  ✓    │  ✓  │   ✓    │   ✓   │   ✓   │ v1 v2 S T │
+```
+
+Total asset count across all formats: **40 PNGs** (10 archetypes ×
+4 formats: v1 landscape baseline, v2 landscape, social square, story
+portrait).
+
+Plus the moment-card library file (Cover + Foundations + 10 archetype
+variant sets) and the marketing toolkit file (5 templates).
+
+### What the marketing team gets today
+
+For the next 3 months of 0→100 GTM content, the workflow is:
+
+- **Match moment hits production?** → automatic satori render at
+  600×400 for in-app + WhatsApp/Telegram. Already running on Hetzner
+  via the v2 cron.
+- **Want to post that same moment to Instagram square?** →
+  `docs/makeathon/assets/social/<kind>-social.png`. Direct upload.
+- **Want to post that same moment to Instagram Stories or TikTok?** →
+  `docs/makeathon/assets/stories/<kind>-story.png`. Direct upload.
+- **Recruit new players to a squad?** → open the Marketing Toolkit,
+  customize the Squad Recruitment template, export. (Both square and
+  story formats.)
+- **Weekly squad-of-the-week post?** → customize the Squad-of-the-Week
+  template. Issue number increments per week.
+- **Captain spotlight content?** → Captain Spotlight template + drop
+  in the headshot.
+- **Need a new landing-page hero variant for A/B?** → Landing Hero
+  template as starting point.
+- **Need to explain a specific product feature?** → Feature Explainer
+  template + swap title + bullets.
+
+Every surface speaks the same brand language. No reformat tax.
+
+### Open follow-ups (still not gating)
+
+- **Figma source moment-card components** still have the v1 flat
+  background and pre-promotion literal hex values. TS satori output
+  is the authoritative render path; the Figma file is design
+  documentation. Sync next session.
+- **CSS variables**: `--identity`, `--verified`, `--welcome`,
+  `--closing`, `--surface-gradient-*` not in `globals.css` yet. Add
+  when non-card UI surfaces need them.
+- **Production redeploy**: Hetzner cron's `v2HandledKinds` reflects
+  the snapshot at last deploy. Re-deploy when convenient.
+- **Marketing Toolkit file → publish to Community** (optional). The
+  templates are reusable for any grassroots sports platform with a
+  similar GTM motion — worth sharing if the team wants the
+  Build-in-Public extension.
