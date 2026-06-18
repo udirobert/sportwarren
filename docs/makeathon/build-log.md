@@ -974,3 +974,160 @@ real working system (3 archetypes shipped, foundations bound,
 manifest maintained, tests passing, production cron live) rather
 than a promising prototype. Judges browsing the repo at the deadline
 land on convergent work.
+
+---
+
+## 2026-06-18 — Session 12: full library — 10 of 10 archetypes
+
+**Intent**
+Burn the remaining Figma AI credits (expiring tomorrow) on the durable
+project artifact: the rest of the moment-card archetypes. Submission
+deadline already passed earlier today; this is Sprint 2 territory now,
+optimised for long-term project value rather than judging optics.
+
+**Done this session**
+
+Seven new archetypes shipped end-to-end. Library is now at **10 of 10
+archetypes** — every kind in `SquadMomentsGallery.tsx`'s `KIND_CONFIG`
+is mapped to a dedicated Figma component + TS card + manifest entry +
+vitest assertion + before/after PNG pair.
+
+| Kind | Figma node | TS card | Archetype mood |
+|------|-----------|---------|----------------|
+| match_imported | `21:78` | `MatchImportedCard` | Archival, monochromatic, calendar-led. Date as hero. |
+| achievement | `25:70` | `AchievementCard` | Civic, badge-led, formal. Concentric emerald+gold crest, centered. |
+| twin_created | `27:102` | `TwinCreatedCard` | Identity-forward, generative. Subject's name dominates; constellation of violet dots as motif. |
+| sim_complete | `29:146` | `SimCompleteCard` | Tactical, board-like. Pitch silhouette + formation dots + W-D-L stat panel. |
+| attestation_milestone | `32:82` | `AttestationMilestoneCard` | Civic, official, certificate-led. Slightly-rotated sky stamp. |
+| coaching_hired | `34:78` | `CoachingHiredCard` | Welcoming, warm. Coach name as if quoted; indigo portrait-light radial. |
+| coaching_expired | `36:74` | `CoachingExpiredCard` | Quiet, valedictory. Smaller hero, rose closing line under the name. |
+
+Each ships with 5 tier variants (Standard / Premium / Streak / Partner /
+Internal) on the shared `Tier=…` property pattern.
+
+**KeepsakeCard component**
+Migrated the keepsake route (`POST /api/keepsake/[matchId]`) to a
+separate `src/components/keepsake/KeepsakeCard.tsx` that uses the same
+design tokens + Space Grotesk + token-bound accents (success / warning
+/ destructive based on match result). Same satori pipeline as v2 moment
+renderer. The route is now a thin wrapper. Keepsake has a different
+prop shape than `MomentCardProps` (match-specific, not a Moment row),
+so it's a sibling component rather than a CARDS-registry entry.
+
+**Non-token colors introduced**
+The remaining archetype palettes needed colors that aren't yet in the
+design system. Each is documented as a `nonTokenColors` field in the
+manifest with a suggestion for the eventual token name:
+
+- `violet` (#8b5cf6) — `twin_created`. Suggested token: `color/identity`
+- `sky` (#38bdf8) — `attestation_milestone`. Suggested: `color/verified`
+- `indigo` (#6366f1) — `coaching_hired`. Suggested: `color/welcome`
+- `rose` (#f43f5e) — `coaching_expired`. Suggested: `color/closing`
+
+When the design system grows to include these tokens, the literal hex
+in the TS cards can be swapped for binding without changing the visual
+output.
+
+**Test coverage**
+`src/test/moment-render-v2.test.ts` expanded to cover all 10 kinds:
+- 3 registry assertions
+- 50 render assertions (10 kinds × 5 tier variants, each renders to a
+  non-empty PNG with valid magic bytes)
+- 1 fallback assertion (unmapped kind → DefaultCard)
+
+Total: **54 tests, all passing**, ~45s including the one-time Google
+Fonts CSS API warmup.
+
+**Assets**
+`pnpm assets:moments` now produces 20 PNGs (`<kind>-v{1,2}.png` for
+every kind) in `docs/makeathon/assets/`. Full side-by-side material
+for any future demo or social post.
+
+**Figma file structure (final)**
+
+```
+SportWarren — Moment Cards (xTaynEAGCjhhmcmQdPG0JZ)
+├── Cover                          (9:2)
+├── Foundations                    (12:15)
+├── ———
+├── MomentCard / Record Broken     (7:65)
+├── MomentCard / Level Up          (11:86)
+├── MomentCard / Season End        (15:102)
+├── MomentCard / Match Imported    (21:78)
+├── MomentCard / Achievement       (25:70)
+├── MomentCard / Twin Created      (27:102)
+├── MomentCard / Sim Complete      (29:146)
+├── MomentCard / Attestation Milestone (32:82)
+├── MomentCard / Coaching Hired    (34:78)
+├── MomentCard / Coaching Expired  (36:74)
+└── ———
+```
+
+Plus the `Color` variable collection (11 tokens, Light + Dark modes), 9
+text styles (text/xs → text/4xl + text/kicker), `code-connect.manifest.json`
+with all 10 mappings, and `DefaultCard` fallback.
+
+### Satori-0.26 gotchas surfaced (recorded for the next contributor)
+
+While building the new archetypes, a few additional satori rules
+surfaced beyond the "display:flex on every wrapping div" rule from
+session 6. Documenting here so future archetype work doesn't trip on
+the same issues:
+
+1. **Google Fonts CSS API serves Latin-only subset by default.** Any
+   decorative glyph outside Latin-1 (`✦` U+2726, `★` U+2605, etc.)
+   renders as a tofu box. Replace with CSS-drawn shapes:
+   `transform: rotate(45deg)` on a small `div` for a diamond,
+   concentric `border-radius` for medals, etc.
+
+2. **Auto-layout flow stacks children.** Don't use
+   `figma.createAutoLayout()` for compositions that need overlapping
+   children (like a concentric crest). Use a regular `figma.createFrame()`
+   with `position: absolute` children and explicit `layoutPositioning =
+   'ABSOLUTE'` inside auto-layout parents.
+
+3. **`stampRow.layoutSizingHorizontal = 'FILL'` requires explicit set
+   in horizontal auto-layout.** Default is HUG, which shrinks to
+   content and starves child FILL children. Set FILL on the row when
+   you want its FILL children to actually expand.
+
+4. **Radial gradients are supported by satori 0.26.** The portrait-light
+   effect in `coaching_hired` uses `background: radial-gradient(...)`
+   directly in inline styles. Works cleanly.
+
+### Files (this session)
+
+New TS cards:
+- `src/components/moments/cards/MatchImportedCard.tsx`
+- `src/components/moments/cards/AchievementCard.tsx`
+- `src/components/moments/cards/TwinCreatedCard.tsx`
+- `src/components/moments/cards/SimCompleteCard.tsx`
+- `src/components/moments/cards/AttestationMilestoneCard.tsx`
+- `src/components/moments/cards/CoachingHiredCard.tsx`
+- `src/components/moments/cards/CoachingExpiredCard.tsx`
+
+New non-moment surface:
+- `src/components/keepsake/KeepsakeCard.tsx`
+
+Updated:
+- `src/components/moments/cards/index.ts` — all 10 kinds registered
+- `src/components/moments/cards/code-connect.manifest.json` — 7 new
+  entries with archetype + designSystemBindings + nonTokenColors +
+  dataShape
+- `src/app/api/keepsake/[matchId]/route.ts` — now a thin wrapper
+  around `KeepsakeCard`
+- `src/test/moment-render-v2.test.ts` — all 10 kinds asserted
+- `scripts/render-before-after.tsx` — all 10 sample moments
+- `docs/makeathon/assets/*.png` — 14 new asset files (7 kinds × v1+v2)
+
+### Library completion impact
+
+The Figma Community publish (`figma.com/community/file/1649363477700031990`)
+needs a re-publish from the Figma app to reflect the new archetypes.
+That's a UI-side action — not via MCP. Trigger it after the next
+session if you want the public version to match HEAD.
+
+The production v2 cron (Hetzner) will pick up the new card components
+on the next runtime deploy. Until then, unmapped kinds at runtime still
+flow through `DefaultCard` — which carries the design system, just not
+the archetype-specific composition. Safe.

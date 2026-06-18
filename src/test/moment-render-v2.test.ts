@@ -75,16 +75,26 @@ beforeAll(async () => {
 }, 30_000);
 
 function syntheticMoment(kind: string, tier = 'standard'): MomentForRender {
-  // Label intentionally numeric-heavy so `level_up`'s numeral parser exercises.
-  // season_end gets a multi-line detail so SeasonEndCard's splitDetail runs.
+  // Per-kind labels exercise each card's parser/composition.
   const labels: Record<string, string> = {
     record_broken: 'MOST GOALS IN A SEASON',
     level_up: 'Level 13',
     season_end: "Spring '26",
+    match_imported: 'W 3-2 vs Ballygally United',
+    achievement: 'FIRST CLEAN SHEET',
+    twin_created: 'Marcus Tate',
+    sim_complete: '7W 2D 1L',
+    attestation_milestone: '100 MATCHES ATTESTED',
+    coaching_hired: 'MARCUS PRESSLEY',
+    coaching_expired: 'Marcus Pressley',
   };
   const details: Record<string, string> = {
     season_end:
       'Brockenhurst Rovers\n14 played · 9 won · 3 drawn · 2 lost\nTop scorer: Marcus Tate — 28 goals\nComeback of the season: 3-2 vs. Ballygally, Apr 12',
+    twin_created: 'MIDFIELDER · BROCKENHURST ROVERS',
+    sim_complete: '10-match round-robin · Brockenhurst Rovers Twin',
+    coaching_hired: 'YOUR NEW COACH · 8 WEEKS · TACTICAL FOCUS',
+    coaching_expired: '8 weeks · Tactical Focus · 19 Apr → 14 Jun',
   };
   return {
     kind,
@@ -118,9 +128,16 @@ async function renderToPng(moment: MomentForRender): Promise<Buffer> {
 describe('moment-render v2 — registry', () => {
   it('CARDS registry contains the kinds the manifest claims', () => {
     expect(Object.keys(CARDS).sort()).toEqual([
+      'achievement',
+      'attestation_milestone',
+      'coaching_expired',
+      'coaching_hired',
       'level_up',
+      'match_imported',
       'record_broken',
       'season_end',
+      'sim_complete',
+      'twin_created',
     ]);
   });
 

@@ -65,6 +65,168 @@
         "label": "Season name (e.g. 'Spring \\'26')",
         "detail": "Multi-line: squad name on first line, stats summary on subsequent lines (2nd stat line is rendered with --success accent)"
       }
+    },
+    {
+      "kind": "match_imported",
+      "figmaNodeId": "21:78",
+      "figmaNodeName": "MomentCard / Match Imported",
+      "figmaUrl": "https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ?node-id=21-78",
+      "component": "MatchImportedCard",
+      "source": "src/components/moments/cards/MatchImportedCard.tsx",
+      "variantProperty": "Tier",
+      "variantValues": ["Standard", "Premium", "Streak", "Partner", "Internal"],
+      "archetype": "Archival, monochromatic, calendar-led — date as the dominant visual element. Most-used kind in production (every historical match imported via squad-import produces one).",
+      "designSystemBindings": {
+        "color/background": "TOKENS.background",
+        "color/foreground": "TOKENS.foreground (hero date + body — monochromatic by design)",
+        "color/success": "TOKENS.success (W result chip)",
+        "color/warning": "TOKENS.warning (D result chip)",
+        "color/destructive": "TOKENS.destructive (L result chip)"
+      },
+      "textStyles": ["text/kicker", "text/sm", "text/xs", "(inline 88px Bold for date day-month, 28px Light for year)"],
+      "dataShape": {
+        "label": "W/D/L prefix + score + opponent (e.g. 'W 3-2 vs Ballygally United')",
+        "detail": "Optional full team-vs-team line",
+        "createdAt": "The historical match date — drives the hero numeral"
+      }
+    },
+    {
+      "kind": "achievement",
+      "figmaNodeId": "25:70",
+      "figmaNodeName": "MomentCard / Achievement",
+      "figmaUrl": "https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ?node-id=25-70",
+      "component": "AchievementCard",
+      "source": "src/components/moments/cards/AchievementCard.tsx",
+      "variantProperty": "Tier",
+      "variantValues": ["Standard", "Premium", "Streak", "Partner", "Internal"],
+      "archetype": "Civic, badge-led, formal — concentric emerald crest with xp-gold rings + center dot, achievement title below, supporting detail underneath. Reads as a medal or certificate.",
+      "designSystemBindings": {
+        "color/background": "TOKENS.background",
+        "color/success": "TOKENS.success (crest fill + kicker pill)",
+        "color/xp-gold": "TOKENS.xpGold (crest border + center dot)",
+        "color/foreground": "TOKENS.foreground (title + detail)"
+      },
+      "textStyles": ["text/kicker", "text/sm", "text/xs", "(inline 32px Bold for achievement title)"],
+      "dataShape": {
+        "label": "Achievement title (e.g. 'FIRST CLEAN SHEET')",
+        "detail": "Earning context (e.g. 'No goals conceded across a full 90 — Marcus Tate, defender')"
+      }
+    },
+    {
+      "kind": "twin_created",
+      "figmaNodeId": "27:102",
+      "figmaNodeName": "MomentCard / Twin Created",
+      "figmaUrl": "https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ?node-id=27-102",
+      "component": "TwinCreatedCard",
+      "source": "src/components/moments/cards/TwinCreatedCard.tsx",
+      "variantProperty": "Tier",
+      "variantValues": ["Standard", "Premium", "Streak", "Partner", "Internal"],
+      "archetype": "Identity-forward, generative, mysterious — subject's name dominates as hero, constellation of low-opacity violet dots as generative motif.",
+      "designSystemBindings": {
+        "color/background": "TOKENS.background",
+        "color/foreground": "TOKENS.foreground (hero name)"
+      },
+      "nonTokenColors": {
+        "violet": "#8b5cf6 (violet-500) — kicker pill, role line, constellation dots. Not in design tokens yet; introduce a color/identity token if more archetypes need it."
+      },
+      "textStyles": ["text/kicker", "text/sm", "text/xs", "(inline 56px Bold for hero name, 18px Light for role line)"],
+      "dataShape": {
+        "label": "Subject's display name (e.g. 'Marcus Tate')",
+        "detail": "Optional role/squad line"
+      }
+    },
+    {
+      "kind": "sim_complete",
+      "figmaNodeId": "29:146",
+      "figmaNodeName": "MomentCard / Sim Complete",
+      "figmaUrl": "https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ?node-id=29-146",
+      "component": "SimCompleteCard",
+      "source": "src/components/moments/cards/SimCompleteCard.tsx",
+      "variantProperty": "Tier",
+      "variantValues": ["Standard", "Premium", "Streak", "Partner", "Internal"],
+      "archetype": "Tactical, board-like — broadcast tactical graphic with pitch silhouette + formation dots on the left, W-D-L stat panel on the right. Data-dense, strategic mood.",
+      "designSystemBindings": {
+        "color/background": "TOKENS.background",
+        "color/team-home": "TOKENS.teamHome (kicker + home formation dots + wins stat)",
+        "color/destructive": "TOKENS.destructive (away formation dots + losses stat)",
+        "color/warning": "TOKENS.warning (draws stat)",
+        "color/foreground": "TOKENS.foreground (pitch outline + labels)"
+      },
+      "textStyles": ["text/kicker", "text/sm", "text/xs", "(inline 52px Bold for WDL stat values)"],
+      "dataShape": {
+        "label": "Optional 'NW MD ML' summary; parsed for W/D/L counts",
+        "detail": "Simulation context (e.g. '10-match round-robin · Brockenhurst Rovers Twin')"
+      }
+    },
+    {
+      "kind": "attestation_milestone",
+      "figmaNodeId": "32:82",
+      "figmaNodeName": "MomentCard / Attestation Milestone",
+      "figmaUrl": "https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ?node-id=32-82",
+      "component": "AttestationMilestoneCard",
+      "source": "src/components/moments/cards/AttestationMilestoneCard.tsx",
+      "variantProperty": "Tier",
+      "variantValues": ["Standard", "Premium", "Streak", "Partner", "Internal"],
+      "archetype": "Civic, official, certificate-led — slightly-rotated stamp with the milestone count + 'VERIFIED', title and subtitle on the right. Ties to the onchain preservation thesis.",
+      "designSystemBindings": {
+        "color/background": "TOKENS.background",
+        "color/foreground": "TOKENS.foreground (title + body)"
+      },
+      "nonTokenColors": {
+        "sky": "#38bdf8 (sky-400) — stamp fill/stroke + count + kicker. Not in design tokens; could introduce color/verified."
+      },
+      "textStyles": ["text/kicker", "text/sm", "text/xs", "(inline 44px Bold for stamp count, 24px Bold for title)"],
+      "dataShape": {
+        "label": "Milestone label with embedded count (e.g. '100 MATCHES ATTESTED')",
+        "detail": "Optional override; defaults to the preservation tagline"
+      }
+    },
+    {
+      "kind": "coaching_hired",
+      "figmaNodeId": "34:78",
+      "figmaNodeName": "MomentCard / Coaching Hired",
+      "figmaUrl": "https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ?node-id=34-78",
+      "component": "CoachingHiredCard",
+      "source": "src/components/moments/cards/CoachingHiredCard.tsx",
+      "variantProperty": "Tier",
+      "variantValues": ["Standard", "Premium", "Streak", "Partner", "Internal"],
+      "archetype": "Welcoming, warm, introductory — coach name as if quoted/signed, soft indigo portrait-light radial gradient on the right. Start date prominent in footer.",
+      "designSystemBindings": {
+        "color/background": "TOKENS.background",
+        "color/foreground": "TOKENS.foreground (coach name + start date)"
+      },
+      "nonTokenColors": {
+        "indigo": "#6366f1 (indigo-500) — kicker pill, quote mark, role line, portrait-light radial. Not in design tokens."
+      },
+      "textStyles": ["text/kicker", "text/xs", "(inline 48px Bold for quote mark, 44px Bold for coach name)"],
+      "dataShape": {
+        "label": "Coach name",
+        "detail": "Optional role/duration line (e.g. 'YOUR NEW COACH · 8 WEEKS · TACTICAL FOCUS')",
+        "createdAt": "Coaching start date — rendered prominently in the footer"
+      }
+    },
+    {
+      "kind": "coaching_expired",
+      "figmaNodeId": "36:74",
+      "figmaNodeName": "MomentCard / Coaching Expired",
+      "figmaUrl": "https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ?node-id=36-74",
+      "component": "CoachingExpiredCard",
+      "source": "src/components/moments/cards/CoachingExpiredCard.tsx",
+      "variantProperty": "Tier",
+      "variantValues": ["Standard", "Premium", "Streak", "Partner", "Internal"],
+      "archetype": "Quiet, valedictory, archival — restrained type weight, thin rose closing line under the coach name. Mood is 'closing' not 'celebrating'. Pairs with coaching_hired.",
+      "designSystemBindings": {
+        "color/background": "TOKENS.background",
+        "color/foreground": "TOKENS.foreground (coach name + body)"
+      },
+      "nonTokenColors": {
+        "rose": "#f43f5e (rose-500) — kicker pill, closing line, attribute-delta line. Not in design tokens."
+      },
+      "textStyles": ["text/kicker", "text/sm", "text/xs", "(inline 30px Medium for coach name — smaller than hired, intentionally)"],
+      "dataShape": {
+        "label": "Coach name (the engagement that ended)",
+        "detail": "Optional summary of duration + outcome (e.g. '8 weeks · Tactical Focus · 19 Apr → 14 Jun')"
+      }
     }
   ],
   "fallback": {
