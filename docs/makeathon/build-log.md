@@ -1446,3 +1446,88 @@ Every surface speaks the same brand language. No reformat tax.
   templates are reusable for any grassroots sports platform with a
   similar GTM motion — worth sharing if the team wants the
   Build-in-Public extension.
+
+## 2026-06-18 — Session 15: football grammar pass
+
+### Why
+
+External feedback after the Community publish: "the cards look
+professional and clean, but they perhaps lack the little elements of
+personality + details that would differentiate the brand — mini
+footballs, grass, etc." Pushed back on the gut reflex (kitsch risk),
+but the underlying read is fair: the cards are *too* editorial. They
+could pass for a fintech product. For a grassroots-football platform
+whose entire wedge is "we get your sport," the iconography should
+whisper football, not just imply it through copy.
+
+The bar was deliberately high: add football personality *without*
+collapsing into FIFA-fan-art clichés. No cartoon balls, no green
+gradient turf, no stripes.
+
+### What landed
+
+Three shared archetype-agnostic elements + per-kind specific touches.
+
+**`src/components/moments/cards/PitchTexture.tsx`** — subtle vertical
+halfway line + center circle + center dot at the card geometric
+center, rendered at 4% opacity over the gradient. Reads as "this is
+a pitch" without overpowering. Sized via explicit `cardWidth` +
+`cardHeight` props because satori 0.26 doesn't honor percentage
+positioning evenly.
+
+**`src/components/moments/cards/FootballMark.tsx`** — small CSS-drawn
+ball icon (concentric circle + faint inner panel suggestion), used
+in every card footer next to the SPORTWARREN wordmark. Sized 12px
+landscape, 26px social, 32px story. Tinted with each archetype's
+accent token (destructive, xpGold, identity, verified, welcome,
+closing, success, teamHome) — so the mark doubles as a tiny
+diversifier across the gallery.
+
+Why not a ⚽ glyph: the Google Fonts CSS API serves a Latin-only
+subset; the football emoji renders as tofu (hit this earlier with ✦
+and ★). CSS-drawn was the safe path.
+
+**Per-kind specific touches:**
+- `record_broken`: scoreboard-style chip ("28 GOALS") next to the
+  broken-rule motif — reads as a stadium tally board, ties the
+  number into the headline visually.
+- `level_up`: jersey-number frame (border + radius) around the giant
+  numeral. Numeric typography stops feeling abstract, starts feeling
+  like a kit back.
+- `achievement`: corner-flag SVG (pole + pennant) in the upper-left.
+  Replaced the failed border-trick triangle (satori 0.26 doesn't
+  render border-style triangles cleanly) with inline `<svg>` polygon.
+
+`sim_complete` got the FootballMark only — no PitchTexture, because
+the card already has an explicit pitch silhouette as its central
+composition. Doubling up would have been gratuitous.
+
+### Scope
+
+All three formats:
+- 10 landscape (600×400) — `src/components/moments/cards/*Card.tsx`
+- 10 social square (1080×1080) — `cards/social/*Social.tsx`
+- 10 story portrait (1080×1920) — `cards/stories/*Story.tsx`
+
+30 components touched. All 30 PNGs regenerated via
+`scripts/render-before-after.tsx` / `render-social.tsx` /
+`render-stories.tsx`. Typecheck clean.
+
+### Bugs caught in flight
+
+- **Double-alpha hex**: passed `alpha(TOKENS.foreground, 0.55)` into
+  `<FootballMark color=...>`, which internally re-applies `alpha()`.
+  Result: `#ffffff8cd9` — satori rejected as malformed. Fix: pass
+  raw token + use `ringOpacity` prop on the mark. Lesson: helper
+  components that color-blend should never take pre-alpha'd hex.
+- **Streak-reward pulse collision**: corner-flag was at `top:0 right:0`,
+  same slot as the streak_reward indicator pulse. Moved flag to the
+  upper-left so both can co-exist on streak-tier achievement cards.
+
+### What's deferred
+
+Figma source-of-truth `.fig` file (`xTaynEAGCjhhmcmQdPG0JZ`) still
+shows the v1 archetype components (no pitch texture / no football
+mark). Code is now the authoritative render path — the Figma file is
+design documentation. Figma sync is task #58, queued for a separate
+pass.

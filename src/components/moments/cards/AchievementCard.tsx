@@ -22,6 +22,8 @@ import {
   MomentTier,
 } from './types';
 import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from './tokens';
+import { PitchTexture } from './PitchTexture';
+import { FootballMark } from './FootballMark';
 
 const FONT = 'Space Grotesk';
 
@@ -55,6 +57,35 @@ export function AchievementCard({ moment }: MomentCardProps) {
         overflow: 'hidden',
       }}
     >
+      <PitchTexture cardWidth={CARD_WIDTH} cardHeight={CARD_HEIGHT} opacity={0.04} />
+      {/* Corner-flag (upper-left): pole + pennant suggested via SVG */}
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          top: 14,
+          left: 14,
+          width: 34,
+          height: 36,
+        }}
+      >
+        <svg width="34" height="36" viewBox="0 0 34 36" xmlns="http://www.w3.org/2000/svg">
+          <line
+            x1="6"
+            y1="2"
+            x2="6"
+            y2="34"
+            stroke={alpha(TOKENS.foreground, 0.55)}
+            strokeWidth="1.5"
+          />
+          <polygon
+            points="6,2 30,8 6,16"
+            fill={alpha(TOKENS.success, 0.75)}
+            stroke={alpha(TOKENS.success, 0.95)}
+            strokeWidth="1"
+          />
+        </svg>
+      </div>
       <div
         style={{
           display: 'flex',
@@ -215,6 +246,7 @@ export function AchievementCard({ moment }: MomentCardProps) {
               </span>
             </div>
           )}
+          <FootballMark size={12} color={TOKENS.success} />
           <span
             style={{
               fontSize: 12,

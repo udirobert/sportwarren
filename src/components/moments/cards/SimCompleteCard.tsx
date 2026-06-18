@@ -31,6 +31,7 @@ import {
   MomentTier,
 } from './types';
 import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from './tokens';
+import { FootballMark } from './FootballMark';
 
 const FONT = 'Space Grotesk';
 
@@ -274,6 +275,7 @@ export function SimCompleteCard({ moment }: MomentCardProps) {
               </span>
             </div>
           )}
+          <FootballMark size={12} color={TOKENS.teamHome} />
           <span
             style={{
               fontSize: 12,

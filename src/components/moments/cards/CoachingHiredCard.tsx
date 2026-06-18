@@ -21,6 +21,8 @@ import {
   MomentTier,
 } from './types';
 import { TOKENS, TIER_ORNAMENT, SURFACE_GRADIENT, alpha, formatCardDate } from './tokens';
+import { PitchTexture } from './PitchTexture';
+import { FootballMark } from './FootballMark';
 
 const FONT = 'Space Grotesk';
 
@@ -53,6 +55,7 @@ export function CoachingHiredCard({ moment }: MomentCardProps) {
         overflow: 'hidden',
       }}
     >
+      <PitchTexture cardWidth={CARD_WIDTH} cardHeight={CARD_HEIGHT} opacity={0.04} />
       <div
         style={{
           display: 'flex',
@@ -176,6 +179,7 @@ export function CoachingHiredCard({ moment }: MomentCardProps) {
               </span>
             </div>
           )}
+          <FootballMark size={12} color={TOKENS.welcome} />
           <span
             style={{
               fontSize: 12,
