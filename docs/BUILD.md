@@ -147,6 +147,71 @@ Migrations run from the build machine against the remote database before uploadi
 #### 3. PM2 Management
 The `ecosystem.config.cjs` runs the Next.js standalone server on port `5200`. The server only responds to API routes (`/api/*`, `/trpc/*`). Frontend requests are handled by Vercel. Use `pm2 status` and `pm2 logs` for monitoring.
 
+#### 4. Operating the Hetzner API service
+
+The Hetzner host (`snel-bot` in your SSH config) runs `sportwarren-api`
+as a long-lived pm2 process. Useful commands:
+
+| Command | What it tells you |
+|---------|-------------------|
+| `ssh snel-bot 'pm2 list'` | All pm2 processes; status, uptime, memory |
+| `ssh snel-bot 'pm2 show sportwarren-api'` | Script path (which release is current), env vars, restart count, recent log paths |
+| `ssh snel-bot 'pm2 logs sportwarren-api --lines 50 --nostream'` | App stdout + stderr |
+| `ssh snel-bot 'pm2 logs sportwarren-api --lines 100 --nostream --err'` | Errors only |
+| `ssh snel-bot 'tail -50 /opt/sportwarren-api/shared/logs/moment-render.log'` | Cron output for moment-render |
+| `ssh snel-bot 'tail -50 /opt/sportwarren-api/shared/logs/scout-settle.log'` | Cron output for scout-settle |
+| `ssh snel-bot 'tail -50 /opt/sportwarren-api/shared/logs/twin-sim.log'` | Cron output for twin-sim |
+
+**Filesystem layout**
+
+```
+/opt/sportwarren-api/
+├── current → releases/<latest-timestamp>/   (symlink)
+├── releases/
+│   ├── 20260618-075142/   (latest deploy)
+│   └── …                  (previous N kept, pruned to KEEP_RELEASES=3)
+└── shared/
+    ├── .env               (single source of truth, symlinked into each release)
+    ├── storage/           (uploaded user assets, symlinked too)
+    ├── logs/              (cron + maintenance script output)
+    └── scripts/maintenance/   (crontab-invoked .ts scripts)
+```
+
+**Crontab** (under both `root` and `deploy` users) drives three
+maintenance scripts via `shared/scripts/maintenance/run-cron.sh`:
+- `scout-settle.ts` every 5 minutes
+- `moment-render.ts` every 6 hours
+- `twin-sim.ts` nightly at 02:00
+
+`run-cron.sh` sources `shared/.env`, `cd`s into `current/`, and runs
+`npx tsx <script>`. Under `set -euo pipefail`, so any env parse error
+(e.g. unquoted multi-word value) aborts before the script runs.
+
+**Manual cron trigger** (handy for verifying a fresh deploy):
+```bash
+ssh snel-bot 'SECRET=$(grep "^CRON_SECRET=" /opt/sportwarren-api/shared/.env | cut -d= -f2 | tr -d "\""); \
+  curl -s -H "Authorization: Bearer $SECRET" "http://localhost:5200/api/cron/moment-render?v=2" | jq'
+```
+
+The response payload from v2 includes `processed`, `byKind`, and
+`fallbackCount` — useful for confirming which archetypes are landing
+through dedicated cards vs. the `DefaultCard` fallback.
+
+**Common failure modes**
+
+- *cron log shows only "command not found" errors* — `shared/.env`
+  has a line whose value contains shell-special chars (spaces,
+  parens). Quote it: `KEY='multi word value'`.
+- */api/cron/moment-render returns 500* — almost certainly the
+  satori font fetch (Google rotates the Inter URL) or a missing
+  native binary in the artifact (`@resvg/resvg-js-linux-x64-gnu` is
+  the one we've hit). Check `pm2 logs --err`.
+- *Deploy script's pm2 start fails with "Script not found"* — the
+  `.next/standalone/server.js` path inside the new artifact is
+  nested under a CWD-leaked subdirectory. Means the build is using
+  Turbopack standalone instead of webpack; switch back in
+  `next.config.*` or `scripts/build-runtime-artifact.sh`.
+
 ---
 
 ## 🧪 Testing & Validation

@@ -41,6 +41,16 @@ The twin (the data model behind the record) is designed so that:
 - **It captures what professional stats miss.** How did you play with different teammates? What's your record against specific opponents? Which formation brings the best out of you? These are the stats Match of the Day reserves for Premier League players, made available to anyone who plays.
 - **It connects the dots between matches.** A training session, a logged run, a recovery day — all of it feeds the record. And when your passing rating has plateaued, the record suggests what to work on. Less trophy cabinet, more personal coach.
 
+The promise "every match leaves a mark" has a concrete artifact behind
+it: a [shareable moment-card library](https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ)
+bound to SportWarren's design tokens, with one archetype per kind of
+moment (records broken, levels up, season ends, debuts). Cards are
+rendered server-side and stored permanently alongside the moment row.
+The build that produced this library — including its failures and
+recovery — is documented in [`docs/makeathon/`](makeathon/) as a
+Build-in-Public artifact, with the reusable workflow at
+[`docs/makeathon/REPRODUCE.md`](makeathon/REPRODUCE.md).
+
 ---
 
 ## Who we build for
