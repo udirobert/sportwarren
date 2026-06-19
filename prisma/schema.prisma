@@ -26,6 +26,14 @@ model User {
   avatar   String?
   position String? // Preferred position
 
+  // Illustrated avatar (V3 card system — null means "use squad defaults")
+  avatarKitColor    String?  @map("avatar_kit_color")
+  avatarAccentColor String?  @map("avatar_accent_color")
+  avatarSkinTone    String?  @map("avatar_skin_tone")
+  avatarHairColor   String?  @map("avatar_hair_color")
+  avatarHairStyle   String?  @map("avatar_hair_style") // 'short' | 'tall' | 'shaved' | 'cap'
+  avatarNumber      String?  @map("avatar_number")
+
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -179,6 +187,10 @@ model Squad {
   // Squad details
   founded    DateTime @default(now())
   homeGround String?  @map("home_ground")
+
+  // Kit branding (V3 card system — null falls back to V3.RED / V3.NAVY)
+  kitColor    String?  @map("kit_color")
+  accentColor String?  @map("accent_color")
 
   // Placeholder squads auto-created from match logging (opponent not yet on platform)
   isPlaceholder Boolean @default(false) @map("is_placeholder")
