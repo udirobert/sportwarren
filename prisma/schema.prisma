@@ -33,6 +33,7 @@ model User {
   avatarHairColor   String?  @map("avatar_hair_color")
   avatarHairStyle   String?  @map("avatar_hair_style") // 'short' | 'tall' | 'shaved' | 'cap'
   avatarNumber      String?  @map("avatar_number")
+  avatarLocked      Boolean  @default(false) @map("avatar_locked")
 
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
