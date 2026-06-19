@@ -25,7 +25,7 @@ export function TelegramNavigation({ activeTab, pendingCount, pendingTopUps, saf
     { id: 'squad', label: 'Squad', icon: Home },
     { id: 'match', label: 'Match', icon: Trophy, badge: pendingCount > 0 ? pendingCount : undefined },
     { id: 'profile', label: 'Profile', icon: User },
-    { id: 'treasury', label: 'TON', icon: Wallet, badge: pendingTopUps > 0 ? pendingTopUps : undefined },
+    { id: 'treasury', label: 'Treasury', icon: Wallet, badge: pendingTopUps > 0 ? pendingTopUps : undefined },
   ], [pendingCount, pendingTopUps]);
 
   return (

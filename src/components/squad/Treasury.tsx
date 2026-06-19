@@ -114,16 +114,16 @@ export const Treasury: React.FC<TreasuryProps> = ({
       await onSetTonWalletAddress(trimmedWalletAddress || null);
       setTonWalletAddress(trimmedWalletAddress);
       addToast({
-        title: 'TON Vault',
+        title: 'Vault',
         message: trimmedWalletAddress
-          ? 'Squad TON vault updated.'
-          : 'Squad TON vault cleared.',
+          ? 'Squad vault updated.'
+          : 'Squad vault cleared.',
         tone: 'success',
       });
     } catch (error) {
       addToast({
-        title: 'TON Vault',
-        message: error instanceof Error ? error.message : 'Failed to update the squad TON vault.',
+        title: 'Vault',
+        message: error instanceof Error ? error.message : 'Failed to update the squad vault.',
         tone: 'error',
       });
     } finally {
@@ -145,14 +145,14 @@ export const Treasury: React.FC<TreasuryProps> = ({
         [transactionId]: '',
       }));
       addToast({
-        title: 'TON Treasury',
-        message: 'Pending TON top-up reconciled into the squad treasury.',
+        title: 'Treasury',
+        message: 'Pending top-up reconciled into the squad treasury.',
         tone: 'success',
       });
     } catch (error) {
       addToast({
-        title: 'TON Treasury',
-        message: error instanceof Error ? error.message : 'Failed to reconcile the TON top-up.',
+        title: 'Treasury',
+        message: error instanceof Error ? error.message : 'Failed to reconcile the top-up.',
         tone: 'error',
       });
     } finally {
@@ -285,7 +285,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
           {pendingTonTopUps.length > 0 && (
             <div className="mt-5 border-t border-gray-200 pt-4">
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">
-                Pending TON top-ups
+                Pending top-ups
               </p>
               <div className="mt-3 space-y-3">
                 {pendingTonTopUps.map((transaction) => {
@@ -297,7 +297,7 @@ export const Treasury: React.FC<TreasuryProps> = ({
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <p className="font-semibold text-gray-900">
-                            {transaction.amount.toLocaleString()} TON pending
+                            {transaction.amount.toLocaleString()} GRAM pending
                           </p>
                           <p className="text-sm text-gray-700 mt-1">
                             {transaction.description}
@@ -516,7 +516,7 @@ const TransactionRow: React.FC<TransactionRowProps> = ({ transaction, currency }
   const isIncome = transaction.type === 'income';
   const categoryLabels: Record<string, string> = {
     deposit: 'Treasury Deposit',
-    deposit_pending: 'TON Top-Up Pending',
+    deposit_pending: 'Top-Up Pending',
     match_fee: 'Match Fee',
     sponsor: 'Sponsorship',
     prize: 'Prize Money',
@@ -527,7 +527,7 @@ const TransactionRow: React.FC<TransactionRowProps> = ({ transaction, currency }
   };
   const categoryLabel =
     transaction.category === 'deposit_pending' && transaction.verified
-      ? 'TON Top-Up'
+      ? 'Top-Up'
       : categoryLabels[transaction.category] || transaction.category;
 
   return (

@@ -73,7 +73,7 @@ export const SUCCESS = {
     `✅ Availability set for *${day}*\n\n_Captains can view with /roster_`,
 
   FEE_PROPOSED: (amount: string, matchId: string) => 
-    `💰 Fee proposed: *${amount} TON*\n\nMatch: ${matchId}\n\n_Players can approve in /app_`,
+    `💰 Fee proposed: *${amount} GRAM*\n\nMatch: ${matchId}\n\n_Players can approve in /app_`,
 } as const;
 
 /**

@@ -175,7 +175,7 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
   const handleTopUp = useCallback(async () => {
     if (!ton.walletAddress || !canSubmit || submitting) {
       if (!canSubmit && !submitting) {
-        setError('Connect a TON wallet and choose an amount before submitting.');
+        setError('Connect a wallet and choose an amount before submitting.');
         hapticNotification('error');
       }
       return;
@@ -270,7 +270,7 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
     if (!webApp) return;
 
     if (canSubmit && !submitting) {
-      webApp.MainButton.setText(`TOP UP ${amountTon} TON`);
+      webApp.MainButton.setText(`TOP UP ${amountTon} GRAM`);
       webApp.MainButton.onClick(handleTopUp);
       webApp.MainButton.show();
     } else {
@@ -373,7 +373,7 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
           {!ton.enabled && (
             <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3">
               <AlertCircle className="h-4 w-4 text-amber-400" />
-              <span className="text-sm text-amber-300">TON top-ups not configured for this squad</span>
+              <span className="text-sm text-amber-300">On-chain top-ups not configured for this squad</span>
             </div>
           )}
 
@@ -423,10 +423,10 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
                 step={1}
                 value={amountTon}
                 onChange={(e) => setAmountTon(Math.max(1, Math.round(Number(e.target.value) || 1)))}
-                aria-label="TON amount"
+                aria-label="GRAM amount"
                 className="w-full rounded-xl border border-white/10 bg-slate-800/50 px-4 py-3 text-center text-lg font-bold text-white outline-none transition placeholder:text-slate-500 focus:border-cyan-400/50"
               />
-              <p className="mt-1 text-center text-[10px] text-slate-500">Enter custom amount in TON</p>
+              <p className="mt-1 text-center text-[10px] text-slate-500">Enter custom amount in GRAM</p>
             </div>
           </div>
 
@@ -491,7 +491,7 @@ export function TelegramTreasuryTab({ context, onRefresh }: TelegramTreasuryTabP
               ) : (
                 <>
                   <ArrowUpRight className="h-4 w-4" />
-                  Top Up {amountTon} TON
+                  Top Up {amountTon} GRAM
                 </>
               )}
             </button>

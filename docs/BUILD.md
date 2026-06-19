@@ -8,6 +8,7 @@
 
 ### Prerequisites
 - **Node.js 18+**, **PostgreSQL 14+**, **Redis 6+** (optional)
+- **pnpm** with `shamefully-hoist=true` (configured in `.npmrc`) — this is required for the standalone build to resolve all runtime dependencies correctly.
 - **GitHub CLI**: `gh auth login`
 
 ### Installation
@@ -86,7 +87,7 @@ All require `Authorization: Bearer <CRON_SECRET>`.
 | **Kite AI** | Agents & Commerce | `KITE_API_KEY`, `WEB3_PRIVATE_KEY`, `KITE_SCOUT_PRICE_USDC`, `KITE_SCOUT_MAX_USDC`, `KITE_SCOUT_MAX_USDC_SQUAD` |
 | **Algorand** | Verification | `DEPLOYER_MNEMONIC`, `ALGORAND_APP_ID` |
 | **GOAT Network** | Governance, ERC-8004 agent identity, x402 settlement | `GOAT_PRIVATE_KEY`, `GOAT_CHAIN_ID`, `GOAT_RPC_URL`, `GOAT_IDENTITY_REGISTRY_ADDRESS`, `GOAT_REPUTATION_REGISTRY_ADDRESS`, `GOAT_FACILITATOR_URL`, `GOAT_USDC_ADDRESS` |
-| **TON** | Telegram Wallet | `TONCENTER_API_KEY` |
+| **TON** (token: Gram / GRAM) | Telegram Wallet | `TONCENTER_API_KEY` |
 
 ### x402 / Agentic Commerce Variables
 | Variable | Default | Purpose |
@@ -119,6 +120,12 @@ For the production API backend, we deploy an **API-only artifact** to Hetzner vi
 - **Vercel**: Frontend (Next.js pages, React components, SSR/ISR) → www.sportwarren.com
 - **Hetzner**: Backend API only (tRPC, REST, workers, cron, database) → api.sportwarren.com
 
+#### Server Bootstrap (one-time)
+```bash
+ssh snel-bot 'mkdir -p /opt/sportwarren-api/shared/storage /opt/sportwarren-api/releases'
+scp .env.production snel-bot:/opt/sportwarren-api/shared/.env
+```
+
 #### 1. Build API-Only Artifact
 ```bash
 bash scripts/build-runtime-artifact.sh
@@ -137,6 +144,8 @@ The build script:
 
 **Result:** ~20-30MB artifact (vs ~121MB full app), ~5min build time (vs ~38min).
 
+> **Build notes:** Next 16 enables Turbopack by default. The runtime artifact build follows the same path. Set `DISABLE_SENTRY_BUILD=true` in non-prod environments to skip the Sentry source-map upload.
+
 #### 2. Deploy Release
 The full pipeline (build + migrate + upload + deploy) is automated:
 ```bash
@@ -144,8 +153,17 @@ bash scripts/deploy-hetzner.sh
 ```
 Migrations run from the build machine against the remote database before uploading. The deploy script unpacks the release, symlinks shared `.env` and `storage`, and restarts PM2.
 
+For manual deploys, upload the artifact and run:
+```bash
+ssh snel-bot 'bash /opt/sportwarren-api/current/scripts/deploy-runtime-release.sh /path/to/sportwarren-runtime-*.tar.gz'
+```
+
+> **Next standalone .env gotcha:** `next build` snapshots the current `.env` into `.next/standalone/.env`, and the standalone server reads from that file (not from `process.cwd`). The deploy script replaces it with a symlink to `shared/.env` so runtime-only secrets such as `KAPSO_API_KEY` and `WHATSAPP_PHONE_NUMBER_ID` are live without rebuilding the artifact.
+
 #### 3. PM2 Management
 The `ecosystem.config.cjs` runs the Next.js standalone server on port `5200`. The server only responds to API routes (`/api/*`, `/trpc/*`). Frontend requests are handled by Vercel. Use `pm2 status` and `pm2 logs` for monitoring.
+
+> **PM2 cwd gotcha:** `pm2 reload` and `pm2 startOrReload` update env vars but **do not** change a process's working directory — pm2 caches `cwd` from the first `pm2 start`. After a symlink swap, a reload keeps serving the previous release. The deploy script therefore does `pm2 delete && pm2 start` on every deploy so the new release directory is picked up.
 
 #### 4. Operating the Hetzner API service
 

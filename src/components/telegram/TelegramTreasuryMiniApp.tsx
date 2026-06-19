@@ -122,12 +122,12 @@ export function TelegramTreasuryMiniApp() {
 
   const handleTopUp = async () => {
     if (!context?.ton.walletAddress) {
-      setError('TON treasury top-ups are not configured for this squad yet.');
+      setError('On-chain top-ups are not configured for this squad yet.');
       return;
     }
 
     if (!canSubmit) {
-      setError('Connect a TON wallet and choose a whole TON amount before submitting.');
+      setError('Connect a TON wallet and choose a whole amount before submitting.');
       return;
     }
 
@@ -164,16 +164,16 @@ export function TelegramTreasuryMiniApp() {
       });
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'The TON transaction was sent, but SportWarren could not record it.');
+       if (!response.ok) {
+        throw new Error(data.error || 'The transaction was sent, but SportWarren could not record it.');
       }
 
       setSuccessMessage(
         data.duplicate
-          ? 'That TON top-up was already recorded in SportWarren.'
+          ? 'That top-up was already recorded in SportWarren.'
           : data.transaction?.verified
-            ? 'TON top-up confirmed on-chain and applied to the squad treasury.'
-            : 'TON top-up submitted. It is now visible as pending treasury reconciliation.'
+            ? 'Top-up confirmed on-chain and applied to the squad treasury.'
+            : 'Top-up submitted. It is now visible as pending treasury reconciliation.'
       );
 
       const contextResponse = await fetch(`/api/telegram/mini-app/context?token=${encodeURIComponent(token)}`, {
@@ -201,7 +201,7 @@ export function TelegramTreasuryMiniApp() {
                 {context?.squadName || 'Loading squad'}
               </h1>
               <p className="mt-2 text-sm leading-6 text-slate-300">
-                Connect a TON wallet and route a squad top-up through the Telegram Mini App. SportWarren records the submission as pending until treasury reconciliation.
+                Connect a wallet and route a squad top-up through the Telegram Mini App. SportWarren records the submission as pending until treasury reconciliation.
               </p>
             </div>
             <div className="rounded-2xl bg-cyan-400/15 p-3 text-cyan-300">
@@ -215,7 +215,7 @@ export function TelegramTreasuryMiniApp() {
               <div className="mt-2 text-2xl font-black text-white">
                 {loading ? '...' : context?.treasury.balance.toLocaleString()}
               </div>
-              <div className="mt-1 text-xs text-slate-400">{context?.treasury.currency || 'TON'}</div>
+              <div className="mt-1 text-xs text-slate-400">{context?.treasury.currency || 'GRAM'}</div>
             </div>
             <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
               <div className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Pending Top-Ups</div>
@@ -247,7 +247,7 @@ export function TelegramTreasuryMiniApp() {
 
           {!loading && !context?.ton.enabled && (
             <div className="mt-4 rounded-2xl border border-amber-400/30 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
-              TON top-ups are not configured on this deployment yet. Set a squad TON vault address first.
+              On-chain top-ups are not configured on this deployment yet. Set a squad vault address first.
             </div>
           )}
 
@@ -273,7 +273,7 @@ export function TelegramTreasuryMiniApp() {
               {context?.ton.walletAddress || 'Not configured'}
             </p>
             <p className="mt-2 text-xs leading-5 text-slate-400">
-              SportWarren writes this payment to the treasury ledger as a pending TON top-up. Balance stays unchanged until reconciliation.
+              SportWarren writes this payment to the treasury ledger as pending. Balance stays unchanged until reconciliation.
             </p>
           </div>
 
@@ -291,7 +291,7 @@ export function TelegramTreasuryMiniApp() {
                       : 'border-white/10 bg-white/5 text-slate-300 hover:border-white/20'
                   }`}
                 >
-                  {preset} TON
+                  {preset} GRAM
                 </button>
               ))}
             </div>
@@ -316,11 +316,11 @@ export function TelegramTreasuryMiniApp() {
               {submitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  Submitting TON top-up
+                  Submitting top-up
                 </>
               ) : (
                 <>
-                  Submit TON top-up
+                  Submit top-up
                   <ArrowUpRight className="h-4 w-4" />
                 </>
               )}

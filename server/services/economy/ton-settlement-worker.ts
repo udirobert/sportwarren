@@ -229,9 +229,9 @@ export class TonSettlementWorker {
 
         const squadName = group.squad?.name || 'Your squad';
         const message = [
-          `✅ TON Top-Up Settled`,
+          `✅ Top-Up Settled`,
           '',
-          `${squadName} treasury +${deposit.amount} TON`,
+          `${squadName} treasury +${deposit.amount} GRAM`,
           `TX: ${txLabel}`,
           '',
           'The deposit has been verified on-chain and your squad balance is updated.',

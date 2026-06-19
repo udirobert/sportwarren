@@ -8,9 +8,9 @@ export const dynamic = 'force-dynamic';
 const topUpSchema = z.object({
   token: z.string().min(1, 'Mini App token is required'),
   senderAddress: z.string().min(1, 'Sender address is required'),
-  amountTon: z.number().int().positive('Amount must be a positive whole TON value'),
+  amountTon: z.number().int().positive('Amount must be a positive whole GRAM value'),
   boc: z.string().min(1, 'Signed BOC is required'),
-  comment: z.string().min(1, 'TON memo is required'),
+  comment: z.string().min(1, 'Memo is required'),
 });
 
 export async function POST(request: NextRequest) {
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to record TON top-up' },
+      { error: error instanceof Error ? error.message : 'Failed to record top-up' },
       { status: 400 }
     );
   }

@@ -2,11 +2,34 @@
 
 How to clone the moment-card library workflow into your own project.
 
-The work documented in `docs/makeathon/` produced two visibly distinct
-moment-card archetypes (`record_broken`, `level_up`) — each as a Figma
-component set with five tier variants, bound to the SportWarren design
-system, and rendered through a satori pipeline that swaps in per-kind
-React components from a registry.
+## Why this exists
+
+SportWarren's whole pitch is that grassroots football moments should be
+preserved. The cards exist — rendered by `moment-render.ts` using satori +
+resvg — but every card was identical: hardcoded gradient, Inter font, same
+composition regardless of whether the moment was a `season_end` or a
+`record_broken`. The renderer shipped PNGs but didn't honor the "designed
+to be saved" promise.
+
+It also used Inter — which `DESIGN_TOKENS.md` explicitly rejects: *"Inter
+and system fonts are overused in AI-generated UIs. Space Grotesk gives a
+sport-tech character that aligns with the brand."* The renderer was a
+generic AI-slop card factory inside a product whose design philosophy
+explicitly rejects generic AI slop.
+
+The pipeline below replaces it with per-kind visual archetypes that respect
+the design system — each moment kind gets its own composition, palette, and
+typography, and no two cards look identical even within a kind.
+
+## What was built
+
+The makeathon work produced two visibly distinct moment-card archetypes
+(`record_broken`, `level_up`) — each as a Figma component set with five
+tier variants, bound to the SportWarren design system, and rendered through
+a satori pipeline that swaps in per-kind React components from a registry.
+Additional archetypes (`season_end`, `twin_created`, `coaching_hired`,
+`match_imported`, `attestation_milestone`) have card components stubbed in
+the registry and ready for the same pipeline.
 
 The *workflow* is reusable: any project with a shareable-card surface
 (open-graph images, social cards, achievement screens, certificate
@@ -183,6 +206,24 @@ you need a new tier-level visual (e.g. `seasonal_finale`).
 
 ---
 
+## Archetype design notes
+
+Each moment kind in the CARDS registry targets a distinct visual mood:
+
+| Kind | Mood | Key visual signals |
+|------|------|--------------------|
+| `record_broken` | Emphatic | Oversized type as imagery, destructive red accent, shattered horizontal rule |
+| `level_up` | Growth | Giant numeral as hero, gold and emerald, chevron stack suggesting progression |
+| `season_end` | Retrospective | Trophy-led, gold and emerald, season-stat grid |
+| `twin_created` | Generative | Violet, abstract, identity-forward composition |
+| `coaching_hired` | Warm | Indigo, welcoming, soft curves |
+| `match_imported` | Archival | Monochrome, calendar-led, restrained typography |
+| `attestation_milestone` | Civic | Sky blue, badge-led, certificate feel |
+
+The tier property (Common → Rare → Epic → Legendary → Mythic) applies
+ornament variation within each kind via shared tier tokens in
+`cards/tokens.ts`.
+
 ## What this skill does NOT do
 
 - It does not auto-generate matching CSS for the cards on the web
@@ -202,6 +243,6 @@ you need a new tier-level visual (e.g. `seasonal_finale`).
 - Skill source: `.claude/skills/sw-moments/`
 - Cards source: `src/components/moments/cards/`
 - v2 renderer: `src/server/services/personalization/moment-render-v2.ts`
-- Build log: `docs/makeathon/build-log.md`
+- Build log: `docs/archive/makeathon/build-log.md` (historical record)
 - Sample renders: `docs/makeathon/assets/`
 - Figma file: https://www.figma.com/design/xTaynEAGCjhhmcmQdPG0JZ
