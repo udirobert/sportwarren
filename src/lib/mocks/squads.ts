@@ -4,7 +4,6 @@
  * - src/hooks/squad/useTreasury.ts (MOCK_TREASURY)
  * - src/components/squad/Treasury.tsx (MOCK_TREASURY)
  * - src/components/squad/TransferMarket.tsx (MOCK_OFFERS)
- * - src/components/rivalry/RivalryTracker.tsx (MOCK_RIVALRIES)
  */
 
 import type { Treasury, TransferOffer, Rivalry, Squad } from '@/types';

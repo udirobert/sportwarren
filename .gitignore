@@ -98,3 +98,6 @@ contracts/**/.openzeppelin/
 
 # Local deployment notes
 docs/DEPLOY_HETZNER_RUNTIME.md
+
+# TypeScript incremental compile cache
+tsconfig.tsbuildinfo
