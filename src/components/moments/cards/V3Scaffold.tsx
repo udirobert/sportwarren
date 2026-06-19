@@ -23,12 +23,155 @@ export const V3 = {
   RED: '#c91022',
   NAVY: '#1c3a5e',
   SAGE: '#4a7549',
+  // Celebratory accent — used only on milestone/champion archetypes
+  MUSTARD: '#d4a437',
+  // Skin/hair palette (for avatars — keep flexibility for the customization UI)
+  SKIN_LIGHT: '#f0d4b8',
+  SKIN_MID: '#c89e7c',
+  SKIN_DARK: '#8b5a3c',
+  HAIR_DARK: '#2a1a10',
+  HAIR_BROWN: '#5c3a1a',
+  HAIR_BLOND: '#c89048',
+  HAIR_RED: '#a64a20',
 } as const;
 
 export const HEAD = 'Antonio';
 export const MONO = 'JetBrains Mono';
 
 export type IconKey = keyof typeof ICONS;
+
+/**
+ * SunburstRays — celebratory radial lines emanating from a focal point.
+ * Used behind hero stats on milestone archetypes.
+ */
+export function SunburstRays({
+  cx,
+  cy,
+  rayCount = 12,
+  innerR = 60,
+  outerR = 320,
+  color = V3.MUSTARD,
+  opacity = 0.18,
+}: {
+  cx: number;
+  cy: number;
+  rayCount?: number;
+  innerR?: number;
+  outerR?: number;
+  color?: string;
+  opacity?: number;
+}) {
+  // Rays drawn as long thin rectangles, rotated radially.
+  const rays = Array.from({ length: rayCount }).map((_, i) => {
+    const angle = (i * 360) / rayCount;
+    return { angle, w: 3, h: outerR - innerR };
+  });
+  return (
+    <>
+      {rays.map((r, i) => (
+        <div
+          key={`ray-${i}`}
+          style={{
+            display: 'flex',
+            position: 'absolute',
+            top: cy - r.h / 2,
+            left: cx - r.w / 2,
+            width: r.w,
+            height: r.h,
+            background: color,
+            opacity: opacity * (i % 2 === 0 ? 1 : 0.6),
+            transform: `rotate(${r.angle}deg) translateY(-${innerR + r.h / 2}px)`,
+            transformOrigin: 'center bottom',
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+/**
+ * Confetti — scattered small dots in multi-color palette.
+ * Used on celebratory archetypes.
+ */
+export function Confetti({
+  dots,
+}: {
+  dots: { x: number; y: number; s: number; color: string; opacity?: number }[];
+}) {
+  return (
+    <>
+      {dots.map((dot, i) => (
+        <div
+          key={`confetti-${i}`}
+          style={{
+            display: 'flex',
+            position: 'absolute',
+            top: dot.y,
+            left: dot.x,
+            width: dot.s,
+            height: dot.s,
+            borderRadius: dot.s / 2,
+            background: dot.color,
+            opacity: dot.opacity ?? 0.8,
+          }}
+        />
+      ))}
+    </>
+  );
+}
+
+/**
+ * RibbonBars — small colored squares like a championship rosette.
+ * Visible top-edge accent for celebratory archetypes.
+ */
+export function RibbonBars({
+  top = 0,
+  left = 32,
+  colors = [V3.MUSTARD, V3.RED, V3.SAGE, V3.NAVY],
+}: {
+  top?: number;
+  left?: number;
+  colors?: readonly string[];
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        position: 'absolute',
+        top,
+        left,
+        height: 4,
+        gap: 4,
+      }}
+    >
+      {colors.map((c, i) => (
+        <div
+          key={`ribbon-${i}`}
+          style={{ display: 'flex', width: 28, height: 4, background: c }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Standard sample confetti positions for a 600x400 card.
+ * Spread across the canvas with multi-color variation.
+ */
+export const CELEBRATORY_CONFETTI = [
+  { x: 60, y: 28, s: 4, color: V3.MUSTARD, opacity: 0.85 },
+  { x: 180, y: 18, s: 3, color: V3.RED, opacity: 0.7 },
+  { x: 250, y: 38, s: 5, color: V3.SAGE, opacity: 0.65 },
+  { x: 460, y: 22, s: 3, color: V3.NAVY, opacity: 0.6 },
+  { x: 540, y: 50, s: 4, color: V3.MUSTARD, opacity: 0.7 },
+  { x: 70, y: 360, s: 5, color: V3.RED, opacity: 0.65 },
+  { x: 170, y: 372, s: 3, color: V3.MUSTARD, opacity: 0.75 },
+  { x: 380, y: 358, s: 4, color: V3.SAGE, opacity: 0.7 },
+  { x: 490, y: 372, s: 3, color: V3.NAVY, opacity: 0.5 },
+  { x: 545, y: 350, s: 5, color: V3.MUSTARD, opacity: 0.75 },
+  { x: 20, y: 200, s: 3, color: V3.RED, opacity: 0.55 },
+  { x: 575, y: 200, s: 3, color: V3.MUSTARD, opacity: 0.6 },
+];
 
 export function PaperBg() {
   return (
@@ -749,27 +892,55 @@ export function EditorialFooter({
   );
 }
 
+/**
+ * Compute a hero font size + left position that fits inside the safe area.
+ * JetBrains Mono Bold char width ≈ 0.6 × fontSize. Aims for the hero to
+ * land in the right half of the card, with right-edge ≤ maxRight.
+ */
+export function fitHero(
+  text: string,
+  opts: { maxRight?: number; maxWidth?: number; maxFontSize?: number } = {},
+): { fontSize: number; left: number } {
+  const maxRight = opts.maxRight ?? 568;
+  const maxWidth = opts.maxWidth ?? 268;
+  const maxFontSize = opts.maxFontSize ?? 240;
+  const charsW = text.length;
+  // Solve maxWidth = charsW * 0.6 * fontSize for fontSize.
+  const fontSizeFromWidth = Math.floor(maxWidth / (charsW * 0.6));
+  const fontSize = Math.min(maxFontSize, fontSizeFromWidth);
+  const textW = charsW * 0.6 * fontSize;
+  const left = Math.round(maxRight - textW);
+  return { fontSize, left };
+}
+
 export function HeroNumber({
   text,
   top = 32,
-  left = 322,
-  fontSize = 240,
+  left,
+  fontSize,
+  maxFontSize,
   color = V3.INK,
 }: {
   text: string;
   top?: number;
   left?: number;
   fontSize?: number;
+  /** Cap the auto-fit font size (used when calling without an explicit fontSize). */
+  maxFontSize?: number;
   color?: string;
 }) {
+  // Auto-fit if dimensions not provided
+  const auto = fitHero(text, { maxFontSize });
+  const fs = fontSize ?? auto.fontSize;
+  const lx = left ?? auto.left;
   return (
     <div
       style={{
         display: 'flex',
         position: 'absolute',
         top,
-        left,
-        fontSize,
+        left: lx,
+        fontSize: fs,
         fontFamily: MONO,
         fontWeight: 700,
         lineHeight: 0.85,
@@ -779,6 +950,85 @@ export function HeroNumber({
     >
       {text}
     </div>
+  );
+}
+
+/**
+ * FoilStamp — celebratory gradient-fill version of InkStamp.
+ * Used on milestone ink-stamps (BROKEN, SEALED, EARNED, WRAPPED).
+ */
+export function FoilStamp({
+  text,
+  top,
+  left,
+  rotation = -7,
+  fontSize = 42,
+}: {
+  text: string;
+  top: number;
+  left: number;
+  rotation?: number;
+  fontSize?: number;
+}) {
+  return (
+    <>
+      {/* Shadow / ink-bleed */}
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          top: top + 2,
+          left: left - 3,
+          padding: '6px 18px 8px',
+          background: 'transparent',
+          border: `3px solid ${V3.INK}`,
+          transform: `rotate(${rotation}deg)`,
+          opacity: 0.18,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: HEAD,
+            fontWeight: 700,
+            fontSize,
+            color: V3.INK,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            lineHeight: 1,
+          }}
+        >
+          {text}
+        </span>
+      </div>
+      {/* Foil layer — mustard gold with red shimmer hint */}
+      <div
+        style={{
+          display: 'flex',
+          position: 'absolute',
+          top,
+          left,
+          padding: '6px 18px 8px',
+          background: `linear-gradient(110deg, ${V3.MUSTARD} 0%, ${V3.RED} 50%, ${V3.MUSTARD} 100%)`,
+          border: `3px solid ${V3.RED}`,
+          transform: `rotate(${rotation}deg)`,
+          opacity: 0.95,
+        }}
+      >
+        <span
+          style={{
+            fontFamily: HEAD,
+            fontWeight: 700,
+            fontSize,
+            color: V3.CREAM,
+            letterSpacing: '0.04em',
+            textTransform: 'uppercase',
+            lineHeight: 1,
+          }}
+        >
+          {text}
+        </span>
+      </div>
+    </>
   );
 }
 
