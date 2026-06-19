@@ -270,6 +270,12 @@ export const playerRouter = createTRPCRouter({
       position: z.enum(['GK', 'DF', 'MF', 'ST', 'WG']),
       avatar: z.string().max(1_000_000, 'Avatar data too large').optional(),
       claimToken: z.string().optional(),
+      avatarKitColor: z.string().max(7).optional(),
+      avatarAccentColor: z.string().max(7).optional(),
+      avatarSkinTone: z.string().max(7).optional(),
+      avatarHairColor: z.string().max(7).optional(),
+      avatarHairStyle: z.enum(['short', 'tall', 'shaved', 'cap']).optional(),
+      avatarNumber: z.string().max(2).optional(),
     }))
     .mutation(async ({ ctx, input }) => {
       try {
@@ -281,6 +287,12 @@ export const playerRouter = createTRPCRouter({
         };
         if (input.avatar !== undefined) {
           updateData.avatar = input.avatar;
+        }
+        for (const field of [
+          'avatarKitColor', 'avatarAccentColor', 'avatarSkinTone',
+          'avatarHairColor', 'avatarHairStyle', 'avatarNumber',
+        ] as const) {
+          if (input[field] !== undefined) updateData[field] = input[field];
         }
 
         const user = await ctx.prisma.user.update({
