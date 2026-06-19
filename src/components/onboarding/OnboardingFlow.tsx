@@ -60,6 +60,11 @@ import {
 } from "@/lib/attributes/provisional";
 import { FORMATIONS } from "@/lib/formations";
 import SquadImportWizard from "@/components/import/SquadImportWizard";
+import {
+  AvatarCustomizer,
+  DEFAULT_AVATAR_DRAFT,
+  type AvatarDraft,
+} from "@/components/avatar/AvatarCustomizer";
 
 const FORMATION_OPTIONS = [
   {
@@ -171,6 +176,8 @@ export function OnboardingFlow({
   // default — it starts unset and is set by the persona branch or the user.
   const [playerName, setPlayerName] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarDraft, setAvatarDraft] = useState<AvatarDraft>(DEFAULT_AVATAR_DRAFT);
+  const [avatarMode, setAvatarMode] = useState<'illustrated' | 'photo'>('illustrated');
   const [formation, setFormation] = useState<string | null>(
     preferences.squadBranding?.formation || null,
   );
@@ -348,8 +355,16 @@ export function OnboardingFlow({
       const profileResult = await updateProfile.mutateAsync({
         name: playerName.trim(),
         position: pendingClaimPosition ?? ("MF" as PlayerPosition),
-        avatar: avatarPreview || undefined,
+        avatar: avatarMode === 'photo' ? (avatarPreview || undefined) : undefined,
         claimToken: pendingClaimToken ?? undefined,
+        ...(avatarMode === 'illustrated' ? {
+          avatarKitColor: avatarDraft.kitColor,
+          avatarAccentColor: avatarDraft.accentColor,
+          avatarSkinTone: avatarDraft.skinTone,
+          avatarHairColor: avatarDraft.hairColor,
+          avatarHairStyle: avatarDraft.hairStyle,
+          avatarNumber: avatarDraft.number,
+        } : {}),
       });
 
       clearPendingClaim();
@@ -396,6 +411,8 @@ export function OnboardingFlow({
   }, [
     playerName,
     avatarPreview,
+    avatarDraft,
+    avatarMode,
     primaryColor,
     nickname,
     formation,
@@ -502,6 +519,10 @@ export function OnboardingFlow({
           completeChecklistItem={completeChecklistItem}
           skipBrandStep={skipBrandStep}
           onStartImport={() => setShowImportWizard(true)}
+          avatarDraft={avatarDraft}
+          setAvatarDraft={setAvatarDraft}
+          avatarMode={avatarMode}
+          setAvatarMode={setAvatarMode}
         />
         <ConfettiOverlay />
       </>
@@ -679,6 +700,10 @@ interface PersonalizationCardProps {
   completeChecklistItem?: (id: ChecklistId) => void;
   skipBrandStep?: boolean;
   onStartImport?: () => void;
+  avatarDraft: AvatarDraft;
+  setAvatarDraft: (draft: AvatarDraft) => void;
+  avatarMode: 'illustrated' | 'photo';
+  setAvatarMode: (mode: 'illustrated' | 'photo') => void;
 }
 
 function PersonalizationCard({
@@ -704,6 +729,10 @@ function PersonalizationCard({
   completeChecklistItem,
   skipBrandStep,
   onStartImport,
+  avatarDraft,
+  setAvatarDraft,
+  avatarMode,
+  setAvatarMode,
 }: PersonalizationCardProps) {
   const [matchResult, setMatchResult] = useState<
     "won" | "drew" | "lost" | null
@@ -928,66 +957,91 @@ function PersonalizationCard({
                 This is how teammates and opponents will see you on the pitch.
               </p>
 
-              <div className="mb-6 flex items-center gap-4">
-                <div
-                  className="relative w-20 h-20 rounded-2xl overflow-hidden bg-white/10 border-2 border-white/20 flex items-center justify-center cursor-pointer group shrink-0"
-                  onClick={() => fileInputRef.current?.click()}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      fileInputRef.current?.click();
-                    }
-                  }}
-                >
-                  {avatarPreview ? (
-                    <img
-                      src={avatarPreview}
-                      alt="Your profile photo"
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <User className="w-10 h-10 text-white/40" />
-                  )}
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera className="w-6 h-6 text-white" />
-                  </div>
-                </div>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={onAvatarFile}
-                />
-                <div className="flex flex-col gap-1">
+              <div className="mb-4">
+                <div className="flex gap-2 mb-4">
                   <button
-                    onClick={() => fileInputRef.current?.click()}
-                    className="text-sm font-bold text-green-400 hover:text-green-300 transition-colors flex items-center gap-2"
+                    type="button"
+                    onClick={() => setAvatarMode('illustrated')}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
+                      avatarMode === 'illustrated'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-white/5 text-gray-500 border border-white/10 hover:bg-white/10'
+                    }`}
                   >
-                    <Camera className="w-4 h-4" />{" "}
-                    {avatarPreview ? "Change photo" : "Upload photo"}
+                    Illustrated
                   </button>
-                  {!avatarPreview && (
-                    /* Skip link: avatar is optional, the "Choose Formation" CTA
-                       doesn't gate on it. Card-savers skip the identity step
-                       entirely so this is only seen by Path A visitors who
-                       didn't prefill a card — still worth it for first-time
-                       friction. Gated on name length so a 1-char name can't
-                       slip through past the "Choose Formation" CTA's check. */
-                    <button
-                      type="button"
-                      onClick={() =>
-                        playerName.trim().length >= 2 && setStep("formation")
-                      }
-                      disabled={playerName.trim().length < 2}
-                      className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4 decoration-gray-700 hover:decoration-gray-500 transition-colors text-left disabled:opacity-30 disabled:cursor-not-allowed disabled:no-underline"
-                    >
-                      Skip avatar for now
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => setAvatarMode('photo')}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
+                      avatarMode === 'photo'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                        : 'bg-white/5 text-gray-500 border border-white/10 hover:bg-white/10'
+                    }`}
+                  >
+                    Photo
+                  </button>
                 </div>
+
+                {avatarMode === 'illustrated' ? (
+                  <AvatarCustomizer value={avatarDraft} onChange={setAvatarDraft} />
+                ) : (
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="relative w-20 h-20 rounded-2xl overflow-hidden bg-white/10 border-2 border-white/20 flex items-center justify-center cursor-pointer group shrink-0"
+                      onClick={() => fileInputRef.current?.click()}
+                      role="button"
+                      tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          fileInputRef.current?.click();
+                        }
+                      }}
+                    >
+                      {avatarPreview ? (
+                        <img
+                          src={avatarPreview}
+                          alt="Your profile photo"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User className="w-10 h-10 text-white/40" />
+                      )}
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Camera className="w-6 h-6 text-white" />
+                      </div>
+                    </div>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={onAvatarFile}
+                    />
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-sm font-bold text-green-400 hover:text-green-300 transition-colors flex items-center gap-2"
+                      >
+                        <Camera className="w-4 h-4" />{" "}
+                        {avatarPreview ? "Change photo" : "Upload photo"}
+                      </button>
+                      {!avatarPreview && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            playerName.trim().length >= 2 && setStep("formation")
+                          }
+                          disabled={playerName.trim().length < 2}
+                          className="text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4 decoration-gray-700 hover:decoration-gray-500 transition-colors text-left disabled:opacity-30 disabled:cursor-not-allowed disabled:no-underline"
+                        >
+                          Skip avatar for now
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mb-8">
