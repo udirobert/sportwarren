@@ -12,6 +12,7 @@ import { communicationRouter } from './routers/communication';
 import { peerRatingRouter } from './routers/peer-rating';
 import { tournamentRouter } from './routers/tournament';
 import { coachingRouter } from './routers/coaching';
+import { avatarRouter } from './routers/avatar';
 
 export const appRouter = createTRPCRouter({
   match: matchRouter,
@@ -27,6 +28,7 @@ export const appRouter = createTRPCRouter({
   peerRating: peerRatingRouter,
   tournament: tournamentRouter,
   coaching: coachingRouter,
+  avatar: avatarRouter,
 });
 
 export type AppRouter = typeof appRouter;
