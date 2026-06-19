@@ -1,0 +1,141 @@
+{
+  "group": {
+    "name": "Tuesday Kickabout",
+    "shortName": "TKO",
+    "kitColor": "#c91022",
+    "accentColor": "#1c3a5e",
+    "founded": "2024-01-01"
+  },
+  "session": {
+    "date": "2026-06-16",
+    "format": "6v6",
+    "playersPerSide": 6,
+    "hasKeeper": false,
+    "totalGoals": 38,
+    "notes": "Winner stays on, 7-min games, two-goal early finish, 2 hours total"
+  },
+  "organizerWalletAddress": "kickabout_organizer_pete",
+  "roster": [
+    {
+      "name": "Pete",
+      "phone": "+44...",
+      "position": "AM",
+      "skillNote": "all-rounder, decent passer",
+      "lastWeekGoals": 3,
+      "lastWeekWins": 4,
+      "lastWeekGames": 6,
+      "look": { "skin": "mid", "hair": "brown", "hairStyle": "short" },
+      "isOrganizer": true
+    },
+    {
+      "name": "Tom",
+      "phone": "+44...",
+      "position": "ST",
+      "skillNote": "clinical finisher, best in the group",
+      "lastWeekGoals": 8,
+      "lastWeekWins": 5,
+      "lastWeekGames": 7,
+      "look": { "skin": "light", "hair": "blond", "hairStyle": "short" }
+    },
+    {
+      "name": "Dave",
+      "phone": "+44...",
+      "position": "CB",
+      "skillNote": "solid defender, hates losing",
+      "lastWeekGoals": 1,
+      "lastWeekWins": 3,
+      "lastWeekGames": 6,
+      "look": { "skin": "mid", "hair": "dark", "hairStyle": "shaved" }
+    },
+    {
+      "name": "Sami",
+      "phone": "+44...",
+      "position": "CM",
+      "skillNote": "engine, runs all night",
+      "lastWeekGoals": 2,
+      "lastWeekWins": 4,
+      "lastWeekGames": 7,
+      "look": { "skin": "dark", "hair": "dark", "hairStyle": "short" }
+    },
+    {
+      "name": "Liam",
+      "phone": "+44...",
+      "position": "ST",
+      "skillNote": "quick on the counter",
+      "lastWeekGoals": 5,
+      "lastWeekWins": 3,
+      "lastWeekGames": 6,
+      "look": { "skin": "light", "hair": "red", "hairStyle": "short" }
+    },
+    {
+      "name": "Marco",
+      "phone": "+44...",
+      "position": "CM",
+      "skillNote": "playmaker, weighted through balls",
+      "lastWeekGoals": 4,
+      "lastWeekWins": 4,
+      "lastWeekGames": 7,
+      "look": { "skin": "light", "hair": "dark", "hairStyle": "tall" }
+    },
+    {
+      "name": "Ravi",
+      "phone": "+44...",
+      "position": "GK",
+      "skillNote": "sweeper-keeper when needed",
+      "lastWeekGoals": 0,
+      "lastWeekWins": 4,
+      "lastWeekGames": 5,
+      "look": { "skin": "mid", "hair": "dark", "hairStyle": "cap" }
+    },
+    {
+      "name": "Chris",
+      "phone": "+44...",
+      "position": "CB",
+      "skillNote": "physical, tough in the air",
+      "lastWeekGoals": 2,
+      "lastWeekWins": 3,
+      "lastWeekGames": 6,
+      "look": { "skin": "light", "hair": "brown", "hairStyle": "short" }
+    },
+    {
+      "name": "Jamie",
+      "phone": "+44...",
+      "position": "LB",
+      "skillNote": "overlapping fullback",
+      "lastWeekGoals": 1,
+      "lastWeekWins": 4,
+      "lastWeekGames": 6,
+      "look": { "skin": "mid", "hair": "dark", "hairStyle": "short" }
+    },
+    {
+      "name": "Nathan",
+      "phone": "+44...",
+      "position": "ST",
+      "skillNote": "poacher in the box",
+      "lastWeekGoals": 6,
+      "lastWeekWins": 4,
+      "lastWeekGames": 7,
+      "look": { "skin": "dark", "hair": "dark", "hairStyle": "shaved" }
+    },
+    {
+      "name": "Will",
+      "phone": "+44...",
+      "position": "RM",
+      "skillNote": "winger, beats his man",
+      "lastWeekGoals": 3,
+      "lastWeekWins": 3,
+      "lastWeekGames": 6,
+      "look": { "skin": "light", "hair": "blond", "hairStyle": "tall" }
+    },
+    {
+      "name": "Adam",
+      "phone": "+44...",
+      "position": "CM",
+      "skillNote": "tidy player, finds space",
+      "lastWeekGoals": 3,
+      "lastWeekWins": 4,
+      "lastWeekGames": 6,
+      "look": { "skin": "mid", "hair": "brown", "hairStyle": "short" }
+    }
+  ]
+}

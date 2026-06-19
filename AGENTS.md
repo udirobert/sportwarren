@@ -17,20 +17,33 @@ matters to them and the alternative (letting it all disappear) feels like
 a betrayal of something real. SportWarren builds a better, permanent home
 for that impulse.
 
-- **Primary wedge:** The captain who already maintains a spreadsheet. They
-  bring 10–15 players with them when they adopt.
+- **Primary wedge (two shapes, same person profile):** The organizer who
+  already does the work of remembering for a recurring group of mates.
+  Either (a) a fixed-squad captain (Sunday League team, season-long
+  fixtures) or (b) a kickabout organizer (rotating teams, 6/8-a-side,
+  weekly session). Both bring 10–18 players with them when they adopt.
+- **Unit of preservation:** Squad season for (a), individual session
+  for (b). The data model supports both — `Match.playersPerSide` and
+  `matchFormat` flex from "11v11" to "6v6", and `PlayerTwin` stats
+  accumulate to the person regardless of which team they were on.
 - **Core promise:** "Every match leaves a mark." The record outlasts the
   platform — stored onchain so it's yours permanently, not dependent on
   SportWarren surviving as a company.
 - **Onchain narrative:** Durability infrastructure, not a feature. "Your
   record outlasts the platform" — not agentic commerce.
-- **Multi-channel:** Meet squads where they already are. WhatsApp for
+- **Multi-channel:** Meet groups where they already are. WhatsApp for
   casual logging, Telegram for deeper engagement, web for the full record.
+- **Pre-seeded onboarding:** For the kickabout shape, the organizer
+  pre-seeds the roster + last week's results in one go, then sends each
+  player a personal preview link. By the time the group meets, the app
+  already knows them. See `scripts/seed-kickabout-session.ts` +
+  `src/app/preview/[token]/page.tsx`.
 - **Deferred to phase 2:** Coaching marketplace, tournaments/championship
   ladder, agentic-commerce UI. These are optimization layers, not core to
   the preservation thesis.
 
-Read `VISION.md` for the full articulation.
+Read `docs/VISION.md` for the full articulation; `docs/product-calibration.md`
+for the current phase-1 scope decision.
 
 ## Project-specific guidance
 
