@@ -55,19 +55,25 @@ Build-in-Public artifact; the reusable workflow is at
 
 ## Who we build for
 
-### Primary: The captain
+The wedge persona has one shape: **the person who already does the work of remembering, for a recurring group of mates.** That person shows up in two flavors:
 
-The person who already maintains the spreadsheet. They already show the behavior. They already care. They have authority in the WhatsApp group and bring 10–15 players with them when they adopt.
+### Primary A: The fixed-squad captain
 
-**Captain-first means:**
-- The onboarding flow starts with "import your existing spreadsheet"
-- Squad management tools are designed for the person who organizes matches
-- Multi-channel ingestion — log results from WhatsApp without anyone installing an app
-- The captain's experience of "I've been maintaining this for years" is recognized and honored
+A Sunday League team plays as a unit. Same shirt, same name, same fixture list. The captain maintains a spreadsheet of goals, attendance, head-to-head records — going back years in some cases. They have authority in the WhatsApp group and bring 10–15 players with them when they adopt.
+
+The unit of preservation is **the squad's season.** Imports an existing roster. Logs match-by-match. The captain's experience of "I've been maintaining this for years" is recognized and honored.
+
+### Primary B: The kickabout organizer
+
+A recurring 6/8-a-side group plays weekly with shifting teams — "Reds vs Blues" decided by bibs on the night, winner stays on, two-goal early finish, twenty short games over two hours. **There is no fixed squad** — the group is the people, not the team. The organizer holds the WhatsApp group, books the pitch, remembers who scored last week.
+
+The unit of preservation is **the session.** Each Tuesday (or whenever the group meets) is one entry. Individual stats accumulate to the player across sessions regardless of which "team" they were on that night. The organizer's experience of "I've been keeping score in my head for years" is recognized and honored.
+
+**Both are the same wedge** — someone who already does the unpaid work of memory, for a group that already cares. SportWarren is the home for that work. Both onboard the same way: import what you have (a spreadsheet, a season's results, a WhatsApp message thread, even a beer-mat tally for the kickabout), and the group's history materializes.
 
 ### Secondary: The player who cares
 
-The fifteen-year-old in São Paulo who just played his first competitive match and has no idea that by Saturday it will be as if it never happened. The player who wants to see their career as a real thing — not a fantasy team, but the actual record of games they played, goals they scored, teammates they shared a pitch with.
+The fifteen-year-old in São Paulo who just played his first competitive match. The pub-league striker who scored a brace last week and wants to remember it. The player who wants to see their career as a real thing — not a fantasy team, but the actual record of games they played, goals they scored, teammates they shared a pitch with.
 
 ---
 
@@ -96,28 +102,30 @@ This is the most expensive framing to maintain (we carry the infra cost without 
 
 ## How we win
 
-1. **Spreadsheet import.** Let a captain paste in their existing spreadsheet and have decades of history materialize on day one. The single most powerful onboarding moment we can engineer. The "love letter" landing in the inbox.
+1. **Import what you have.** Whatever the organizer or captain already keeps — a spreadsheet, a season fixture sheet, a WhatsApp message thread of last week's scores — drop it in and the group's history materializes. The "love letter" landing in the inbox.
 
-2. **Captain-first acquisition.** The spreadsheet guy is the archetype. He doesn't need to be sold on the value — he's been living it for years. We just need to be a better home than Google Sheets.
+2. **Organizer-first acquisition.** Whether they're called captain (fixed squad) or organizer (kickabout), the person who already does the work doesn't need to be sold on the value — they've been living it for years. We just need to be a better home than Google Sheets, Notes, or memory.
 
-3. **Multi-channel, zero-install.** The product becomes a layer under existing behavior, not a destination people have to drag their squad to. Quote-reply in WhatsApp to log a result. Auto-detect matches in group chat. The least friction wins.
+3. **Pre-seeded onboarding for the rotating-team case.** The organizer of a kickabout group sets up the roster + last week's results in 10 minutes, sends each player a personal preview link. By the time the group meets on the next match night, the app already knows them. No 18 individual sign-ups; one organizer doing the work of 18.
 
-4. **The Match-of-the-Day stat.** "When Dave and Sami start together, the win rate is 73%." That's the screenshotable insight. Shareable to the group chat as an image. The stat that makes a captain feel seen.
+4. **Multi-channel, zero-install.** The product becomes a layer under existing behavior, not a destination people have to drag their squad to. Quote-reply in WhatsApp to log a result. Auto-detect matches in group chat. The least friction wins.
 
-5. **The post-match card as keepsake.** Not a gamified XP screen. A memento — designed to be saved, screenshotted, looked at years later. This is where the product's emotional promise lands in pixels.
+5. **The Match-of-the-Day stat.** "When Dave and Sami are on the same team, the win rate is 73%." That's the screenshotable insight. Shareable to the group chat as an image. The stat that makes someone feel seen.
+
+6. **The post-match card as keepsake.** Not a gamified XP screen. A memento — designed to be saved, screenshotted, looked at years later. This is where the product's emotional promise lands in pixels.
 
 ---
 
 ## How we measure success
 
 **Primary signal (4-week cohort validation):**
-- Does the captain stop maintaining their old spreadsheet? (Behavioral substitution — the strongest possible signal.)
-- Does anyone in the squad screenshot a SportWarren stat into the group chat unprompted? (Meaning is being created.)
+- Does the organizer stop maintaining their old spreadsheet/memory system? (Behavioral substitution — the strongest possible signal.)
+- Does anyone in the group screenshot a SportWarren stat into the WhatsApp chat unprompted? (Meaning is being created.)
 
 **Secondary signals (product health):**
-- Match logging: >= 2 matches per squad per week
+- Logging cadence: >= 1 session per week per group (kickabout) or >= 2 matches per week per squad (fixed)
 - Peer ratings: >= 60% of matches have ratings from >= 3 teammates
-- Retention: squad active in week 4 after onboarding
+- Retention: group active in week 4 after onboarding
 - Share rate: stats or moments shared outside the app
 
 Everything else (DAU curves, NPS, engagement time) is downstream noise compared to those two primary signals.
@@ -128,8 +136,9 @@ Everything else (DAU curves, NPS, engagement time) is downstream noise compared 
 
 These complement the engineering principles (ENHANCEMENT FIRST, CONSOLIDATION, PREVENT BLOAT, DRY, CLEAN, MODULAR, PERFORMANT, ORGANIZED) with product-specific guidance.
 
-- **Preserve first, optimize second.** Every feature should be justifiable against "does this help a squad remember its history?" Coaching, tournaments, and social features are optimization — they come after preservation is solid.
-- **The captain is the unit of acquisition.** Build for the person who already maintains the spreadsheet. They bring the squad.
+- **Preserve first, optimize second.** Every feature should be justifiable against "does this help a group remember its history?" Coaching, tournaments, and social features are optimization — they come after preservation is solid.
+- **The organizer is the unit of acquisition.** Whether that's a fixed-squad captain or a kickabout organizer, build for the person who already does the work of memory. They bring the group with them.
+- **Sessions matter as much as squads.** Not every group plays as a fixed team. The 6-a-side group that rotates teams every game is just as worth preserving as the Sunday League side. The data model and surfaces support both shapes.
 - **Jargon is a leak.** If the user-facing copy mentions a protocol, a token, a chain, or an internal codename, it's wrong. Plain language only.
 - **The post-match card is the emotional surface.** Invest disproportionately in how it looks, feels, and shares. It's what players actually see and send.
-- **If it doesn't help a squad remember, defer it.** Every new feature passes through this filter or it goes to phase 2.
+- **If it doesn't help a group remember, defer it.** Every new feature passes through this filter or it goes to phase 2.
