@@ -62,6 +62,45 @@ import { CreateSquadFlow } from '@/components/squad/CreateSquadFlow';
 import { JoinSquadFlow } from '@/components/squad/JoinSquadFlow';
 import { PendingActionsPanel } from '@/components/operations/PendingActionsPanel';
 
+/**
+ * Phase-1 dashboard scope. See docs/product-calibration.md for the
+ * decision rationale. These widgets are intentionally suppressed
+ * from the dashboard so the preservation thesis (log a match → twin
+ * updates → moments preserved) lands clean for first-touch users.
+ *
+ * The underlying components, tRPC procedures, and Prisma models are
+ * intact — only the dashboard surface is slimmed. Post-Tuesday review
+ * decides what comes back vs. what gets permanently retired.
+ *
+ * To re-enable a widget temporarily, remove it from this set and
+ * the existing user-preference filter will take over.
+ */
+const PHASE_1_HIDDEN_WIDGET_IDS = new Set<string>([
+  // Web3 financial surface
+  'event-feed',           // Mixes treasury + transfer-offer alerts
+  // Web3 governance / social
+  'governance',           // DAO voting
+  'lens-social',          // Lens social hub
+  // Geo gamification
+  'nearby-squads',
+  'territory',
+  // AI staff surface
+  'staff-feed',
+  // Coaching marketplace (per AGENTS.md: phase 2)
+  'coach-kite',
+  // Sim/analysis (phase 2)
+  'squad-dynamics',
+  'scouting-report',
+  // Gamification/streak loops
+  'weekly-challenges',
+  'sharpness-streak',
+  'daily-drill',
+  'post-match-reaction',
+  // Training + comms surfaces
+  'training',
+  'communication-hub',
+]);
+
 // Dynamically imported (code-split, loaded on demand)
 const StaffFeed        = dynamic(() => import('@/components/adaptive/StaffFeed').then(m => ({ default: m.StaffFeed })), { ssr: false });
 const NearbyRivals     = dynamic(() => import('@/components/dashboard/NearbyRivals').then(m => ({ default: m.NearbyRivals })), { ssr: false });
@@ -1013,6 +1052,9 @@ export const AdaptiveDashboard: React.FC = () => {
 
     return allWidgets
       .filter(widget => {
+        // Phase-1 scope — see PHASE_1_HIDDEN_WIDGET_IDS at top of file
+        if (PHASE_1_HIDDEN_WIDGET_IDS.has(widget.id)) return false;
+
         // Hide widgets user has explicitly hidden
         if (hiddenWidgets.includes(widget.id)) return false;
 
@@ -1290,7 +1332,8 @@ export const AdaptiveDashboard: React.FC = () => {
       </div>
 
       <OnboardingFlow onVisibilityChange={setIsTourActive} journeyStage={entryState.id} completeChecklistItem={completeChecklistItem} />
-      {!isTourActive && <AgenticConcierge journeyStage={entryState.id} />}
+      {/* AgenticConcierge — phase-2 AI surface, hidden for first iteration (see docs/product-calibration.md) */}
+      {/* {!isTourActive && <AgenticConcierge journeyStage={entryState.id} />} */}
 
       {/* Next-action focus strip — shows the single most important thing to do */}
       <div className="flex items-center gap-2 flex-wrap mb-4">
@@ -1315,7 +1358,8 @@ export const AdaptiveDashboard: React.FC = () => {
         )}
       </div>
 
-      <AnimatePresence>
+      {/* StaffRoom modal — phase-2 AI manager surface, hidden for first iteration (see docs/product-calibration.md) */}
+      {/* <AnimatePresence>
         {isStaffRoomOpen && (
           <AgentProvider>
             <StaffRoom
@@ -1324,7 +1368,7 @@ export const AdaptiveDashboard: React.FC = () => {
             />
           </AgentProvider>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
 
       {(() => {
         const todayIds = ['quick-log', 'onboarding-checklist', 'pending-actions', 'event-feed', 'staff-feed', 'recent-matches', 'match-engine', 'quick-stats', 'achievements', 'upcoming-fixtures', 'coach-kite'];
