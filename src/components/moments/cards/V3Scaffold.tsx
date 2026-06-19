@@ -561,11 +561,136 @@ export function InkSplatter({
 
 export type TwinStat = { k: string; v: number; delta?: number };
 
+/**
+ * StatBand — Panini sticker-style nameplate banner. Used below an
+ * avatar/crest to caption the moment's hero stat. Primary value
+ * (mono number) on the left, label on the right, dark ink fill.
+ */
+export function StatBand({
+  primary,
+  label,
+  top,
+  left = 320,
+  width = 240,
+  bg = V3.INK,
+  textColor = V3.CREAM,
+  accent,
+}: {
+  primary: string;
+  label: string;
+  top: number;
+  left?: number;
+  width?: number;
+  bg?: string;
+  textColor?: string;
+  /** Optional left-edge color bar */
+  accent?: string;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        position: 'absolute',
+        top,
+        left,
+        width,
+        padding: '6px 12px',
+        background: bg,
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 8,
+        borderLeft: accent ? `4px solid ${accent}` : undefined,
+      }}
+    >
+      <span
+        style={{
+          fontFamily: MONO,
+          fontSize: 26,
+          fontWeight: 700,
+          color: textColor,
+          lineHeight: 1,
+          letterSpacing: '-0.02em',
+        }}
+      >
+        {primary}
+      </span>
+      <span
+        style={{
+          fontFamily: MONO,
+          fontSize: 9,
+          fontWeight: 700,
+          color: textColor,
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          opacity: 0.85,
+        }}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
+/**
+ * CornerSticker — small angled label sticker. Used on top of an
+ * avatar (e.g. BROKEN, EARNED) like a Panini league-badge sticker.
+ * Smaller, more playful than InkStamp/FoilStamp.
+ */
+export function CornerSticker({
+  text,
+  top,
+  left,
+  rotation = 10,
+  bg = V3.MUSTARD,
+  border = V3.RED,
+  textColor = V3.INK,
+  fontSize = 18,
+}: {
+  text: string;
+  top: number;
+  left: number;
+  rotation?: number;
+  bg?: string;
+  border?: string;
+  textColor?: string;
+  fontSize?: number;
+}) {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        position: 'absolute',
+        top,
+        left,
+        padding: '4px 10px 5px',
+        background: bg,
+        border: `2px solid ${border}`,
+        transform: `rotate(${rotation}deg)`,
+        alignItems: 'center',
+      }}
+    >
+      <span
+        style={{
+          fontFamily: HEAD,
+          fontWeight: 700,
+          fontSize,
+          color: textColor,
+          letterSpacing: '0.06em',
+          textTransform: 'uppercase',
+          lineHeight: 1,
+        }}
+      >
+        {text}
+      </span>
+    </div>
+  );
+}
+
 export function TwinStatStrip({
   stats,
   heroKey,
   hypeTag,
-  top = 258,
+  top = 252,
   left = 32,
   accent = V3.RED,
 }: {
