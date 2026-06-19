@@ -16,7 +16,7 @@ Telegram is the primary surface for **squad coordination and power users**.
 - **Any-Member Logging:** Any linked squad member can log a match, not just captains. Group reaction verification (confirm/dispute buttons) ensures accuracy.
 - **Auto-Created Opponents:** When logging a match against a squad not on the platform, a placeholder squad is created automatically so the match can proceed.
 - **Match Cards:** After verification and peer consensus, a visual match result card (score, MOTM, XP progression) is sent to both squad group chats as a photo.
-- **TON Integration:** Native wallet UX for treasury top-ups and rewards.
+- **TON Integration (token: Gram / GRAM):** Native wallet UX for treasury top-ups and rewards via TON Connect.
 
 ### App Routes (Telegram Mini App)
 | Route | Purpose |
@@ -49,7 +49,6 @@ WhatsApp reaches the broadest, least technical squad members. All messages are s
 - **Rate-token auth:** Players tap a signed link in DM to rate teammates — no Privy login required. Wallet banners are suppressed for these sessions.
 - **Post-match player cards:** FIFA-style player cards posted to the group after consensus closes.
 - **Yellow fee toast:** Settlement status shown after match verification.
-- **ERC-8004 agent registration:** Fire-and-forget registration on onboarding completion.
 
 ### Management Commands
 | Message | Action |
@@ -63,13 +62,8 @@ WhatsApp reaches the broadest, least technical squad members. All messages are s
 
 ---
 
-## 🌿 Social: Lens Protocol
-Lens Protocol provides a portable social graph and a distribution surface for "Pro-Style" football highlights.
-
-### Features
-- **Highlight Sharing:** Post automated highlight cards (stats, results, MVP) directly to your Lens feed.
-- **Social Identity:** Sign-in with Lens (SIWL) for decentralized authentication.
-- **Community Graph:** Verified credentials of your Sunday league status and reputation.
+## 🌿 Social: Lens Protocol (dormant)
+Lens Protocol was evaluated as a portable social graph and distribution surface. Integration deferred until squad activity justifies the social layer.
 
 ---
 

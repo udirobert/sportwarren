@@ -21,7 +21,7 @@ Squad Treasuries held on Goat Network can benefit from **Sustainable BTC Yield**
 | :--- | :--- | :--- |
 | **Data Ingestion** | Algorand | High-frequency match verification and proof-backed state. |
 | **Settlement & Governance** | Goat Network | Squad DAOs, Asset Escrow, and Global Reputation. |
-| **Consumer UX** | TON | Telegram-native wallet interactions and fan engagement. |
+| **Consumer UX** | TON (token: Gram / GRAM) | Telegram-native wallet interactions and fan engagement. |
 | **Social Graph** | Lens Protocol | Portable social identity and content distribution. |
 
 ## Roadmap to BitVM2 Testnet

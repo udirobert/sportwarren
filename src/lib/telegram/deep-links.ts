@@ -73,7 +73,7 @@ export function getTabDescription(tab: TelegramMiniAppTab): string {
     squad: 'View your squad overview, form, and treasury summary',
     match: 'Log results, verify matches, and review XP movement',
     profile: 'Review your attributes, XP, and sharpness',
-    treasury: 'Connect TON wallet and manage squad treasury',
+    treasury: 'Manage squad treasury',
     ai: 'Chat with AI staff for tactical, scouting, and commercial guidance',
   };
   return descriptions[tab];

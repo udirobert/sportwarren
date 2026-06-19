@@ -89,7 +89,7 @@ type AuthorizedTelegramCaptainActor =
     };
 
 const MATCH_DRAFT_TTL_MS = 15 * 60 * 1000;
-const MATCH_FEE_TON = 1;
+const MATCH_FEE_GRAM = 1;
 const GENERAL_CHAT_MEMORY_LIMIT = 6;
 const GENERAL_CHAT_MEMORY_TTL_MS = 60 * 60 * 1000;
 
@@ -816,7 +816,7 @@ export class TelegramService {
         "If they want to log a result, tell them to use /log 4-2 win vs Red Lions. Any squad member can log.",
         "If they want stats, tell them to use /stats or /stats Marcus.",
         "If they want fixtures, tell them to use /fixtures.",
-        "If they want treasury or TON actions, tell them to use /treasury.",
+        "If they want treasury or on-chain actions, tell them to use /treasury.",
         "If they want staff analysis, tell them to use /ask coach <question>.",
         "If the message is just a greeting, welcome them and suggest the single best next step.",
         "Treat follow-up questions as referring to the recent conversation if context is available.",
@@ -2170,7 +2170,7 @@ export class TelegramService {
       `🛡 SportWarren Squad Card: ${squad.name}`,
       "",
       matchSection,
-      `💰 Treasury: ${formattedBalance} TON`,
+      `💰 Treasury: ${formattedBalance} GRAM`,
       "",
       "Use /app to open the Mini App for tactics and rewards.",
     ].join("\n");
@@ -2649,7 +2649,7 @@ export class TelegramService {
 
     const parts = args.split(/\s+/);
     const matchId = parts[0]?.trim() || "";
-    const feeAmount = Number(parts[1]) || MATCH_FEE_TON;
+    const feeAmount = Number(parts[1]) || MATCH_FEE_GRAM;
 
     if (!matchId) {
       await this.bot.sendMessage(
@@ -2662,7 +2662,7 @@ export class TelegramService {
     if (feeAmount <= 0 || feeAmount > 100) {
       await this.bot.sendMessage(
         chatId,
-        "Fee amount must be between 0 and 100 TON.",
+        "Fee amount must be between 0 and 100 GRAM.",
       );
       return;
     }
@@ -2704,7 +2704,7 @@ export class TelegramService {
       if (treasury.balance < feeAmount) {
         await this.bot.sendMessage(
           chatId,
-          `Insufficient treasury balance (${treasury.balance} TON) for a ${feeAmount} TON fee.`,
+          `Insufficient treasury balance (${treasury.balance} GRAM) for a ${feeAmount} GRAM fee.`,
         );
         return;
       }
@@ -2734,7 +2734,7 @@ export class TelegramService {
         inline_keyboard: [
           [
             {
-              text: `✅ Approve ${feeAmount} TON`,
+              text: `✅ Approve ${feeAmount} GRAM`,
               callback_data: `approve_fee:${feeTx.transaction.id}`,
             },
             {
@@ -2751,8 +2751,8 @@ export class TelegramService {
         `${match.homeSquad.name} vs ${match.awaySquad.name}`,
         `Score: ${match.homeScore ?? "?"} - ${match.awayScore ?? "?"}`,
         "",
-        `Fee: ${feeAmount} TON from squad treasury`,
-        `Balance: ${treasury.balance} TON`,
+        `Fee: ${feeAmount} GRAM from squad treasury`,
+        `Balance: ${treasury.balance} GRAM`,
         "",
         "Approve to deduct from treasury?",
       ].join("\n");
@@ -2920,8 +2920,8 @@ export class TelegramService {
           `Score: ${score}`,
           `Match ID: ${matchId}`,
           "",
-          `Deducted: ${pendingTransaction.amount} TON`,
-          `Updated balance: ${settled.treasury.balance} TON`,
+          `Deducted: ${pendingTransaction.amount} GRAM`,
+          `Updated balance: ${settled.treasury.balance} GRAM`,
         ].join("\n"),
         {
           chat_id: chatId,

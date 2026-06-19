@@ -930,7 +930,7 @@ export async function recordTelegramTonTopUp(
 
   if (!tonWalletAddress) {
     throw new Error(
-      "TON treasury top-ups are not configured for this squad yet.",
+      "On-chain top-ups are not configured for this squad yet.",
     );
   }
 
@@ -941,7 +941,7 @@ export async function recordTelegramTonTopUp(
     type: "income",
     category: "deposit_pending",
     amount: Math.round(input.amountTon),
-    description: `TON top-up submitted via Telegram Mini App from ${formatWalletLabel(input.senderAddress)}`,
+    description: `On-chain top-up submitted via Telegram Mini App from ${formatWalletLabel(input.senderAddress)}`,
     txHash: messageHash,
     metadata: {
       source: "telegram-mini-app",
@@ -977,7 +977,7 @@ export async function recordTelegramTonTopUp(
     });
   } catch (error) {
     console.warn(
-      "TON top-up verification deferred:",
+      "Top-up verification deferred:",
       error instanceof Error ? error.message : error,
     );
     return pendingResult;

@@ -141,6 +141,32 @@ affordances** and **net-new triggers** for the marketing templates.
 
 ---
 
+## Cross-cutting: Moment share URLs
+
+Every moment generates a PNG and lands in the in-app gallery, WhatsApp
+delivery, and Telegram (per-kind opt-in). Adding a public share page turns
+each moment into an inbound funnel.
+
+### What to build
+- `src/app/m/[momentId]/page.tsx` — public route, no auth, OG-image meta
+  tags pointing at the stored PNG, copy block from moment's `label` +
+  `detail`, soft CTA into the squad's public page.
+- `src/app/m/[momentId]/opengraph-image.tsx` — Next.js OG handler that
+  302s to the stored PNG (or rebuilds from cache if missing).
+- Tweet / WhatsApp / Telegram share buttons — `intent` URLs, no SDKs.
+- New column on `Moment`: `shareSlug` (random 8-char base36) so the
+  public URL isn't the raw DB id.
+- Update `SquadMomentsGallery` to surface a "Share" affordance per row.
+
+### Out of scope
+- Per-moment analytics. Add later if the feature gets traction.
+- Authenticated edit / delete — moments are immutable.
+- Custom OG variants per recipient — one canonical render per moment.
+
+### Effort: ~1 day
+
+---
+
 ## Marketing toolkit triggers
 
 The 5 marketing templates that just propagated to V3 (in
@@ -155,7 +181,20 @@ where the most product opportunity sits.
 | **Surface** | Onboarding success state (after `commitSquadImport`), "Recruit Players" tab in squad settings. |
 | **Share** | "Copy invite link", "Share to WhatsApp/Telegram/Twitter/IG", "Download image". Includes squad-specific invite URL (`/join/[squadId]`) and squad/captain branding. |
 | **Notification** | None directly — captain initiates the share. |
-| **Status** | **Build.** Single highest-leverage integration. Tied to `post-submission-roadmap.md` (Section 2). |
+| **Status** | **Build.** Single highest-leverage integration. |
+
+**Implementation spec:**
+- `src/components/moments/cards/SquadRecruitmentCard.tsx` (+ social + story
+  siblings) — satori component matching the Figma template. Inputs: squad
+  name, captain handle, current member count, invite URL/QR.
+- `src/server/services/personalization/recruitment-render.ts` — mirrors
+  `moment-render-v2.ts` minus the cron sweep; renders on-demand when the
+  captain hits the share button.
+- `src/app/api/squads/[squadId]/recruitment-post/route.ts` — returns the
+  PNG (cached on storage adapter using `kind: 'recruitment-post'`).
+- Onboarding flow: post-squad-creation success state gets a "Share
+  recruitment post" button alongside the existing invite-link copy.
+- **Effort:** ~1 day. Reuses existing moment-render scaffolding.
 
 ### Squad of the Week
 
@@ -203,9 +242,9 @@ where the most product opportunity sits.
 
 Ordered by leverage × effort:
 
-1. **Moment share URLs (`/m/[shareSlug]`)** — ~1 day. Turns every existing production moment into an inbound funnel. Already specced in `post-submission-roadmap.md`.
+1. **Moment share URLs (`/m/[shareSlug]`)** — ~1 day. Turns every existing production moment into an inbound funnel. Specced above.
 
-2. **Squad Recruitment dynamic generation + onboarding share button** — ~1 day. Captain wedge multiplier.
+2. **Squad Recruitment dynamic generation + onboarding share button** — ~1 day. Captain wedge multiplier. Specced above.
 
 3. **Avatar customization (item #5)** — ~4.5 days across 5 phases. Specced in `avatar-customization-roadmap.md`. Phase A (schema + render) unblocks everything.
 

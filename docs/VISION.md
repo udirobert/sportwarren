@@ -48,7 +48,7 @@ moment (records broken, levels up, season ends, debuts). Cards are
 rendered server-side and stored permanently alongside the moment row.
 The build that produced this library — including its failures and
 recovery — is documented in [`docs/makeathon/`](makeathon/) as a
-Build-in-Public artifact, with the reusable workflow at
+Build-in-Public artifact; the reusable workflow is at
 [`docs/makeathon/REPRODUCE.md`](makeathon/REPRODUCE.md).
 
 ---
