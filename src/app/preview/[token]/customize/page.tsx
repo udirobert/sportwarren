@@ -18,13 +18,23 @@ interface PageProps {
   params: Promise<{ token: string }>;
 }
 
+const KIT_HEX: Record<string, string> = {
+  red: PALETTE.red,
+  navy: PALETTE.navy,
+  sage: PALETTE.sage,
+  mustard: PALETTE.mustard,
+  ink: PALETTE.ink,
+};
+
 async function saveAvatar(token: string, formData: FormData) {
   'use server';
+  const kitColor = formData.get('kitColor') as string;
   const skinTone = formData.get('skinTone') as string;
   const hairColor = formData.get('hairColor') as string;
   const hairStyle = formData.get('hairStyle') as string;
   const number = formData.get('number') as string;
 
+  if (!['red', 'navy', 'sage', 'mustard', 'ink'].includes(kitColor)) return;
   if (!['light', 'mid', 'dark'].includes(skinTone)) return;
   if (!['dark', 'brown', 'blond', 'red'].includes(hairColor)) return;
   if (!['short', 'tall', 'shaved', 'cap'].includes(hairStyle)) return;
@@ -32,6 +42,7 @@ async function saveAvatar(token: string, formData: FormData) {
   await prisma.user.update({
     where: { walletAddress: token },
     data: {
+      avatarKitColor: KIT_HEX[kitColor],
       avatarSkinTone: PALETTE.skin[skinTone as keyof typeof PALETTE.skin],
       avatarHairColor: PALETTE.hair[hairColor as keyof typeof PALETTE.hair],
       avatarHairStyle: hairStyle,
@@ -65,6 +76,7 @@ export default async function CustomizePage({ params }: PageProps) {
   }
 
   const initial = {
+    kitColor: colorKeyFromHex(user.avatarKitColor, KIT_HEX) as 'red' | 'navy' | 'sage' | 'mustard' | 'ink',
     skinTone: colorKeyFromHex(user.avatarSkinTone, PALETTE.skin),
     hairColor: colorKeyFromHex(user.avatarHairColor, PALETTE.hair),
     hairStyle: (user.avatarHairStyle ?? 'short') as 'short' | 'tall' | 'shaved' | 'cap',

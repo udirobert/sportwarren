@@ -252,33 +252,28 @@ function DoneScreen({
           per-player messages with their personal recap link.
         </p>
 
-        <div
-          style={{
-            background: PALETTE.ink,
-            color: PALETTE.cream,
-            padding: '16px 18px',
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
-            fontWeight: 600,
-            lineHeight: 1.6,
-            marginBottom: 24,
-          }}
-        >
-          <div
+        {sessionId && (
+          <Link
+            href={`/session/broadcast/${encodeURIComponent(sessionId)}/${encodeURIComponent(token)}`}
             style={{
-              fontSize: 9,
-              opacity: 0.7,
-              marginBottom: 8,
-              letterSpacing: '0.2em',
+              background: PALETTE.mustard,
+              color: PALETTE.ink,
+              padding: '16px 20px',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 14,
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              textAlign: 'center',
+              border: `2px solid ${PALETTE.red}`,
+              textDecoration: 'none',
+              display: 'block',
+              marginBottom: 16,
             }}
           >
-            RUN ON YOUR LAPTOP
-          </div>
-          <code>
-            pnpm tsx scripts/whatsapp-session-recap.ts{' '}
-            <span style={{ color: PALETTE.mustard }}>{sessionId ?? '<session-id>'}</span>
-          </code>
-        </div>
+            Open the WA broadcast →
+          </Link>
+        )}
 
         <Link
           href={`/session/live/${encodeURIComponent(token)}`}

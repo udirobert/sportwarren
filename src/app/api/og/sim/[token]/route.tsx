@@ -416,15 +416,53 @@ export async function GET(
         </div>
       </div>
 
+      {/* Attestation chain — editorial detail row */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 14,
+          marginTop: 'auto',
+          marginBottom: 18,
+          paddingTop: 24,
+          borderTop: `1px solid ${PALETTE.inkLight}`,
+        }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            padding: '4px 10px',
+            fontFamily: 'JetBrains Mono',
+            fontSize: 16,
+            fontWeight: 700,
+            color: PALETTE.cream,
+            background: PALETTE.navy,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+          }}
+        >
+          ATTESTED
+        </div>
+        <div
+          style={{
+            fontFamily: 'JetBrains Mono',
+            fontSize: 16,
+            fontWeight: 700,
+            color: PALETTE.navy,
+            letterSpacing: '0.16em',
+            textTransform: 'uppercase',
+          }}
+        >
+          Simulated · oracle-signed · seed {seed}
+        </div>
+      </div>
+
       {/* Bottom footer */}
       <div
         style={{
           display: 'flex',
-          marginTop: 'auto',
           justifyContent: 'space-between',
           alignItems: 'center',
-          paddingTop: 24,
-          borderTop: `1px solid ${PALETTE.inkLight}`,
         }}
       >
         <div
