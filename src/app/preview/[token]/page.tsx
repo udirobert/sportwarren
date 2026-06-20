@@ -15,11 +15,10 @@
 
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { MiniAvatar, PALETTE } from '../_components/MiniAvatar';
 
-const prisma = new PrismaClient();
 
 interface PageProps {
   params: Promise<{ token: string }>;

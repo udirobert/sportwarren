@@ -10,13 +10,11 @@
 
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { PALETTE } from '../../../preview/_components/MiniAvatar';
 import { LiveCapture } from './_components/LiveCapture';
 import { startSession } from './_actions';
-
-const prisma = new PrismaClient();
 
 interface PageProps {
   params: Promise<{ token: string }>;

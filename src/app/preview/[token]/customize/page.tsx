@@ -7,12 +7,10 @@
 import React from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { PALETTE } from '../../_components/MiniAvatar';
 import { CustomizeForm } from './CustomizeForm';
-
-const prisma = new PrismaClient();
 
 interface PageProps {
   params: Promise<{ token: string }>;

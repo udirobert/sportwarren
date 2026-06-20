@@ -8,10 +8,8 @@
 
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { WatchClient } from './WatchClient';
-
-const prisma = new PrismaClient();
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
