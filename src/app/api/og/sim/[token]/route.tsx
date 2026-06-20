@@ -12,10 +12,8 @@
 import { NextRequest } from 'next/server';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import React from 'react';
-
-const prisma = new PrismaClient();
 
 type Attrs = { PAC: number; SHO: number; PAS: number; DRI: number; DEF: number; PHY: number };
 

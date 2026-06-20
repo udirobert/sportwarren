@@ -16,10 +16,8 @@
 
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { BroadcastClient } from './BroadcastClient';
-
-const prisma = new PrismaClient();
 
 interface PageProps {
   params: Promise<{ sessionId: string; organizerToken: string }>;

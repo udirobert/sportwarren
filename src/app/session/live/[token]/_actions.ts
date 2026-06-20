@@ -7,10 +7,8 @@
 
 'use server';
 
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
-
-const prisma = new PrismaClient();
 
 interface CaptainContext {
   userId: string;

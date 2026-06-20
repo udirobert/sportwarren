@@ -9,12 +9,10 @@
 
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { PALETTE } from '../../_components/MiniAvatar';
 import { SimReveal } from './SimReveal';
-
-const prisma = new PrismaClient();
 
 interface PageProps {
   params: Promise<{ token: string }>;
