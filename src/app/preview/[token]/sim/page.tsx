@@ -1,26 +1,60 @@
 /**
  * Preview sim — generates a quick simulated match between the player
- * and 5 random teammates vs 6 random opponents from the group. Uses
- * the squad's pre-seeded twin attributes to weight the result.
+ * and ~5 random teammates vs ~6 random opponents from the group.
+ * Hands off to <SimReveal /> for the staged anticipation + reveal.
  *
- * Non-persistent — each page load runs a fresh sim. This is the
- * "playable demo" surface, not a tournament. If the player wants to
- * persist, they wait for Tuesday's real game.
+ * Sim is computed deterministically per-load (seeded by ?r= query), so
+ * the share-image route can recreate the same outcome for a given URL.
  */
 
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { PrismaClient } from '@prisma/client';
 import Link from 'next/link';
-import { MiniAvatar, PALETTE } from '../../_components/MiniAvatar';
+import { PALETTE } from '../../_components/MiniAvatar';
+import { SimReveal } from './SimReveal';
 
 const prisma = new PrismaClient();
 
 interface PageProps {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ r?: string }>;
 }
 
 type Attrs = { PAC: number; SHO: number; PAS: number; DRI: number; DEF: number; PHY: number };
+
+function defaultAttrs(): Attrs {
+  return { PAC: 55, SHO: 50, PAS: 55, DRI: 55, DEF: 55, PHY: 55 };
+}
+
+// Seeded RNG for deterministic sims per ?r= value (so the share PNG matches)
+function makeRng(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (s * 1664525 + 1013904223) >>> 0;
+    return s / 0xffffffff;
+  };
+}
+
+function poisson(rate: number, rng: () => number): number {
+  const L = Math.exp(-rate);
+  let k = 0;
+  let p = 1;
+  do {
+    k++;
+    p *= rng();
+  } while (p > L);
+  return k - 1;
+}
+
+function shuffle<T>(arr: T[], rng: () => number): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
 interface PlayerData {
   userId: string;
@@ -37,65 +71,42 @@ interface PlayerData {
   attrs: Attrs;
 }
 
-function defaultAttrs(): Attrs {
-  return { PAC: 55, SHO: 50, PAS: 55, DRI: 55, DEF: 55, PHY: 55 };
-}
-
-function poisson(rate: number): number {
-  // Simple Knuth-style Poisson
-  const L = Math.exp(-rate);
-  let k = 0;
-  let p = 1;
-  do {
-    k++;
-    p *= Math.random();
-  } while (p > L);
-  return k - 1;
-}
-
-function shuffle<T>(arr: T[]): T[] {
-  const a = [...arr];
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
-  }
-  return a;
-}
-
-function distributeGoals(team: PlayerData[], totalGoals: number): Map<string, number> {
-  const result = new Map<string, number>();
-  if (totalGoals <= 0) return result;
-  // Weight scoring chance by SHO + DRI
+function distributeGoals(
+  team: PlayerData[],
+  totalGoals: number,
+  rng: () => number,
+): Array<{ userId: string; goals: number }> {
+  if (totalGoals <= 0) return [];
+  const map = new Map<string, number>();
   const weights = team.map((p) => p.attrs.SHO + p.attrs.DRI * 0.6);
-  const totalWeight = weights.reduce((s, w) => s + w, 0);
+  const total = weights.reduce((s, w) => s + w, 0);
   for (let i = 0; i < totalGoals; i++) {
-    let r = Math.random() * totalWeight;
+    let r = rng() * total;
     for (let j = 0; j < team.length; j++) {
       r -= weights[j];
       if (r <= 0) {
-        result.set(team[j].userId, (result.get(team[j].userId) ?? 0) + 1);
+        map.set(team[j].userId, (map.get(team[j].userId) ?? 0) + 1);
         break;
       }
     }
   }
-  return result;
+  return Array.from(map.entries()).map(([userId, goals]) => ({ userId, goals }));
 }
 
 function teamRate(team: PlayerData[]): number {
   return team.reduce((s, p) => s + p.attrs.SHO + p.attrs.PAS * 0.5, 0);
 }
 
-export default async function SimPage({ params }: PageProps) {
+export default async function SimPage({ params, searchParams }: PageProps) {
   const { token } = await params;
+  const { r } = await searchParams;
+  const seed = parseInt(r ?? String(Date.now() % 100000), 10) || 1;
+  const rng = makeRng(seed);
 
   const user = await prisma.user.findUnique({
     where: { walletAddress: token },
     include: {
-      playerProfile: {
-        include: {
-          twin: true,
-        },
-      },
+      playerProfile: { include: { twin: true } },
       squads: { include: { squad: true } },
     },
   });
@@ -105,23 +116,17 @@ export default async function SimPage({ params }: PageProps) {
   const squad = user.squads[0]?.squad;
   if (!squad) notFound();
 
-  // Pull all members of the group
   const allMembers = await prisma.squadMember.findMany({
     where: { squadId: squad.id },
     include: {
       user: {
-        include: {
-          playerProfile: {
-            include: { twin: true },
-          },
-        },
+        include: { playerProfile: { include: { twin: true } } },
       },
     },
   });
 
-  // Build PlayerData for each member
   const players: PlayerData[] = allMembers.map((m) => {
-    const baseAttrs = m.user.playerProfile?.twin?.baseAttributes as Attrs | undefined;
+    const ba = m.user.playerProfile?.twin?.baseAttributes as Attrs | undefined;
     return {
       userId: m.userId,
       name: m.user.name ?? 'Player',
@@ -134,333 +139,52 @@ export default async function SimPage({ params }: PageProps) {
         hairStyle: m.user.avatarHairStyle ?? 'short',
         number: m.user.avatarNumber ?? '',
       },
-      attrs: baseAttrs && typeof baseAttrs.SHO === 'number' ? baseAttrs : defaultAttrs(),
+      attrs: ba && typeof ba.SHO === 'number' ? ba : defaultAttrs(),
     };
   });
 
   const me = players.find((p) => p.userId === user.id);
   const others = players.filter((p) => p.userId !== user.id);
-
   if (!me || others.length < 5) {
-    // Not enough opponents — graceful fall-through
-    return (
-      <NotEnoughOpponents token={token} count={others.length} />
-    );
+    return <NotEnoughOpponents token={token} count={others.length} />;
   }
 
-  const shuffled = shuffle(others);
-  // Take up to 5 teammates + 5/6 opponents based on availability
+  const shuffled = shuffle(others, rng);
   const teammates = shuffled.slice(0, Math.min(5, Math.floor(shuffled.length / 2)));
-  const opponents = shuffled.slice(teammates.length, teammates.length + Math.min(6, shuffled.length - teammates.length));
+  const opponents = shuffled.slice(
+    teammates.length,
+    teammates.length + Math.min(6, shuffled.length - teammates.length),
+  );
 
   const myTeam = [me, ...teammates];
-
   const myRate = teamRate(myTeam);
   const oppRate = teamRate(opponents);
-  const expectedTotal = 5.5; // average kickabout-game total goals
+  const expectedTotal = 5.5;
   const myGoalRate = (myRate / (myRate + oppRate)) * expectedTotal;
   const oppGoalRate = expectedTotal - myGoalRate;
 
-  const myGoals = poisson(myGoalRate);
-  const oppGoals = poisson(oppGoalRate);
+  const myGoals = poisson(myGoalRate, rng);
+  const oppGoals = poisson(oppGoalRate, rng);
 
-  const myScorers = distributeGoals(myTeam, myGoals);
-  const oppScorers = distributeGoals(opponents, oppGoals);
+  const myScorers = distributeGoals(myTeam, myGoals, rng);
+  const oppScorers = distributeGoals(opponents, oppGoals, rng);
 
-  const result = myGoals > oppGoals ? 'win' : oppGoals > myGoals ? 'loss' : 'draw';
-  const myGoalsScored = myScorers.get(me.userId) ?? 0;
-
-  const accentColor =
-    result === 'win' ? PALETTE.sage : result === 'loss' ? PALETTE.red : PALETTE.navy;
-  const resultLabel = result === 'win' ? 'WIN' : result === 'loss' ? 'LOSS' : 'DRAW';
+  // Share PNG URL — re-uses the same seed so the image matches
+  const shareUrl = `/api/og/sim/${encodeURIComponent(token)}?r=${seed}`;
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: PALETTE.cream,
-        padding: '40px 20px',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        color: PALETTE.ink,
-      }}
-    >
-      <div style={{ maxWidth: 600, margin: '0 auto' }}>
-        {/* Top ribbon */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 28 }}>
-          <div style={{ width: 28, height: 4, background: PALETTE.mustard }} />
-          <div style={{ width: 28, height: 4, background: accentColor }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.navy }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.sage }} />
-        </div>
-
-        <Link
-          href={`/preview/${encodeURIComponent(token)}`}
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            color: PALETTE.inkLight,
-            textDecoration: 'none',
-            marginBottom: 28,
-            display: 'inline-block',
-          }}
-        >
-          ← Back
-        </Link>
-
-        <div
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            color: PALETTE.navy,
-            marginBottom: 12,
-          }}
-        >
-          Simulated · {myTeam.length}v{opponents.length} · {squad.name}
-        </div>
-
-        <h1
-          style={{
-            fontFamily: 'Antonio, Impact, sans-serif',
-            fontSize: 96,
-            fontWeight: 800,
-            lineHeight: 0.95,
-            margin: 0,
-            letterSpacing: '-0.03em',
-            color: accentColor,
-            textTransform: 'uppercase',
-          }}
-        >
-          {resultLabel}
-        </h1>
-
-        <div
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 64,
-            fontWeight: 700,
-            letterSpacing: '-0.04em',
-            color: PALETTE.ink,
-            marginTop: 16,
-            marginBottom: 36,
-          }}
-        >
-          {myGoals} — {oppGoals}
-        </div>
-
-        {/* Your stat band */}
-        <div
-          style={{
-            background: PALETTE.ink,
-            color: PALETTE.cream,
-            padding: '14px 18px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            gap: 12,
-            borderLeft: `4px solid ${accentColor}`,
-            marginBottom: 36,
-          }}
-        >
-          <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: 28, fontWeight: 700 }}>
-            {myGoalsScored}
-          </span>
-          <span
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: '0.18em',
-              textTransform: 'uppercase',
-              opacity: 0.85,
-              textAlign: 'right',
-            }}
-          >
-            Your goals · {me.position ?? 'unset'}
-          </span>
-        </div>
-
-        {/* Team sheets */}
-        <TeamSheet
-          label={`Your team · ${myGoals} goals`}
-          team={myTeam}
-          scorers={myScorers}
-          highlight={me.userId}
-          accent={result === 'win' ? PALETTE.sage : PALETTE.inkLight}
-        />
-
-        <TeamSheet
-          label={`Opponents · ${oppGoals} goals`}
-          team={opponents}
-          scorers={oppScorers}
-          accent={result === 'loss' ? PALETTE.red : PALETTE.inkLight}
-        />
-
-        {/* CTAs */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 40 }}>
-          <Link
-            href={`/preview/${encodeURIComponent(token)}/sim?r=${Date.now()}`}
-            prefetch={false}
-            style={{
-              background: PALETTE.mustard,
-              color: PALETTE.ink,
-              padding: '16px 20px',
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: 14,
-              fontWeight: 700,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              textAlign: 'center',
-              border: `2px solid ${PALETTE.red}`,
-              textDecoration: 'none',
-              display: 'block',
-            }}
-          >
-            Sim another →
-          </Link>
-
-          <Link
-            href={`/preview/${encodeURIComponent(token)}`}
-            style={{
-              background: 'transparent',
-              color: PALETTE.ink,
-              padding: '16px 20px',
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: 14,
-              fontWeight: 700,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              textAlign: 'center',
-              border: `2px solid ${PALETTE.navy}`,
-              textDecoration: 'none',
-              display: 'block',
-            }}
-          >
-            Back to your twin
-          </Link>
-        </div>
-
-        <p
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
-            lineHeight: 1.6,
-            color: PALETTE.inkLight,
-            marginTop: 36,
-            fontStyle: 'italic',
-          }}
-        >
-          This was a simulation — none of it counts toward your record.
-          The real one's Tuesday. See you there.
-        </p>
-      </div>
-    </div>
-  );
-}
-
-function TeamSheet({
-  label,
-  team,
-  scorers,
-  accent,
-  highlight,
-}: {
-  label: string;
-  team: PlayerData[];
-  scorers: Map<string, number>;
-  accent: string;
-  highlight?: string;
-}) {
-  return (
-    <div style={{ marginBottom: 24 }}>
-      <div
-        style={{
-          fontFamily: 'JetBrains Mono, monospace',
-          fontSize: 10,
-          fontWeight: 700,
-          letterSpacing: '0.18em',
-          textTransform: 'uppercase',
-          color: accent,
-          marginBottom: 14,
-        }}
-      >
-        {label}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {team.map((p) => {
-          const goals = scorers.get(p.userId) ?? 0;
-          const isMe = p.userId === highlight;
-          return (
-            <div
-              key={p.userId}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                padding: 10,
-                background: isMe ? 'rgba(212,164,55,0.18)' : 'transparent',
-                border: isMe ? `1.5px solid ${PALETTE.mustard}` : '1px solid rgba(0,0,0,0.08)',
-                borderRadius: 6,
-              }}
-            >
-              <MiniAvatar
-                kit={p.avatar.kit}
-                accent={p.avatar.accent}
-                skin={p.avatar.skin}
-                hair={p.avatar.hair}
-                hairStyle={p.avatar.hairStyle}
-                number={p.avatar.number}
-                size={44}
-              />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  style={{
-                    fontFamily: 'JetBrains Mono, monospace',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: PALETTE.ink,
-                  }}
-                >
-                  {p.name}
-                </div>
-                <div
-                  style={{
-                    fontFamily: 'JetBrains Mono, monospace',
-                    fontSize: 10,
-                    fontWeight: 600,
-                    color: PALETTE.inkLight,
-                    letterSpacing: '0.12em',
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {p.position ?? '—'}
-                </div>
-              </div>
-              {goals > 0 && (
-                <div
-                  style={{
-                    background: PALETTE.ink,
-                    color: PALETTE.cream,
-                    padding: '4px 10px',
-                    fontFamily: 'JetBrains Mono, monospace',
-                    fontSize: 11,
-                    fontWeight: 700,
-                    letterSpacing: '0.1em',
-                  }}
-                >
-                  {goals} ⚽
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <SimReveal
+      token={token}
+      squadName={squad.name}
+      me={me}
+      teammates={teammates}
+      opponents={opponents}
+      myGoals={myGoals}
+      oppGoals={oppGoals}
+      myScorers={myScorers}
+      oppScorers={oppScorers}
+      shareUrl={shareUrl}
+    />
   );
 }
 
@@ -498,8 +222,7 @@ function NotEnoughOpponents({ token, count }: { token: string; count: number }) 
           }}
         >
           Only {count} other players in your group right now. Sim needs at
-          least 5 so we can build a proper team for you. Once the captain
-          seeds the full roster, this will work.
+          least 5 so we can build a proper team for you.
         </p>
         <Link
           href={`/preview/${encodeURIComponent(token)}`}
