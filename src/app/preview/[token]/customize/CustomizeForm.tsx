@@ -15,6 +15,7 @@ import { MiniAvatar, PALETTE } from '../../_components/MiniAvatar';
 interface CustomizeFormProps {
   token: string;
   initial: {
+    kitColor: 'red' | 'navy' | 'sage' | 'mustard' | 'ink';
     skinTone: 'light' | 'mid' | 'dark';
     hairColor: 'dark' | 'brown' | 'blond' | 'red';
     hairStyle: 'short' | 'tall' | 'shaved' | 'cap';
@@ -23,11 +24,21 @@ interface CustomizeFormProps {
   saveAction: (formData: FormData) => Promise<void>;
 }
 
+type Kit = CustomizeFormProps['initial']['kitColor'];
 type Skin = CustomizeFormProps['initial']['skinTone'];
 type Hair = CustomizeFormProps['initial']['hairColor'];
 type Style = CustomizeFormProps['initial']['hairStyle'];
 
+const KIT_PALETTE: Record<Kit, string> = {
+  red: PALETTE.red,
+  navy: PALETTE.navy,
+  sage: PALETTE.sage,
+  mustard: PALETTE.mustard,
+  ink: PALETTE.ink,
+};
+
 export function CustomizeForm({ token, initial, saveAction }: CustomizeFormProps) {
+  const [kitColor, setKitColor] = useState<Kit>(initial.kitColor);
   const [skinTone, setSkinTone] = useState<Skin>(initial.skinTone);
   const [hairColor, setHairColor] = useState<Hair>(initial.hairColor);
   const [hairStyle, setHairStyle] = useState<Style>(initial.hairStyle);
@@ -58,6 +69,7 @@ export function CustomizeForm({ token, initial, saveAction }: CustomizeFormProps
           }}
         >
           <MiniAvatar
+            kit={KIT_PALETTE[kitColor]}
             skin={PALETTE.skin[skinTone]}
             hair={PALETTE.hair[hairColor]}
             hairStyle={hairStyle}
@@ -66,6 +78,21 @@ export function CustomizeForm({ token, initial, saveAction }: CustomizeFormProps
           />
         </div>
       </div>
+
+      <Section title="Kit color">
+        <SwatchRow>
+          {(['red', 'navy', 'sage', 'mustard', 'ink'] as const).map((key) => (
+            <SwatchRadio
+              key={key}
+              name="kitColor"
+              value={key}
+              color={KIT_PALETTE[key]}
+              checked={kitColor === key}
+              onTap={() => setKitColor(key)}
+            />
+          ))}
+        </SwatchRow>
+      </Section>
 
       <Section title="Skin tone">
         <SwatchRow>

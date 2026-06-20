@@ -8,9 +8,26 @@
 
 'use client';
 
-import React, { useOptimistic, useTransition, useState } from 'react';
+import React, { useOptimistic, useTransition, useState, useEffect, useRef } from 'react';
 import { PALETTE, MiniAvatar } from '../../../../preview/_components/MiniAvatar';
 import { addGoal, undoLastGoal, endSession } from '../_actions';
+
+/**
+ * PR milestones that trigger a celebration banner.
+ * 1 = first goal of the night, 3 = hat trick, 5 = nap, 7 = stunner.
+ */
+const MILESTONE_LABELS: Record<number, string> = {
+  1: 'FIRST GOAL',
+  3: 'HAT TRICK',
+  5: 'FIVE — NAP',
+  7: 'SEVEN — GET IN',
+};
+
+interface Celebration {
+  id: string;
+  player: PlayerSlot;
+  label: string;
+}
 
 interface PlayerSlot {
   profileId: string;
@@ -52,8 +69,31 @@ export function LiveCapture({ token, sessionId, matchId, players }: LiveCaptureP
     },
   );
   const [showEndModal, setShowEndModal] = useState(false);
+  const [celebrations, setCelebrations] = useState<Celebration[]>([]);
+  const lastGoalsRef = useRef<Map<string, number>>(
+    new Map(players.map((p) => [p.profileId, p.goals])),
+  );
 
   const totalGoals = optimisticPlayers.reduce((s, p) => s + p.goals, 0);
+
+  // Detect milestone crossings
+  useEffect(() => {
+    const last = lastGoalsRef.current;
+    for (const p of optimisticPlayers) {
+      const prev = last.get(p.profileId) ?? 0;
+      if (p.goals > prev && MILESTONE_LABELS[p.goals]) {
+        const id = `${p.profileId}-${p.goals}-${Date.now()}`;
+        setCelebrations((curr) => [
+          ...curr,
+          { id, player: p, label: MILESTONE_LABELS[p.goals] },
+        ]);
+        setTimeout(() => {
+          setCelebrations((curr) => curr.filter((c) => c.id !== id));
+        }, 3200);
+      }
+      last.set(p.profileId, p.goals);
+    }
+  }, [optimisticPlayers]);
 
   const handleGoal = (profileId: string) => {
     startTransition(() => {
@@ -181,6 +221,27 @@ export function LiveCapture({ token, sessionId, matchId, players }: LiveCaptureP
           ))}
         </div>
 
+        {/* Celebration banner stack */}
+        {celebrations.length > 0 && (
+          <div
+            style={{
+              position: 'fixed',
+              top: 16,
+              left: 16,
+              right: 16,
+              zIndex: 200,
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 10,
+              pointerEvents: 'none',
+            }}
+          >
+            {celebrations.map((c) => (
+              <CelebrationBanner key={c.id} celebration={c} />
+            ))}
+          </div>
+        )}
+
         {/* End session modal */}
         {showEndModal && (
           <div
@@ -269,6 +330,72 @@ export function LiveCapture({ token, sessionId, matchId, players }: LiveCaptureP
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function CelebrationBanner({ celebration }: { celebration: Celebration }) {
+  return (
+    <div
+      style={{
+        background: PALETTE.mustard,
+        color: PALETTE.ink,
+        padding: '14px 16px',
+        border: `3px solid ${PALETTE.red}`,
+        boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 14,
+        animation: 'celebrationSlide 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)',
+      }}
+    >
+      <MiniAvatar
+        kit={celebration.player.avatar.kit}
+        accent={celebration.player.avatar.accent}
+        skin={celebration.player.avatar.skin}
+        hair={celebration.player.avatar.hair}
+        hairStyle={celebration.player.avatar.hairStyle}
+        number={celebration.player.avatar.number}
+        size={52}
+      />
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontFamily: 'Antonio, Impact, sans-serif',
+            fontSize: 24,
+            fontWeight: 800,
+            lineHeight: 1,
+            letterSpacing: '-0.01em',
+            textTransform: 'uppercase',
+            color: PALETTE.red,
+          }}
+        >
+          {celebration.label}
+        </div>
+        <div
+          style={{
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: 12,
+            fontWeight: 700,
+            color: PALETTE.ink,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            marginTop: 2,
+          }}
+        >
+          {celebration.player.name}
+        </div>
+      </div>
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
+            @keyframes celebrationSlide {
+              from { transform: translateY(-20px) scale(0.92); opacity: 0; }
+              to { transform: translateY(0) scale(1); opacity: 1; }
+            }
+          `,
+        }}
+      />
     </div>
   );
 }

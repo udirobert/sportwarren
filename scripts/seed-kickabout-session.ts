@@ -266,6 +266,25 @@ async function main() {
         },
       });
 
+      // WhatsApp phone (stored on PlatformIdentity — reuse existing model)
+      if (player.phone && player.phone !== '+44...') {
+        const normalizedPhone = player.phone.replace(/[^\d+]/g, '');
+        await tx.platformIdentity.upsert({
+          where: {
+            platform_platformUserId: {
+              platform: 'whatsapp',
+              platformUserId: normalizedPhone,
+            },
+          },
+          update: { userId: user.id },
+          create: {
+            userId: user.id,
+            platform: 'whatsapp',
+            platformUserId: normalizedPhone,
+          },
+        });
+      }
+
       provisioned.push({ player, userId: user.id, profileId: profile.id, token: walletAddress });
     }
     console.log(`  ✓ ${provisioned.length} users + profiles + squad memberships`);
