@@ -76,6 +76,22 @@ export default async function RecapPage({ params }: PageProps) {
     year: 'numeric',
   });
 
+  // Reciprocity gate — SubmitHub-style. How many lads has this player
+  // rated in this session, and how many have rated them. The "give to
+  // receive" framing creates the social pressure that drives engagement.
+  const profileId = player.playerProfile!.id;
+  const [givenCount, receivedCount] = await Promise.all([
+    prisma.peerRating.count({
+      where: { raterId: profileId, match: { sessionId } },
+    }),
+    prisma.peerRating.count({
+      where: { targetId: profileId, match: { sessionId } },
+    }),
+  ]);
+  const RATING_THRESHOLD = 5;
+  const givenEnough = givenCount >= RATING_THRESHOLD;
+  const receivedEnough = receivedCount >= RATING_THRESHOLD;
+
   return (
     <div
       style={{
@@ -341,11 +357,85 @@ export default async function RecapPage({ params }: PageProps) {
           </div>
         )}
 
+        {/* Reciprocity gate — SubmitHub for football. Your card unlocks
+            once you've rated the threshold. Empty state = the lever. */}
+        <div
+          style={{
+            background: PALETTE.cream,
+            border: `2px solid ${PALETTE.ink}`,
+            padding: '18px 20px',
+            marginBottom: 16,
+            borderLeft: `6px solid ${givenEnough && receivedEnough ? PALETTE.sage : PALETTE.red}`,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              color: PALETTE.navy,
+              marginBottom: 6,
+            }}
+          >
+            Peer rating · the loop
+          </div>
+          <div
+            style={{
+              fontFamily: 'Antonio, Impact, sans-serif',
+              fontSize: 28,
+              fontWeight: 800,
+              lineHeight: 1.05,
+              letterSpacing: '-0.01em',
+              textTransform: 'uppercase',
+              marginBottom: 6,
+            }}
+          >
+            {givenCount} given · {receivedCount} received
+          </div>
+          <div
+            style={{
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 12,
+              lineHeight: 1.55,
+              color: PALETTE.ink,
+            }}
+          >
+            {!givenEnough && receivedCount === 0 && (
+              <>
+                Rate {RATING_THRESHOLD - givenCount} more lads and your card
+                unlocks ratings back. <strong>No free rides.</strong>
+              </>
+            )}
+            {!givenEnough && receivedCount > 0 && (
+              <>
+                {receivedCount} lad{receivedCount === 1 ? ' has' : 's have'} rated
+                you so far. Rate {RATING_THRESHOLD - givenCount} more to see
+                what they said.
+              </>
+            )}
+            {givenEnough && !receivedEnough && (
+              <>
+                You're in — waiting on{' '}
+                <strong>{RATING_THRESHOLD - receivedCount} more lads</strong> to
+                rate you. The group decides what your numbers say next.
+              </>
+            )}
+            {givenEnough && receivedEnough && (
+              <>
+                Unlocked. {receivedCount} lads have weighed in. The next
+                kickabout reflects what they said.
+              </>
+            )}
+          </div>
+        </div>
+
         {/* CTA — rate teammates */}
         <Link
           href={`/session/${encodeURIComponent(sessionId)}/rate/${encodeURIComponent(playerToken)}`}
           style={{
-            background: PALETTE.mustard,
+            background: givenEnough ? 'transparent' : PALETTE.mustard,
             color: PALETTE.ink,
             padding: '16px 20px',
             fontFamily: 'JetBrains Mono, monospace',
@@ -360,7 +450,11 @@ export default async function RecapPage({ params }: PageProps) {
             marginBottom: 16,
           }}
         >
-          Pick your Team of the Night →
+          {givenEnough
+            ? 'Edit your picks →'
+            : givenCount === 0
+            ? 'Pick your Team of the Night →'
+            : `Keep rating · ${RATING_THRESHOLD - givenCount} to go →`}
         </Link>
 
         <p
@@ -374,8 +468,8 @@ export default async function RecapPage({ params }: PageProps) {
             marginTop: 12,
           }}
         >
-          Takes 90 seconds. Could be skill, could be vibes. Top 5 picked
-          most overall becomes the night's XI.
+          Takes 90 seconds. Could be skill, could be vibes. Top picks across
+          the night form the XI — and your votes are what unlock yours.
         </p>
 
         <div
