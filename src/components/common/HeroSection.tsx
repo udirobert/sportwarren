@@ -21,6 +21,7 @@ import { ShareLinks } from '@/components/common/ShareLinks';
 import { usePlatform } from '@/hooks/usePlatform';
 import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
 import SquadImportWizard from '@/components/import/SquadImportWizard';
+import { PALETTE, V4PaperGrain, V4ChalkLine } from '@/components/v4';
 import type { PlayerPosition } from '@/types';
 
 interface HeroSectionProps {
@@ -147,18 +148,41 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
 
 
   return (
-    <div className="relative bg-gray-900 overflow-hidden">
+    <div
+      className="relative overflow-hidden"
+      style={{ background: PALETTE.pitch }}
+    >
       {/* Hero Section */}
-      <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      <section
+        className="relative min-h-screen flex items-center justify-center overflow-hidden"
+        style={{ background: PALETTE.pitch }}
+      >
         <div className="absolute inset-x-0 top-0 z-20">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
             <Link href={hasAccount || isGuest ? '/dashboard' : '/'} className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/10 text-white backdrop-blur-sm">
+              <div
+                className="flex h-11 w-11 items-center justify-center"
+                style={{
+                  background: PALETTE.dusk,
+                  color: PALETTE.cream,
+                  border: `1px solid rgba(244,237,224,0.25)`,
+                }}
+              >
                 <Target className="h-5 w-5" aria-hidden="true" />
               </div>
               <div>
-                <div className="text-sm font-black uppercase tracking-[0.22em] text-white/80">SportWarren</div>
-                <div className="text-xs text-white/60">Stop playing ghost matches</div>
+                <div
+                  className="text-sm font-black uppercase"
+                  style={{ letterSpacing: '0.22em', color: PALETTE.cream }}
+                >
+                  SportWarren
+                </div>
+                <div
+                  className="text-xs"
+                  style={{ color: PALETTE.chalk, opacity: 0.7 }}
+                >
+                  Stop playing ghost matches
+                </div>
               </div>
             </Link>
 
@@ -167,7 +191,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             ) : (
               <button
                 onClick={onGetStarted}
-                className="inline-flex items-center justify-center rounded-2xl border border-white/15 bg-black/25 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-sm transition-all hover:bg-black/35"
+                className="inline-flex items-center justify-center px-4 py-2.5 text-sm font-bold transition-colors"
+                style={{
+                  background: 'transparent',
+                  color: PALETTE.cream,
+                  border: `1px solid ${PALETTE.chalk}`,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  fontSize: 12,
+                }}
               >
                 Sign In
               </button>
@@ -175,58 +207,102 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
           </div>
         </div>
 
-        {/* Animated Background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-green-900 to-gray-900">
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
-          <div
-            ref={parallaxRef}
-            className="absolute top-0 -left-4 w-96 h-96 bg-green-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 will-change-transform"
-            aria-hidden="true"
-          ></div>
-          <div
-            ref={parallaxRef2}
-            className="absolute top-0 -right-4 w-96 h-96 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 will-change-transform"
-            aria-hidden="true"
-          ></div>
+        {/* V4 verdant background — solid pitch block + paper grain.
+            No gradients. No blur orbs. The brutalist Sunday-League
+            programme cover register: one block of grass, cream type
+            on top, chalk-line edges where needed. */}
+        <V4PaperGrain opacity={0.05} zIndex={1} />
+        <div
+          className="absolute top-0 left-0 right-0 z-[2]"
+          aria-hidden="true"
+          style={{ paddingTop: 0 }}
+        >
+          <V4ChalkLine thickness={2} opacity={0.5} />
+        </div>
+        <div
+          className="absolute bottom-0 left-0 right-0 z-[2]"
+          aria-hidden="true"
+        >
+          <V4ChalkLine thickness={2} opacity={0.5} />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-12 sm:py-20 text-center">
-          <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black mb-3 sm:mb-4 leading-tight">
-            <span className="block text-white">Claim Your Spot.</span>
-            <span className="block bg-gradient-to-r from-green-400 via-emerald-500 to-green-600 bg-clip-text text-transparent">
+          <h1
+            className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-black mb-3 sm:mb-4 leading-[0.95]"
+            style={{
+              fontFamily: 'Antonio, Impact, sans-serif',
+              letterSpacing: '-0.02em',
+              textTransform: 'uppercase',
+              color: PALETTE.cream,
+            }}
+          >
+            <span className="block">Claim Your Spot.</span>
+            <span className="block" style={{ color: PALETTE.mustard }}>
               Build Your Player Card.
             </span>
           </h1>
 
-          <p className="text-sm sm:text-base text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto">
+          <p
+            className="text-sm sm:text-base mb-6 sm:mb-8 max-w-2xl mx-auto"
+            style={{
+              color: PALETTE.chalk,
+              opacity: 0.85,
+              fontFamily: 'JetBrains Mono, monospace',
+              lineHeight: 1.6,
+            }}
+          >
             Start with a 5s, 6s, or 7s setup. Put yourself in the team, share the card to the group, then turn matchdays into verified stats, XP, and squad history.
           </p>
 
-          {/* Dual CTA — two wedges, one above-the-fold choice. Captain
-              path scrolls to the existing SquadImportWizard section;
-              player path continues to the PlayerCardPreview below. */}
+          {/* Dual CTA — two wedges, one above-the-fold choice. V4
+              register: mustard fill (primary, captain) + chalk-border
+              outline (secondary, player). No gradients, no glow. */}
           {isPublicVisitor && (
             <div className="mx-auto mb-8 grid max-w-md gap-3 sm:grid-cols-2">
               <a
                 href="#squad-import-wizard"
-                className="group inline-flex items-center justify-between rounded-2xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-3 text-left backdrop-blur-sm transition-all hover:bg-emerald-500/25"
+                className="group inline-flex items-center justify-between px-4 py-3 text-left transition-colors"
+                style={{
+                  background: PALETTE.mustard,
+                  color: PALETTE.ink,
+                  border: `2px solid ${PALETTE.red}`,
+                }}
               >
                 <span className="min-w-0">
-                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">Captain / organiser</div>
-                  <div className="text-sm font-bold text-white">Set up your group</div>
+                  <div
+                    className="text-[10px] font-black uppercase"
+                    style={{ letterSpacing: '0.18em', color: PALETTE.red }}
+                  >
+                    Captain / organiser
+                  </div>
+                  <div className="text-sm font-bold" style={{ color: PALETTE.ink }}>
+                    Set up your group
+                  </div>
                 </span>
-                <ArrowRight className="h-4 w-4 text-emerald-300 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" style={{ color: PALETTE.ink }} aria-hidden="true" />
               </a>
               <button
                 type="button"
                 onClick={onGuestStart ?? onGetStarted}
-                className="group inline-flex items-center justify-between rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-left backdrop-blur-sm transition-all hover:bg-white/10"
+                className="group inline-flex items-center justify-between px-4 py-3 text-left transition-colors"
+                style={{
+                  background: 'transparent',
+                  color: PALETTE.cream,
+                  border: `2px solid ${PALETTE.chalk}`,
+                }}
               >
                 <span className="min-w-0">
-                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/70">Player</div>
-                  <div className="text-sm font-bold text-white">Build your card</div>
+                  <div
+                    className="text-[10px] font-black uppercase"
+                    style={{ letterSpacing: '0.18em', color: PALETTE.chalk, opacity: 0.8 }}
+                  >
+                    Player
+                  </div>
+                  <div className="text-sm font-bold" style={{ color: PALETTE.cream }}>
+                    Build your card
+                  </div>
                 </span>
-                <ArrowRight className="h-4 w-4 text-white/70 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" style={{ color: PALETTE.chalk }} aria-hidden="true" />
               </button>
             </div>
           )}
@@ -244,10 +320,28 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               { icon: Target, label: "Pick a role", detail: "Small-sided shapes first, 11v11 when the squad grows." },
               { icon: Users, label: "Bring the squad", detail: "Every teammate gets a native spot to claim and share." },
             ].map(({ icon: Icon, label, detail }) => (
-              <div key={label} className="rounded-xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
-                <Icon className="h-4 w-4 text-emerald-300" aria-hidden="true" />
-                <div className="mt-2 text-xs font-black uppercase tracking-[0.14em] text-white">{label}</div>
-                <p className="mt-1 text-xs leading-5 text-gray-400">{detail}</p>
+              <div
+                key={label}
+                className="p-3"
+                style={{
+                  background: PALETTE.dusk,
+                  border: `1px solid rgba(244,237,224,0.18)`,
+                  color: PALETTE.chalk,
+                }}
+              >
+                <Icon className="h-4 w-4" style={{ color: PALETTE.mustard }} aria-hidden="true" />
+                <div
+                  className="mt-2 text-xs font-black uppercase"
+                  style={{ letterSpacing: '0.14em', color: PALETTE.cream }}
+                >
+                  {label}
+                </div>
+                <p
+                  className="mt-1 text-xs leading-5"
+                  style={{ color: PALETTE.chalk, opacity: 0.8 }}
+                >
+                  {detail}
+                </p>
               </div>
             ))}
           </div>
@@ -278,7 +372,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             )}
             <button
               onClick={handlePrimaryCta}
-              className="group relative inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
+              className="group relative inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold transition-colors"
+              style={{
+                background: PALETTE.mustard,
+                color: PALETTE.ink,
+                border: `2px solid ${PALETTE.red}`,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                fontFamily: 'JetBrains Mono, monospace',
+              }}
             >
               <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
               {isTelegram ? 'Open in Telegram' : journeyContent.hero.primaryCtaLabel}
@@ -313,13 +415,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             >
               <FileSpreadsheet className="w-3 h-3" />
               Already have a squad?
-              <span className="font-bold text-emerald-400 group-hover:text-emerald-300">Import your roster</span>
+              <span className="font-bold" style={{ color: PALETTE.mustard }}>Import your roster</span>
             </button>
           </p>
           </div>
 
           {journeyContent.hero.stageLine && (
-            <p className="mb-4 text-sm font-bold uppercase tracking-[0.16em] text-green-300">
+            <p
+              className="mb-4 text-sm font-bold uppercase"
+              style={{ letterSpacing: '0.16em', color: PALETTE.mustard }}
+            >
               {journeyContent.hero.stageLine}
             </p>
           )}
@@ -376,48 +481,84 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
 
           {/* Start my season CTA — summarises accumulated investment */}
           {!hasAccount && isPublicVisitor && playgroundState && (
-            <div className="mx-auto mb-8 max-w-md overflow-hidden rounded-2xl border border-emerald-500/20 bg-gradient-to-br from-emerald-950/40 via-slate-900 to-slate-900 p-5 text-center shadow-2xl shadow-emerald-500/10">
-              <p className="mb-3 text-[10px] font-black uppercase tracking-[0.22em] text-emerald-300">
+            <div
+              className="mx-auto mb-8 max-w-md overflow-hidden p-5 text-center"
+              style={{
+                background: PALETTE.dusk,
+                border: `2px solid ${PALETTE.mustard}`,
+                borderLeft: `8px solid ${PALETTE.mustard}`,
+              }}
+            >
+              <p
+                className="mb-3 text-[10px] font-black uppercase"
+                style={{ letterSpacing: '0.22em', color: PALETTE.mustard }}
+              >
                 Your squad is ready
               </p>
               <div className="mb-4 flex flex-wrap items-center justify-center gap-1.5">
                 {cardName && (
-                  <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-bold text-white">
+                  <span
+                    className="px-2 py-1 text-[10px] font-bold"
+                    style={{ background: 'rgba(244,237,224,0.08)', color: PALETTE.cream, border: `1px solid rgba(244,237,224,0.18)` }}
+                  >
                     {cardName}
                   </span>
                 )}
                 {playgroundState.formation && (
-                  <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-bold text-emerald-300">
+                  <span
+                    className="px-2 py-1 text-[10px] font-bold"
+                    style={{ background: 'rgba(244,237,224,0.08)', color: PALETTE.mustard, border: `1px solid rgba(244,237,224,0.18)` }}
+                  >
                     {playgroundState.formation}
                   </span>
                 )}
                 {playgroundState.style && (
-                  <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-bold text-emerald-300">
+                  <span
+                    className="px-2 py-1 text-[10px] font-bold"
+                    style={{ background: 'rgba(244,237,224,0.08)', color: PALETTE.mustard, border: `1px solid rgba(244,237,224,0.18)` }}
+                  >
                     {playgroundState.style}
                   </span>
                 )}
                 {playgroundState.color && (
-                  <span className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-bold text-emerald-300">
-                    <span className="h-2 w-2 rounded-full border border-white/50" style={{ backgroundColor: playgroundState.color }} />
+                  <span
+                    className="inline-flex items-center gap-1 px-2 py-1 text-[10px] font-bold"
+                    style={{ background: 'rgba(244,237,224,0.08)', color: PALETTE.mustard, border: `1px solid rgba(244,237,224,0.18)` }}
+                  >
+                    <span className="h-2 w-2" style={{ backgroundColor: playgroundState.color, border: `1px solid ${PALETTE.chalk}` }} />
                     Kit
                   </span>
                 )}
                 {playgroundState.names && playgroundState.names.length > 0 && (
-                  <span className="rounded-md border border-white/10 bg-white/[0.06] px-2 py-1 text-[10px] font-bold text-gray-400">
+                  <span
+                    className="px-2 py-1 text-[10px] font-bold"
+                    style={{ background: 'rgba(244,237,224,0.08)', color: PALETTE.chalk, opacity: 0.75, border: `1px solid rgba(244,237,224,0.18)` }}
+                  >
                     {playgroundState.names.length} players named
                   </span>
                 )}
               </div>
               <button
                 onClick={handlePrimaryCta}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-green-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-emerald-500/30 transition hover:scale-[1.02]"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3 text-sm font-bold transition-colors"
+                style={{
+                  background: PALETTE.mustard,
+                  color: PALETTE.ink,
+                  border: `2px solid ${PALETTE.red}`,
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  fontFamily: 'JetBrains Mono, monospace',
+                }}
               >
                 <Zap className="h-4 w-4" />
                 Start my season
                 <ArrowRight className="h-4 w-4" />
               </button>
-              <p className="mt-3 text-[10px] text-gray-500">
-                No password required. We'll create a guest account and sync your setup.
+              <p
+                className="mt-3 text-[10px]"
+                style={{ color: PALETTE.chalk, opacity: 0.65 }}
+              >
+                No password required. We&apos;ll create a guest account and sync your setup.
               </p>
             </div>
           )}
@@ -450,12 +591,15 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
           {stats.totalPlayers > 0 || (stats.waitlistTotal && stats.waitlistTotal > 0) ? (
             <div className="flex flex-wrap items-center justify-center gap-4 sm:gap-8 p-4 sm:p-6 border border-white/5 rounded-2xl bg-white/2">
               <div className="flex items-center space-x-2 group">
-                <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-green-500/20 flex items-center justify-center group-hover:scale-110 transition-transform">
-                  <Users className="w-4 sm:w-5 h-4 sm:h-5 text-green-400" aria-hidden="true" />
+                <div
+                  className="w-8 sm:w-10 h-8 sm:h-10 flex items-center justify-center group-hover:scale-110 transition-transform"
+                  style={{ background: 'rgba(212,164,55,0.18)' }}
+                >
+                  <Users className="w-4 sm:w-5 h-4 sm:h-5" style={{ color: PALETTE.mustard }} aria-hidden="true" />
                 </div>
                 <div className="text-left">
-                  <div className="text-lg sm:text-2xl font-bold text-white">{stats.totalPlayers.toLocaleString()}</div>
-                  <div className="text-[10px] sm:text-xs text-gray-400">Players</div>
+                  <div className="text-lg sm:text-2xl font-bold" style={{ color: PALETTE.cream }}>{stats.totalPlayers.toLocaleString()}</div>
+                  <div className="text-[10px] sm:text-xs" style={{ color: PALETTE.chalk, opacity: 0.7 }}>Players</div>
                 </div>
               </div>
               <div className="flex items-center space-x-2 group">
@@ -491,26 +635,46 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               )}
               {stats.recentCardsClaimed && stats.recentCardsClaimed > 0 && (
                 <div className="flex items-center space-x-2 group">
-                  <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-full bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform relative">
-                    <CheckCircle2 className="w-4 sm:w-5 h-4 sm:h-5 text-emerald-400" aria-hidden="true" />
-                    <span className="absolute inset-0 rounded-full bg-emerald-400/30 animate-pulse" />
+                  <div
+                    className="w-8 sm:w-10 h-8 sm:h-10 flex items-center justify-center group-hover:scale-110 transition-transform relative"
+                    style={{ background: 'rgba(212,164,55,0.18)' }}
+                  >
+                    <CheckCircle2 className="w-4 sm:w-5 h-4 sm:h-5" style={{ color: PALETTE.mustard }} aria-hidden="true" />
                   </div>
                   <div className="text-left">
-                    <div className="text-lg sm:text-2xl font-bold text-white">{stats.recentCardsClaimed.toLocaleString()}</div>
-                    <div className="text-[10px] sm:text-xs text-gray-400">Cards This Week</div>
+                    <div className="text-lg sm:text-2xl font-bold" style={{ color: PALETTE.cream }}>{stats.recentCardsClaimed.toLocaleString()}</div>
+                    <div className="text-[10px] sm:text-xs" style={{ color: PALETTE.chalk, opacity: 0.7 }}>Cards This Week</div>
                   </div>
                 </div>
               )}
             </div>
           ) : (
             <div className="flex flex-col items-center gap-4">
-              <div className="flex items-center justify-center gap-2 text-sm text-gray-400">
-                <Sparkles className="w-4 h-4 text-green-400" aria-hidden="true" />
+              <div className="flex items-center justify-center gap-2 text-sm" style={{ color: PALETTE.chalk, opacity: 0.8 }}>
+                <Sparkles className="w-4 h-4" style={{ color: PALETTE.mustard }} aria-hidden="true" />
                 <span>Be among the first to track your rec football stats</span>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-green-500/20 bg-green-500/5 px-4 py-2">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                <span className="text-xs text-green-300 font-medium">Early access — founding members get lifetime perks</span>
+              <div
+                className="inline-flex items-center gap-2 px-4 py-2"
+                style={{
+                  background: PALETTE.dusk,
+                  border: `1px solid ${PALETTE.mustard}`,
+                }}
+              >
+                <span
+                  className="w-2 h-2 animate-pulse"
+                  style={{ background: PALETTE.mustard }}
+                />
+                <span
+                  className="text-xs font-medium uppercase"
+                  style={{
+                    letterSpacing: '0.14em',
+                    color: PALETTE.mustard,
+                    fontFamily: 'JetBrains Mono, monospace',
+                  }}
+                >
+                  Early access — founding members get lifetime perks
+                </span>
               </div>
             </div>
           )}

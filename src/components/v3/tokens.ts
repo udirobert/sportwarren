@@ -18,6 +18,19 @@ export const PALETTE = {
   navy: '#1c3a5e',
   sage: '#4a7549',
   mustard: '#d4a437',
+
+  // V4 verdant register — for surfaces that evoke the GAME itself
+  // (the pitch, dusk, mud, programme covers) rather than the RECORD
+  // (V3 editorial / archive). Same typography; different ground.
+  // pitch  — deep warm grass, Sunday League shirt green
+  // dusk   — chestnut / dried mud / boots after a wet game
+  // chalk  — off-cream touchline marker (slightly whiter than cream)
+  // worn   — green-tinted faded cream, programme cover left in sun
+  pitch: '#5e7d35',
+  dusk:  '#3d2817',
+  chalk: '#f4ede0',
+  worn:  '#dde0c8',
+
   skin: {
     light: '#f0d4b8',
     mid: '#c89e7c',
@@ -32,6 +45,7 @@ export const PALETTE = {
 } as const;
 
 export type V3AccentKey = 'red' | 'navy' | 'sage' | 'mustard';
+export type V4AccentKey = 'pitch' | 'dusk' | 'chalk' | 'worn';
 
 /**
  * Typography stacks. Antonio is the display face (big headlines + the
