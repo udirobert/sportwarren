@@ -125,6 +125,42 @@ when their owners opt in. Both use the canonical V3 card via
   `#squad-import-wizard`) + Player ("Build your card" → existing
   PlayerCardPreview flow). Visible to public visitors only.
 
+### V3 / V4 — the two visual registers
+
+SportWarren runs on two paired visual registers. They share Antonio +
+JetBrains Mono typography but apply different ground / atmosphere
+depending on what the brand is doing.
+
+- **V3 — the RECORD** (editorial / archival).
+  Cream paper + ink + 4 accents (red / navy / sage / mustard). Used
+  on every player-facing in-app surface where the brand is about
+  *preservation*: the chess.com card, post-session recap, public
+  squad/player profile, post-session analysis. Lives in
+  `src/components/v3/` — see below.
+
+- **V4 — the GAME** (dark stadium / atmospheric).
+  Currently inlined in the landing surfaces (`HeroSection`,
+  `ProblemSection`, `SolutionSection`, `HowItWorksSection`,
+  `AppPreviewSection`). The dark gradient (slate-900 → green-900 →
+  slate-900) + ambient blur orbs + grid overlay + emerald/green
+  accents on CTAs. This is the visual identity of the homepage and
+  the marketing flow.
+
+  V4 does **not** currently have a primitive library — it lives as
+  Tailwind utility classes within each landing section. When the
+  patterns harden (e.g. the dark backdrop + orbs is repeated 3+
+  times), promote them into `src/components/v4/` with the same
+  shape as V3 (tokens + primitives + barrel export).
+
+  The Figma file for V4 should mirror the homepage: dark stadium
+  ground, emerald/green energy, atmospheric depth via orbs and
+  gradient — not a flat verdant programme-cover register.
+
+**Don't confuse them.** A failed earlier pass introduced a "verdant
+rustic" palette (pitch/dusk/chalk/worn) as V4 — that register felt
+plastic vs the homepage's actual atmospheric depth, and was reverted.
+Future V4 work should reference the existing homepage aesthetic.
+
 ### V3 design system
 
 Single source of truth lives at `src/components/v3/`:
