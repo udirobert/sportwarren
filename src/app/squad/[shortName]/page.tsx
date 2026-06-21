@@ -17,12 +17,19 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
-import { PALETTE } from '@/app/preview/_components/MiniAvatar';
 import {
+  PALETTE,
+  TYPE,
+  TRACKING,
+  V3PageShell,
+  V3Ribbon,
+  V3IdentityLine,
+  V3Heading,
+  V3SectionLabel,
   V3PlayerCard,
   buildPlayerCardData,
   type Attrs,
-} from '@/components/identity/V3PlayerCard';
+} from '@/components/v3';
 import {
   baselineForPosition,
   computeOverall,
@@ -88,221 +95,151 @@ export default async function PublicSquadPage({ params }: PageProps) {
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: PALETTE.cream,
-        padding: '40px 20px 80px',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        color: PALETTE.ink,
-      }}
-    >
-      <div style={{ maxWidth: 720, margin: '0 auto' }}>
-        {/* Ribbon */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 24 }}>
-          <div style={{ width: 28, height: 4, background: PALETTE.mustard }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.red }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.navy }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.sage }} />
-        </div>
+    <V3PageShell maxWidth={720}>
+      <V3Ribbon marginBottom={24} />
+      <V3IdentityLine context={squad.shortName} showDot={false} />
 
-        {/* Identity line */}
+      <V3Heading>{squad.name}</V3Heading>
+
+      <p
+        style={{
+          fontFamily: TYPE.mono,
+          fontSize: 14,
+          color: PALETTE.inkLight,
+          lineHeight: 1.55,
+          marginTop: 18,
+          marginBottom: 28,
+          maxWidth: 520,
+        }}
+      >
+        {squad.members.length} member{squad.members.length === 1 ? '' : 's'}
+        {captain?.user.name ? ` · led by ${captain.user.name}` : ''}.
+        {visibility === 'group_only'
+          ? ' Group roster public, individual cards hidden by the captain.'
+          : ' Public squad — individual cards visible.'}
+      </p>
+
+      {/* Squad-level aggregate Overall */}
+      {groupAvgOverall !== null && (
         <div
           style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-            color: PALETTE.navy,
-            marginBottom: 12,
-          }}
-        >
-          SportWarren · {squad.shortName}
-        </div>
-
-        {/* Headline */}
-        <h1
-          style={{
-            fontFamily: 'Antonio, Impact, sans-serif',
-            fontSize: 72,
-            fontWeight: 800,
-            lineHeight: 0.95,
-            margin: 0,
-            letterSpacing: '-0.02em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {squad.name}
-        </h1>
-
-        <p
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 14,
-            color: PALETTE.inkLight,
-            lineHeight: 1.55,
-            marginTop: 18,
+            background: PALETTE.ink,
+            color: PALETTE.cream,
+            padding: '20px 22px',
             marginBottom: 28,
-            maxWidth: 520,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 18,
+            borderLeft: `8px solid ${PALETTE.mustard}`,
           }}
         >
-          {squad.members.length} member{squad.members.length === 1 ? '' : 's'}
-          {captain?.user.name ? ` · led by ${captain.user.name}` : ''}.
-          {visibility === 'group_only'
-            ? ' Group roster public, individual cards hidden by the captain.'
-            : ' Public squad — individual cards visible.'}
-        </p>
-
-        {/* Squad-level aggregate */}
-        {groupAvgOverall !== null && (
-          <div
-            style={{
-              background: PALETTE.ink,
-              color: PALETTE.cream,
-              padding: '20px 22px',
-              marginBottom: 28,
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              gap: 18,
-              borderLeft: `8px solid ${PALETTE.mustard}`,
-            }}
-          >
-            <div>
-              <div
-                style={{
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: '0.22em',
-                  textTransform: 'uppercase',
-                  color: PALETTE.mustard,
-                  marginBottom: 6,
-                }}
-              >
-                Squad Overall · avg of {twinCount}
-              </div>
-              <div
-                style={{
-                  fontFamily: 'JetBrains Mono, monospace',
-                  fontSize: 11,
-                  color: PALETTE.cream,
-                  opacity: 0.8,
-                  maxWidth: 320,
-                }}
-              >
-                Aggregate strength — moves as the squad plays + lads rate
-                each other.
-              </div>
+          <div>
+            <div
+              style={{
+                fontFamily: TYPE.mono,
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: TRACKING.capWide,
+                textTransform: 'uppercase',
+                color: PALETTE.mustard,
+                marginBottom: 6,
+              }}
+            >
+              Squad Overall · avg of {twinCount}
             </div>
             <div
               style={{
-                fontFamily: 'Antonio, Impact, sans-serif',
-                fontSize: 84,
-                fontWeight: 800,
-                lineHeight: 0.9,
-                letterSpacing: '-0.03em',
-                color: PALETTE.mustard,
+                fontFamily: TYPE.mono,
+                fontSize: 11,
+                opacity: 0.8,
+                maxWidth: 320,
               }}
             >
-              {groupAvgOverall}
+              Aggregate strength — moves as the squad plays + lads rate each other.
             </div>
           </div>
-        )}
-
-        {/* Roster */}
-        <div
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-            color: PALETTE.navy,
-            marginBottom: 12,
-          }}
-        >
-          Roster
+          <div
+            style={{
+              fontFamily: TYPE.display,
+              fontSize: 84,
+              fontWeight: 800,
+              lineHeight: 0.9,
+              letterSpacing: TRACKING.displayBig,
+              color: PALETTE.mustard,
+            }}
+          >
+            {groupAvgOverall}
+          </div>
         </div>
+      )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 32 }}>
-          {squad.members.map((m) => {
-            const twin = m.user.playerProfile?.twin;
-            const attrs = twin
-              ? ((twin.baseAttributes as Attrs | null) ?? baselineForPosition(m.user.position))
-              : baselineForPosition(m.user.position);
-            const overall = computeOverall(attrs, m.user.position, twin?.level ?? 1, twin?.prestige ?? 0);
-            const data = buildPlayerCardData({
-              user: m.user,
-              attrs,
-              level: twin?.level ?? 1,
-              overall,
-            });
+      <V3SectionLabel>Roster</V3SectionLabel>
 
-            // Discoverable players get linked to their public profile; others
-            // render as compact-card-only (no link, no chess.com expansion).
-            const playerLink = m.user.discoverable && m.user.handle
-              ? `/player/${encodeURIComponent(m.user.handle)}`
-              : null;
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 32 }}>
+        {squad.members.map((m) => {
+          const twin = m.user.playerProfile?.twin;
+          const attrs = twin
+            ? ((twin.baseAttributes as Attrs | null) ?? baselineForPosition(m.user.position))
+            : baselineForPosition(m.user.position);
+          const overall = computeOverall(attrs, m.user.position, twin?.level ?? 1, twin?.prestige ?? 0);
+          const data = buildPlayerCardData({
+            user: m.user,
+            attrs,
+            level: twin?.level ?? 1,
+            overall,
+          });
 
-            const card = (
-              <V3PlayerCard
-                data={data}
-                variant={showIndividualCards ? 'compact' : 'compact'}
-              />
-            );
+          // Discoverable players get linked to their public profile.
+          const playerLink = m.user.discoverable && m.user.handle
+            ? `/player/${encodeURIComponent(m.user.handle)}`
+            : null;
+          const card = <V3PlayerCard data={data} variant="compact" />;
 
-            return showIndividualCards && playerLink ? (
-              <Link
-                key={m.id}
-                href={playerLink}
-                style={{ textDecoration: 'none', color: 'inherit' }}
-              >
-                {card}
-              </Link>
-            ) : (
-              <div key={m.id}>{card}</div>
-            );
-          })}
-        </div>
-
-        {/* Trust footer */}
-        <div
-          style={{
-            background: 'rgba(0,0,0,0.04)',
-            border: `1px solid ${PALETTE.inkLight}`,
-            padding: '14px 16px',
-            marginBottom: 24,
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
-            lineHeight: 1.55,
-            color: PALETTE.inkLight,
-          }}
-        >
-          <strong>Privacy:</strong> this page exists because the captain
-          set this squad to <em>{visibility === 'public' ? 'public' : 'group-only'}</em>.
-          {visibility === 'group_only' && ' Individual cards are hidden.'}
-          {' Player-level discoverability is opt-in per player.'}
-        </div>
-
-        <Link
-          href="/"
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            color: PALETTE.inkLight,
-            textDecoration: 'none',
-            textAlign: 'center',
-            display: 'block',
-          }}
-        >
-          ← SportWarren
-        </Link>
+          return showIndividualCards && playerLink ? (
+            <Link key={m.id} href={playerLink} style={{ textDecoration: 'none', color: 'inherit' }}>
+              {card}
+            </Link>
+          ) : (
+            <div key={m.id}>{card}</div>
+          );
+        })}
       </div>
-    </div>
+
+      <div
+        style={{
+          background: 'rgba(0,0,0,0.04)',
+          border: `1px solid ${PALETTE.inkLight}`,
+          padding: '14px 16px',
+          marginBottom: 24,
+          fontFamily: TYPE.mono,
+          fontSize: 11,
+          lineHeight: 1.55,
+          color: PALETTE.inkLight,
+        }}
+      >
+        <strong>Privacy:</strong> this page exists because the captain set
+        this squad to <em>{visibility === 'public' ? 'public' : 'group-only'}</em>.
+        {visibility === 'group_only' && ' Individual cards are hidden.'}
+        {' Player-level discoverability is opt-in per player.'}
+      </div>
+
+      <Link
+        href="/"
+        style={{
+          fontFamily: TYPE.mono,
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: TRACKING.cap,
+          textTransform: 'uppercase',
+          color: PALETTE.inkLight,
+          textDecoration: 'none',
+          textAlign: 'center',
+          display: 'block',
+        }}
+      >
+        ← SportWarren
+      </Link>
+    </V3PageShell>
   );
 }

@@ -36,7 +36,7 @@ export const TOKENS = {
 
   // Surface gradient stops. The canonical card surface, matching the
   // website's bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900
-  // (used by HeroSection, SquadIdentityCard, PlayerIdentityCard).
+  // (used by HeroSection + legacy Tailwind PlayerIdentityCard).
   surfaceGradientStart: '#0f172a',
   surfaceGradientMid: '#1e293b',
   surfaceGradientEnd: '#0f172a',

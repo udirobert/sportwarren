@@ -16,12 +16,19 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
-import { PALETTE } from '@/app/preview/_components/MiniAvatar';
 import {
+  PALETTE,
+  TYPE,
+  TRACKING,
+  V3PageShell,
+  V3Ribbon,
+  V3IdentityLine,
+  V3Heading,
+  V3SectionLabel,
   V3PlayerCard,
   buildPlayerCardData,
   type Attrs,
-} from '@/components/identity/V3PlayerCard';
+} from '@/components/v3';
 import {
   baselineForPosition,
   computeOverall,
@@ -63,142 +70,87 @@ export default async function PublicPlayerPage({ params }: PageProps) {
   const visibleSquads = user.squads.filter((m) => m.squad.visibility !== 'private');
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: PALETTE.cream,
-        padding: '40px 20px 80px',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        color: PALETTE.ink,
-      }}
-    >
-      <div style={{ maxWidth: 600, margin: '0 auto' }}>
-        {/* Ribbon */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 24 }}>
-          <div style={{ width: 28, height: 4, background: PALETTE.mustard }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.red }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.navy }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.sage }} />
-        </div>
+    <V3PageShell>
+      <V3Ribbon marginBottom={24} />
+      <V3IdentityLine context={`@${user.handle}`} showDot={false} />
 
-        <div
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-            color: PALETTE.navy,
-            marginBottom: 12,
-          }}
-        >
-          SportWarren · @{user.handle}
-        </div>
+      <V3Heading>{user.name}</V3Heading>
 
-        <h1
-          style={{
-            fontFamily: 'Antonio, Impact, sans-serif',
-            fontSize: 72,
-            fontWeight: 800,
-            lineHeight: 0.95,
-            margin: 0,
-            letterSpacing: '-0.02em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {user.name}
-        </h1>
+      <p
+        style={{
+          fontFamily: TYPE.mono,
+          fontSize: 14,
+          color: PALETTE.inkLight,
+          lineHeight: 1.55,
+          marginTop: 18,
+          marginBottom: 28,
+          maxWidth: 480,
+        }}
+      >
+        {user.position ?? 'Position not set'} · L{level}
+        {visibleSquads.length > 0
+          ? ` · plays for ${visibleSquads.map((m) => m.squad.name).join(', ')}`
+          : ''}
+      </p>
 
-        <p
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 14,
-            color: PALETTE.inkLight,
-            lineHeight: 1.55,
-            marginTop: 18,
-            marginBottom: 28,
-            maxWidth: 480,
-          }}
-        >
-          {user.position ?? 'Position not set'} · L{level}
-          {visibleSquads.length > 0
-            ? ` · plays for ${visibleSquads.map((m) => m.squad.name).join(', ')}`
-            : ''}
-        </p>
+      <V3PlayerCard data={cardData} variant="full" />
 
-        {/* The card */}
-        <V3PlayerCard data={cardData} variant="full" />
-
-        {/* Squad links */}
-        {visibleSquads.length > 0 && (
-          <div style={{ marginTop: 32 }}>
-            <div
-              style={{
-                fontFamily: 'JetBrains Mono, monospace',
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.22em',
-                textTransform: 'uppercase',
-                color: PALETTE.navy,
-                marginBottom: 12,
-              }}
-            >
-              Their squads
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {visibleSquads.map((m) => (
-                <Link
-                  key={m.id}
-                  href={`/squad/${encodeURIComponent(m.squad.shortName)}`}
+      {visibleSquads.length > 0 && (
+        <div style={{ marginTop: 32 }}>
+          <V3SectionLabel>Their squads</V3SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {visibleSquads.map((m) => (
+              <Link
+                key={m.id}
+                href={`/squad/${encodeURIComponent(m.squad.shortName)}`}
+                style={{
+                  padding: '12px 14px',
+                  border: `1px solid ${PALETTE.ink}`,
+                  background: PALETTE.cream,
+                  fontFamily: TYPE.mono,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: PALETTE.ink,
+                  textDecoration: 'none',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span>{m.squad.name}</span>
+                <span
                   style={{
-                    padding: '12px 14px',
-                    border: `1px solid ${PALETTE.ink}`,
-                    background: PALETTE.cream,
-                    fontFamily: 'JetBrains Mono, monospace',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    color: PALETTE.ink,
-                    textDecoration: 'none',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
+                    fontSize: 9,
+                    letterSpacing: TRACKING.cap,
+                    textTransform: 'uppercase',
+                    color: PALETTE.inkLight,
                   }}
                 >
-                  <span>{m.squad.name}</span>
-                  <span
-                    style={{
-                      fontSize: 9,
-                      letterSpacing: '0.18em',
-                      textTransform: 'uppercase',
-                      color: PALETTE.inkLight,
-                    }}
-                  >
-                    {m.role} · {m.squad.visibility}
-                  </span>
-                </Link>
-              ))}
-            </div>
+                  {m.role} · {m.squad.visibility}
+                </span>
+              </Link>
+            ))}
           </div>
-        )}
+        </div>
+      )}
 
-        <Link
-          href="/"
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            color: PALETTE.inkLight,
-            textDecoration: 'none',
-            textAlign: 'center',
-            display: 'block',
-            marginTop: 36,
-          }}
-        >
-          ← SportWarren
-        </Link>
-      </div>
-    </div>
+      <Link
+        href="/"
+        style={{
+          fontFamily: TYPE.mono,
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: TRACKING.cap,
+          textTransform: 'uppercase',
+          color: PALETTE.inkLight,
+          textDecoration: 'none',
+          textAlign: 'center',
+          display: 'block',
+          marginTop: 36,
+        }}
+      >
+        ← SportWarren
+      </Link>
+    </V3PageShell>
   );
 }
