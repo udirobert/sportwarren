@@ -93,6 +93,34 @@ recap, customize, rate). They distinguish preservation from gamification.
   organizer token) renders them. Audit every new player-facing page
   against this rule.
 
+### Flywheel surfaces (shipped 2026-06-21)
+
+The closed-loop ecosystem (`docs/flywheel.md`) bound together by:
+
+- **Bibs Optimizer** (`src/server/services/personalization/bibs-optimizer.ts`)
+  — Primary B (kickabout) team allocation. Snake-draft by Overall +
+  role-preserving balance swap. Surface at
+  `/session/live/{token}/teams` — captain picks format (5/6/7/8-a-side)
+  + ticks confirmed players + reads suggested split.
+- **Post-session analysis** (`/session/{sessionId}/analysis/{playerToken}`)
+  — chess.com "your match" surface. Reads PlayerMatchStats + PeerRating
+  + PlayerTwin to assemble goals/ratings/attributes/weakness story.
+  Linked from recap page; not yet referenced in WhatsApp broadcast
+  templates.
+- **Unified twin write path** — preview-tier sim and drill claims
+  route through `TwinService.recordEvent` with `skipMoment: true` +
+  `skipNotification: true`. The single funnel for twin mutations is
+  preserved; preview surfaces don't trigger Kite signing, moment
+  rendering, or push notifications, which is correct for preview-tier.
+  Pattern: use `admin_adjustment` for direct attribute deltas (sim),
+  `daily_drill` for the drill applier (handles xp + level + clamp +
+  `lastDailyDrillAt` atomically).
+- **Squad-aware drill picker** — `pickTargetAttribute` in
+  `/preview/{token}/drill/page.tsx` scores by `gapBelowSquadAvg * 1.5
+  + (99 - myValue)`. When the whole squad lags on PAS, everyone gets
+  PAS drills. UI surfaces a "Squad-wide weakness" callout when picked
+  attribute reflects a group lag.
+
 ## Project-specific guidance
 
 ### Stack
