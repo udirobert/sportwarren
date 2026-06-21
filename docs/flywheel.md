@@ -1,9 +1,12 @@
-# Flywheel — closed-loop ecosystem (post-Tuesday architecture)
+# Flywheel — closed-loop ecosystem
 
-> **Status:** Pre-Tuesday audit + design. The post-Tuesday architectural
-> queue. Wait for real signal from Tuesday's three players before
-> building the items here — but lock in the shape so future-us doesn't
-> redo the audit.
+> **Status:** Items #1, #2, #4, #5 shipped 2026-06-21 (commits ac9e0c2
+> → forthcoming). Items #3, #6, #7 remain post-Tuesday — they're
+> either lower-impact for the kickabout cohort (#3 is a Sunday League
+> formation, #7 is a coherence cleanup) or are multi-week builds (#6
+> is the full tactics puzzle library). The bones of the loop are in
+> place; Tuesday's signal informs the prioritisation of the remaining
+> three.
 
 ## What we're trying to build
 
@@ -121,19 +124,20 @@ Audit done 2026-06-21. The codebase already has:
    has one hardcoded scenario; the real version should pull from
    tagged scenarios that reference actual matches.
 
-## Shipping order (post-Tuesday)
+## Shipping order
 
-Each item in dependency order. Times are first-pass estimates.
+Each item in dependency order. Times are first-pass estimates. Status
+reflects 2026-06-21 ship.
 
-| # | What | Time | Why this order |
+| # | What | Time | Status |
 |---|---|---|---|
-| 1 | **Unify the twin write path.** Add `previewMode` flag in `TwinService.recordEvent` that skips Kite signing + moment rendering + notification dispatch but keeps event sourcing + attribute update + idempotency. Re-route preview sim claim + preview drill claim through it. | ~3h | Removes the dual-write debt I created in the chess.com pass. Single funnel = single truth. |
-| 2 | **Post-session analysis page** at `/session/{id}/analysis/{token}`. Shows the player's session story: goals → peer ratings → attribute deltas → "where your card moved" → "what to drill next." | ~1 day | This is the missing emotional peak. Just-after-the-match is when the player is hot. |
-| 3 | **`recommendFormation(squadId)` for Primary A (Sunday League).** Aggregate squad attribute distribution → propose formation + lineup. Wire into Formation-of-Week + pre-match captain UI. | ~1.5 days | Sunday-League captain wedge needs this. Formation-of-Week becomes consequential. |
-| 4 | **`bibsOptimizer(squadId, signups, playersPerSide)` for Primary B (kickabout).** Balance two teams by aggregate twin strength + suggest positions per player. Handle winner-stays-on rotation. | ~2 days | The kickabout wedge needs THIS, not 11-a-side formation. Highest-impact for the Tuesday cohort. |
-| 5 | **Drill picker biased toward squad-weakest + player-weakest.** Intersection of "your lowest" and "the squad's lowest" — creates squad-level momentum. | ~3h | Small tweak; high coherence payoff. The squad becomes a co-protagonist. |
-| 6 | **Tactics puzzle tied to last session scenarios.** Replace the scaffold with a library of scenarios tagged to match contexts ("you conceded 3 on the left wing — here's what you should have done"). | ~1 week+ | Long tail. Puzzle becomes downstream of lived experience. |
-| 7 | **Deduplicate drill flow.** Pick one path: preview-side `/drill` or in-app `DailyDrillWidget`. The other gets deleted. | ~1h | Coherence cleanup. Decision can wait until after #1 lands. |
+| 1 | **Unify the twin write path.** Re-route preview sim claim + preview drill claim through `TwinService.recordEvent` with `skipMoment` + `skipNotification` flags (existing API on the service — no schema change). | ~3h | ✅ Shipped. Preview sim uses `admin_adjustment` event; preview drill uses `daily_drill` event. Single funnel. |
+| 2 | **Post-session analysis page** at `/session/{id}/analysis/{token}`. Player's session story: goals + assists + minutes + rank → peer ratings received → current attribute bars (with weakest highlighted) → "what to drill next" CTA. | ~1 day | ✅ Shipped. Stub replaced with real surface; linked from recap page. |
+| 3 | **`recommendFormation(squadId)` for Primary A (Sunday League).** Aggregate squad attribute distribution → propose formation + lineup. Wire into Formation-of-Week + pre-match captain UI. | ~1.5 days | ⏳ Deferred — Tuesday cohort is kickabout (Primary B), not Sunday League. Formation-of-Week cron remains deterministic for now. |
+| 4 | **`bibsOptimizer(squadId, signups, playersPerSide)` for Primary B (kickabout).** Snake-draft by Overall + role-aware swap to tighten balance + bench rotation suggestions. Surface at `/session/live/{token}/teams`. | ~2 days | ✅ Shipped. Captain picks format (5/6/7/8-a-side) + ticks confirmed players → balanced split with reasoning lines. |
+| 5 | **Drill picker biased toward squad-weakest + player-weakest.** Combine player-floor weighting with squad-gap weighting so collective weaknesses become collective drills. | ~3h | ✅ Shipped. `pickTargetAttribute(attrs, seed, squadAvgByAttr)` factors in squad averages; UI shows "Squad-wide weakness" callout when picked attribute reflects a group lag. |
+| 6 | **Tactics puzzle tied to last session scenarios.** Replace the scaffold with a library tagged to match contexts ("you conceded 3 on the left wing — here's what you should have done"). | ~1 week+ | ⏳ Deferred. Scaffold remains the placeholder. Real lib requires schema, content authoring, drag-and-drop board, TACTICS 7th attribute. |
+| 7 | **Deduplicate drill flow.** Pick one path: preview-side `/drill` or in-app `DailyDrillWidget`. | ~1h | ⏳ Deferred. Both surfaces routed through TwinService now (item #1), so they're behaviourally equivalent but textually duplicated. Coherence cleanup after we see which surface Tuesday's cohort uses. |
 
 ## Design call to make explicitly
 

@@ -37,13 +37,34 @@ const DRILL_TYPES: Record<AttributeKey, string[]> = {
   physical: ['Strength Circuit · 4 rounds', 'Endurance Run · 5km', 'Agility Course · 6 reps'],
 };
 
-function pickTargetAttribute(attrs: Attrs, seed: number): AttributeKey {
-  const values = ATTRIBUTE_KEYS.map((k) => ({ key: k, value: attrs[k] ?? 50 }));
-  values.sort((a, b) => a.value - b.value);
-  // Weighted toward the bottom — index 0 (weakest) gets the highest weight.
+/**
+ * Pick the drill target attribute. Weighted by:
+ *  - Your own gap below the squad average for each attribute
+ *    (creates squad-level momentum — the whole group works on the
+ *    same weakness, so the squad's collective Overall climbs together)
+ *  - Your absolute floor (player-level weakness)
+ * Falls back to pure player-weakest if no squad context is available.
+ */
+function pickTargetAttribute(
+  attrs: Attrs,
+  seed: number,
+  squadAvgByAttr?: Partial<Record<AttributeKey, number>>,
+): AttributeKey {
+  const values = ATTRIBUTE_KEYS.map((k) => {
+    const my = attrs[k] ?? 50;
+    const squadAvg = squadAvgByAttr?.[k];
+    // Gap below squad avg (positive when you're behind the group)
+    const gapBelow = squadAvg !== undefined ? Math.max(0, squadAvg - my) : 0;
+    // Absolute weakness component (lower attrs get higher weight)
+    const floor = 99 - my;
+    // Combine: squad gap weighted slightly more than absolute floor
+    // so collective weaknesses become collective drills.
+    return { key: k, score: gapBelow * 1.5 + floor };
+  });
+  values.sort((a, b) => b.score - a.score);
+  // Weighted draw toward the top (index 0 = most-needed)
   const weights = values.map((_, i) => Math.max(1, values.length - i));
   const total = weights.reduce((s, w) => s + w, 0);
-  // Deterministic per-day via the seed
   let r = (seed % 10000) / 10000 * total;
   for (let i = 0; i < values.length; i++) {
     r -= weights[i];
@@ -71,7 +92,10 @@ export default async function DrillPage({ params }: PageProps) {
 
   const user = await prisma.user.findUnique({
     where: { walletAddress: token },
-    include: { playerProfile: { include: { twin: true } } },
+    include: {
+      playerProfile: { include: { twin: true } },
+      squads: { select: { squadId: true } },
+    },
   });
 
   if (!user || user.chain !== 'preview') notFound();
@@ -83,6 +107,27 @@ export default async function DrillPage({ params }: PageProps) {
     pace: 50, shooting: 50, passing: 50, dribbling: 50, defending: 50, physical: 50,
   };
 
+  // Squad-wide attribute averages — used to bias drill picking toward
+  // the squad's collective weakness, not just the player's. This is
+  // how the daily drill becomes a co-protagonist mechanic: when the
+  // whole group is weak in PAS, everyone gets passing drills.
+  const squadId = user.squads[0]?.squadId;
+  const squadTwins = squadId
+    ? await prisma.playerTwin.findMany({
+        where: { profile: { user: { squads: { some: { squadId } } } } },
+        select: { profileId: true, baseAttributes: true },
+      })
+    : [];
+  const squadAvgByAttr: Partial<Record<AttributeKey, number>> = {};
+  for (const k of ATTRIBUTE_KEYS) {
+    const vals = squadTwins
+      .map((t) => (t.baseAttributes as Attrs | null)?.[k])
+      .filter((v): v is number => typeof v === 'number');
+    if (vals.length > 0) {
+      squadAvgByAttr[k] = Math.round(vals.reduce((s, v) => s + v, 0) / vals.length);
+    }
+  }
+
   // Daily seed — same drill all day for the player. Deterministic per
   // (twinId, UTC-date) so reloads don't re-pick.
   const now = new Date();
@@ -90,9 +135,19 @@ export default async function DrillPage({ params }: PageProps) {
   const seedStr = `${twin.id}-${utcDay}`;
   const seed = seedStr.split('').reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 0);
 
-  const targetAttribute = pickTargetAttribute(attrs, seed);
+  const targetAttribute = pickTargetAttribute(attrs, seed, squadAvgByAttr);
   const drillType = pickDrillType(targetAttribute, seed);
   const attrMeta = ATTR_LABEL[targetAttribute];
+
+  // Squad gap commentary — surface when the picked attribute is one
+  // the whole squad lags on, not just this player. This is the
+  // co-protagonist mechanic made visible.
+  const squadAvgForTarget = squadAvgByAttr[targetAttribute];
+  const myValueForTarget = attrs[targetAttribute];
+  const squadGap = squadAvgForTarget !== undefined
+    ? Math.round(squadAvgForTarget - myValueForTarget)
+    : null;
+  const squadWideWeak = squadAvgForTarget !== undefined && squadAvgForTarget < 50;
 
   const alreadyDoneToday = twin.lastDailyDrillAt &&
     twin.lastDailyDrillAt.getUTCFullYear() === now.getUTCFullYear() &&
@@ -153,14 +208,34 @@ export default async function DrillPage({ params }: PageProps) {
             color: PALETTE.inkLight,
             lineHeight: 1.55,
             marginTop: 16,
-            marginBottom: 32,
+            marginBottom: 20,
             maxWidth: 480,
           }}
         >
           Today's drill targets <strong>{attrMeta.label}</strong> — your
-          twin's lowest stat at <strong>{attrs[targetAttribute]}</strong>.
+          card at <strong>{attrs[targetAttribute]}</strong>.
           Do it for real, tap done. <em>One drill per day.</em>
         </p>
+
+        {squadWideWeak && squadGap !== null && squadGap >= 0 && (
+          <div
+            style={{
+              background: 'rgba(212,164,55,0.12)',
+              border: `1px solid ${PALETTE.mustard}`,
+              padding: '12px 14px',
+              marginBottom: 24,
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 11,
+              lineHeight: 1.55,
+              color: PALETTE.ink,
+            }}
+          >
+            <strong>Squad-wide weakness.</strong> The whole group averages{' '}
+            <strong>{squadAvgForTarget}</strong> in {attrMeta.label.toLowerCase()}.
+            Everyone working on the same thing — that's how the squad
+            climbs together.
+          </div>
+        )}
 
         {/* The drill card */}
         <div
