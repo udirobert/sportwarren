@@ -9,15 +9,5 @@
     "app/api/**/*.ts": {
       "maxDuration": 30
     }
-  },
-  "crons": [
-    {
-      "path": "/api/cron/scout-settle",
-      "schedule": "*/5 * * * *"
-    },
-    {
-      "path": "/api/cron/auto-scout",
-      "schedule": "0 */6 * * *"
-    }
-  ]
+  }
 }
