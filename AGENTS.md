@@ -92,6 +92,50 @@ recap, customize, rate). They distinguish preservation from gamification.
   captain's broadcast UI (`/session/broadcast/.../page.tsx`, gated by
   organizer token) renders them. Audit every new player-facing page
   against this rule.
+- **Privacy gradient — squad-level + player-level, decoupled.**
+  - `Squad.visibility`: `'private' | 'group_only' | 'public'`, default
+    `'private'`. Controls `/squad/{shortName}` resolution. Captain
+    toggles via Settings → Privacy.
+  - `User.discoverable`: opts the player into `/player/{handle}` and
+    (future) scout indexing — *independent of any squad's visibility*.
+    A player in a private squad can still publish their own card.
+  - The intersection (squad public AND player discoverable) is the
+    talent pool surface that future scouts will see.
+  - URL handle: `User.handle` is the URL slug — lowercase, alphanumeric +
+    dashes, 3-30 chars, globally unique.
+
+### Public surfaces (shipped 2026-06-21)
+
+The multi-team scaffolding — squads + players exposed to the open web
+when their owners opt in. Both use the canonical V3 card via
+`src/components/identity/V3PlayerCard.tsx`.
+
+- **Public squad page** (`/squad/{shortName}` — `src/app/squad/[shortName]/page.tsx`)
+  Resolves only when `Squad.visibility !== 'private'`. At `group_only`
+  shows roster + aggregate Overall + group avg by attribute. At
+  `public` adds linkable per-player V3 cards (compact variant).
+- **Public player page** (`/player/{handle}` — `src/app/player/[handle]/page.tsx`)
+  Resolves only when `User.discoverable === true`. Renders the V3
+  card (full variant) + visible squads (those not `private`).
+- **Settings → Privacy tab** (`src/app/(app)/settings/PrivacyTab.tsx`)
+  Player toggles discoverable + sets handle. If user captains any
+  squad, also surfaces per-squad visibility radios. Both flows hit
+  `player.updatePrivacy` / `squad.setVisibility` tRPC procedures.
+- **Homepage dual CTA** — Captain ("Set up your group" →
+  `#squad-import-wizard`) + Player ("Build your card" → existing
+  PlayerCardPreview flow). Visible to public visitors only.
+
+### V3 card consolidation (DRY)
+
+`src/components/identity/V3PlayerCard.tsx` is the canonical chess.com
+card surface. Three variants: `full` (Overall + 6 bars + comparison),
+`compact` (Overall + name, for roster lists), `showcase` (marketing,
+animated). `buildPlayerCardData(...)` is the normaliser from twin row
+→ card data. Use this everywhere — preview, public squad, public
+player, post-session analysis. NOT to be confused with the legacy
+`PlayerIdentityCard.tsx` (Tailwind dark theme) which is still used on
+the in-app `/profile` page and will be consolidated in the next
+design-language harmonization pass.
 
 ### Flywheel surfaces (shipped 2026-06-21)
 

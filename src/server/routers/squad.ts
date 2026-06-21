@@ -505,6 +505,40 @@ export const squadRouter = createTRPCRouter({
       return { xpGain, newLevel: result.diff.newLevel, energyConsumed: 40, focus: attributeImproved };
     }),
 
+  /**
+   * Update squad visibility — captain/vice-captain only. The privacy
+   * gradient (see AGENTS.md "Engagement rules"):
+   *   private    = only members see anything (default)
+   *   group_only = roster visible at /squad/{shortName}, no cards
+   *   public     = roster + cards visible, indexed for discovery
+   * Player-level discoverability is independent and lives on User.
+   */
+  setVisibility: protectedProcedure
+    .input(z.object({
+      squadId: squadIdSchema,
+      visibility: z.enum(['private', 'group_only', 'public']),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const membership = await getSquadMembership(ctx.prisma, input.squadId, ctx.userId!);
+      const leader = membership ? isSquadLeader(membership.role) : false;
+      const adminWallets = (process.env.ADMIN_WALLETS || '').split(',').filter(Boolean);
+      const isAdmin = adminWallets.includes(ctx.walletAddress || '');
+
+      if (!leader && !isAdmin) {
+        throw new TRPCError({
+          code: 'FORBIDDEN',
+          message: 'Captain or admin access required to change visibility.',
+        });
+      }
+
+      const squad = await ctx.prisma.squad.update({
+        where: { id: input.squadId },
+        data: { visibility: input.visibility },
+        select: { id: true, visibility: true },
+      });
+      return squad;
+    }),
+
   setDigitalTwin3dEntitlement: protectedProcedure
     .input(z.object({
       squadId: squadIdSchema,

@@ -202,6 +202,35 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
             Start with a 5s, 6s, or 7s setup. Put yourself in the team, share the card to the group, then turn matchdays into verified stats, XP, and squad history.
           </p>
 
+          {/* Dual CTA — two wedges, one above-the-fold choice. Captain
+              path scrolls to the existing SquadImportWizard section;
+              player path continues to the PlayerCardPreview below. */}
+          {isPublicVisitor && (
+            <div className="mx-auto mb-8 grid max-w-md gap-3 sm:grid-cols-2">
+              <a
+                href="#squad-import-wizard"
+                className="group inline-flex items-center justify-between rounded-2xl border border-emerald-400/30 bg-emerald-500/15 px-4 py-3 text-left backdrop-blur-sm transition-all hover:bg-emerald-500/25"
+              >
+                <span className="min-w-0">
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">Captain / organiser</div>
+                  <div className="text-sm font-bold text-white">Set up your group</div>
+                </span>
+                <ArrowRight className="h-4 w-4 text-emerald-300 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+              </a>
+              <button
+                type="button"
+                onClick={onGuestStart ?? onGetStarted}
+                className="group inline-flex items-center justify-between rounded-2xl border border-white/15 bg-white/5 px-4 py-3 text-left backdrop-blur-sm transition-all hover:bg-white/10"
+              >
+                <span className="min-w-0">
+                  <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/70">Player</div>
+                  <div className="text-sm font-bold text-white">Build your card</div>
+                </span>
+                <ArrowRight className="h-4 w-4 text-white/70 transition-transform group-hover:translate-x-1" aria-hidden="true" />
+              </button>
+            </div>
+          )}
+
           <PlayerCardPreview
             authed={hasAccount && !isGuest}
             onSave={onSavePlayerCard ?? onGetStarted}
