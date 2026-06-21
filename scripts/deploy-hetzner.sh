@@ -34,6 +34,11 @@ if [ -z "${DATABASE_URL:-}" ]; then
   exit 1
 fi
 
+# Use migrate deploy (production-safe, idempotent, tracked) not db push.
+# If this errors with "migration X is in a failed state" or "drift detected",
+# do not switch to db push — reconcile with:
+#   npx prisma migrate status        # see what's out of sync
+#   npx prisma migrate resolve --applied <migration-name>   # mark already-applied
 if ! npx prisma migrate deploy; then
   echo "❌ Migration failed — aborting deploy to keep previous release live"
   exit 1

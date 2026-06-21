@@ -11,6 +11,11 @@ echo "Checking for secrets..."
 # Patterns to check (common secret patterns)
 PATTERNS="(aws-access-key|aws-secret-key|akia[0-9a-z]{16}|BEGIN (RSA|EC|DSA|OPENSSH) PRIVATE KEY|-----BEGIN PRIVATE KEY-----)"
 
+# E.164 phone pattern — guards against committing real player rosters.
+# Per AGENTS.md "Engagement rules", phones live only in PlatformIdentity
+# rows and the captain's broadcast UI. They never belong in git.
+PHONE_PATTERN='\+[0-9]{10,15}'
+
 # Files to check (staged, excluding .env files and husky)
 FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -v ".env" | grep -v "seed.ts" | grep -v ".husky")
 
@@ -35,6 +40,21 @@ fi
 ENV_FILES=$(echo "$FILES" | grep "\.env" || true)
 if [ -n "$ENV_FILES" ]; then
   echo "${YELLOW}WARNING: .env files staged. Ensure they contain no real secrets.${NC}"
+fi
+
+# Phone-number check — block any E.164-shaped number outside the
+# allowlisted paths (docs/*.md may reference format examples).
+PHONE_FILES=$(echo "$FILES" | grep -vE '\.md$|\.husky/')
+if [ -n "$PHONE_FILES" ]; then
+  PHONE_MATCHES=$(echo "$PHONE_FILES" | xargs grep -EnH "$PHONE_PATTERN" 2>/dev/null || true)
+  if [ -n "$PHONE_MATCHES" ]; then
+    echo "${RED}ERROR: Phone numbers detected in staged files:${NC}"
+    echo "$PHONE_MATCHES"
+    echo ""
+    echo "${YELLOW}Phone numbers belong in the DB (PlatformIdentity), never in git.${NC}"
+    echo "${YELLOW}If this is intentional (e.g. a placeholder), use --no-verify.${NC}"
+    exit 1
+  fi
 fi
 
 echo "✅ No secrets detected"
