@@ -24,12 +24,25 @@
  * (matched by walletAddress / squad name).
  */
 
+import * as dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 
-const prisma = new PrismaClient();
+dotenv.config({ path: '.env.local' });
+dotenv.config({ path: '.env', override: false });
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 5,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+});
+const adapter = new PrismaPg(pool);
+const prisma = new PrismaClient({ adapter, log: ['error', 'warn'] });
 
 const V3_PALETTE = {
   cream: '#f0e8d6',
@@ -176,29 +189,28 @@ async function main() {
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://sportwarren.com';
 
-  await prisma.$transaction(async (tx) => {
-    // 1. Squad (group identity) — no unique on name, so findFirst-or-create
-    const existingSquad = await tx.squad.findFirst({ where: { name: data.group.name } });
-    const squad = existingSquad
-      ? await tx.squad.update({
-          where: { id: existingSquad.id },
-          data: {
-            shortName: data.group.shortName,
-            kitColor: data.group.kitColor ?? V3_PALETTE.red,
-            accentColor: data.group.accentColor ?? V3_PALETTE.navy,
-            ...(data.group.founded ? { founded: new Date(data.group.founded) } : {}),
-          },
-        })
-      : await tx.squad.create({
-          data: {
-            name: data.group.name,
-            shortName: data.group.shortName,
-            kitColor: data.group.kitColor ?? V3_PALETTE.red,
-            accentColor: data.group.accentColor ?? V3_PALETTE.navy,
-            ...(data.group.founded ? { founded: new Date(data.group.founded) } : {}),
-          },
-        });
-    console.log(`  ✓ Squad: ${squad.name} (id=${squad.id})`);
+  // 1. Squad (group identity) — no unique on name, so findFirst-or-create
+  const existingSquad = await prisma.squad.findFirst({ where: { name: data.group.name } });
+  const squad = existingSquad
+    ? await prisma.squad.update({
+        where: { id: existingSquad.id },
+        data: {
+          shortName: data.group.shortName,
+          kitColor: data.group.kitColor ?? V3_PALETTE.red,
+          accentColor: data.group.accentColor ?? V3_PALETTE.navy,
+          ...(data.group.founded ? { founded: new Date(data.group.founded) } : {}),
+        },
+      })
+    : await prisma.squad.create({
+        data: {
+          name: data.group.name,
+          shortName: data.group.shortName,
+          kitColor: data.group.kitColor ?? V3_PALETTE.red,
+          accentColor: data.group.accentColor ?? V3_PALETTE.navy,
+          ...(data.group.founded ? { founded: new Date(data.group.founded) } : {}),
+        },
+      });
+  console.log(`  ✓ Squad: ${squad.name} (id=${squad.id})`);
 
     // 2. Per-player provisioning
     const provisioned: Array<{ player: RosterPlayer; userId: string; profileId: string; token: string }> = [];
@@ -211,7 +223,7 @@ async function main() {
       const avatar = resolveAvatar(player);
 
       // Reuse existing user if name + group already exists (idempotent)
-      const existing = await tx.user.findFirst({
+      const existing = await prisma.user.findFirst({
         where: {
           name: player.name,
           squads: { some: { squadId: squad.id } },
@@ -219,14 +231,14 @@ async function main() {
       });
 
       const user = existing
-        ? await tx.user.update({
+        ? await prisma.user.update({
             where: { id: existing.id },
             data: {
               position: player.position ?? null,
               ...avatar,
             },
           })
-        : await tx.user.create({
+        : await prisma.user.create({
             data: {
               walletAddress,
               chain: 'preview',
@@ -237,7 +249,7 @@ async function main() {
           });
 
       // Player profile
-      const profile = await tx.playerProfile.upsert({
+      const profile = await prisma.playerProfile.upsert({
         where: { userId: user.id },
         update: {
           totalMatches: { increment: 0 },
@@ -254,7 +266,7 @@ async function main() {
       });
 
       // Squad membership
-      await tx.squadMember.upsert({
+      await prisma.squadMember.upsert({
         where: { squadId_userId: { squadId: squad.id, userId: user.id } },
         update: {
           role: player.isOrganizer ? 'captain' : 'player',
@@ -269,7 +281,7 @@ async function main() {
       // WhatsApp phone (stored on PlatformIdentity — reuse existing model)
       if (player.phone && player.phone !== '+44...') {
         const normalizedPhone = player.phone.replace(/[^\d+]/g, '');
-        await tx.platformIdentity.upsert({
+        await prisma.platformIdentity.upsert({
           where: {
             platform_platformUserId: {
               platform: 'whatsapp',
@@ -292,7 +304,7 @@ async function main() {
     // 3. Last week's Session — the Prisma Session model fits the
     // kickabout shape exactly (see comment in schema.prisma: "for
     // ad-hoc 'Bibs vs Non-Bibs' games").
-    const session = await tx.session.create({
+    const session = await prisma.session.create({
       data: {
         squadId: squad.id,
         name: `Session · ${data.session.date}`,
@@ -303,7 +315,7 @@ async function main() {
 
     // SessionAttendee for each player
     for (const { profileId } of provisioned) {
-      await tx.sessionAttendee.create({
+      await prisma.sessionAttendee.create({
         data: {
           sessionId: session.id,
           profileId,
@@ -314,7 +326,7 @@ async function main() {
     // One synthetic Match summarising the night's results (linked to session)
     const totalGoals = data.session.totalGoals
       ?? data.roster.reduce((sum, p) => sum + p.lastWeekGoals, 0);
-    const synthMatch = await tx.match.create({
+    const synthMatch = await prisma.match.create({
       data: {
         homeSquadId: squad.id,
         awaySquadId: squad.id,
@@ -333,7 +345,7 @@ async function main() {
 
     // 4. PlayerMatchStats for each player
     for (const { player, profileId } of provisioned) {
-      await tx.playerMatchStats.create({
+      await prisma.playerMatchStats.create({
         data: {
           matchId: synthMatch.id,
           profileId,
@@ -359,7 +371,6 @@ async function main() {
       console.log(`  Message:\n  ${message}`);
     }
     console.log('\n========================================================\n');
-  });
 
   await prisma.$disconnect();
 }
