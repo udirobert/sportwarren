@@ -31,6 +31,7 @@ import { Pool } from 'pg';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
+import { baselineForPosition } from '../src/server/services/personalization/position-baselines';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env', override: false });
@@ -277,6 +278,39 @@ async function main() {
           role: player.isOrganizer ? 'captain' : 'player',
         },
       });
+
+      // Player twin — position-baselined chess.com-style starting card.
+      // Skip Kite agent provisioning (external API), create a synthetic
+      // AiAgent row instead so the schema relation is satisfied. The
+      // baseAttributes come from baselineForPosition so CBs start
+      // strong in DEF/PHY, STs strong in SHO/PAC, etc.
+      const existingTwin = await prisma.playerTwin.findUnique({
+        where: { profileId: profile.id },
+      });
+      if (!existingTwin) {
+        const syntheticAgentId = `preview_${profile.id}`;
+        const agent = await prisma.aiAgent.upsert({
+          where: { agentId: syntheticAgentId },
+          update: { name: player.name },
+          create: {
+            agentId: syntheticAgentId,
+            passportId: `preview_passport_${profile.id}`,
+            name: player.name,
+            type: 'twin_player',
+            description: `Preview twin for ${player.name}`,
+            ownerType: 'player',
+            ownerId: user.id,
+            capabilities: [],
+          },
+        });
+        await prisma.playerTwin.create({
+          data: {
+            profileId: profile.id,
+            agentId: agent.id,
+            baseAttributes: baselineForPosition(player.position) as object,
+          },
+        });
+      }
 
       // WhatsApp phone (stored on PlatformIdentity — reuse existing model)
       if (player.phone && player.phone !== '+44...') {

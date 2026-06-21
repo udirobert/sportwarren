@@ -50,12 +50,27 @@ for the current phase-1 scope decision.
 Non-negotiable design rules for every player-facing surface (preview,
 recap, customize, rate). They distinguish preservation from gamification.
 
+- **The chess.com card model.** Every player starts with a
+  position-baselined attribute card (CB: 65 DEF / 60 PHY / 45 PAC,
+  ST: 65 SHO / 55 PAC / 40 DEF, etc.) computed by
+  `baselineForPosition` in `src/server/services/personalization/position-baselines.ts`.
+  The number IS the player; every interaction with the platform is
+  in service of moving it. Overall rating (`computeOverall`) is the
+  single chess.com-style ELO surfaced prominently on the preview.
 - **Stats are never self-editable.** Players edit *vanity* (kit, hair,
   jersey number) via `/preview/[token]/customize`. They cannot edit
   goals, ratings, attributes, or rank. Numbers move only via verified
   third-party proof — peer ratings, Strava sync, bleep-test capture
-  with teammate verification. Say this out loud in the UI: "These
-  numbers are how the group remembers you. You can't fake them."
+  with teammate verification, peer-witnessed match performance, and
+  small consequential sim outcomes. Say this out loud in the UI:
+  "These numbers are how the group remembers you. You can't fake them."
+- **Drills give XP and small attribute deltas, capped per day.**
+  `/preview/[token]/drill` picks the player's weakest attribute,
+  prescribes one real-world drill, applies +1 to that attribute and
+  ~15 XP on claim. Once per UTC day per twin. Honor-system v1; Strava
+  OAuth is the path to verified-auto-claim. Tactics puzzles will move
+  a future `TACTICS` 7th attribute once it ships (post-Tuesday
+  migration); current `/preview/[token]/tactics` is a scaffold.
 - **Provocation lives in the empty slot.** Preview pages show what we
   know AND what we don't, with each blank tagged with how to fill it
   (`UNKNOWN_SLOTS` in `src/app/preview/[token]/page.tsx`). An unfilled

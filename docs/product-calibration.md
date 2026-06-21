@@ -170,6 +170,55 @@ read informational, not provocative. Three changes landed to fix that:
 
 See `AGENTS.md` → "Engagement rules" for the consolidated doctrine.
 
+## Chess.com pass (added 2026-06-21)
+
+After re-reviewing the preview pages with seeded players, the static
+attribute panel still didn't drive action. The insight that unlocked
+it: chess.com works because the number isn't a description, it's a
+*position in a hierarchy that you can climb*. Five changes landed to
+re-shape SportWarren's twin around that model:
+
+1. **Position baselines** (`src/server/services/personalization/position-baselines.ts`)
+   — CB starts 65 DEF / 60 PHY / 45 PAC, ST starts 65 SHO / 55 PAC, etc.
+   Players see a *real starting card*, not all 50s. The seed
+   (`scripts/seed-kickabout-session.ts`) now creates a PlayerTwin row
+   per player with `baselineForPosition(player.position)`.
+2. **Chess.com six-bar card on preview** (`src/app/preview/[token]/page.tsx`)
+   — replaces the prior "What we don't know" panel. Each attribute
+   shows the player's value, a group-avg tick, and the verified path
+   that moves it. Above the bars: a single Overall rating
+   (`computeOverall`) computed with position-aware weights.
+3. **Sim becomes consequential** (`src/app/preview/[token]/sim/_actions.ts`)
+   — `claimSimOutcome` server action applies small deltas to
+   PlayerTwin.baseAttributes when the player taps "Lock this in" after
+   a sim. Bypasses TwinService for v1 (preview-tier only) to avoid
+   the Kite signing + moment-generation side effects; should be
+   re-routed through `TwinService.recordEvent({ kind: 'admin_adjustment' })`
+   post-Tuesday.
+4. **Daily drill route** (`src/app/preview/[token]/drill/`) — picks
+   the player's weakest attribute, prescribes one real-world drill,
+   grants +1 to that attribute + ~15 XP on claim. Once per UTC day
+   per twin via `lastDailyDrillAt`. Honor-system v1; Strava OAuth
+   verifies post-Tuesday.
+5. **Tactics puzzle scaffold** (`src/app/preview/[token]/tactics/`) —
+   one hardcoded scenario, multiple-choice, with right/wrong feedback.
+   The full library (drag-and-drop board, scenario library, TACTICS
+   7th attribute) is a real multi-week project; the scaffold makes
+   the architectural direction visible without pretending it's done.
+
+### Post-Tuesday queue (proper builds)
+
+- Re-route the sim claim through `TwinService.recordEvent` so the
+  attestation + moment pipeline fires.
+- Add a `tactics` 7th key to `AttributeKey` + `ATTRIBUTE_KEYS` +
+  `position-baselines.ts` baselines + clamp logic. Requires migration.
+- Build the tactics puzzle library: schema, content authoring,
+  drag-and-drop board (inspired by JonSzeto821/soccer-tactics and
+  spyderkam/Tactics-Board), difficulty progression.
+- Strava OAuth integration — verifies daily drills, syncs PAC/PHY.
+- Bleep test capture with teammate verification — moves PHY/PAC.
+- Full Overall ELO with peer-validated swings and squad-wide ranking.
+
 ## Related files
 
 - `docs/makeathon/post-submission-roadmap.md` — earlier roadmap;
