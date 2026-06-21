@@ -150,12 +150,18 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
   return (
     <div
       className="relative overflow-hidden"
-      style={{ background: PALETTE.pitch }}
+      style={{ background: PALETTE.dusk }}
     >
       {/* Hero Section */}
       <section
         className="relative min-h-screen flex items-center justify-center overflow-hidden"
-        style={{ background: PALETTE.pitch }}
+        style={{
+          // Atmospheric verdant depth — mirrors the SHAPE of the old
+          // gray-900 → green-900 → gray-900 gradient but in V4 tones.
+          // Dusk (top) → pitch (middle) → dusk (bottom) gives a sense
+          // of light and shadow: dawn canopy + grass + earth.
+          background: `linear-gradient(180deg, ${PALETTE.dusk} 0%, #4a6428 25%, ${PALETTE.pitch} 50%, #4a6428 78%, ${PALETTE.dusk} 100%)`,
+        }}
       >
         <div className="absolute inset-x-0 top-0 z-20">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
@@ -207,23 +213,36 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
           </div>
         </div>
 
-        {/* V4 verdant background — solid pitch block + paper grain.
-            No gradients. No blur orbs. The brutalist Sunday-League
-            programme cover register: one block of grass, cream type
-            on top, chalk-line edges where needed. */}
-        <V4PaperGrain opacity={0.05} zIndex={1} />
+        {/* V4 atmospheric backdrop — verdant gradient (above) +
+            ambient light orbs (here) + paper grain + chalk edges.
+            Same atmospheric shape as the previous dark backdrop but
+            entirely in V4 verdant tones: mustard for the warm-light
+            blur (low sun / floodlight halo), sage for the cool-green
+            blur (canopy / damp grass). */}
+        <div
+          ref={parallaxRef}
+          className="absolute top-0 -left-4 w-96 h-96 rounded-full mix-blend-screen filter blur-3xl opacity-25 will-change-transform"
+          style={{ background: PALETTE.mustard }}
+          aria-hidden="true"
+        />
+        <div
+          ref={parallaxRef2}
+          className="absolute bottom-0 -right-4 w-96 h-96 rounded-full mix-blend-screen filter blur-3xl opacity-20 will-change-transform"
+          style={{ background: PALETTE.sage }}
+          aria-hidden="true"
+        />
+        <V4PaperGrain opacity={0.09} zIndex={1} />
         <div
           className="absolute top-0 left-0 right-0 z-[2]"
           aria-hidden="true"
-          style={{ paddingTop: 0 }}
         >
-          <V4ChalkLine thickness={2} opacity={0.5} />
+          <V4ChalkLine thickness={2} opacity={0.45} />
         </div>
         <div
           className="absolute bottom-0 left-0 right-0 z-[2]"
           aria-hidden="true"
         >
-          <V4ChalkLine thickness={2} opacity={0.5} />
+          <V4ChalkLine thickness={2} opacity={0.45} />
         </div>
 
         <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-12 sm:py-20 text-center">
