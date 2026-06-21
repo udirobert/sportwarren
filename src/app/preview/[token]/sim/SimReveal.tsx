@@ -15,9 +15,19 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { MiniAvatar, PALETTE } from '../../_components/MiniAvatar';
+import { claimSimOutcome, type ClaimResult } from './_actions';
+
+const ATTR_LABEL: Record<string, string> = {
+  pace: 'PAC',
+  shooting: 'SHO',
+  passing: 'PAS',
+  dribbling: 'DRI',
+  defending: 'DEF',
+  physical: 'PHY',
+};
 
 interface PlayerData {
   userId: string;
@@ -51,6 +61,44 @@ type Stage = 'picking' | 'team' | 'kickoff' | 'reveal' | 'scorers' | 'done';
 export function SimReveal(props: SimRevealProps) {
   const [stage, setStage] = useState<Stage>('picking');
   const [revealedScorers, setRevealedScorers] = useState<number>(0);
+  const [claimResult, setClaimResult] = useState<ClaimResult | null>(null);
+  const [hasClaimed, setHasClaimed] = useState(false);
+  const [isClaiming, startClaim] = useTransition();
+
+  // Local idempotency — once this token has claimed a sim today, show
+  // the already-locked-in state instead of the claim button.
+  const claimKey = `sim_claimed_${props.token}_${new Date().toISOString().slice(0, 10)}`;
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(claimKey);
+      if (stored) {
+        setHasClaimed(true);
+        setClaimResult(JSON.parse(stored) as ClaimResult);
+      }
+    } catch {
+      /* noop */
+    }
+  }, [claimKey]);
+
+  const onClaim = () => {
+    if (hasClaimed || isClaiming) return;
+    startClaim(async () => {
+      const res = await claimSimOutcome({
+        token: props.token,
+        goalsScored: props.myGoals,
+        goalsConceded: props.oppGoals,
+      });
+      setClaimResult(res);
+      if (res.ok) {
+        setHasClaimed(true);
+        try {
+          localStorage.setItem(claimKey, JSON.stringify(res));
+        } catch {
+          /* noop */
+        }
+      }
+    });
+  };
 
   useEffect(() => {
     const timers: ReturnType<typeof setTimeout>[] = [];
@@ -315,6 +363,81 @@ export function SimReveal(props: SimRevealProps) {
             pointerEvents: stage === 'done' ? 'auto' : 'none',
           }}
         >
+          {/* Lock-this-in CTA — the chess.com moment. Fires the
+              server action to apply attribute deltas to the twin. */}
+          {!hasClaimed ? (
+            <button
+              type="button"
+              onClick={onClaim}
+              disabled={isClaiming}
+              style={{
+                background: result === 'win' ? PALETTE.sage : PALETTE.ink,
+                color: PALETTE.cream,
+                padding: '18px 20px',
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 14,
+                fontWeight: 700,
+                letterSpacing: '0.12em',
+                textTransform: 'uppercase',
+                textAlign: 'center',
+                border: `2px solid ${result === 'win' ? PALETTE.sage : PALETTE.ink}`,
+                cursor: isClaiming ? 'wait' : 'pointer',
+                opacity: isClaiming ? 0.7 : 1,
+              }}
+            >
+              {isClaiming ? 'Locking in…' : 'Lock this in · move my card →'}
+            </button>
+          ) : claimResult?.ok && claimResult.deltas ? (
+            <div
+              style={{
+                background: PALETTE.cream,
+                border: `2px solid ${PALETTE.sage}`,
+                borderLeft: `8px solid ${PALETTE.sage}`,
+                padding: '18px 20px',
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: 'JetBrains Mono, monospace',
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase',
+                  color: PALETTE.sage,
+                  marginBottom: 8,
+                }}
+              >
+                Locked in · this is now your card
+              </div>
+              <div
+                style={{
+                  fontFamily: 'Antonio, Impact, sans-serif',
+                  fontSize: 28,
+                  fontWeight: 800,
+                  lineHeight: 1.05,
+                  textTransform: 'uppercase',
+                  letterSpacing: '-0.01em',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: 12,
+                }}
+              >
+                {Object.entries(claimResult.deltas).map(([attr, delta]) => {
+                  const d = delta as number;
+                  if (!d) return null;
+                  const sign = d > 0 ? '+' : '';
+                  const color = d > 0 ? PALETTE.sage : PALETTE.red;
+                  return (
+                    <span key={attr} style={{ color }}>
+                      {ATTR_LABEL[attr] ?? attr.toUpperCase()} {sign}
+                      {d}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          ) : null}
+
           <a
             href={props.shareUrl}
             target="_blank"
@@ -387,8 +510,9 @@ export function SimReveal(props: SimRevealProps) {
             fontStyle: 'italic',
           }}
         >
-          This was a simulation — none of it counts toward your record.
-          The real one's Tuesday. See you there.
+          One claimed sim per day moves your card by ±1 in a couple of
+          attributes. The real test is Tuesday — peer ratings + the night's
+          goals do most of the moving.
         </p>
       </div>
 

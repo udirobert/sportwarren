@@ -19,6 +19,12 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { MiniAvatar, PALETTE } from '../_components/MiniAvatar';
+import {
+  baselineForPosition,
+  compareToGroup,
+  computeOverall,
+} from '@/server/services/personalization/position-baselines';
+import type { AttributeKey } from '@/server/services/personalization/twin-types';
 
 
 interface PageProps {
@@ -40,19 +46,25 @@ function ordinal(n: number): string {
   return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`;
 }
 
-// Each unknown slot is paired with the verified-third-party path that fills
-// it. Stats are never self-editable; this list is the visible API for that.
-const UNKNOWN_SLOTS: Array<{
+// The six chess.com-style attribute bars. Each is tagged with the
+// VERIFIED path that moves it — "stats are never self-editable" from
+// AGENTS.md still holds. Drills move XP, not these numbers.
+const ATTRIBUTE_VIEWS: Array<{
+  key: AttributeKey;
+  short: string;
   label: string;
-  hint: string;
-  via: string;
-  accent: 'sage' | 'mustard' | 'navy' | 'red';
+  movedBy: string;
+  accent: 'red' | 'sage' | 'mustard' | 'navy';
 }> = [
-  { label: 'Pace', hint: 'Bleep test', via: 'Verified by the lads at the next session', accent: 'sage' },
-  { label: 'Endurance', hint: 'Link Strava', via: 'Synced from your real runs', accent: 'mustard' },
-  { label: 'Composure', hint: 'Earn it on the pitch', via: 'Captured by the match log over time', accent: 'navy' },
-  { label: 'Finishing', hint: 'Let the lads rate you', via: 'Aggregated from peer votes — needs 5+', accent: 'red' },
+  { key: 'pace',      short: 'PAC', label: 'Pace',      movedBy: 'Link Strava · run splits',              accent: 'mustard' },
+  { key: 'shooting',  short: 'SHO', label: 'Shooting',  movedBy: 'Goals + peer ratings on finishing',     accent: 'red' },
+  { key: 'passing',   short: 'PAS', label: 'Passing',   movedBy: 'Match data + peer consensus',           accent: 'navy' },
+  { key: 'dribbling', short: 'DRI', label: 'Dribbling', movedBy: 'Match data + peer ratings',             accent: 'sage' },
+  { key: 'defending', short: 'DEF', label: 'Defending', movedBy: 'Tackles, clean sheets + peer ratings',  accent: 'navy' },
+  { key: 'physical',  short: 'PHY', label: 'Physical',  movedBy: 'Bleep test + Strava endurance',         accent: 'red' },
 ];
+
+type BaseAttributes = Record<AttributeKey, number>;
 
 export default async function PreviewPage({ params }: PageProps) {
   const { token } = await params;
@@ -60,7 +72,7 @@ export default async function PreviewPage({ params }: PageProps) {
   const user = await prisma.user.findUnique({
     where: { walletAddress: token },
     include: {
-      playerProfile: true,
+      playerProfile: { include: { twin: true } },
       squads: {
         include: {
           squad: true,
@@ -122,6 +134,29 @@ export default async function PreviewPage({ params }: PageProps) {
         prisma.peerRating.count({ where: { targetId: profile.id } }),
       ])
     : [0, 0];
+
+  // Chess.com card data — pull this player's twin attributes and every
+  // squad-mate's twin attributes so we can show per-attribute group avg.
+  const myAttrs: BaseAttributes = (profile?.twin?.baseAttributes as BaseAttributes | null) ?? baselineForPosition(user.position);
+  const myLevel = profile?.twin?.level ?? 1;
+  const myPrestige = profile?.twin?.prestige ?? 0;
+  const overall = computeOverall(myAttrs, user.position, myLevel, myPrestige);
+
+  const squadTwins = await prisma.playerTwin.findMany({
+    where: { profile: { user: { squads: { some: { squadId: squad.id } } } } },
+    select: { profileId: true, baseAttributes: true },
+  });
+  const groupByAttr: Record<AttributeKey, number[]> = {
+    pace: [], shooting: [], passing: [], dribbling: [], defending: [], physical: [],
+  };
+  for (const t of squadTwins) {
+    if (t.profileId === profile?.id) continue;
+    const attrs = t.baseAttributes as BaseAttributes | null;
+    if (!attrs) continue;
+    for (const k of Object.keys(groupByAttr) as AttributeKey[]) {
+      if (typeof attrs[k] === 'number') groupByAttr[k].push(attrs[k]);
+    }
+  }
 
   const avatar = {
     kit: user.avatarKitColor ?? PALETTE.red,
@@ -290,9 +325,66 @@ export default async function PreviewPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* What we don't know — the unknown slots panel. Each missing
-            attribute is shown as a hollow card with a question mark and
-            the verified path that fills it. Empty is the hook. */}
+        {/* Overall badge — the chess.com single number, prominent so
+            players see their rank in the hierarchy at a glance. */}
+        <div
+          style={{
+            background: PALETTE.ink,
+            color: PALETTE.cream,
+            padding: '24px 26px',
+            marginBottom: 16,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 18,
+            borderLeft: `8px solid ${PALETTE.mustard}`,
+          }}
+        >
+          <div>
+            <div
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: '0.22em',
+                textTransform: 'uppercase',
+                color: PALETTE.mustard,
+                marginBottom: 6,
+              }}
+            >
+              Overall · level {myLevel}
+            </div>
+            <div
+              style={{
+                fontFamily: 'JetBrains Mono, monospace',
+                fontSize: 11,
+                color: PALETTE.cream,
+                opacity: 0.8,
+                lineHeight: 1.45,
+                maxWidth: 320,
+              }}
+            >
+              Your starting rating. Sims, peer ratings, and verified runs
+              move it up or down. Refresh after Tuesday to see it shift.
+            </div>
+          </div>
+          <div
+            style={{
+              fontFamily: 'Antonio, Impact, sans-serif',
+              fontSize: 84,
+              fontWeight: 800,
+              lineHeight: 0.9,
+              letterSpacing: '-0.03em',
+              color: PALETTE.mustard,
+            }}
+          >
+            {overall}
+          </div>
+        </div>
+
+        {/* The chess.com six-bar card. Each attribute is rendered as a
+            bar with the player's value + group avg marker + a one-line
+            "How to move this" tied to a verified path. */}
         <div style={{ marginBottom: 28 }}>
           <div
             style={{
@@ -307,84 +399,127 @@ export default async function PreviewPage({ params }: PageProps) {
               textTransform: 'uppercase',
             }}
           >
-            <span style={{ color: PALETTE.navy }}>What we don't know yet</span>
+            <span style={{ color: PALETTE.navy }}>Your card · {user.position ?? '—'}</span>
             <span style={{ color: PALETTE.inkLight, fontSize: 10 }}>
-              {UNKNOWN_SLOTS.length} blanks · 0 filled
+              vs {squadTwins.length - (profile?.twin ? 1 : 0)} lads in the group
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {UNKNOWN_SLOTS.map((slot) => {
-              const accentColor = PALETTE[slot.accent];
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {ATTRIBUTE_VIEWS.map((view) => {
+              const accentColor = PALETTE[view.accent];
+              const value = myAttrs[view.key] ?? 50;
+              const { groupAvg, verdict } = compareToGroup(value, groupByAttr[view.key]);
+              const verdictCopy =
+                verdict === 'ahead'
+                  ? `+${value - groupAvg} vs group`
+                  : verdict === 'behind'
+                  ? `${value - groupAvg} vs group`
+                  : `parity (${groupAvg} group avg)`;
+              const verdictColor =
+                verdict === 'ahead' ? PALETTE.sage : verdict === 'behind' ? PALETTE.red : PALETTE.inkLight;
               return (
                 <div
-                  key={slot.label}
+                  key={view.key}
                   style={{
-                    border: `2px dashed ${accentColor}`,
-                    padding: '14px 16px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 16,
-                    background: 'rgba(0,0,0,0.015)',
+                    border: `1px solid ${PALETTE.ink}`,
+                    padding: '12px 14px 14px',
+                    background: PALETTE.cream,
                   }}
                 >
                   <div
                     style={{
-                      fontFamily: 'Antonio, Impact, sans-serif',
-                      fontSize: 40,
-                      fontWeight: 800,
-                      lineHeight: 1,
-                      color: accentColor,
-                      minWidth: 32,
-                      textAlign: 'center',
+                      display: 'flex',
+                      alignItems: 'baseline',
+                      gap: 10,
+                      marginBottom: 8,
                     }}
                   >
-                    ?
-                  </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
+                    <span
                       style={{
-                        display: 'flex',
-                        alignItems: 'baseline',
-                        gap: 10,
-                        flexWrap: 'wrap',
+                        fontFamily: 'Antonio, Impact, sans-serif',
+                        fontSize: 22,
+                        fontWeight: 800,
+                        letterSpacing: '-0.01em',
+                        color: accentColor,
+                        minWidth: 48,
                       }}
                     >
-                      <span
-                        style={{
-                          fontFamily: 'Antonio, Impact, sans-serif',
-                          fontSize: 22,
-                          fontWeight: 800,
-                          letterSpacing: '-0.01em',
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {slot.label}
-                      </span>
-                      <span
-                        style={{
-                          fontFamily: 'JetBrains Mono, monospace',
-                          fontSize: 10,
-                          fontWeight: 700,
-                          letterSpacing: '0.16em',
-                          textTransform: 'uppercase',
-                          color: accentColor,
-                        }}
-                      >
-                        → {slot.hint}
-                      </span>
-                    </div>
-                    <div
+                      {view.short}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: 'Antonio, Impact, sans-serif',
+                        fontSize: 28,
+                        fontWeight: 800,
+                        lineHeight: 1,
+                        letterSpacing: '-0.02em',
+                      }}
+                    >
+                      {value}
+                    </span>
+                    <span
                       style={{
                         fontFamily: 'JetBrains Mono, monospace',
-                        fontSize: 11,
-                        lineHeight: 1.45,
-                        color: PALETTE.inkLight,
-                        marginTop: 4,
+                        fontSize: 10,
+                        fontWeight: 700,
+                        letterSpacing: '0.14em',
+                        textTransform: 'uppercase',
+                        color: verdictColor,
+                        marginLeft: 'auto',
                       }}
                     >
-                      {slot.via}
-                    </div>
+                      {verdictCopy}
+                    </span>
+                  </div>
+
+                  {/* Bar with the player's value filled + group-avg tick */}
+                  <div
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      height: 6,
+                      background: 'rgba(0,0,0,0.08)',
+                      marginBottom: 8,
+                    }}
+                  >
+                    <div
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        height: '100%',
+                        width: `${Math.max(0, Math.min(99, value))}%`,
+                        background: accentColor,
+                      }}
+                    />
+                    {/* Group-avg tick */}
+                    {groupByAttr[view.key].length > 0 && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: -3,
+                          left: `${Math.max(0, Math.min(99, groupAvg))}%`,
+                          width: 2,
+                          height: 12,
+                          background: PALETTE.ink,
+                          transform: 'translateX(-1px)',
+                        }}
+                      />
+                    )}
+                  </div>
+
+                  <div
+                    style={{
+                      fontFamily: 'JetBrains Mono, monospace',
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      color: PALETTE.inkLight,
+                    }}
+                  >
+                    → {view.movedBy}
                   </div>
                 </div>
               );
@@ -487,9 +622,26 @@ export default async function PreviewPage({ params }: PageProps) {
           </p>
         </div>
 
-        {/* CTAs — the kit CTA is explicitly tagged as vanity so the
-            stat-immutability principle is visible at the action layer. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        {/* "Train your card" — the chess.com-style action menu. Sim is
+            the headline (it actually moves the card now). Drill is the
+            daily-engagement loop. Tactics is a scaffold pointing at the
+            post-Tuesday lichess-training equivalent. Customize is the
+            vanity-only escape hatch. */}
+        <div
+          style={{
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: '0.22em',
+            textTransform: 'uppercase',
+            color: PALETTE.navy,
+            marginBottom: 14,
+          }}
+        >
+          Train your card
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <Link
             href={`/preview/${encodeURIComponent(token)}/sim`}
             style={{
@@ -507,11 +659,31 @@ export default async function PreviewPage({ params }: PageProps) {
               display: 'block',
             }}
           >
-            See what your twin does vs the lads →
+            Sim a match · move your numbers →
           </Link>
 
           <Link
-            href={`/preview/${encodeURIComponent(token)}/customize`}
+            href={`/preview/${encodeURIComponent(token)}/drill`}
+            style={{
+              background: 'transparent',
+              color: PALETTE.ink,
+              padding: '14px 20px',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 13,
+              fontWeight: 700,
+              letterSpacing: '0.1em',
+              textTransform: 'uppercase',
+              textAlign: 'center',
+              border: `2px solid ${PALETTE.sage}`,
+              textDecoration: 'none',
+              display: 'block',
+            }}
+          >
+            Today's drill · +1 on your weakest →
+          </Link>
+
+          <Link
+            href={`/preview/${encodeURIComponent(token)}/tactics`}
             style={{
               background: 'transparent',
               color: PALETTE.ink,
@@ -525,6 +697,27 @@ export default async function PreviewPage({ params }: PageProps) {
               border: `2px solid ${PALETTE.navy}`,
               textDecoration: 'none',
               display: 'block',
+            }}
+          >
+            Tactics puzzle · scaffold →
+          </Link>
+
+          <Link
+            href={`/preview/${encodeURIComponent(token)}/customize`}
+            style={{
+              background: 'transparent',
+              color: PALETTE.inkLight,
+              padding: '12px 20px',
+              fontFamily: 'JetBrains Mono, monospace',
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: '0.14em',
+              textTransform: 'uppercase',
+              textAlign: 'center',
+              border: `1px solid ${PALETTE.inkLight}`,
+              textDecoration: 'none',
+              display: 'block',
+              marginTop: 6,
             }}
           >
             Pick your kit (vanity only — won't change stats)
