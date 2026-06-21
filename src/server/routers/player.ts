@@ -24,7 +24,7 @@ const playerProfileInclude = {
     orderBy: { createdAt: 'desc' },
     take: 5,
   },
-  user: { select: { name: true, avatar: true, position: true, walletAddress: true, ensName: true, walletLabel: true } },
+  user: { select: { name: true, avatar: true, position: true, walletAddress: true, ensName: true, walletLabel: true, discoverable: true, handle: true } },
   twin: {
     include: {
       agent: {
@@ -347,6 +347,54 @@ export const playerRouter = createTRPCRouter({
         throw new TRPCError({
           code: 'INTERNAL_SERVER_ERROR',
           message: 'Failed to resolve ENS name',
+          cause: error,
+        });
+      }
+    }),
+
+  /**
+   * Update player-level privacy settings — discoverable (opts the player
+   * into scout indexing independent of squad visibility) + handle (the
+   * URL slug for /player/{handle}).
+   *
+   * Handle rules: lowercase, alphanumeric + dash, 3-30 chars. The
+   * `@unique` index on User.handle enforces global uniqueness; we
+   * surface a friendly error when it collides.
+   */
+  updatePrivacy: protectedProcedure
+    .input(z.object({
+      discoverable: z.boolean().optional(),
+      handle: z.string()
+        .trim()
+        .toLowerCase()
+        .min(3, 'Handle must be at least 3 characters')
+        .max(30, 'Handle must be 30 characters or fewer')
+        .regex(/^[a-z0-9-]+$/, 'Handle can only contain lowercase letters, numbers, and dashes')
+        .nullable()
+        .optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const updateData: Record<string, unknown> = {};
+      if (input.discoverable !== undefined) updateData.discoverable = input.discoverable;
+      if (input.handle !== undefined) updateData.handle = input.handle;
+
+      try {
+        await ctx.prisma.user.update({
+          where: { id: ctx.userId! },
+          data: updateData,
+        });
+        return { success: true };
+      } catch (error) {
+        // Prisma uniqueness violation
+        if (typeof error === 'object' && error !== null && 'code' in error && (error as { code?: string }).code === 'P2002') {
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Handle already taken — pick another.',
+          });
+        }
+        throw new TRPCError({
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'Failed to update privacy settings',
           cause: error,
         });
       }

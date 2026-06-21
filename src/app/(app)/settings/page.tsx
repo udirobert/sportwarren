@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { Settings, Wallet, User, Bell, Link2, Check, X, Copy, LogOut, Trophy, Target, Star, MessageCircle, ShieldAlert, ShieldCheck, Camera, Edit3, RefreshCw } from 'lucide-react';
+import { Settings, Wallet, User, Bell, Link2, Check, X, Copy, LogOut, Trophy, Target, Star, MessageCircle, ShieldAlert, ShieldCheck, Camera, Edit3, RefreshCw, Eye } from 'lucide-react';
 import { useWallet } from '@/contexts/WalletContext';
 import { useMySquads } from '@/hooks/squad/useSquad';
 import { usePlatformConnections } from '@/hooks/usePlatformConnections';
@@ -16,9 +16,11 @@ import { PlatformType, NotificationPreferences, PLATFORM_CONFIG } from '@/types'
 import type { PlayerPosition } from '@/types';
 import { trackFeatureUsed } from '@/lib/analytics';
 import { buildTelegramDeepLink } from '@/lib/telegram/deep-links';
+import { PrivacyTab } from './PrivacyTab';
 
 const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
+  { id: 'privacy', label: 'Privacy', icon: Eye },
   { id: 'connections', label: 'Connections', icon: Link2 },
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'wallet', label: 'Wallet', icon: Wallet },
@@ -599,6 +601,21 @@ export default function SettingsPage() {
             </div>
           )}
         </div>
+      )}
+
+      {/* Privacy Tab */}
+      {activeTab === 'privacy' && (
+        <PrivacyTab
+          initialDiscoverable={currentProfile?.user?.discoverable ?? false}
+          initialHandle={currentProfile?.user?.handle ?? null}
+          captainSquads={(memberships ?? [])
+            .filter((m) => m.role === 'captain' || m.role === 'vice_captain')
+            .map((m) => ({
+              id: m.squad.id,
+              name: m.squad.name,
+              visibility: m.squad.visibility ?? 'private',
+            }))}
+        />
       )}
 
       {/* Connections Tab */}

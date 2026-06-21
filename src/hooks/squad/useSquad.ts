@@ -13,6 +13,7 @@ interface Squad {
   homeGround?: string;
   treasuryBalance: number;
   memberCount: number;
+  visibility?: 'private' | 'group_only' | 'public';
 }
 
 interface SquadMember {
@@ -72,6 +73,7 @@ function transformSquad(squad: any): Squad {
     homeGround: squad.homeGround || undefined,
     treasuryBalance: squad.treasuryBalance,
     memberCount: squad._count?.members || 0,
+    visibility: squad.visibility ?? 'private',
   };
 }
 

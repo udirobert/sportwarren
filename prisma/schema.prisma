@@ -35,6 +35,13 @@ model User {
   avatarNumber      String?  @map("avatar_number")
   avatarLocked      Boolean  @default(false) @map("avatar_locked")
 
+  // Public-profile + scout-discoverability (see docs/flywheel.md "Privacy
+  // gradient" + AGENTS.md "Engagement rules"). The handle is the slug for
+  // /player/{handle}; discoverable opts the player into scout indexing
+  // independent of any squad's visibility setting.
+  handle       String?  @unique
+  discoverable Boolean  @default(false)
+
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -195,6 +202,14 @@ model Squad {
 
   // Placeholder squads auto-created from match logging (opponent not yet on platform)
   isPlaceholder Boolean @default(false) @map("is_placeholder")
+
+  // Public-profile visibility gradient. Default private (kickabout / Sunday
+  // League captain wedge — preservation is intimate). Captain toggles
+  // via the Settings → Privacy tab. Player-level discoverability
+  // (User.discoverable) is INDEPENDENT — a player can opt into scout
+  // indexing even if their squad is private (their own card is theirs).
+  // Values: "private" | "group_only" | "public"
+  visibility String @default("private")
 
   // Weekly Schedule (0=Sunday, 1=Monday, etc.)
   preferredMatchDay Int @default(0) @map("preferred_match_day")

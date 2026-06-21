@@ -233,6 +233,8 @@ export interface CareerHighlight {
 // SQUAD DOMAIN
 // ============================================================================
 
+export type SquadVisibility = 'private' | 'group_only' | 'public';
+
 export interface Squad {
   id: string;
   name: string;
@@ -243,6 +245,9 @@ export interface Squad {
   treasury: Treasury;
   tactics: Tactics;
   reputation: number;
+  // Public-profile visibility — controls /squad/{shortName} resolution.
+  // Default 'private' for new squads (preservation is intimate).
+  visibility?: SquadVisibility;
 }
 
 export interface SquadPlayer extends Player {
