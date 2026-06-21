@@ -1,5 +1,12 @@
 'use client';
 
+// TODO(flywheel): This widget is currently hidden via PHASE_1_HIDDEN_WIDGET_IDS
+// in AdaptiveDashboard.tsx. It duplicates the preview-side drill flow at
+// src/app/preview/[token]/drill/ (which writes directly to PlayerTwin via a
+// server action, vs this widget's TwinService.recordEvent('daily_drill') route).
+// Post-Tuesday these two surfaces should converge — single source of truth
+// for the daily drill. See docs/flywheel.md items #1, #7.
+
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Dumbbell, CheckCircle2, Flame, Zap } from 'lucide-react';
