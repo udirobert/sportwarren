@@ -31,30 +31,14 @@ export const SolutionSection: React.FC = () => (
   <section
     aria-label="The solution"
     className="relative overflow-hidden py-16 sm:py-32"
-    style={{
-      // Same atmospheric verdant gradient as the hero — dusk →
-      // pitch → dusk. The "solution" is the game returning, so it
-      // gets the same atmospheric verdant register, not a flat block.
-      background: `linear-gradient(180deg, ${PALETTE.dusk} 0%, #4a6428 18%, ${PALETTE.pitch} 50%, #4a6428 82%, ${PALETTE.dusk} 100%)`,
-      color: PALETTE.cream,
-    }}
+    style={{ background: PALETTE.pitch, color: PALETTE.cream }}
   >
-    <div
-      className="absolute top-0 -left-4 w-96 h-96 rounded-full mix-blend-screen filter blur-3xl opacity-20"
-      style={{ background: PALETTE.mustard }}
-      aria-hidden="true"
-    />
-    <div
-      className="absolute bottom-0 -right-4 w-96 h-96 rounded-full mix-blend-screen filter blur-3xl opacity-15"
-      style={{ background: PALETTE.sage }}
-      aria-hidden="true"
-    />
-    <V4PaperGrain opacity={0.09} zIndex={1} />
+    <V4PaperGrain opacity={0.05} zIndex={1} />
     <div className="absolute top-0 left-0 right-0 z-[2]" aria-hidden="true">
-      <V4ChalkLine thickness={2} opacity={0.45} />
+      <V4ChalkLine thickness={2} opacity={0.5} />
     </div>
     <div className="absolute bottom-0 left-0 right-0 z-[2]" aria-hidden="true">
-      <V4ChalkLine thickness={2} opacity={0.45} />
+      <V4ChalkLine thickness={2} opacity={0.5} />
     </div>
 
     <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
