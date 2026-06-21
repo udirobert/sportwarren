@@ -447,7 +447,7 @@ export default async function RecapPage({ params }: PageProps) {
             border: `2px solid ${PALETTE.red}`,
             textDecoration: 'none',
             display: 'block',
-            marginBottom: 16,
+            marginBottom: 12,
           }}
         >
           {givenEnough
@@ -455,6 +455,27 @@ export default async function RecapPage({ params }: PageProps) {
             : givenCount === 0
             ? 'Pick your Team of the Night →'
             : `Keep rating · ${RATING_THRESHOLD - givenCount} to go →`}
+        </Link>
+
+        <Link
+          href={`/session/${encodeURIComponent(sessionId)}/analysis/${encodeURIComponent(playerToken)}`}
+          style={{
+            background: 'transparent',
+            color: PALETTE.ink,
+            padding: '14px 20px',
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            textAlign: 'center',
+            border: `2px solid ${PALETTE.navy}`,
+            textDecoration: 'none',
+            display: 'block',
+            marginBottom: 16,
+          }}
+        >
+          See how your card moved tonight →
         </Link>
 
         <p

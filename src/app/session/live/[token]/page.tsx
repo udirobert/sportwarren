@@ -184,11 +184,32 @@ function StartScreen({ token, squadName }: { token: string; squadName: string })
               border: `2px solid ${PALETTE.red}`,
               width: '100%',
               cursor: 'pointer',
+              marginBottom: 12,
             }}
           >
             Start the session →
           </button>
         </form>
+
+        <Link
+          href={`/session/live/${encodeURIComponent(token)}/teams`}
+          style={{
+            background: 'transparent',
+            color: PALETTE.ink,
+            padding: '16px 20px',
+            fontFamily: 'JetBrains Mono, monospace',
+            fontSize: 13,
+            fontWeight: 700,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            textAlign: 'center',
+            border: `2px solid ${PALETTE.navy}`,
+            textDecoration: 'none',
+            display: 'block',
+          }}
+        >
+          Pick balanced teams first →
+        </Link>
       </div>
     </div>
   );
