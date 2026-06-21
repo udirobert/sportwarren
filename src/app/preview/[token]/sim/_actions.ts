@@ -12,9 +12,12 @@
  *   - Client-side localStorage guard (in SimReveal) keeps the UX honest
  *     for the happy path; no server-side idempotency check by design.
  *
- * Post-Tuesday this should be routed through TwinService.recordEvent
- * with kind: 'admin_adjustment' so the full attestation + moment
- * pipeline fires. Tracked in docs/product-calibration.md.
+ * TODO(flywheel): Re-route through TwinService.recordEvent with a new
+ * `previewMode: true` flag that skips Kite signing + moment rendering
+ * + notification dispatch but keeps event sourcing + idempotency. See
+ * docs/flywheel.md item #1 — "Unify the twin write path". This file
+ * is one of two places that bypass TwinService; the other is
+ * src/app/preview/[token]/drill/_actions.ts.
  */
 
 'use server';

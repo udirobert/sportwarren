@@ -43,7 +43,10 @@ for that impulse.
   the preservation thesis.
 
 Read `docs/VISION.md` for the full articulation; `docs/product-calibration.md`
-for the current phase-1 scope decision.
+for the current phase-1 scope decision; `docs/flywheel.md` for the
+post-Tuesday closed-loop architecture (team allocation, post-session
+analysis, twin write-path unification, Bibs Optimizer for kickabouts
++ formation recommendation for fixed squads).
 
 ## Engagement rules
 

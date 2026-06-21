@@ -10,6 +10,17 @@
  * anyone actually ran sprint intervals. Post-Tuesday this is the
  * surface that gates Strava OAuth: the verified-third-party path
  * is what makes the drill grant move attributes.
+ *
+ * TODO(flywheel): Two debts to clear after Tuesday (see docs/flywheel.md):
+ *   1. Route through TwinService.recordEvent({ kind: 'daily_drill', ... })
+ *      with a `previewMode: true` flag — single funnel for all twin
+ *      mutations. The existing `daily-drill` event applier already
+ *      handles the math.
+ *   2. Deduplicate with src/components/dashboard/DailyDrillWidget.tsx
+ *      (hidden behind PHASE_1_HIDDEN_WIDGET_IDS) — same intent, two
+ *      surfaces, two write paths. Pick one.
+ *   3. Bias the target attribute toward intersection of player-weakest
+ *      AND squad-weakest, so the squad becomes a co-protagonist.
  */
 
 'use server';
