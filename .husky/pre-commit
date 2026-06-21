@@ -44,7 +44,9 @@ fi
 
 # Phone-number check — block any E.164-shaped number outside the
 # allowlisted paths (docs/*.md may reference format examples).
-PHONE_FILES=$(echo "$FILES" | grep -vE '\.md$|\.husky/')
+# `|| true` because grep -v exits 1 when all lines are filtered out
+# (e.g. docs-only commit), which under `sh -e` would abort the hook.
+PHONE_FILES=$(echo "$FILES" | grep -vE '\.md$|\.husky/' || true)
 if [ -n "$PHONE_FILES" ]; then
   PHONE_MATCHES=$(echo "$PHONE_FILES" | xargs grep -EnH "$PHONE_PATTERN" 2>/dev/null || true)
   if [ -n "$PHONE_MATCHES" ]; then
