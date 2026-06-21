@@ -18,7 +18,6 @@ import {
 import { getSquadMembership, isSquadLeader } from '../services/permissions';
 import { kiteAIService } from '../services/ai/kite';
 import { autonomyPolicy } from '../services/ai/autonomy-policy';
-import { algorandService } from '../services/blockchain/algorand';
 import { getTwinService } from '../services/personalization/twin-service';
 import { generateSquadNarrative } from '../services/personalization/narrative';
 import { identityService } from '../services/personalization/identity';
@@ -2114,6 +2113,7 @@ export const squadRouter = createTRPCRouter({
               
               // We'll create the proposal on-chain
               // NOTE: In a real app, we might want to store the proposal ID in Prisma too
+              const { algorandService } = await import('../services/blockchain/algorand');
               const success = await algorandService.createProposal(
                 ctx.walletAddress,
                 description,
