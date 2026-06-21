@@ -125,63 +125,6 @@ when their owners opt in. Both use the canonical V3 card via
   `#squad-import-wizard`) + Player ("Build your card" → existing
   PlayerCardPreview flow). Visible to public visitors only.
 
-### V3 + V4 design registers — the dual aesthetic
-
-SportWarren runs on two paired design registers:
-
-- **V3 — the RECORD** (editorial / archival).
-  Cream paper + ink + 4 accents (red / navy / sage / mustard).
-  Antonio display + JetBrains Mono. Used wherever the brand is
-  about *preservation* — the chess.com card, the post-session
-  recap, the player profile, the squad page, the procedural
-  explainer ("how it works"), and *the problem* framing ("rec
-  players are invisible").
-- **V4 — the GAME** (pitch / verdant).
-  Solid blocks of `pitch` (warm grass) or `dusk` (mud / boots
-  after a wet game). Cream/chalk type on top. Paper-grain
-  overlay. Chalk-line edges. NO gradients, NO glow. Used wherever
-  the brand is about *the lived experience of playing* — the
-  homepage hero, *the solution* moment, the app-preview section,
-  any marketing CTA that says "this is about the game itself."
-
-Both registers share the same typography (Antonio + JetBrains
-Mono) and the same V3 accent colors. V4 only adds `pitch`, `dusk`,
-`chalk`, `worn` — the verdant axis. Both modules live side-by-side
-in `src/components/`:
-
-| Module | Location | Imports |
-|---|---|---|
-| Tokens | `src/components/v3/tokens.ts` | both V3 + V4 colors live here |
-| V3 primitives | `src/components/v3/primitives.tsx` | `V3PageShell`, `V3Ribbon`, `V3IdentityLine`, `V3Heading`, `V3SectionLabel`, `V3StatBand`, `V3CTAButton`, `V3HollowCard`, `V3SolidCard` |
-| V3 barrel | `src/components/v3/index.ts` | one-stop for V3 + re-exports V3PlayerCard |
-| V4 primitives | `src/components/v4/primitives.tsx` | `V4PitchPanel`, `V4PaperGrain`, `V4ChalkLine`, `V4Heading`, `V4Label` |
-| V4 barrel | `src/components/v4/index.ts` | one-stop for V4 + re-exports tokens |
-
-**Rules:**
-- Never hardcode a color hex. Import `PALETTE` from `@/components/v3` or `@/components/v4`.
-- Never inline a 4-color ribbon, a stat-band, a CTA button, or a chess.com card row — use the primitives.
-- If a pattern repeats 3+ times across V3 or V4 surfaces, promote it into the relevant `primitives.tsx`.
-- V4 surfaces use **solid colors, not gradients**. If you reach for `bg-gradient-…`, stop — the V4 brutalist register is "single block of pitch with paper grain on top, chalk lines at edges."
-
-**Narrative arc (homepage):**
-
-```
-Hero (V4 pitch) — claim your spot
-  ↓
-Problem (V3 cream) — rec players are invisible
-  ↓
-Solution (V4 pitch) — build, verify, grow
-  ↓
-How it works (V3 cream) — four steps
-  ↓
-App preview (V4 pitch) — your command center
-```
-
-Pitch → cream → pitch → cream → pitch. The eye reads the page
-like reading a programme cover then opening it to the diagnosis
-inside, then back to a glossy verdant page, then the rules, then
-the matchday photos.
-
 ### V3 design system
 
 Single source of truth lives at `src/components/v3/`:
