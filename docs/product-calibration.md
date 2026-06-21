@@ -146,6 +146,30 @@ and we bring features back, calibrated.
 Either way you get information you can't get any other way. The
 slim isn't a deletion. It's a *test*.
 
+## Engagement layer (added 2026-06-21)
+
+The slim trimmed the *surface*. The engagement rules give it teeth.
+After seeding three real preview links and reviewing them, the pages
+read informational, not provocative. Three changes landed to fix that:
+
+1. **Preview reframe** — replaced the descriptive "What this is" block
+   with a "What we don't know yet" panel of empty attribute slots, each
+   tagged with the verified-third-party path that fills it (Strava,
+   bleep test, peer ratings). Added rank-with-ties framing to the goal
+   stat ("1 goal · joint 4th"). Stated the stat-immutability rule
+   verbatim on the page.
+2. **Reciprocity gate** on `/session/recap/[id]/[token]` — SubmitHub
+   loop. Your card unlocks once you've rated 5 teammates; receiving
+   ratings is gated by giving them. Counts scoped per-session via
+   `peerRating.count({ where: { …, match: { sessionId } } })`.
+3. **Canonical identity comment** in `prisma/schema.prisma` —
+   `PlatformIdentity.platformUserId` now explicitly documents the
+   canonical-identity intent; the `@@unique([platform, platformUserId])`
+   constraint that enforces "one canonical Kim per phone" was already
+   in place.
+
+See `AGENTS.md` → "Engagement rules" for the consolidated doctrine.
+
 ## Related files
 
 - `docs/makeathon/post-submission-roadmap.md` — earlier roadmap;

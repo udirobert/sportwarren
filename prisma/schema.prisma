@@ -326,8 +326,11 @@ model PlatformIdentity {
   userId String @map("user_id")
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  platform       String // telegram, discord
-  platformUserId String  @map("platform_user_id") // Telegram user ID (stable)
+  platform       String // telegram, discord, whatsapp
+  // Canonical identity anchor for the (platform, user) pair. For WhatsApp
+  // this is the normalised E.164 phone — the spine of the "one canonical
+  // Kim" rule. The @@unique below enforces it at the DB.
+  platformUserId String  @map("platform_user_id")
   chatId         String? @map("chat_id") // Last group chat context
   username       String?
   firstName      String? @map("first_name") // Telegram first name

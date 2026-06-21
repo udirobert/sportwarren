@@ -45,6 +45,36 @@ for that impulse.
 Read `docs/VISION.md` for the full articulation; `docs/product-calibration.md`
 for the current phase-1 scope decision.
 
+## Engagement rules
+
+Non-negotiable design rules for every player-facing surface (preview,
+recap, customize, rate). They distinguish preservation from gamification.
+
+- **Stats are never self-editable.** Players edit *vanity* (kit, hair,
+  jersey number) via `/preview/[token]/customize`. They cannot edit
+  goals, ratings, attributes, or rank. Numbers move only via verified
+  third-party proof — peer ratings, Strava sync, bleep-test capture
+  with teammate verification. Say this out loud in the UI: "These
+  numbers are how the group remembers you. You can't fake them."
+- **Provocation lives in the empty slot.** Preview pages show what we
+  know AND what we don't, with each blank tagged with how to fill it
+  (`UNKNOWN_SLOTS` in `src/app/preview/[token]/page.tsx`). An unfilled
+  "Endurance · ?" with a "Link Strava" hint outperforms any filled
+  stat dump for first-contact engagement.
+- **Reciprocity gate on peer rating.** SubmitHub loop — your rating
+  card unlocks only after you've rated 5 teammates. Lives in
+  `src/app/session/recap/[sessionId]/[playerToken]/page.tsx`, counted
+  via `prisma.peerRating.count` scoped to `match.sessionId`.
+- **Canonical identity = phone.** `PlatformIdentity (platform,
+  platformUserId)` is `@@unique` — one canonical Kim per phone, period.
+  Profile edits gated by the per-player preview token (sent via WA DM).
+  Full OTP account-claim is phase 2; the schema constraint is half of
+  it and is already shipped.
+- **Phone numbers never appear on player-facing surfaces.** Only the
+  captain's broadcast UI (`/session/broadcast/.../page.tsx`, gated by
+  organizer token) renders them. Audit every new player-facing page
+  against this rule.
+
 ## Project-specific guidance
 
 ### Stack

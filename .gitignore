@@ -101,3 +101,7 @@ docs/DEPLOY_HETZNER_RUNTIME.md
 
 # TypeScript incremental compile cache
 tsconfig.tsbuildinfo
+
+# Player rosters — contain real phone numbers, never commit
+scripts/seed-kickabout-roster*.json
+scripts/*-roster.json
