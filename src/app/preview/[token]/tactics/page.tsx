@@ -28,7 +28,16 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
-import { PALETTE } from '../../_components/MiniAvatar';
+import {
+  PALETTE,
+  TYPE,
+  TRACKING,
+  V3PageShell,
+  V3Ribbon,
+  V3IdentityLine,
+  V3Heading,
+  V3HollowCard,
+} from '@/components/v3';
 import { TacticsPuzzleClient } from './TacticsPuzzleClient';
 
 interface PageProps {
@@ -64,107 +73,63 @@ export default async function TacticsPage({ params }: PageProps) {
   if (!user || user.chain !== 'preview') notFound();
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: PALETTE.cream,
-        padding: '40px 20px',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        color: PALETTE.ink,
-      }}
-    >
-      <div style={{ maxWidth: 640, margin: '0 auto' }}>
-        {/* Ribbon */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 28 }}>
-          <div style={{ width: 28, height: 4, background: PALETTE.navy }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.sage }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.mustard }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.red }} />
-        </div>
+    <V3PageShell maxWidth={640}>
+      <V3Ribbon order={['navy', 'sage', 'mustard', 'red']} />
+      <V3IdentityLine context="Tactics · puzzle 1 of 1 (preview)" showDot={false} />
 
-        {/* Header */}
-        <div
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-            color: PALETTE.navy,
-            marginBottom: 12,
-          }}
-        >
-          Tactics · puzzle 1 of 1 (preview)
-        </div>
+      <V3Heading size="large">{PUZZLE.title}</V3Heading>
 
-        <h1
-          style={{
-            fontFamily: 'Antonio, Impact, sans-serif',
-            fontSize: 56,
-            fontWeight: 800,
-            lineHeight: 0.95,
-            margin: 0,
-            letterSpacing: '-0.02em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {PUZZLE.title}
-        </h1>
+      <p
+        style={{
+          fontFamily: TYPE.mono,
+          fontSize: 13,
+          color: PALETTE.inkLight,
+          lineHeight: 1.6,
+          marginTop: 20,
+          marginBottom: 16,
+        }}
+      >
+        {PUZZLE.scenario}
+      </p>
 
-        <p
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 13,
-            color: PALETTE.inkLight,
-            lineHeight: 1.6,
-            marginTop: 20,
-            marginBottom: 8,
-          }}
-        >
-          {PUZZLE.scenario}
-        </p>
-
-        {/* Honesty note — this is a scaffold */}
-        <div
-          style={{
-            background: 'rgba(28,58,94,0.06)',
-            border: `1px dashed ${PALETTE.navy}`,
-            padding: '12px 14px',
-            marginTop: 16,
-            marginBottom: 24,
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 10,
-            lineHeight: 1.55,
-            color: PALETTE.navy,
-            letterSpacing: '0.02em',
-          }}
-        >
-          <strong>This is a scaffold.</strong> The full library — drag-and-drop
-          tactics board, scenario library, a <code>TACTICS</code> attribute
-          that climbs as you solve — is the post-Tuesday build. This puzzle
-          is one real proof of the direction.
-        </div>
-
-        <TacticsPuzzleClient puzzle={PUZZLE} token={token} />
-
-        <Link
-          href={`/preview/${encodeURIComponent(token)}`}
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: '0.18em',
-            textTransform: 'uppercase',
-            color: PALETTE.inkLight,
-            textDecoration: 'none',
-            textAlign: 'center',
-            display: 'block',
-            marginTop: 32,
-          }}
-        >
-          ← Back to your twin
-        </Link>
+      <div style={{ marginBottom: 24 }}>
+        <V3HollowCard accent="navy" padding="12px 14px">
+          <div
+            style={{
+              fontFamily: TYPE.mono,
+              fontSize: 10,
+              lineHeight: 1.55,
+              color: PALETTE.navy,
+              letterSpacing: '0.02em',
+            }}
+          >
+            <strong>This is a scaffold.</strong> The full library — drag-and-drop
+            tactics board, scenario library, a <code>TACTICS</code> attribute
+            that climbs as you solve — is the post-Tuesday build. This puzzle
+            is one real proof of the direction.
+          </div>
+        </V3HollowCard>
       </div>
-    </div>
+
+      <TacticsPuzzleClient puzzle={PUZZLE} token={token} />
+
+      <Link
+        href={`/preview/${encodeURIComponent(token)}`}
+        style={{
+          fontFamily: TYPE.mono,
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: TRACKING.cap,
+          textTransform: 'uppercase',
+          color: PALETTE.inkLight,
+          textDecoration: 'none',
+          textAlign: 'center',
+          display: 'block',
+          marginTop: 32,
+        }}
+      >
+        ← Back to your twin
+      </Link>
+    </V3PageShell>
   );
 }

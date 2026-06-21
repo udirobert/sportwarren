@@ -8,26 +8,11 @@
 
 import React from 'react';
 
-export const PALETTE = {
-  cream: '#f0e8d6',
-  ink: '#0a0a0a',
-  inkLight: '#3a3a3a',
-  red: '#c91022',
-  navy: '#1c3a5e',
-  sage: '#4a7549',
-  mustard: '#d4a437',
-  skin: {
-    light: '#f0d4b8',
-    mid: '#c89e7c',
-    dark: '#8b5a3c',
-  },
-  hair: {
-    dark: '#2a1a10',
-    brown: '#5c3a1a',
-    blond: '#c89048',
-    red: '#a64a20',
-  },
-} as const;
+// PALETTE moved to src/components/v3/tokens.ts. Re-exported here to
+// preserve existing imports (20+ files import PALETTE from MiniAvatar).
+// New code should import directly from '@/components/v3/tokens'.
+export { PALETTE } from '@/components/v3/tokens';
+import { PALETTE } from '@/components/v3/tokens';
 
 const HAIR_PATHS: Record<string, string> = {
   short: 'M 30 38 Q 32 22 50 22 Q 68 22 70 38 Q 65 26 50 26 Q 35 26 30 38 Z',

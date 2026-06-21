@@ -125,17 +125,53 @@ when their owners opt in. Both use the canonical V3 card via
   `#squad-import-wizard`) + Player ("Build your card" → existing
   PlayerCardPreview flow). Visible to public visitors only.
 
-### V3 card consolidation (DRY)
+### V3 design system
+
+Single source of truth lives at `src/components/v3/`:
+
+- `tokens.ts` — `PALETTE`, `TYPE` (font stacks), `TRACKING`
+  (letter-spacing). The canonical home for V3 colors and typography.
+  Never hardcode V3 hex values; always import.
+- `primitives.tsx` — composable building blocks:
+  - `V3PageShell` — cream bg + max-width container + standard padding
+  - `V3Ribbon` — 4-color top strip (reorderable)
+  - `V3IdentityLine` — "SportWarren · <context>" eyebrow
+  - `V3Heading` — Antonio display headline (`huge` | `large` | `medium`)
+  - `V3SectionLabel` — small uppercase mono label between sections
+  - `V3StatBand` — black ink + accent left border + BIG number + label
+  - `V3CTAButton` — `primary` (mustard fill) | `secondary` (transparent
+    + navy border) | `tertiary` (transparent + thin inkLight border)
+  - `V3HollowCard` — dashed-border accent card (for empty/unknown slots)
+  - `V3SolidCard` — bordered solid card with optional accent stripe
+- `index.ts` — barrel export. Import everything via
+  `import { … } from '@/components/v3';` — including `V3PlayerCard`,
+  which lives in `src/components/identity/V3PlayerCard.tsx` but is
+  re-exported here.
+
+**Rule:** any new V3 page composes from these primitives. If you find
+yourself inlining `gap: 4, marginBottom: 28` ribbons or hand-rolled
+Antonio `h1`s, you're not using the primitives — fix it. If a pattern
+repeats 3+ times in V3 surfaces, promote it into `primitives.tsx`.
+
+**`PALETTE` re-export:** `src/app/preview/_components/MiniAvatar.tsx`
+re-exports `PALETTE` from the v3 tokens for back-compat (20+ files
+import via MiniAvatar). New code imports directly from
+`@/components/v3`.
+
+### V3PlayerCard (DRY)
 
 `src/components/identity/V3PlayerCard.tsx` is the canonical chess.com
 card surface. Three variants: `full` (Overall + 6 bars + comparison),
 `compact` (Overall + name, for roster lists), `showcase` (marketing,
 animated). `buildPlayerCardData(...)` is the normaliser from twin row
-→ card data. Use this everywhere — preview, public squad, public
-player, post-session analysis. NOT to be confused with the legacy
-`PlayerIdentityCard.tsx` (Tailwind dark theme) which is still used on
-the in-app `/profile` page and will be consolidated in the next
-design-language harmonization pass.
+→ card data. Consumed by `/preview/[token]`, `/player/[handle]`,
+`/squad/[shortName]`, `/session/[id]/analysis/[token]`. Re-exported
+through `@/components/v3`.
+
+The legacy `PlayerIdentityCard.tsx` (Tailwind dark theme) survives
+ONLY on the in-app `/profile` page — marked with a TODO pointing at
+V3PlayerCard. When the rest of `(app)` is ported to V3, delete it.
+`SquadIdentityCard.tsx` was unused and deleted in the harmonization pass.
 
 ### Flywheel surfaces (shipped 2026-06-21)
 

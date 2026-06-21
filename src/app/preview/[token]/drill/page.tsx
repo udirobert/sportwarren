@@ -18,7 +18,15 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
-import { PALETTE } from '../../_components/MiniAvatar';
+import {
+  PALETTE,
+  TYPE,
+  TRACKING,
+  V3PageShell,
+  V3Ribbon,
+  V3IdentityLine,
+  V3Heading,
+} from '@/components/v3';
 import { ATTRIBUTE_KEYS, type AttributeKey } from '@/server/services/personalization/twin-types';
 import { DrillClient } from './DrillClient';
 
@@ -155,164 +163,128 @@ export default async function DrillPage({ params }: PageProps) {
     twin.lastDailyDrillAt.getUTCDate() === now.getUTCDate();
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        background: PALETTE.cream,
-        padding: '40px 20px',
-        fontFamily: 'system-ui, -apple-system, sans-serif',
-        color: PALETTE.ink,
-      }}
-    >
-      <div style={{ maxWidth: 600, margin: '0 auto' }}>
-        {/* Ribbon */}
-        <div style={{ display: 'flex', gap: 4, marginBottom: 28 }}>
-          <div style={{ width: 28, height: 4, background: PALETTE.mustard }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.red }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.navy }} />
-          <div style={{ width: 28, height: 4, background: PALETTE.sage }} />
-        </div>
+    <V3PageShell>
+      <V3Ribbon />
+      <V3IdentityLine
+        context={`Daily drill · ${now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}`}
+        showDot={false}
+        marginBottom={14}
+      />
 
+      <V3Heading size="large">
+        Your weakest attribute<br />asked for work.
+      </V3Heading>
+
+      <p
+        style={{
+          fontFamily: TYPE.mono,
+          fontSize: 13,
+          color: PALETTE.inkLight,
+          lineHeight: 1.55,
+          marginTop: 16,
+          marginBottom: 20,
+          maxWidth: 480,
+        }}
+      >
+        Today&apos;s drill targets <strong>{attrMeta.label}</strong> — your
+        card at <strong>{attrs[targetAttribute]}</strong>.
+        Do it for real, tap done. <em>One drill per day.</em>
+      </p>
+
+      {squadWideWeak && squadGap !== null && squadGap >= 0 && (
         <div
           style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: '0.22em',
-            textTransform: 'uppercase',
-            color: PALETTE.navy,
-            marginBottom: 14,
-          }}
-        >
-          Daily drill · {now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
-        </div>
-
-        <h1
-          style={{
-            fontFamily: 'Antonio, Impact, sans-serif',
-            fontSize: 56,
-            fontWeight: 800,
-            lineHeight: 0.95,
-            margin: 0,
-            letterSpacing: '-0.02em',
-            textTransform: 'uppercase',
-          }}
-        >
-          Your weakest attribute<br />asked for work.
-        </h1>
-
-        <p
-          style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 13,
-            color: PALETTE.inkLight,
-            lineHeight: 1.55,
-            marginTop: 16,
-            marginBottom: 20,
-            maxWidth: 480,
-          }}
-        >
-          Today's drill targets <strong>{attrMeta.label}</strong> — your
-          card at <strong>{attrs[targetAttribute]}</strong>.
-          Do it for real, tap done. <em>One drill per day.</em>
-        </p>
-
-        {squadWideWeak && squadGap !== null && squadGap >= 0 && (
-          <div
-            style={{
-              background: 'rgba(212,164,55,0.12)',
-              border: `1px solid ${PALETTE.mustard}`,
-              padding: '12px 14px',
-              marginBottom: 24,
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: 11,
-              lineHeight: 1.55,
-              color: PALETTE.ink,
-            }}
-          >
-            <strong>Squad-wide weakness.</strong> The whole group averages{' '}
-            <strong>{squadAvgForTarget}</strong> in {attrMeta.label.toLowerCase()}.
-            Everyone working on the same thing — that's how the squad
-            climbs together.
-          </div>
-        )}
-
-        {/* The drill card */}
-        <div
-          style={{
-            background: PALETTE.ink,
-            color: PALETTE.cream,
-            padding: 28,
+            background: 'rgba(212,164,55,0.12)',
+            border: `1px solid ${PALETTE.mustard}`,
+            padding: '12px 14px',
             marginBottom: 24,
-            borderLeft: `8px solid ${PALETTE.mustard}`,
+            fontFamily: TYPE.mono,
+            fontSize: 11,
+            lineHeight: 1.55,
+            color: PALETTE.ink,
           }}
         >
-          <div
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: '0.22em',
-              textTransform: 'uppercase',
-              color: PALETTE.mustard,
-              marginBottom: 10,
-            }}
-          >
-            Target · {attrMeta.short} {attrs[targetAttribute]} → {Math.min(99, attrs[targetAttribute] + 1)}
-          </div>
-          <div
-            style={{
-              fontFamily: 'Antonio, Impact, sans-serif',
-              fontSize: 40,
-              fontWeight: 800,
-              lineHeight: 1.05,
-              letterSpacing: '-0.01em',
-              textTransform: 'uppercase',
-            }}
-          >
-            {drillType}
-          </div>
+          <strong>Squad-wide weakness.</strong> The whole group averages{' '}
+          <strong>{squadAvgForTarget}</strong> in {attrMeta.label.toLowerCase()}.
+          Everyone working on the same thing — that&apos;s how the squad climbs together.
         </div>
+      )}
 
-        <DrillClient
-          token={token}
-          targetAttribute={targetAttribute}
-          alreadyDone={!!alreadyDoneToday}
-        />
-
-        <Link
-          href={`/preview/${encodeURIComponent(token)}`}
+      {/* The drill card */}
+      <div
+        style={{
+          background: PALETTE.ink,
+          color: PALETTE.cream,
+          padding: 28,
+          marginBottom: 24,
+          borderLeft: `8px solid ${PALETTE.mustard}`,
+        }}
+      >
+        <div
           style={{
-            fontFamily: 'JetBrains Mono, monospace',
+            fontFamily: TYPE.mono,
             fontSize: 11,
             fontWeight: 700,
-            letterSpacing: '0.18em',
+            letterSpacing: TRACKING.capWide,
             textTransform: 'uppercase',
-            color: PALETTE.inkLight,
-            textDecoration: 'none',
-            textAlign: 'center',
-            display: 'block',
-            marginTop: 32,
+            color: PALETTE.mustard,
+            marginBottom: 10,
           }}
         >
-          ← Back to your twin
-        </Link>
-
-        <p
+          Target · {attrMeta.short} {attrs[targetAttribute]} → {Math.min(99, attrs[targetAttribute] + 1)}
+        </div>
+        <div
           style={{
-            fontFamily: 'JetBrains Mono, monospace',
-            fontSize: 10,
-            lineHeight: 1.6,
-            color: PALETTE.inkLight,
-            marginTop: 40,
-            fontStyle: 'italic',
-            textAlign: 'center',
+            fontFamily: TYPE.display,
+            fontSize: 40,
+            fontWeight: 800,
+            lineHeight: 1.05,
+            letterSpacing: '-0.01em',
+            textTransform: 'uppercase',
           }}
         >
-          Honor system — for now. Future: link Strava and the drill auto-claims
-          when the activity hits your feed.
-        </p>
+          {drillType}
+        </div>
       </div>
-    </div>
+
+      <DrillClient
+        token={token}
+        targetAttribute={targetAttribute}
+        alreadyDone={!!alreadyDoneToday}
+      />
+
+      <Link
+        href={`/preview/${encodeURIComponent(token)}`}
+        style={{
+          fontFamily: TYPE.mono,
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: TRACKING.cap,
+          textTransform: 'uppercase',
+          color: PALETTE.inkLight,
+          textDecoration: 'none',
+          textAlign: 'center',
+          display: 'block',
+          marginTop: 32,
+        }}
+      >
+        ← Back to your twin
+      </Link>
+
+      <p
+        style={{
+          fontFamily: TYPE.mono,
+          fontSize: 10,
+          lineHeight: 1.6,
+          color: PALETTE.inkLight,
+          marginTop: 40,
+          fontStyle: 'italic',
+          textAlign: 'center',
+        }}
+      >
+        Honor system — for now. Future: link Strava and the drill auto-claims
+        when the activity hits your feed.
+      </p>
+    </V3PageShell>
   );
 }

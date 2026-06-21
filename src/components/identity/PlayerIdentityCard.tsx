@@ -1,5 +1,11 @@
 'use client';
 
+// TODO(v3-harmonisation): This is the legacy Tailwind dark-theme card,
+// only used by /(app)/profile. The canonical card is now
+// `@/components/identity/V3PlayerCard` (V3 Risograph). When `/profile`
+// gets ported to V3 — alongside the rest of the (app) shell — delete
+// this file per the CONSOLIDATION principle. Don't add new call sites.
+
 import React from 'react';
 import { Card } from '@/components/ui/Card';
 import { Award, Calendar, Clock } from 'lucide-react';
