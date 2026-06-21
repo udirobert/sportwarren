@@ -150,16 +150,6 @@ export interface V4PitchPanelProps {
   children: React.ReactNode;
   /** Background color from the verdant palette. Defaults to pitch. */
   accent?: V4AccentKey;
-  /**
-   * Depth treatment.
-   *   atmospheric — verdant gradient (dusk → accent → dusk) + soft
-   *     ambient light orbs (mustard + sage). Use for hero / large
-   *     section backdrops where flat would feel plastic.
-   *   flat — solid accent fill. Use for small inline panels / cards
-   *     where atmospheric depth would compete with content.
-   * Default: 'atmospheric'.
-   */
-  depth?: 'atmospheric' | 'flat';
   /** Show paper grain texture. Default true. */
   grain?: boolean;
   /** Show chalk lines at top + bottom edges. Default true. */
@@ -175,12 +165,9 @@ export interface V4PitchPanelProps {
   className?: string;
 }
 
-const PITCH_MID = '#4a6428';
-
 export function V4PitchPanel({
   children,
   accent = 'pitch',
-  depth = 'atmospheric',
   grain = true,
   chalkEdges = true,
   minHeight,
@@ -189,11 +176,7 @@ export function V4PitchPanel({
   style,
   className,
 }: V4PitchPanelProps) {
-  const isAtmospheric = depth === 'atmospheric' && accent === 'pitch';
-  const background = isAtmospheric
-    ? `linear-gradient(180deg, ${PALETTE.dusk} 0%, ${PITCH_MID} 18%, ${PALETTE.pitch} 50%, ${PITCH_MID} 82%, ${PALETTE.dusk} 100%)`
-    : PALETTE[accent];
-
+  const background = PALETTE[accent];
   return (
     <div
       className={className}
@@ -208,28 +191,14 @@ export function V4PitchPanel({
         ...style,
       }}
     >
-      {isAtmospheric && (
-        <>
-          <div
-            className="absolute top-0 -left-4 w-96 h-96 rounded-full mix-blend-screen filter blur-3xl opacity-20"
-            style={{ background: PALETTE.mustard }}
-            aria-hidden="true"
-          />
-          <div
-            className="absolute bottom-0 -right-4 w-96 h-96 rounded-full mix-blend-screen filter blur-3xl opacity-15"
-            style={{ background: PALETTE.sage }}
-            aria-hidden="true"
-          />
-        </>
-      )}
-      {grain && <V4PaperGrain opacity={isAtmospheric ? 0.09 : 0.05} zIndex={1} />}
+      {grain && <V4PaperGrain opacity={0.05} zIndex={1} />}
       {chalkEdges && (
         <>
           <div style={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 2 }}>
-            <V4ChalkLine opacity={0.45} />
+            <V4ChalkLine />
           </div>
           <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 2 }}>
-            <V4ChalkLine opacity={0.45} />
+            <V4ChalkLine />
           </div>
         </>
       )}
