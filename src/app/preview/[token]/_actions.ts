@@ -12,6 +12,7 @@
 
 import { prisma } from '@/lib/db';
 import { getScenarioById } from '@/server/services/perception/scenarios';
+import { maybeSendTierUnlockNudge } from '@/server/services/perception/nudges';
 
 export interface PerceptionPeek {
   scenarioId: string;
@@ -92,6 +93,13 @@ export async function submitPerception(input: {
   const givenCount = await prisma.playerPerception.count({
     where: { raterId: rater.id },
   });
+
+  // Tier-unlock celebration via Telegram. Fire-and-forget so any send
+  // failure doesn't sink the submit. No-op unless count just hit
+  // 5 / 10 / 20 exactly.
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://sportwarren.com';
+  const dashboardUrl = `${baseUrl}/preview/${encodeURIComponent(token)}`;
+  void maybeSendTierUnlockNudge(user.id, givenCount, dashboardUrl);
 
   // Build the sneak-peek — aggregate of all ratings on this exact
   // (target, scenario, kind) combo + a headline that frames the
