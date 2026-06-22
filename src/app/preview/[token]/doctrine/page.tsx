@@ -36,6 +36,7 @@ import {
   type ChoiceCounts,
 } from '@/server/services/perception/aggregate';
 import { SCENARIOS } from '@/server/services/perception/scenarios';
+import { DoctrineShareButton } from './DoctrineShareButton';
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -221,6 +222,10 @@ export default async function CaptainDoctrinePage({ params }: PageProps) {
           </div>
         </V3SolidCard>
       </div>
+
+      {totalRows > 0 && (
+        <DoctrineShareButton token={token} squadName={squad.name} />
+      )}
 
       {orderedPositions.length === 0 && (
         <V3SolidCard accent="navy" padding="20px">
