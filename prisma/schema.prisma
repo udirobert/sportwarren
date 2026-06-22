@@ -117,10 +117,43 @@ model PlayerProfile {
   ratingsReceived   PeerRating[]       @relation("RatingReceived")
   motmVotesGiven    MotmVote[]         @relation("MotmVoteGiven")
   motmVotesReceived MotmVote[]         @relation("MotmVoteReceived")
+  perceptionsGiven    PlayerPerception[] @relation("PerceptionGiven")
+  perceptionsReceived PlayerPerception[] @relation("PerceptionReceived")
   sessionsAttended  SessionAttendee[]
   twin              PlayerTwin?
 
   @@map("player_profiles")
+}
+
+// Player-perception quiz answers. Distinct from PeerRating (which is
+// score-based on the 1-10 scale) — these are choice-based (a/b/c/d)
+// multiple-choice predictions about how a player ACTUALLY plays
+// (descriptive) vs how they SHOULD play (prescriptive). The hot-take
+// banter engine: lads rate each other's tendencies in scenarios; the
+// group's aggregate perception becomes the social proof + tactical
+// doctrine. See `src/server/services/perception/scenarios.ts` for
+// the scenario library.
+model PlayerPerception {
+  id String @id @default(cuid())
+
+  raterId String        @map("rater_id")
+  rater   PlayerProfile @relation("PerceptionGiven", fields: [raterId], references: [id], onDelete: Cascade)
+
+  targetId String        @map("target_id")
+  target   PlayerProfile @relation("PerceptionReceived", fields: [targetId], references: [id], onDelete: Cascade)
+
+  scenarioId String @map("scenario_id") // e.g. "ball_own_half"
+  choice     String                       // "a" | "b" | "c" | "d"
+  kind       String                       // "descriptive" | "prescriptive"
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Each rater can re-submit for the same (target, scenario, kind) —
+  // the unique key lets us upsert on re-answer instead of accumulating.
+  @@unique([raterId, targetId, scenarioId, kind])
+  @@index([targetId])
+  @@map("player_perceptions")
 }
 
 model PhysicalActivity {
