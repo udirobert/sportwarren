@@ -14,6 +14,7 @@
 
 import React from 'react';
 import { notFound } from 'next/navigation';
+import type { Metadata } from 'next';
 import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import {
@@ -36,6 +37,47 @@ import {
 
 interface PageProps {
   params: Promise<{ handle: string }>;
+}
+
+/**
+ * Set `og:image` to the player's satori card PNG so WhatsApp / iMessage
+ * / X / Instagram unfurls this URL with a rich image preview. Tapping
+ * the unfurled card lands on this page (the public profile), not the
+ * raw PNG endpoint — which is the structurally correct viral loop.
+ */
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { handle } = await params;
+  const user = await prisma.user.findUnique({
+    where: { handle: handle.toLowerCase() },
+    select: { name: true, walletAddress: true, discoverable: true, position: true },
+  });
+  if (!user || !user.discoverable) {
+    return { title: 'SportWarren' };
+  }
+
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://sportwarren.com';
+  const cardImageUrl = `${baseUrl}/api/og/card/${encodeURIComponent(user.walletAddress)}`;
+  const title = `${user.name ?? handle} · SportWarren`;
+  const description = user.position
+    ? `${user.position} on SportWarren. Rate the lads back, build your own card.`
+    : 'See this player\'s SportWarren card. Rate the lads back, build your own card.';
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: [{ url: cardImageUrl, width: 1080, height: 1350, alt: title }],
+      type: 'profile',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: [cardImageUrl],
+    },
+  };
 }
 
 export default async function PublicPlayerPage({ params }: PageProps) {
