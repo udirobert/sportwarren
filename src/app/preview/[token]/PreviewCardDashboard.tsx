@@ -51,7 +51,7 @@ function injectStyles() {
 export function PreviewCardDashboard({
   user, rater, squad, baseUrl, token,
   perceptionsGiven, perceptionsReceived, uniquePerceivers, tier, remainingCombos,
-  squadTwins, lastSession, aggregate, scenarios,
+  squadTwins, lastSession, aggregate, scenarios, isCaptain = false,
 }: {
   user: any;
   rater: any;
@@ -67,6 +67,7 @@ export function PreviewCardDashboard({
   lastSession: any;
   aggregate: PerceptionAggregate;
   scenarios: Array<{ id: string; prompt: string; context?: string; hasPrescriptive: boolean; options: Array<{ id: string; label: string }> }>;
+  isCaptain?: boolean;
 }) {
   const injected = useRef(false);
   if (!injected.current) { injectStyles(); injected.current = true; }
@@ -343,6 +344,26 @@ export function PreviewCardDashboard({
         >
           Pick your kit →
         </Link>
+        {isCaptain && (
+          <Link
+            href={`/preview/${encodeURIComponent(token)}/doctrine`}
+            style={{
+              fontFamily: TYPE.display, fontSize: 16, fontWeight: 800,
+              letterSpacing: '-0.01em', textTransform: 'uppercase',
+              color: PALETTE.ink, textDecoration: 'none',
+              padding: '12px 0', borderBottom: `1px solid ${PALETTE.ink}15`,
+              display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+            }}
+          >
+            <span>The group&apos;s read →</span>
+            <span style={{
+              fontFamily: TYPE.mono, fontSize: 9, fontWeight: 700,
+              letterSpacing: '0.14em', color: PALETTE.red,
+            }}>
+              CAPTAIN
+            </span>
+          </Link>
+        )}
       </div>
     </div>
   );

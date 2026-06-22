@@ -119,6 +119,88 @@ export async function aggregateReceivedPerceptions(
   };
 }
 
+/** {position: {scenarioId: {descriptive, prescriptive}}} — the captain's view. */
+export type SquadDoctrineAggregate = Record<string, PerceptionAggregate>;
+
+export interface SquadDoctrineResult {
+  /** Position → scenario → counts. "Unknown" bucket for players with no position. */
+  byPosition: SquadDoctrineAggregate;
+  /** Total perception rows considered (across the whole squad). */
+  totalRows: number;
+  /** Distinct raters who have contributed. */
+  uniqueRaters: number;
+  /** Distinct targets who have received at least one perception. */
+  uniqueTargets: number;
+}
+
+/**
+ * Aggregate every PlayerPerception row whose target is a member of the
+ * given squad, grouped by the *target's* position. The captain reads
+ * this to see "across all my CBs, what do the lads think they DO vs
+ * SHOULD do" — the foundation of a tactical doctrine.
+ *
+ * Anonymized by design: no rater or target identities leak through the
+ * return shape, only positional buckets and choice counts.
+ */
+export async function aggregateSquadDoctrine(
+  squadId: string,
+  opts?: { prisma?: PrismaClient },
+): Promise<SquadDoctrineResult> {
+  const db = opts?.prisma ?? defaultPrisma;
+
+  const rows = await db.playerPerception.findMany({
+    where: {
+      target: { user: { squads: { some: { squadId } } } },
+    },
+    select: {
+      scenarioId: true,
+      choice: true,
+      kind: true,
+      raterId: true,
+      targetId: true,
+      target: {
+        select: {
+          user: { select: { position: true } },
+        },
+      },
+    },
+  });
+
+  const byPosition: SquadDoctrineAggregate = {};
+  const raterIds = new Set<string>();
+  const targetIds = new Set<string>();
+
+  for (const r of rows) {
+    raterIds.add(r.raterId);
+    targetIds.add(r.targetId);
+
+    const position = r.target?.user?.position ?? 'Unknown';
+    if (!byPosition[position]) byPosition[position] = {};
+    if (!byPosition[position][r.scenarioId]) {
+      byPosition[position][r.scenarioId] = {
+        descriptive: emptyCounts(),
+        prescriptive: emptyCounts(),
+      };
+    }
+    const bucket =
+      r.kind === 'prescriptive'
+        ? byPosition[position][r.scenarioId].prescriptive
+        : byPosition[position][r.scenarioId].descriptive;
+    const c = r.choice as ChoiceLetter;
+    if (c === 'a' || c === 'b' || c === 'c' || c === 'd') {
+      bucket[c] += 1;
+      bucket.total += 1;
+    }
+  }
+
+  return {
+    byPosition,
+    totalRows: rows.length,
+    uniqueRaters: raterIds.size,
+    uniqueTargets: targetIds.size,
+  };
+}
+
 /**
  * Pick the modal choice for a ChoiceCounts bucket, or null if no data.
  * Used to find the "winning" option for headline generation.

@@ -36,8 +36,10 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
   if (!user || user.chain !== 'preview') notFound();
 
   const rater = user.playerProfile;
-  const squad = user.squads[0]?.squad;
+  const captainMembership = user.squads.find((m) => m.role === 'captain');
+  const squad = captainMembership?.squad ?? user.squads[0]?.squad;
   if (!rater || !squad) notFound();
+  const isCaptain = !!captainMembership && captainMembership.squadId === squad.id;
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://sportwarren.com';
 
@@ -117,6 +119,7 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
         squadTwins={squadTwins}
         lastSession={lastSession}
         aggregate={aggregate}
+        isCaptain={isCaptain}
         scenarios={SCENARIOS.map((s) => ({
           id: s.id,
           prompt: s.prompt,
