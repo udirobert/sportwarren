@@ -42,6 +42,16 @@ model User {
   handle       String?  @unique
   discoverable Boolean  @default(false)
 
+  // Strava OAuth — connects a player's real-world endurance/distance
+  // activity to their twin. v1 stores the tokens; webhook subscription +
+  // activity→attribute deltas come post-Tuesday (see docs/flywheel.md).
+  stravaAthleteId      String?   @unique @map("strava_athlete_id")
+  stravaAccessToken    String?   @map("strava_access_token")
+  stravaRefreshToken   String?   @map("strava_refresh_token")
+  stravaTokenExpiresAt DateTime? @map("strava_token_expires_at")
+  stravaScopes         String?   @map("strava_scopes")
+  stravaConnectedAt    DateTime? @map("strava_connected_at")
+
   // Timestamps
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
