@@ -13,6 +13,11 @@ import { prisma } from '@/lib/db';
 import Link from 'next/link';
 import { PALETTE } from '../../_components/MiniAvatar';
 import { SimReveal } from './SimReveal';
+import { aggregatePerceptionsForPlayers } from '@/server/services/perception/aggregate';
+import {
+  generateMatchCommentary,
+  type CommentaryPlayer,
+} from '@/server/services/perception/match-commentary';
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -56,6 +61,7 @@ function shuffle<T>(arr: T[], rng: () => number): T[] {
 
 interface PlayerData {
   userId: string;
+  profileId: string | null;
   name: string;
   position: string | null;
   avatar: {
@@ -127,6 +133,7 @@ export default async function SimPage({ params, searchParams }: PageProps) {
     const ba = m.user.playerProfile?.twin?.baseAttributes as Attrs | undefined;
     return {
       userId: m.userId,
+      profileId: m.user.playerProfile?.id ?? null,
       name: m.user.name ?? 'Player',
       position: m.user.position,
       avatar: {
@@ -167,6 +174,35 @@ export default async function SimPage({ params, searchParams }: PageProps) {
   const myScorers = distributeGoals(myTeam, myGoals, rng);
   const oppScorers = distributeGoals(opponents, oppGoals, rng);
 
+  // Perception commentary — pulls each on-pitch player's aggregate and
+  // weaves a 2-4 beat narrative coloured by what the lads said. Stays
+  // deterministic via the same seed so share links reproduce.
+  const allOnPitch = [me, ...teammates, ...opponents];
+  const profileIds = allOnPitch.map((p) => p.profileId).filter((id): id is string => !!id);
+  const perceptionMap = await aggregatePerceptionsForPlayers(profileIds);
+
+  const goalsByUser = new Map<string, number>();
+  for (const s of myScorers) goalsByUser.set(s.userId, s.goals);
+  for (const s of oppScorers) goalsByUser.set(s.userId, s.goals);
+
+  const commentaryPlayers: CommentaryPlayer[] = allOnPitch
+    .filter((p) => p.profileId)
+    .map((p) => ({
+      profileId: p.profileId!,
+      firstName: p.name.split(' ')[0],
+      position: p.position,
+      onMyTeam: p.userId === me.userId || teammates.some((t) => t.userId === p.userId),
+      goals: goalsByUser.get(p.userId) ?? 0,
+    }));
+
+  const commentary = generateMatchCommentary({
+    players: commentaryPlayers,
+    perceptions: perceptionMap,
+    myGoals,
+    oppGoals,
+    seed,
+  });
+
   // Share PNG URL — re-uses the same seed so the image matches
   const shareUrl = `/api/og/sim/${encodeURIComponent(token)}?r=${seed}`;
 
@@ -182,6 +218,7 @@ export default async function SimPage({ params, searchParams }: PageProps) {
       myScorers={myScorers}
       oppScorers={oppScorers}
       shareUrl={shareUrl}
+      commentary={commentary}
     />
   );
 }

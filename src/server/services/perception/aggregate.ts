@@ -202,6 +202,54 @@ export async function aggregateSquadDoctrine(
 }
 
 /**
+ * Aggregate perceptions for many target profiles in a single query.
+ *
+ * Used by the sim commentary generator — given a set of players in a
+ * match, returns each player's per-scenario buckets so the narrative
+ * can be coloured by "what the lads said about them."
+ */
+export async function aggregatePerceptionsForPlayers(
+  profileIds: string[],
+  opts?: { prisma?: PrismaClient },
+): Promise<Map<string, PerceptionAggregate>> {
+  const db = opts?.prisma ?? defaultPrisma;
+  if (profileIds.length === 0) return new Map();
+
+  const rows = await db.playerPerception.findMany({
+    where: { targetId: { in: profileIds } },
+    select: {
+      targetId: true,
+      scenarioId: true,
+      choice: true,
+      kind: true,
+    },
+  });
+
+  const byTarget = new Map<string, PerceptionAggregate>();
+  for (const r of rows) {
+    let agg = byTarget.get(r.targetId);
+    if (!agg) {
+      agg = {};
+      byTarget.set(r.targetId, agg);
+    }
+    if (!agg[r.scenarioId]) {
+      agg[r.scenarioId] = { descriptive: emptyCounts(), prescriptive: emptyCounts() };
+    }
+    const bucket =
+      r.kind === 'prescriptive'
+        ? agg[r.scenarioId].prescriptive
+        : agg[r.scenarioId].descriptive;
+    const c = r.choice as ChoiceLetter;
+    if (c === 'a' || c === 'b' || c === 'c' || c === 'd') {
+      bucket[c] += 1;
+      bucket.total += 1;
+    }
+  }
+
+  return byTarget;
+}
+
+/**
  * Pick the modal choice for a ChoiceCounts bucket, or null if no data.
  * Used to find the "winning" option for headline generation.
  */
