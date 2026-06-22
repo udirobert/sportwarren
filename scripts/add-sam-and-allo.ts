@@ -81,6 +81,34 @@ function handleFromName(name: string): string {
   return name.toLowerCase().replace(/[^a-z0-9]/g, '-');
 }
 
+/**
+ * Best-effort handle assignment. Collisions (P2002) are caught and
+ * logged — the user record stays valid with handle=null, and the
+ * captain can set a custom handle later via Settings → Privacy.
+ */
+async function safelySetHandle(
+  userId: string,
+  rawName: string | null | undefined,
+): Promise<{ assigned: string | null; collided: boolean }> {
+  if (!rawName) return { assigned: null, collided: false };
+  const handle = handleFromName(rawName);
+  if (!handle || handle.length < 3) return { assigned: null, collided: false };
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { handle },
+    });
+    return { assigned: handle, collided: false };
+  } catch (err) {
+    const code = (err as { code?: string })?.code;
+    if (code === 'P2002') {
+      console.warn(`  ⚠ Handle @${handle} taken — ${rawName} stays without a handle (set custom via Settings → Privacy)`);
+      return { assigned: null, collided: true };
+    }
+    throw err;
+  }
+}
+
 async function main() {
   console.log('🔍 Looking up squad…');
   const squad = await prisma.squad.findFirst({ where: { name: SQUAD_NAME } });
@@ -108,13 +136,14 @@ async function main() {
 
     const walletAddress = makeToken(player.name);
 
+    // Create user WITHOUT handle first — collisions handled separately
+    // by safelySetHandle below so a name clash doesn't block creation.
     const user = await prisma.user.create({
       data: {
         walletAddress,
         chain: 'preview',
         name: player.name,
         position: player.position,
-        handle: handleFromName(player.name),
         avatarKitColor: player.kit,
         avatarAccentColor: player.accent,
         avatarSkinTone: '#c89e7c',
@@ -123,6 +152,7 @@ async function main() {
         avatarNumber: '',
       },
     });
+    await safelySetHandle(user.id, player.name);
 
     const profile = await prisma.playerProfile.create({
       data: {
@@ -217,15 +247,19 @@ async function main() {
   const allUsers = await prisma.user.findMany({
     where: { chain: 'preview', squads: { some: { squadId: squad.id } }, handle: null },
   });
+  let assigned = 0;
+  let collided = 0;
   for (const u of allUsers) {
-    const handle = handleFromName(u.name ?? u.id);
-    await prisma.user.update({
-      where: { id: u.id },
-      data: { handle },
-    });
-    console.log(`  ✓ ${u.name} → @${handle}`);
+    const result = await safelySetHandle(u.id, u.name);
+    if (result.assigned) {
+      console.log(`  ✓ ${u.name} → @${result.assigned}`);
+      assigned++;
+    } else if (result.collided) {
+      collided++;
+    }
   }
   if (allUsers.length === 0) console.log('  (none needed)');
+  else console.log(`  → ${assigned} assigned, ${collided} collided (kept null)`);
 
   // 4. Output preview URLs so the user can grab them for WhatsApp
   console.log('\n========================================================');
