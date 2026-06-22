@@ -53,8 +53,8 @@ export const SCENARIOS: Scenario[] = [
     options: [
       { id: 'a', label: 'Plays it short and safe to a CB', tag: 'safe' },
       { id: 'b', label: 'Tries to dribble out themselves', tag: 'aggressive' },
-      { id: 'c', label: 'Looks long for a teammate', tag: 'creative' },
-      { id: 'd', label: 'Miscontrols under pressure', tag: 'careless' },
+      { id: 'c', label: 'Miscontrols under pressure', tag: 'careless' },
+      { id: 'd', label: 'Launches it long up the pitch', tag: 'creative' },
     ],
   },
   {
