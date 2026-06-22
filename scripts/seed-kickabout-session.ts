@@ -399,7 +399,10 @@ async function main() {
     console.log('========================================================');
     for (const { player, token } of provisioned) {
       const url = `${baseUrl}/preview/${encodeURIComponent(token)}`;
-      const message = `Hey ${player.name} — I've set you up on a new thing for the ${data.group.name} group. Your stats from last week are already in. Have a look, tweak your avatar, sim a match against the lads if you want. See you Tuesday. ${url}`;
+      // Leads with the hot-take hook, not the stat card — perception
+      // quizzes get more engagement than self-stat-dumps for this
+      // cohort. Stats are still on the page, just below the fold.
+      const message = `${player.name} — quick game for the ${data.group.name} group. Rate the lads on how they actually play (multiple choice, 30 sec each). Your card unlocks once 5 of you have weighed in. Hot takes, no names attached. See you Tuesday. ${url}`;
       console.log(`\n${player.name} ${player.phone ? `(${player.phone})` : ''}`);
       console.log(`  URL: ${url}`);
       console.log(`  Message:\n  ${message}`);

@@ -104,12 +104,22 @@ export default async function PreviewPage({ params }: PageProps) {
 
   // Reciprocity counts (peer ratings given vs received). Empty state
   // IS the hook — "be the first to rate."
-  const [ratedByMe, ratedMe] = profile
+  const [ratedByMe, ratedMe, perceptionsGiven, perceptionsReceived, uniquePerceivers] = profile
     ? await Promise.all([
         prisma.peerRating.count({ where: { raterId: profile.id } }),
         prisma.peerRating.count({ where: { targetId: profile.id } }),
+        prisma.playerPerception.count({ where: { raterId: profile.id } }),
+        prisma.playerPerception.count({ where: { targetId: profile.id } }),
+        // Distinct raters that have weighed in on this player
+        prisma.playerPerception
+          .findMany({
+            where: { targetId: profile.id },
+            select: { raterId: true },
+            distinct: ['raterId'],
+          })
+          .then((rows) => rows.length),
       ])
-    : [0, 0];
+    : [0, 0, 0, 0, 0];
 
   // Card data + group comparison for each attribute.
   const myAttrs: Attrs = (profile?.twin?.baseAttributes as Attrs | null) ?? baselineForPosition(user.position);
@@ -175,14 +185,100 @@ export default async function PreviewPage({ params }: PageProps) {
           lineHeight: 1.6,
           color: PALETTE.inkLight,
           marginTop: 18,
-          marginBottom: 36,
+          marginBottom: 28,
           maxWidth: 520,
         }}
       >
-        Last week is in the record. Most of you isn&apos;t — yet. This is
-        a half-finished portrait of you as a footballer in the {squad.name} group.
-        What&apos;s filled in stays filled. The blanks below are how you fill the rest.
+        Last week&apos;s record is in. Most of you isn&apos;t — yet. The
+        hottest takes about how you actually play live below. Rate the
+        lads first — your own perception card unlocks once they&apos;ve
+        rated you back.
       </p>
+
+      {/* HERO — perception is the lead hook. Above the chess.com card
+          because what the LADS think of each other generates more
+          banter than your own stat dump. Cold stats are the record;
+          hot takes are the engagement loop. */}
+      <V3SolidCard
+        accent="red"
+        background={PALETTE.ink}
+        padding="22px 24px"
+        marginBottom={20}
+      >
+        <div
+          style={{
+            fontFamily: TYPE.mono,
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: TRACKING.capWide,
+            textTransform: 'uppercase',
+            color: PALETTE.mustard,
+            marginBottom: 10,
+          }}
+        >
+          Perception · the hot-take engine
+        </div>
+        <div
+          style={{
+            fontFamily: TYPE.display,
+            fontSize: 30,
+            fontWeight: 800,
+            lineHeight: 1.05,
+            letterSpacing: '-0.01em',
+            textTransform: 'uppercase',
+            color: PALETTE.cream,
+            marginBottom: 10,
+          }}
+        >
+          {uniquePerceivers === 0
+            ? 'No takes yet. Be the first to call.'
+            : `${uniquePerceivers} lad${uniquePerceivers === 1 ? '' : 's'} have weighed in on you.`}
+        </div>
+        <div
+          style={{
+            fontFamily: TYPE.mono,
+            fontSize: 12,
+            lineHeight: 1.55,
+            color: PALETTE.cream,
+            opacity: 0.85,
+            marginBottom: 14,
+          }}
+        >
+          Rate the lads — what do they DO in pressure moments, what
+          SHOULD they do? Aggregate only, no names attached. Your
+          card unlocks at 5 ratings given.
+        </div>
+        <div
+          style={{
+            fontFamily: TYPE.mono,
+            fontSize: 11,
+            fontWeight: 700,
+            letterSpacing: TRACKING.cap,
+            textTransform: 'uppercase',
+            color: PALETTE.mustard,
+          }}
+        >
+          {perceptionsGiven} given · {perceptionsReceived} received
+        </div>
+      </V3SolidCard>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 32 }}>
+        <V3CTAButton href={`/preview/${encodeURIComponent(token)}/perceive`}>
+          {perceptionsGiven === 0
+            ? 'Rate the lads · start the hot takes →'
+            : perceptionsGiven < 5
+            ? `Keep rating · ${5 - perceptionsGiven} more to unlock yours →`
+            : 'Rate more · keep the takes coming →'}
+        </V3CTAButton>
+        {perceptionsGiven >= 5 && (
+          <V3CTAButton
+            href={`/preview/${encodeURIComponent(token)}/perceived`}
+            variant="secondary"
+          >
+            See what the lads said about me →
+          </V3CTAButton>
+        )}
+      </div>
 
       {/* Twin identity card — avatar + name + stat band */}
       <div
