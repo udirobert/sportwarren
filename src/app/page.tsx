@@ -11,6 +11,7 @@ import { Send } from "lucide-react";
 import { trackEvent } from "@/lib/analytics";
 import { decodePendingClaim, storePendingClaim } from "@/lib/claims/context";
 import { getPendingPersona } from "@/lib/claims/persona";
+import { getPreviewClaim } from "@/lib/preview-claim";
 
 export default function Home() {
   const { hasAccount } = useWallet();
@@ -42,6 +43,16 @@ export default function Home() {
       window.history.replaceState({}, '', nextUrl);
     }
     if (params.get('wl') === '1') {
+      const nextUrl = window.location.pathname;
+      window.history.replaceState({}, '', nextUrl);
+    }
+    if (params.get('claim') === 'preview') {
+      const claim = getPreviewClaim();
+      if (claim?.name) {
+        setLossAversionData({ playerName: claim.name });
+      }
+      setShowWalletModal(true);
+      setModalContext({ title: 'Keep your card forever', description: 'Sign in to link your preview card to your account and keep your ratings, attributes, and history.' });
       const nextUrl = window.location.pathname;
       window.history.replaceState({}, '', nextUrl);
     }

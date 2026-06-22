@@ -11,6 +11,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
+import { getPreviewUser } from '../_lib/get-preview-user';
 import { getScenarioById } from '@/server/services/perception/scenarios';
 import { maybeSendTierUnlockNudge } from '@/server/services/perception/nudges';
 
@@ -48,11 +49,10 @@ export async function submitPerception(input: {
     return { ok: false, reason: 'invalid_scenario' };
   }
 
-  const user = await prisma.user.findUnique({
-    where: { walletAddress: token },
+  const user = await getPreviewUser(token, {
     include: { playerProfile: true },
   });
-  if (!user || user.chain !== 'preview') return { ok: false, reason: 'not_preview' };
+  if (!user) return { ok: false, reason: 'not_preview' };
   const rater = user.playerProfile;
   if (!rater) return { ok: false, reason: 'no_profile' };
   if (rater.id === targetProfileId) return { ok: false, reason: 'self_target' };

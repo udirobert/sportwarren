@@ -10,6 +10,7 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
+import { getPreviewUser } from '../../_lib/get-preview-user';
 import Link from 'next/link';
 import { PALETTE } from '../../_components/MiniAvatar';
 import { SimReveal } from './SimReveal';
@@ -107,15 +108,13 @@ export default async function SimPage({ params, searchParams }: PageProps) {
   const seed = parseInt(r ?? String(Date.now() % 100000), 10) || 1;
   const rng = makeRng(seed);
 
-  const user = await prisma.user.findUnique({
-    where: { walletAddress: token },
+  const user = await getPreviewUser(token, {
     include: {
       playerProfile: { include: { twin: true } },
       squads: { include: { squad: true } },
     },
   });
-
-  if (!user || user.chain !== 'preview') notFound();
+  if (!user) notFound();
 
   const squad = user.squads[0]?.squad;
   if (!squad) notFound();

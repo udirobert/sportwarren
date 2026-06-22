@@ -16,7 +16,7 @@
 
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { prisma } from '@/lib/db';
+import { getPreviewUser } from '../../_lib/get-preview-user';
 import {
   PALETTE,
   TYPE,
@@ -96,13 +96,12 @@ function strongestTension(
 export default async function CaptainDoctrinePage({ params }: PageProps) {
   const { token } = await params;
 
-  const user = await prisma.user.findUnique({
-    where: { walletAddress: token },
+  const user = await getPreviewUser(token, {
     include: {
       squads: { include: { squad: true } },
     },
   });
-  if (!user || user.chain !== 'preview') notFound();
+  if (!user) notFound();
 
   const captainMembership = user.squads.find((m) => m.role === 'captain');
   if (!captainMembership) notFound();

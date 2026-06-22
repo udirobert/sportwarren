@@ -8,6 +8,7 @@ import React from 'react';
 import { notFound, redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/db';
+import { getPreviewUser } from '../../_lib/get-preview-user';
 import Link from 'next/link';
 import { PALETTE } from '../../_components/MiniAvatar';
 import { CustomizeForm } from './CustomizeForm';
@@ -67,11 +68,9 @@ export default async function CustomizePage({ params, searchParams }: PageProps)
   const { token } = await params;
   const { strava: stravaFlag } = await searchParams;
 
-  const user = await prisma.user.findUnique({
-    where: { walletAddress: token },
-  });
+  const user = await getPreviewUser(token);
 
-  if (!user || user.chain !== 'preview') {
+  if (!user) {
     notFound();
   }
 

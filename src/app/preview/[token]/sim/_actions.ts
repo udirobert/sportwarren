@@ -20,6 +20,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
+import { getPreviewUser } from '../../_lib/get-preview-user';
 import { getTwinService } from '@/server/services/personalization/twin-service';
 import type { AttributeKey } from '@/server/services/personalization/twin-types';
 
@@ -81,12 +82,10 @@ export async function claimSimOutcome(input: {
 }): Promise<ClaimResult> {
   const { token, goalsScored, goalsConceded } = input;
 
-  const user = await prisma.user.findUnique({
-    where: { walletAddress: token },
+  const user = await getPreviewUser(token, {
     include: { playerProfile: { include: { twin: true } } },
   });
-
-  if (!user || user.chain !== 'preview') return { ok: false, reason: 'not_preview' };
+  if (!user) return { ok: false, reason: 'not_preview' };
 
   const profile = user.playerProfile;
   const twin = profile?.twin;

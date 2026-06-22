@@ -2,7 +2,9 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { PALETTE } from '../_components/MiniAvatar';
+import { storePreviewClaim } from '@/lib/preview-claim';
 import {
   TYPE,
   buildPlayerCardData,
@@ -72,6 +74,7 @@ export function PreviewCardDashboard({
   const injected = useRef(false);
   if (!injected.current) { injectStyles(); injected.current = true; }
 
+  const router = useRouter();
   const [phase, setPhase] = useState(0);
 
   useEffect(() => {
@@ -79,6 +82,16 @@ export function PreviewCardDashboard({
     const t2 = setTimeout(() => setPhase(2), 500);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
+
+  const handleKeepCard = () => {
+    storePreviewClaim({
+      previewToken: token,
+      userId: user.id,
+      name: user.name ?? null,
+      squadName: squad.name ?? null,
+    });
+    router.push('/?claim=preview');
+  };
 
   const profile = user.playerProfile;
   const myAttrs: Attrs = (profile?.twin?.baseAttributes as Attrs | null) ?? baselineForPosition(user.position);
@@ -364,6 +377,42 @@ export function PreviewCardDashboard({
             </span>
           </Link>
         )}
+      </div>
+
+      {/* Auth explanation + claim bridge */}
+      <div style={{ ...secStyle(2), marginTop: 32, paddingTop: 24, borderTop: `1px solid ${PALETTE.ink}15` }}>
+        <p style={{
+          fontFamily: TYPE.mono, fontSize: 9, fontWeight: 700,
+          letterSpacing: '0.16em', textTransform: 'uppercase',
+          color: PALETTE.inkLight, marginBottom: 8,
+        }}>
+          Your private link
+        </p>
+        <p style={{
+          fontFamily: TYPE.mono, fontSize: 11, lineHeight: 1.55,
+          color: PALETTE.inkLight, marginBottom: 16, maxWidth: 400,
+        }}>
+          The captain sent this link to your WhatsApp. Only you have it —
+          it's how the app knows it's you. No password needed.
+        </p>
+        <button
+          onClick={handleKeepCard}
+          style={{
+            fontFamily: TYPE.display, fontSize: 16, fontWeight: 800,
+            letterSpacing: '-0.01em', textTransform: 'uppercase',
+            color: PALETTE.navy, textDecoration: 'none',
+            background: 'transparent', border: 'none', cursor: 'pointer',
+            padding: '10px 0', display: 'flex', alignItems: 'center', gap: 8,
+          }}
+        >
+          <span>Keep your card forever →</span>
+          <span style={{
+            fontFamily: TYPE.mono, fontSize: 9, fontWeight: 700,
+            letterSpacing: '0.12em', color: PALETTE.sage,
+          }}>
+            CONNECT
+          </span>
+        </button>
       </div>
     </div>
   );
