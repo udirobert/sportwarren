@@ -307,9 +307,10 @@ export function PreviewCardDashboard({
             /api/og/card/[token] which respects the same tier rules. */}
         {tier >= 2 && (
           <ShareToWhatsApp
-            token={token}
             baseUrl={baseUrl}
             firstName={(user.name ?? 'Player').split(' ')[0]}
+            handle={user.handle ?? null}
+            discoverable={user.discoverable ?? false}
             tier={tier}
           />
         )}
@@ -348,31 +349,47 @@ export function PreviewCardDashboard({
 }
 
 /**
- * Share-to-WhatsApp CTA. Opens wa.me with a pre-filled message that
- * embeds the share-PNG URL — WhatsApp auto-unfurls it as an image
- * preview in the thread, so the recipient sees the card without
- * tapping through. Drives the viral loop: one player shares → group
- * sees the card → curious lads tap the link → they land in the quiz.
+ * Share-to-WhatsApp CTA. Opens wa.me with a pre-filled message linking
+ * to the player's PUBLIC profile (/player/{handle}) — that page has
+ * og:image pointing at /api/og/card/{token}, so WhatsApp unfurls the
+ * card visually AND tapping the unfurl lands the recipient on a real
+ * page with a CTA, not a raw PNG endpoint.
+ *
+ * Fallbacks:
+ *   - If the player has no handle (collision or hasn't been set), use
+ *     the homepage as the landing — still gets a generic SportWarren
+ *     unfurl, recipient lands somewhere coherent.
+ *   - If the player isn't discoverable, /player/{handle} would 404 —
+ *     same fallback to the homepage to avoid a dead link in the wild.
  */
 function ShareToWhatsApp({
-  token,
   baseUrl,
   firstName,
+  handle,
+  discoverable,
   tier,
 }: {
-  token: string;
   baseUrl: string;
   firstName: string;
+  handle: string | null;
+  discoverable: boolean;
   tier: number;
 }) {
-  const cardImageUrl = `${baseUrl}/api/og/card/${encodeURIComponent(token)}`;
-  // wa.me text wraps the line below + the image URL so the unfurl
-  // shows under the call to action. Plain text, no fancy formatting —
-  // WhatsApp strips most of it anyway.
+  // Pick the landing URL — public profile if available + discoverable,
+  // else the marketing homepage. Never link to the preview token URL
+  // (that's an auth surface and must not leak into shared chat).
+  const landingUrl = handle && discoverable
+    ? `${baseUrl}/player/${encodeURIComponent(handle)}`
+    : baseUrl;
+
+  // Single URL in the message — WhatsApp unfurls the first link it
+  // encounters by reading the page's og:* meta tags. /player/{handle}
+  // sets og:image to the satori PNG, so the recipient sees the card
+  // preview and the tap lands them on the profile.
   const message =
     tier >= 3
-      ? `My SportWarren card. The lads have weighed in. Rate me back: ${cardImageUrl}`
-      : `My SportWarren card. Rate the lads to see what they think of you: ${cardImageUrl}`;
+      ? `My SportWarren card — the lads have spoken. Rate me back + build yours: ${landingUrl}`
+      : `My SportWarren card. Rate the lads + build yours: ${landingUrl}`;
   const waUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
 
   return (
