@@ -115,6 +115,37 @@ function handleFromName(name: string): string {
 }
 
 /**
+ * Best-effort handle assignment. Collisions (P2002) are caught and
+ * logged — the user record stays valid with handle=null, and the
+ * captain can set a custom handle later via Settings → Privacy.
+ * Fail-soft rather than fail-fast because the seed script shouldn't
+ * abort on a name collision; it should just skip the handle for that
+ * one player and continue.
+ */
+async function safelySetHandle(
+  userId: string,
+  rawName: string | null | undefined,
+): Promise<{ assigned: string | null; collided: boolean }> {
+  if (!rawName) return { assigned: null, collided: false };
+  const handle = handleFromName(rawName);
+  if (!handle || handle.length < 3) return { assigned: null, collided: false };
+  try {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { handle },
+    });
+    return { assigned: handle, collided: false };
+  } catch (err) {
+    const code = (err as { code?: string })?.code;
+    if (code === 'P2002') {
+      console.warn(`  ⚠ Handle @${handle} taken — leaving ${rawName} without a handle (set custom via Settings → Privacy)`);
+      return { assigned: null, collided: true };
+    }
+    throw err;
+  }
+}
+
+/**
  * Derive a believable 6-attribute profile from position + skill note + goals.
  * Tuned for grassroots realism — all values 35–85, no Premier League numbers.
  */
@@ -236,6 +267,9 @@ async function main() {
         },
       });
 
+      // Create/update the user WITHOUT the handle first so collisions
+      // don't block the row. Handle is set in a separate try/catch
+      // below via safelySetHandle.
       const user = existing
         ? await prisma.user.update({
             where: { id: existing.id },
@@ -253,6 +287,12 @@ async function main() {
               ...avatar,
             },
           });
+
+      // Best-effort handle — only attempt if existing user doesn't
+      // already have one (don't overwrite custom handles).
+      if (!existing?.handle && player.name) {
+        await safelySetHandle(user.id, player.name);
+      }
 
       // Player profile
       const profile = await prisma.playerProfile.upsert({

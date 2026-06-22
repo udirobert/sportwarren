@@ -104,6 +104,27 @@ recap, customize, rate). They distinguish preservation from gamification.
   - URL handle: `User.handle` is the URL slug — lowercase, alphanumeric +
     dashes, 3-30 chars, globally unique.
 
+### Two URLs per player — never collapse them
+
+Each player has **two distinct URLs** serving two distinct purposes.
+Never conflate them in code or in product copy:
+
+| URL | Auth model | Purpose | Format |
+|---|---|---|---|
+| `/preview/{walletAddress}` | auth-by-URL token | Captain DMs this to the player. Gates profile edits, customize, perception ratings, sim claims. Only the holder of this URL can mutate the player's state. | `<firstname>-<6char>` — readable in WhatsApp threads, sufficient entropy in suffix |
+| `/player/{handle}` | unauthenticated public read | The player chooses to share this URL publicly. Resolves only when `User.discoverable === true`. Read-only — never gates writes. | `<handle>` — lowercase, alphanumeric, hyphens; user-editable |
+
+**Hard rules:**
+- The preview token (walletAddress) **must never appear on a public
+  surface** — not in markup, not in a meta tag, not in a sitemap. It
+  is the auth mechanism.
+- The handle **must never gate auth** — it's a vanity URL, anyone can
+  guess one, and unique-ness is just for routing.
+- Handle collisions are **fail-soft** — `safelySetHandle()` in the
+  seed scripts catches P2002 and leaves the user with `handle=null`;
+  the captain (or the user themselves) sets a custom handle later via
+  Settings → Privacy. Seed scripts must never abort on a name clash.
+
 ### Public surfaces (shipped 2026-06-21)
 
 The multi-team scaffolding — squads + players exposed to the open web
