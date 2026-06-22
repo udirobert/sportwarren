@@ -139,27 +139,43 @@ depending on what the brand is doing.
   `src/components/v3/` — see below.
 
 - **V4 — the GAME** (dark stadium / atmospheric).
-  Currently inlined in the landing surfaces (`HeroSection`,
+  Lives on the homepage hero + landing sections (`HeroSection`,
   `ProblemSection`, `SolutionSection`, `HowItWorksSection`,
-  `AppPreviewSection`). The dark gradient (slate-900 → green-900 →
-  slate-900) + ambient blur orbs + grid overlay + emerald/green
-  accents on CTAs. This is the visual identity of the homepage and
-  the marketing flow.
+  `AppPreviewSection`). The dark gradient (gray-900 → green-900 →
+  gray-900) + ambient blur orbs + grid overlay + emerald/green
+  accents on CTAs. The visual identity of the homepage and
+  marketing flow.
 
-  V4 does **not** currently have a primitive library — it lives as
-  Tailwind utility classes within each landing section. When the
-  patterns harden (e.g. the dark backdrop + orbs is repeated 3+
-  times), promote them into `src/components/v4/` with the same
-  shape as V3 (tokens + primitives + barrel export).
+  Primitive library at `src/components/v4/`:
+  - `tokens.ts` — `PALETTE` (gray-900, slate-900, green-900,
+    emerald-400, emerald-500, amber-500, blue-400, cream, muted,
+    subtle), `TYPE` + `TRACKING` (same fonts as V3).
+  - `primitives.tsx` — `V4StadiumBackdrop`, `V4SectionShell`,
+    `V4Eyebrow`, `V4Heading`, `V4PrimaryCTA`, `V4DualCTA`,
+    `V4EarlyAccessBadge`.
+  - `index.ts` — barrel export.
 
-  The Figma file for V4 should mirror the homepage: dark stadium
-  ground, emerald/green energy, atmospheric depth via orbs and
-  gradient — not a flat verdant programme-cover register.
+  **Important:** the homepage and landing sections currently inline
+  these patterns as Tailwind utilities — they work, and an earlier
+  pass that touched them caused regression. The primitive library
+  exists for **future V4 surfaces**, not for an immediate refactor.
+  Don't migrate `HeroSection` etc. to the primitives unless
+  explicitly asked.
 
-**Don't confuse them.** A failed earlier pass introduced a "verdant
-rustic" palette (pitch/dusk/chalk/worn) as V4 — that register felt
-plastic vs the homepage's actual atmospheric depth, and was reverted.
-Future V4 work should reference the existing homepage aesthetic.
+**V3 / V4 in Figma:** both registers live in file
+`MjsiLmieTcZhKWwimOlZ0u` (SportWarren — Moment Cards V3 (Risograph)).
+Two variable collections: `V3 Risograph` (cream + ink + V3 accents,
+already established) and `V4 Stadium` (10 dark stadium variables —
+ground/*, energy/*, light/*, signal/*, text/*). Pages: V3 has Cover +
+Components + Archetypes; V4 has the `V4 — Site / Marketing` page with
+a token-swatch cover + a 1920×1080 hero mockup that mirrors the live
+`HeroSection.tsx`.
+
+**Don't confuse the registers.** A failed earlier pass introduced a
+"verdant rustic" palette (pitch/dusk/chalk/worn) as V4 — that register
+felt plastic vs the homepage's atmospheric depth, and was reverted.
+Current V4 = the dark stadium aesthetic that's already shipped on
+the homepage.
 
 ### V3 design system
 
