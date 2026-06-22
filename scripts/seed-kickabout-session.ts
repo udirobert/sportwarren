@@ -106,7 +106,12 @@ interface RosterFile {
 }
 
 function genToken(prefix: string): string {
-  return `${prefix}_${randomBytes(6).toString('base64url')}`;
+  const suffix = randomBytes(4).toString('base64url').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6);
+  return `${prefix}-${suffix}`;
+}
+
+function handleFromName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '-');
 }
 
 /**

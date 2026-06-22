@@ -73,7 +73,12 @@ const PERCEPTIONS = [
 ];
 
 function makeToken(name: string): string {
-  return `kickabout_${name.toLowerCase()}_${randomBytes(4).toString('base64url').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6)}`;
+  const suffix = randomBytes(4).toString('base64url').replace(/[^a-zA-Z0-9]/g, '').slice(0, 6);
+  return `${name.toLowerCase()}-${suffix}`;
+}
+
+function handleFromName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9]/g, '-');
 }
 
 async function main() {
@@ -109,6 +114,7 @@ async function main() {
         chain: 'preview',
         name: player.name,
         position: player.position,
+        handle: handleFromName(player.name),
         avatarKitColor: player.kit,
         avatarAccentColor: player.accent,
         avatarSkinTone: '#c89e7c',
@@ -206,7 +212,22 @@ async function main() {
     console.log(`  ✓ ${p.rater} → ${p.target}: ${p.scenarioId} = ${p.choice.toUpperCase()} (${p.kind})`);
   }
 
-  // 3. Output preview URLs so the user can grab them for WhatsApp
+  // 3. Backfill handles for existing users who don't have one
+  console.log('\n🔑 Seeding handles…');
+  const allUsers = await prisma.user.findMany({
+    where: { chain: 'preview', squads: { some: { squadId: squad.id } }, handle: null },
+  });
+  for (const u of allUsers) {
+    const handle = handleFromName(u.name ?? u.id);
+    await prisma.user.update({
+      where: { id: u.id },
+      data: { handle },
+    });
+    console.log(`  ✓ ${u.name} → @${handle}`);
+  }
+  if (allUsers.length === 0) console.log('  (none needed)');
+
+  // 4. Output preview URLs so the user can grab them for WhatsApp
   console.log('\n========================================================');
   console.log('  PREVIEW LINKS — paste into each player\'s WhatsApp');
   console.log('========================================================');
@@ -215,8 +236,11 @@ async function main() {
     orderBy: { name: 'asc' },
   });
   for (const u of all) {
+    const previewUrl = `${baseUrl}/preview/${u.walletAddress}`;
+    const playerUrl = u.handle ? `${baseUrl}/player/${u.handle}` : '—';
     console.log(`\n${u.name} (${u.position ?? '—'})`);
-    console.log(`  ${baseUrl}/preview/${u.walletAddress}`);
+    console.log(`  Preview  → ${previewUrl}`);
+    console.log(`  Profile  → ${playerUrl}`);
   }
   console.log('\n========================================================\n');
 

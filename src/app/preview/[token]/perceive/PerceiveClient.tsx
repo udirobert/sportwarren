@@ -12,7 +12,7 @@ import {
   V3Heading,
   V3CTAButton,
 } from '@/components/v3';
-import { submitPerception } from './_actions';
+import { submitPerception, type PerceptionPeek } from './_actions';
 
 interface Target {
   profileId: string;
@@ -107,6 +107,14 @@ export function PerceiveClient({
   const [completed, setCompleted] = useState(alreadyRated.length);
   const [pending, startTransition] = useTransition();
   const [feedback, setFeedback] = useState<string | null>(null);
+  // The sneak-peek shown briefly between rounds — what others picked
+  // for the combo the rater just answered. Holds for ~1.4s before the
+  // next combo replaces it. Tied to the combo so the displayed peek
+  // can include the player/scenario context.
+  const [peek, setPeek] = useState<{
+    combo: Combo;
+    data: PerceptionPeek;
+  } | null>(null);
 
   const current = queue[0];
 
@@ -134,9 +142,16 @@ export function PerceiveClient({
         setQueue((q) => [combo, ...q]);
         setCompleted((c) => Math.max(0, c - 1));
         setFeedback('Couldn’t save — try again');
+        setTimeout(() => setFeedback(null), 900);
+        return;
       }
-      // Clear feedback after a beat
-      setTimeout(() => setFeedback(null), 900);
+      // Success — show the peek for ~1.4s, then clear so the next
+      // combo's prompt is unobstructed.
+      if (res.peek) {
+        setPeek({ combo, data: res.peek });
+        setTimeout(() => setPeek(null), 1400);
+      }
+      setFeedback(null);
     });
   };
 
@@ -175,6 +190,175 @@ export function PerceiveClient({
         <V3CTAButton href={`/preview/${encodeURIComponent(token)}`} variant="secondary">
           Back to your card
         </V3CTAButton>
+      </V3PageShell>
+    );
+  }
+
+  // Peek interstitial — shown briefly between rounds. Renders FIRST
+  // so that the moment of "ooh, what did the others say?" lands
+  // before the next combo arrives.
+  if (peek) {
+    const peekCombo = peek.combo;
+    const peekData = peek.data;
+    const peekPrompt = peekCombo.scenario.prompt.replace(/\{name\}/g, peekCombo.target.firstName);
+    const myOption = peekCombo.scenario.options.find((o) => o.id === peekData.myChoice);
+    return (
+      <V3PageShell>
+        <V3Ribbon />
+        <V3IdentityLine context={`Perception · ${squadName}`} showDot={false} marginBottom={20} />
+
+        {/* Banner — what the rater just said */}
+        <div
+          style={{
+            background: PALETTE.ink,
+            color: PALETTE.cream,
+            padding: '14px 18px',
+            marginBottom: 14,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+            borderLeft: `4px solid ${peekCombo.kind === 'descriptive' ? PALETTE.mustard : PALETTE.red}`,
+          }}
+        >
+          <span
+            style={{
+              fontFamily: TYPE.mono,
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: TRACKING.cap,
+              textTransform: 'uppercase',
+              opacity: 0.85,
+            }}
+          >
+            You said {peekData.myChoice.toUpperCase()} about {peekCombo.target.firstName}
+          </span>
+          <span
+            style={{
+              fontFamily: TYPE.mono,
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: TRACKING.cap,
+              textTransform: 'uppercase',
+              opacity: 0.6,
+            }}
+          >
+            {peekCombo.kind === 'descriptive' ? 'Does' : 'Should'}
+          </span>
+        </div>
+
+        <div
+          style={{
+            fontFamily: TYPE.mono,
+            fontSize: 11,
+            lineHeight: 1.45,
+            color: PALETTE.inkLight,
+            marginBottom: 16,
+          }}
+        >
+          {peekPrompt}
+        </div>
+
+        {/* Aggregate bars */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 18 }}>
+          {peekCombo.scenario.options.map((opt) => {
+            const count = peekData.counts[opt.id];
+            const pct = peekData.counts.total > 0 ? Math.round((count / peekData.counts.total) * 100) : 0;
+            const isMine = opt.id === peekData.myChoice;
+            return (
+              <div key={opt.id} style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'baseline',
+                    gap: 8,
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: TYPE.mono,
+                      fontSize: 11,
+                      lineHeight: 1.4,
+                      color: isMine ? PALETTE.ink : PALETTE.inkLight,
+                      fontWeight: isMine ? 700 : 500,
+                      flex: 1,
+                      minWidth: 0,
+                    }}
+                  >
+                    <span style={{ marginRight: 6 }}>{opt.id.toUpperCase()}.</span>
+                    {opt.label}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: TYPE.mono,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: isMine ? PALETTE.ink : PALETTE.inkLight,
+                      minWidth: 24,
+                      textAlign: 'right',
+                    }}
+                  >
+                    {count}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    position: 'relative',
+                    width: '100%',
+                    height: 5,
+                    background: 'rgba(0,0,0,0.06)',
+                  }}
+                >
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      height: '100%',
+                      width: `${pct}%`,
+                      background: isMine
+                        ? (peekCombo.kind === 'descriptive' ? PALETTE.mustard : PALETTE.red)
+                        : PALETTE.inkLight,
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Headline */}
+        <div
+          style={{
+            background: 'rgba(212,164,55,0.12)',
+            border: `1px solid ${PALETTE.mustard}`,
+            padding: '12px 14px',
+            fontFamily: TYPE.mono,
+            fontSize: 12,
+            fontWeight: 700,
+            lineHeight: 1.4,
+            color: PALETTE.ink,
+            letterSpacing: '0.02em',
+          }}
+        >
+          {peekData.headline}
+        </div>
+
+        {myOption && (
+          <div
+            style={{
+              fontFamily: TYPE.mono,
+              fontSize: 10,
+              color: PALETTE.inkLight,
+              marginTop: 14,
+              fontStyle: 'italic',
+              textAlign: 'center',
+            }}
+          >
+            Next take in a moment…
+          </div>
+        )}
       </V3PageShell>
     );
   }

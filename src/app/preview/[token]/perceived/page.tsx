@@ -36,6 +36,12 @@ interface PageProps {
 }
 
 const RECIPROCITY_GATE = 5;
+// Tier 2 — position-anonymized source reveal. Past this threshold the
+// report shows each individual rating with the rater's POSITION
+// (never name) so debate fuel ramps up without nuking friendships.
+// In small squads "a CB said X" can effectively name the source —
+// that's by design for the test cohort; raise to 20 when squads grow.
+const TIER2_GATE = 10;
 
 export default async function PerceivedPage({ params }: PageProps) {
   const { token } = await params;
@@ -54,17 +60,30 @@ export default async function PerceivedPage({ params }: PageProps) {
   if (!profile || !squad) notFound();
 
   // Reciprocity counts — given (this rater's outgoing perceptions)
-  // vs received (what others said about this player).
+  // vs received (what others said about this player). The received
+  // rows pull the rater's POSITION (never name) so the Tier 2 view
+  // can attribute by role without exposing who said what.
   const [givenCount, received] = await Promise.all([
     prisma.playerPerception.count({ where: { raterId: profile.id } }),
     prisma.playerPerception.findMany({
       where: { targetId: profile.id },
-      select: { scenarioId: true, choice: true, kind: true, raterId: true },
+      select: {
+        scenarioId: true,
+        choice: true,
+        kind: true,
+        raterId: true,
+        rater: {
+          select: {
+            user: { select: { position: true } },
+          },
+        },
+      },
     }),
   ]);
 
   const uniqueRaters = new Set(received.map((r) => r.raterId)).size;
   const isUnlocked = givenCount >= RECIPROCITY_GATE;
+  const isTier2Unlocked = givenCount >= TIER2_GATE;
 
   // Aggregate received responses by (scenarioId, kind)
   // Shape: { [scenarioId]: { descriptive: { a, b, c, d, total }, prescriptive: {...} } }
@@ -207,10 +226,41 @@ export default async function PerceivedPage({ params }: PageProps) {
                     />
                   )}
                 </div>
+
+                {/* Tier 2 voices — position-anonymized individual takes.
+                    Only renders past TIER2_GATE so casual raters don't
+                    see role-attributed opinions before they've done
+                    enough rating themselves. */}
+                {isTier2Unlocked && (
+                  <VoicesSection
+                    scenarioId={scenario.id}
+                    options={scenario.options}
+                    received={received.filter((r) => r.scenarioId === scenario.id)}
+                  />
+                )}
               </V3SolidCard>
             );
           })}
         </div>
+      )}
+
+      {/* Tier 2 unlock teaser — appears when user is past Tier 1 but
+          hasn't reached Tier 2. Acts as the next-tier carrot. */}
+      {isUnlocked && !isTier2Unlocked && scenariosWithData.length > 0 && (
+        <V3HollowCard accent="mustard">
+          <div
+            style={{
+              fontFamily: TYPE.mono,
+              fontSize: 11,
+              lineHeight: 1.6,
+              color: PALETTE.ink,
+            }}
+          >
+            <strong>Next tier:</strong> rate {TIER2_GATE - givenCount} more lads to see
+            <em> who said what</em> by their position (not by name). Hot takes get
+            spicier when you know which CB called you out.
+          </div>
+        </V3HollowCard>
       )}
 
       <V3SectionLabel marginTop={12}>Reciprocity</V3SectionLabel>
@@ -253,8 +303,9 @@ export default async function PerceivedPage({ params }: PageProps) {
           textAlign: 'center',
         }}
       >
-        Aggregate only — we never show who said what. Make the lads
-        argue, not fight.
+        Names stay hidden. Past Tier 2 we surface the rater&apos;s
+        position so the banter has texture — never the name. Make
+        the lads argue, not fight.
       </p>
     </V3PageShell>
   );
@@ -345,6 +396,114 @@ function ChoiceBars({
                   }}
                 />
               </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Tier 2 — individual takes labeled by rater position.
+ *
+ * Each row shows: [POSITION] · CHOICE · option label · (kind).
+ * No names ever. In small squads "a CB said X" can be one of two
+ * people; that's by design — keeps the banter pointed without
+ * turning it into a 1:1 callout.
+ */
+function VoicesSection({
+  scenarioId: _scenarioId,
+  options,
+  received,
+}: {
+  scenarioId: string;
+  options: Array<{ id: 'a' | 'b' | 'c' | 'd'; label: string }>;
+  received: Array<{
+    scenarioId: string;
+    choice: string;
+    kind: string;
+    raterId: string;
+    rater: { user: { position: string | null } | null } | null;
+  }>;
+}) {
+  if (received.length === 0) return null;
+
+  const optionById: Record<string, string> = {};
+  for (const o of options) optionById[o.id] = o.label;
+
+  return (
+    <div style={{ marginTop: 16, paddingTop: 14, borderTop: `1px dashed ${PALETTE.inkLight}` }}>
+      <div
+        style={{
+          fontFamily: TYPE.mono,
+          fontSize: 9,
+          fontWeight: 700,
+          letterSpacing: TRACKING.capWide,
+          textTransform: 'uppercase',
+          color: PALETTE.navy,
+          marginBottom: 10,
+        }}
+      >
+        Voices · by position
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {received.map((r, i) => {
+          const positionLabel = (r.rater?.user?.position ?? '?').toUpperCase();
+          const choiceUpper = r.choice.toUpperCase();
+          const label = optionById[r.choice] ?? '—';
+          const isPrescriptive = r.kind === 'prescriptive';
+          return (
+            <div
+              key={`${r.raterId}-${r.scenarioId}-${r.kind}-${i}`}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                fontFamily: TYPE.mono,
+                fontSize: 11,
+                lineHeight: 1.4,
+                padding: '6px 10px',
+                border: '1px solid rgba(0,0,0,0.08)',
+                background: 'rgba(0,0,0,0.02)',
+              }}
+            >
+              <span
+                style={{
+                  fontWeight: 700,
+                  fontSize: 9,
+                  letterSpacing: TRACKING.cap,
+                  background: PALETTE.ink,
+                  color: PALETTE.cream,
+                  padding: '3px 7px',
+                  minWidth: 38,
+                  textAlign: 'center',
+                }}
+              >
+                {positionLabel}
+              </span>
+              <span
+                style={{
+                  fontWeight: 700,
+                  color: isPrescriptive ? PALETTE.red : PALETTE.mustard,
+                  minWidth: 18,
+                }}
+              >
+                {choiceUpper}
+              </span>
+              <span style={{ flex: 1, minWidth: 0, color: PALETTE.ink }}>{label}</span>
+              <span
+                style={{
+                  fontSize: 8,
+                  fontWeight: 700,
+                  letterSpacing: TRACKING.cap,
+                  textTransform: 'uppercase',
+                  color: isPrescriptive ? PALETTE.red : PALETTE.mustard,
+                  opacity: 0.8,
+                }}
+              >
+                {isPrescriptive ? 'Should' : 'Does'}
+              </span>
             </div>
           );
         })}
