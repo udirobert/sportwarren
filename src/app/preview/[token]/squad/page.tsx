@@ -29,10 +29,7 @@ import {
   V3IdentityLine,
   V3Heading,
   V3SectionLabel,
-  V3SolidCard,
   V3CTAButton,
-  V3PlayerCard,
-  buildPlayerCardData,
   type Attrs,
 } from '@/components/v3';
 import { PerceptionBars } from '@/components/perception/PerceptionBars';
@@ -149,7 +146,6 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
     tier: 0 | 1 | 2 | 3;
     perceptionsReceived: number;
     perceptionsGiven: number;
-    cardData: ReturnType<typeof buildPlayerCardData>;
     isViewer: boolean;
     viewerHasRated: boolean;
   };
@@ -191,7 +187,6 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
         tier: tierFromGiven(given),
         perceptionsReceived: receivedMap.get(profile.id) ?? 0,
         perceptionsGiven: given,
-        cardData: buildPlayerCardData({ user: m.user, attrs, level, overall }),
         isViewer: m.userId === user.id,
         viewerHasRated: givenTargetIds.has(profile.id),
       };
@@ -282,259 +277,257 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
     ? Math.round(rows.reduce((s, r) => s + r.overall, 0) / rows.length)
     : 0;
 
+  // Build the inline leaderboard list — top 2 always visible, rest collapsed.
+  type Leader = { label: string; player: string; meta: string | null; accent: 'mustard' | 'navy' | 'sage' | 'red' };
+  const inlineLeaders: Leader[] = [];
+  const collapsedLeaders: Leader[] = [];
+
+  if (sortByOverall[0]) {
+    inlineLeaders.push({
+      label: 'Top of the pile',
+      player: sortByOverall[0].name,
+      meta: `${sortByOverall[0].position ?? ''} · ${sortByOverall[0].overall} OVR`.trim(),
+      accent: 'mustard',
+    });
+  }
+  if (topHotTake) {
+    inlineLeaders.push({
+      label: 'Biggest hot take',
+      player: `${topHotTake.position}s`,
+      meta: `${topHotTake.count}/${topHotTake.total} say ${topHotTake.label.toLowerCase()}`,
+      accent: 'red',
+    });
+  }
+  if (sortByReceived[0] && sortByReceived[0].perceptionsReceived > 0) {
+    collapsedLeaders.push({
+      label: 'Most rated',
+      player: sortByReceived[0].name,
+      meta: `${sortByReceived[0].perceptionsReceived} ratings received`,
+      accent: 'navy',
+    });
+  }
+  if (sortByGiven[0] && sortByGiven[0].perceptionsGiven > 0) {
+    collapsedLeaders.push({
+      label: 'Most active rater',
+      player: sortByGiven[0].name,
+      meta: `${sortByGiven[0].perceptionsGiven} given`,
+      accent: 'sage',
+    });
+  }
+  if (tier3Lads.length > 0) {
+    collapsedLeaders.push({
+      label: 'Tier 3 unlocked',
+      player: tier3Lads.map((t) => t.name.split(' ')[0]).join(', '),
+      meta: `${tier3Lads.length} lad${tier3Lads.length === 1 ? '' : 's'}`,
+      accent: 'mustard',
+    });
+  }
+
+  const visibleActivity = recentPerceptions.slice(0, 4);
+  const hiddenActivity = recentPerceptions.slice(4);
+
   return (
     <V3PageShell maxWidth={720}>
-      <V3Ribbon order={['red', 'mustard', 'navy', 'sage']} marginBottom={24} />
-      <V3IdentityLine context={`${squad.name} · clubhouse`} />
+      <V3Ribbon order={['red', 'mustard', 'navy', 'sage']} marginBottom={20} />
+      <V3IdentityLine context={`${squad.name} · clubhouse`} marginBottom={10} />
 
-      <V3Heading size="large">The lads.</V3Heading>
+      <V3Heading size="medium">The lads.</V3Heading>
 
       <p
         style={{
           fontFamily: TYPE.mono,
-          fontSize: 13,
+          fontSize: 11,
+          fontWeight: 700,
+          letterSpacing: '0.14em',
+          textTransform: 'uppercase',
           color: PALETTE.inkLight,
-          lineHeight: 1.55,
-          marginTop: 16,
-          marginBottom: 28,
-          maxWidth: 520,
+          marginTop: 8,
+          marginBottom: 24,
         }}
       >
-        The squad&apos;s home alongside WhatsApp. Every lad&apos;s card, what the
-        group thinks of each role, who&apos;s rated whom, and where you stand.
+        {rows.length} lads · {squadAvgOverall} avg · {doctrineResult.totalRows} ratings · {doctrineResult.uniqueRaters} voices
       </p>
 
-      {/* ── Squad stats band ───────────────────────────────────────── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: 6,
-          marginBottom: 36,
-        }}
-      >
-        <StatTile accent="navy" value={String(rows.length)} label="Lads" />
-        <StatTile accent="mustard" value={String(squadAvgOverall)} label="Avg Overall" />
-        <StatTile accent="sage" value={String(doctrineResult.totalRows)} label="Ratings" />
-        <StatTile accent="red" value={String(doctrineResult.uniqueRaters)} label="Voices" />
-      </div>
+      {/* ── Leaderboards (top 2 inline, rest behind details) ──────── */}
+      {inlineLeaders.length > 0 && (
+        <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
+          {inlineLeaders.map((l) => (
+            <LeaderTile key={l.label} {...l} />
+          ))}
+        </div>
+      )}
+      {collapsedLeaders.length > 0 && (
+        <details style={{ marginBottom: 28 }}>
+          <summary
+            style={{
+              cursor: 'pointer',
+              listStyle: 'none',
+              fontFamily: TYPE.mono,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: TRACKING.cap,
+              textTransform: 'uppercase',
+              color: PALETTE.inkLight,
+              padding: '6px 0',
+            }}
+          >
+            + {collapsedLeaders.length} more leaderboard{collapsedLeaders.length === 1 ? '' : 's'}
+          </summary>
+          <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
+            {collapsedLeaders.map((l) => (
+              <LeaderTile key={l.label} {...l} />
+            ))}
+          </div>
+        </details>
+      )}
 
-      {/* ── Leaderboards ───────────────────────────────────────────── */}
-      <V3SectionLabel marginBottom={12}>Leaderboards</V3SectionLabel>
-      <div style={{ display: 'grid', gap: 10, marginBottom: 36 }}>
-        {sortByOverall[0] && (
-          <LeaderTile
-            label="Highest Overall"
-            playerName={sortByOverall[0].name}
-            position={sortByOverall[0].position}
-            value={String(sortByOverall[0].overall)}
-            accent="mustard"
-          />
-        )}
-        {sortByReceived[0] && sortByReceived[0].perceptionsReceived > 0 && (
-          <LeaderTile
-            label="Most rated"
-            playerName={sortByReceived[0].name}
-            position={sortByReceived[0].position}
-            value={`${sortByReceived[0].perceptionsReceived} ratings`}
-            accent="navy"
-          />
-        )}
-        {sortByGiven[0] && sortByGiven[0].perceptionsGiven > 0 && (
-          <LeaderTile
-            label="Most active rater"
-            playerName={sortByGiven[0].name}
-            position={sortByGiven[0].position}
-            value={`${sortByGiven[0].perceptionsGiven} given`}
-            accent="sage"
-          />
-        )}
-        {topHotTake && (
-          <LeaderTile
-            label="Biggest hot take"
-            playerName={`${topHotTake.position}s`}
-            position={null}
-            value={`${topHotTake.count}/${topHotTake.total} say: ${topHotTake.label.toLowerCase()}`}
-            accent="red"
-            small
-          />
-        )}
-        {tier3Lads.length > 0 && (
-          <LeaderTile
-            label="Tier 3 unlocked"
-            playerName={tier3Lads.map((t) => t.name.split(' ')[0]).join(', ')}
-            position={null}
-            value={`${tier3Lads.length} lad${tier3Lads.length === 1 ? '' : 's'}`}
-            accent="mustard"
-            small
-          />
-        )}
-      </div>
+      {/* ── Roster filters ────────────────────────────────────────── */}
+      <V3SectionLabel marginBottom={10} marginTop={4}>The roster</V3SectionLabel>
 
-      {/* ── Filters ────────────────────────────────────────────────── */}
-      <V3SectionLabel marginBottom={12}>The roster</V3SectionLabel>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-        <Chip href={buildUrl({ sort: 'overall' })} active={sort === 'overall'}>Overall</Chip>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+        <Chip href={buildUrl({ sort: 'overall' })} active={sort === 'overall'}>OVR</Chip>
         <Chip href={buildUrl({ sort: 'ratings' })} active={sort === 'ratings'}>Ratings</Chip>
         <Chip href={buildUrl({ sort: 'tier' })} active={sort === 'tier'}>Tier</Chip>
-        <Chip href={buildUrl({ sort: 'name' })} active={sort === 'name'}>Name</Chip>
-      </div>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-        <Chip href={buildUrl({ position: undefined })} active={positionFilter === null} muted>
-          All positions
-        </Chip>
-        {presentPositions.map((p) => (
-          <Chip key={p} href={buildUrl({ position: p })} active={positionFilter === p} muted>
-            {p}
-          </Chip>
-        ))}
-      </div>
-
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 20 }}>
+        <Chip href={buildUrl({ sort: 'name' })} active={sort === 'name'}>A→Z</Chip>
+        <span style={{ width: 8 }} />
         {unratedOnly ? (
           <Chip href={buildUrl({ unrated: undefined })} active muted>
-            ✓ Only lads you haven&apos;t rated
+            ✓ Untrated only
           </Chip>
         ) : (
           <Chip href={buildUrl({ unrated: '1' })} active={false} muted>
-            Hide lads you&apos;ve rated
+            Untrated only
           </Chip>
         )}
       </div>
 
-      {/* ── Roster grid ────────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 40 }}>
+      {presentPositions.length > 1 && (
+        <details style={{ marginBottom: 16 }}>
+          <summary
+            style={{
+              cursor: 'pointer',
+              listStyle: 'none',
+              fontFamily: TYPE.mono,
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: TRACKING.cap,
+              textTransform: 'uppercase',
+              color: PALETTE.inkLight,
+              padding: '4px 0',
+            }}
+          >
+            Filter by position {positionFilter ? `· ${positionFilter}` : ''}
+          </summary>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+            <Chip href={buildUrl({ position: undefined })} active={positionFilter === null} muted>All</Chip>
+            {presentPositions.map((p) => (
+              <Chip key={p} href={buildUrl({ position: p })} active={positionFilter === p} muted>
+                {p}
+              </Chip>
+            ))}
+          </div>
+        </details>
+      )}
+
+      {/* ── Roster rows ───────────────────────────────────────────── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 36 }}>
         {sorted.length === 0 ? (
           <p style={{ fontFamily: TYPE.mono, fontSize: 12, color: PALETTE.inkLight, fontStyle: 'italic' }}>
             No lads match those filters.
           </p>
         ) : (
           sorted.map((r) => (
-            <div
+            <RosterRow
               key={r.userId}
-              style={{
-                position: 'relative',
-                border: r.isViewer ? `2px solid ${PALETTE.mustard}` : 'none',
-                padding: r.isViewer ? 4 : 0,
-                background: r.isViewer ? 'rgba(212,164,55,0.12)' : 'transparent',
-              }}
-            >
-              {r.isViewer && (
-                <div
-                  style={{
-                    position: 'absolute',
-                    top: -10,
-                    right: 10,
-                    fontFamily: TYPE.mono,
-                    fontSize: 9,
-                    fontWeight: 700,
-                    letterSpacing: TRACKING.cap,
-                    background: PALETTE.mustard,
-                    color: PALETTE.ink,
-                    padding: '2px 6px',
-                  }}
-                >
-                  YOU
-                </div>
-              )}
-              <V3PlayerCard data={r.cardData} variant="compact" />
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  padding: '6px 12px 4px',
-                  fontFamily: TYPE.mono,
-                  fontSize: 10,
-                  color: PALETTE.inkLight,
-                  letterSpacing: '0.06em',
-                }}
-              >
-                <span>{r.perceptionsReceived} ratings received · T{r.tier}</span>
-                {!r.isViewer && !r.viewerHasRated && (
-                  <Link
-                    href={`/preview/${encodeURIComponent(token)}?mode=quiz`}
-                    style={{ color: PALETTE.red, fontWeight: 700, textDecoration: 'none' }}
-                  >
-                    Rate them →
-                  </Link>
-                )}
-                {r.viewerHasRated && !r.isViewer && (
-                  <span style={{ color: PALETTE.sage, fontWeight: 700 }}>✓ rated</span>
-                )}
-              </div>
-            </div>
+              row={r}
+              quizHref={`/preview/${encodeURIComponent(token)}?mode=quiz`}
+            />
           ))
         )}
       </div>
 
-      {/* ── Universal doctrine ─────────────────────────────────────── */}
+      {/* ── Doctrine (collapsed) ──────────────────────────────────── */}
       {doctrineResult.totalRows > 0 && (
-        <>
-          <V3SectionLabel marginBottom={12}>What the group says by role</V3SectionLabel>
-          <p
+        <details style={{ marginBottom: 32 }}>
+          <summary
             style={{
+              cursor: 'pointer',
+              listStyle: 'none',
               fontFamily: TYPE.mono,
               fontSize: 11,
-              color: PALETTE.inkLight,
-              lineHeight: 1.55,
-              marginBottom: 18,
+              fontWeight: 700,
+              letterSpacing: TRACKING.cap,
+              textTransform: 'uppercase',
+              color: PALETTE.navy,
+              padding: '10px 12px',
+              border: `1.5px solid ${PALETTE.navy}`,
+              borderLeft: `6px solid ${PALETTE.navy}`,
+              background: PALETTE.cream,
+              display: 'flex',
+              justifyContent: 'space-between',
             }}
           >
-            Anonymized — no individual names attached. The squad&apos;s collective read of each role.
-          </p>
-          {Object.entries(doctrineResult.byPosition).map(([position, scenarios]) => (
-            <div key={position} style={{ marginBottom: 28 }}>
-              <V3SectionLabel marginBottom={10} color={PALETTE.red}>
-                {position}
-              </V3SectionLabel>
-              <PerceptionBars
-                aggregate={scenarios}
-                scenarios={SCENARIO_PAYLOAD}
-                nameSubstitution={`the ${position}`}
-                emptyMessage="No ratings for this role yet."
-              />
-            </div>
-          ))}
-        </>
-      )}
-
-      {/* ── Activity ticker ────────────────────────────────────────── */}
-      {recentPerceptions.length > 0 && (
-        <>
-          <V3SectionLabel marginBottom={12} marginTop={16}>Recent activity</V3SectionLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 32 }}>
-            {recentPerceptions.map((p) => {
-              const raterPos = p.rater?.user?.position ?? 'a lad';
-              const targetPos = p.target?.user?.position ?? 'a lad';
-              const scenario = SCENARIOS.find((s) => s.id === p.scenarioId);
-              const lens = scenario ? scenario.attributeTag : 'play';
-              return (
-                <div
-                  key={p.id}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    fontFamily: TYPE.mono,
-                    fontSize: 11,
-                    color: PALETTE.inkLight,
-                    padding: '6px 10px',
-                    borderLeft: `2px solid ${PALETTE.ink}25`,
-                  }}
-                >
-                  <span>
-                    A {raterPos} rated a {targetPos} on {lens}
-                  </span>
-                  <span style={{ opacity: 0.7 }}>{timeAgo(p.createdAt)}</span>
-                </div>
-              );
-            })}
+            <span>What the group says by role</span>
+            <span style={{ opacity: 0.7 }}>tap →</span>
+          </summary>
+          <div style={{ marginTop: 14 }}>
+            <p style={{ fontFamily: TYPE.mono, fontSize: 11, color: PALETTE.inkLight, lineHeight: 1.55, marginBottom: 18 }}>
+              Anonymized positional read — no names attached.
+            </p>
+            {Object.entries(doctrineResult.byPosition).map(([position, scenarios]) => (
+              <div key={position} style={{ marginBottom: 24 }}>
+                <V3SectionLabel marginBottom={10} color={PALETTE.red}>
+                  {position}
+                </V3SectionLabel>
+                <PerceptionBars
+                  aggregate={scenarios}
+                  scenarios={SCENARIO_PAYLOAD}
+                  nameSubstitution={`the ${position}`}
+                  emptyMessage="No ratings for this role yet."
+                />
+              </div>
+            ))}
           </div>
+        </details>
+      )}
+
+      {/* ── Activity ticker (4 inline + collapse) ─────────────────── */}
+      {visibleActivity.length > 0 && (
+        <>
+          <V3SectionLabel marginBottom={10}>Recent activity</V3SectionLabel>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
+            {visibleActivity.map((p) => (
+              <ActivityRow key={p.id} perception={p} />
+            ))}
+          </div>
+          {hiddenActivity.length > 0 && (
+            <details style={{ marginBottom: 32 }}>
+              <summary
+                style={{
+                  cursor: 'pointer',
+                  listStyle: 'none',
+                  fontFamily: TYPE.mono,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: TRACKING.cap,
+                  textTransform: 'uppercase',
+                  color: PALETTE.inkLight,
+                  padding: '4px 0',
+                }}
+              >
+                + {hiddenActivity.length} more
+              </summary>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+                {hiddenActivity.map((p) => (
+                  <ActivityRow key={p.id} perception={p} />
+                ))}
+              </div>
+            </details>
+          )}
         </>
       )}
 
-      {/* ── CTAs ───────────────────────────────────────────────────── */}
+      {/* ── CTAs ──────────────────────────────────────────────────── */}
       <V3CTAButton
         href={`/preview/${encodeURIComponent(token)}?mode=quiz`}
         variant="primary"
@@ -547,7 +540,7 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
         variant="secondary"
         marginBottom={16}
       >
-        ← Back to your card
+        ← Your card
       </V3CTAButton>
     </V3PageShell>
   );
@@ -557,74 +550,31 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
 // Local components
 // ──────────────────────────────────────────────────────────────────────
 
-function StatTile({
-  value,
-  label,
-  accent,
-}: {
-  value: string;
-  label: string;
-  accent: 'navy' | 'mustard' | 'sage' | 'red';
-}) {
-  return (
-    <V3SolidCard accent={accent} padding="10px 12px">
-      <div
-        style={{
-          fontFamily: TYPE.display,
-          fontSize: 26,
-          fontWeight: 800,
-          lineHeight: 1,
-          color: PALETTE.ink,
-        }}
-      >
-        {value}
-      </div>
-      <div
-        style={{
-          fontFamily: TYPE.mono,
-          fontSize: 9,
-          fontWeight: 700,
-          letterSpacing: TRACKING.cap,
-          textTransform: 'uppercase',
-          color: PALETTE.inkLight,
-          marginTop: 4,
-        }}
-      >
-        {label}
-      </div>
-    </V3SolidCard>
-  );
-}
-
 function LeaderTile({
   label,
-  playerName,
-  position,
-  value,
+  player,
+  meta,
   accent,
-  small,
 }: {
   label: string;
-  playerName: string;
-  position: string | null;
-  value: string;
+  player: string;
+  meta: string | null;
   accent: 'navy' | 'mustard' | 'sage' | 'red';
-  small?: boolean;
 }) {
   return (
     <div
       style={{
         background: PALETTE.cream,
         border: `1.5px solid ${PALETTE.ink}`,
-        borderLeft: `6px solid ${PALETTE[accent]}`,
-        padding: '10px 14px',
+        borderLeft: `5px solid ${PALETTE[accent]}`,
+        padding: '8px 12px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         gap: 12,
       }}
     >
-      <div style={{ minWidth: 0 }}>
+      <div style={{ minWidth: 0, flex: 1 }}>
         <div
           style={{
             fontFamily: TYPE.mono,
@@ -633,44 +583,193 @@ function LeaderTile({
             letterSpacing: TRACKING.cap,
             textTransform: 'uppercase',
             color: PALETTE.inkLight,
-            marginBottom: 2,
+            marginBottom: 1,
           }}
         >
           {label}
         </div>
         <div
           style={{
-            fontFamily: TYPE.display,
-            fontSize: small ? 16 : 22,
-            fontWeight: 800,
-            letterSpacing: '-0.02em',
+            fontFamily: TYPE.mono,
+            fontSize: 13,
+            fontWeight: 700,
             color: PALETTE.ink,
-            textTransform: 'uppercase',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}
         >
-          {playerName}
-          {position && (
-            <span style={{ fontSize: 11, color: PALETTE.inkLight, marginLeft: 8, letterSpacing: TRACKING.cap }}>
-              · {position}
-            </span>
-          )}
+          {player}
         </div>
       </div>
+      {meta && (
+        <div
+          style={{
+            fontFamily: TYPE.mono,
+            fontSize: 10,
+            fontWeight: 700,
+            color: PALETTE[accent],
+            textAlign: 'right',
+            flexShrink: 0,
+            maxWidth: '50%',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {meta}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RosterRow({
+  row,
+  quizHref,
+}: {
+  row: {
+    userId: string;
+    name: string;
+    position: string | null;
+    overall: number;
+    level: number;
+    isViewer: boolean;
+    viewerHasRated: boolean;
+  };
+  quizHref: string;
+}) {
+  // One row, one shape — same skeleton for everyone, status pip on the right.
+  const ratedTag = row.isViewer
+    ? { text: 'YOU', color: PALETTE.ink, bg: PALETTE.mustard }
+    : row.viewerHasRated
+    ? { text: '✓ RATED', color: PALETTE.sage, bg: 'transparent' }
+    : null;
+
+  const Wrap = (children: React.ReactNode) =>
+    !row.isViewer && !row.viewerHasRated ? (
+      <Link
+        href={quizHref}
+        style={{ textDecoration: 'none', display: 'block' }}
+      >
+        {children}
+      </Link>
+    ) : (
+      <div>{children}</div>
+    );
+
+  return Wrap(
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '8px 10px',
+        background: row.isViewer ? 'rgba(212,164,55,0.14)' : PALETTE.cream,
+        border: row.isViewer ? `2px solid ${PALETTE.mustard}` : `1px solid ${PALETTE.ink}25`,
+      }}
+    >
       <div
         style={{
-          fontFamily: TYPE.mono,
-          fontSize: small ? 11 : 13,
-          fontWeight: 700,
-          color: PALETTE[accent],
-          textAlign: 'right',
+          fontFamily: TYPE.display,
+          fontSize: 26,
+          fontWeight: 800,
+          letterSpacing: '-0.02em',
+          color: PALETTE.mustard,
+          background: PALETTE.ink,
+          padding: '2px 8px',
+          lineHeight: 1.05,
           flexShrink: 0,
         }}
       >
-        {value}
+        {row.overall}
       </div>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div
+          style={{
+            fontFamily: TYPE.mono,
+            fontSize: 13,
+            fontWeight: 700,
+            color: PALETTE.ink,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
+        >
+          {row.name}
+        </div>
+        <div
+          style={{
+            fontFamily: TYPE.mono,
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: TRACKING.cap,
+            textTransform: 'uppercase',
+            color: PALETTE.inkLight,
+          }}
+        >
+          {row.position ?? '—'} · L{row.level}
+        </div>
+      </div>
+      {ratedTag ? (
+        <span
+          style={{
+            fontFamily: TYPE.mono,
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: TRACKING.cap,
+            color: ratedTag.color,
+            background: ratedTag.bg,
+            padding: ratedTag.bg !== 'transparent' ? '2px 6px' : 0,
+            flexShrink: 0,
+          }}
+        >
+          {ratedTag.text}
+        </span>
+      ) : (
+        <span
+          style={{
+            fontFamily: TYPE.mono,
+            fontSize: 11,
+            fontWeight: 700,
+            color: PALETTE.red,
+            flexShrink: 0,
+          }}
+        >
+          Rate →
+        </span>
+      )}
+    </div>,
+  );
+}
+
+function ActivityRow({
+  perception,
+}: {
+  perception: {
+    id: string;
+    scenarioId: string;
+    createdAt: Date;
+    rater: { user: { position: string | null } | null } | null;
+    target: { user: { position: string | null } | null } | null;
+  };
+}) {
+  const raterPos = perception.rater?.user?.position ?? 'a lad';
+  const targetPos = perception.target?.user?.position ?? 'a lad';
+  const scenario = SCENARIOS.find((s) => s.id === perception.scenarioId);
+  const lens = scenario ? scenario.attributeTag : 'play';
+  return (
+    <div
+      style={{
+        display: 'flex',
+        justifyContent: 'space-between',
+        fontFamily: TYPE.mono,
+        fontSize: 11,
+        color: PALETTE.inkLight,
+        padding: '4px 8px',
+      }}
+    >
+      <span>A {raterPos} rated a {targetPos} on {lens}</span>
+      <span style={{ opacity: 0.65 }}>{timeAgo(perception.createdAt)}</span>
     </div>
   );
 }
