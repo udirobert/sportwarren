@@ -26,7 +26,7 @@
 
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { prisma } from '@/lib/db';
+import { getPreviewUser } from '../../_lib/get-preview-user';
 import Link from 'next/link';
 import {
   PALETTE,
@@ -65,12 +65,10 @@ const PUZZLE = {
 export default async function TacticsPage({ params }: PageProps) {
   const { token } = await params;
 
-  const user = await prisma.user.findUnique({
-    where: { walletAddress: token },
+  const user = await getPreviewUser(token, {
     include: { playerProfile: { include: { twin: true } } },
   });
-
-  if (!user || user.chain !== 'preview') notFound();
+  if (!user) notFound();
 
   return (
     <V3PageShell maxWidth={640}>

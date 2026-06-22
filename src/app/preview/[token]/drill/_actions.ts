@@ -15,6 +15,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
+import { getPreviewUser } from '../../_lib/get-preview-user';
 import { getTwinService } from '@/server/services/personalization/twin-service';
 import type { AttributeKey } from '@/server/services/personalization/twin-types';
 
@@ -54,12 +55,10 @@ export async function claimDailyDrill(input: {
 }): Promise<DrillClaimResult> {
   const { token, targetAttribute } = input;
 
-  const user = await prisma.user.findUnique({
-    where: { walletAddress: token },
+  const user = await getPreviewUser(token, {
     include: { playerProfile: { include: { twin: true } } },
   });
-
-  if (!user || user.chain !== 'preview') return { ok: false, reason: 'not_preview' };
+  if (!user) return { ok: false, reason: 'not_preview' };
 
   const profile = user.playerProfile;
   const twin = profile?.twin;

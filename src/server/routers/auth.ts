@@ -3,6 +3,7 @@ import { createTRPCRouter, protectedProcedure } from '../trpc';
 import { TRPCError } from '@trpc/server';
 
 import { squadIdSchema } from '../lib/validation-schemas';
+import { claimPreviewIdentity } from '@/server/services/preview/claim';
 
 export const authRouter = createTRPCRouter({
     setActiveSquad: protectedProcedure
@@ -118,4 +119,29 @@ export const authRouter = createTRPCRouter({
                 });
             }
     }),
+
+    claimPreviewIdentity: protectedProcedure
+        .input(z.object({
+            previewToken: z.string().min(1),
+        }))
+        .mutation(async ({ ctx, input }) => {
+            const { userId, prisma } = ctx;
+            if (!userId) {
+                throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Sign in first' });
+            }
+
+            const result = await claimPreviewIdentity(prisma, {
+                authedUserId: userId,
+                previewToken: input.previewToken,
+            });
+
+            if (!result.ok) {
+                throw new TRPCError({
+                    code: result.reason === 'not_found' ? 'NOT_FOUND' : 'CONFLICT',
+                    message: result.message,
+                });
+            }
+
+            return { success: true, message: result.message };
+        }),
 });

@@ -1,6 +1,7 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
+import { getPreviewUser } from '../_lib/get-preview-user';
 import { PreviewQuizFlow } from './PreviewQuizFlow';
 import { SCENARIOS } from '@/server/services/perception/scenarios';
 import { aggregateReceivedPerceptions } from '@/server/services/perception/aggregate';
@@ -26,14 +27,13 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
   // route. CONSOLIDATION — one URL, two modes, no /perceive duplicate.
   const forceQuiz = mode === 'quiz';
 
-  const user = await prisma.user.findUnique({
-    where: { walletAddress: token },
+  const user = await getPreviewUser(token, {
     include: {
       playerProfile: true,
       squads: { include: { squad: true } },
     },
   });
-  if (!user || user.chain !== 'preview') notFound();
+  if (!user) notFound();
 
   const rater = user.playerProfile;
   const captainMembership = user.squads.find((m) => m.role === 'captain');

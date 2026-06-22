@@ -6,6 +6,7 @@ import { LensProvider } from "@/contexts/LensContext";
 import { TRPCProvider } from "@/lib/trpc-provider";
 import { EnvironmentProvider } from "@/contexts/EnvironmentContext";
 import { GuestMigrationPrompt } from "@/components/onboarding/GuestMigrationPrompt";
+import { PreviewClaimPrompt } from "@/components/onboarding/PreviewClaimPrompt";
 import { PrivyProvider, type PrivyClientConfig } from '@privy-io/react-auth';
 import { WagmiProvider } from '@privy-io/wagmi';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -71,6 +72,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                           <ExitIntentWaitlist />
                           {children}
                           <GuestMigrationPrompt />
+                          <PreviewClaimPrompt />
                         </ActiveSquadProvider>
                       </ToastProvider>
                     </TRPCProvider>

@@ -17,6 +17,7 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
+import { getPreviewUser } from '../../_lib/get-preview-user';
 import Link from 'next/link';
 import {
   PALETTE,
@@ -98,15 +99,14 @@ const ATTR_LABEL: Record<AttributeKey, { short: string; label: string }> = {
 export default async function DrillPage({ params }: PageProps) {
   const { token } = await params;
 
-  const user = await prisma.user.findUnique({
-    where: { walletAddress: token },
+  const user = await getPreviewUser(token, {
     include: {
       playerProfile: { include: { twin: true } },
       squads: { select: { squadId: true } },
     },
   });
 
-  if (!user || user.chain !== 'preview') notFound();
+  if (!user) notFound();
 
   const twin = user.playerProfile?.twin;
   if (!twin) notFound();
