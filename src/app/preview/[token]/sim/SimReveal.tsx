@@ -19,6 +19,7 @@ import React, { useEffect, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { MiniAvatar, PALETTE } from '../../_components/MiniAvatar';
 import { claimSimOutcome, type ClaimResult } from './_actions';
+import type { CommentaryBeat } from '@/server/services/perception/match-commentary';
 
 const ATTR_LABEL: Record<string, string> = {
   pace: 'PAC',
@@ -54,6 +55,7 @@ interface SimRevealProps {
   myScorers: Array<{ userId: string; goals: number }>;
   oppScorers: Array<{ userId: string; goals: number }>;
   shareUrl: string;
+  commentary: CommentaryBeat[];
 }
 
 type Stage = 'picking' | 'team' | 'kickoff' | 'reveal' | 'scorers' | 'done';
@@ -349,6 +351,10 @@ export function SimReveal(props: SimRevealProps) {
           revealed={revealedScorers}
           revealOrder={[...props.myScorers, ...props.oppScorers].map((s) => s.userId)}
         />
+
+        {props.commentary.length > 0 && (
+          <CommentarySection beats={props.commentary} visible={stage === 'done'} />
+        )}
 
         {/* CTAs — only show when fully done */}
         <div
@@ -723,6 +729,96 @@ function ScorersList({
             `,
           }}
         />
+      </div>
+    </div>
+  );
+}
+
+function CommentarySection({
+  beats,
+  visible,
+}: {
+  beats: CommentaryBeat[];
+  visible: boolean;
+}) {
+  return (
+    <div
+      style={{
+        marginTop: 32,
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(12px)',
+        transition: 'opacity 0.5s 0.3s, transform 0.5s 0.3s',
+      }}
+    >
+      <div
+        style={{
+          fontFamily: 'JetBrains Mono, monospace',
+          fontSize: 10,
+          fontWeight: 700,
+          letterSpacing: '0.18em',
+          textTransform: 'uppercase',
+          color: PALETTE.navy,
+          marginBottom: 14,
+        }}
+      >
+        What the lads said · what happened
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {beats.map((b, i) => {
+          const sideAccent =
+            b.side === 'me' ? PALETTE.sage : b.side === 'opp' ? PALETTE.red : PALETTE.navy;
+          return (
+            <div
+              key={`${b.playerName}-${i}`}
+              style={{
+                display: 'flex',
+                gap: 14,
+                padding: '12px 14px',
+                background: PALETTE.cream,
+                border: `1px solid ${PALETTE.ink}15`,
+                borderLeft: `4px solid ${sideAccent}`,
+              }}
+            >
+              <div
+                style={{
+                  fontFamily: 'Antonio, Impact, sans-serif',
+                  fontSize: 28,
+                  fontWeight: 800,
+                  letterSpacing: '-0.02em',
+                  color: PALETTE.ink,
+                  minWidth: 56,
+                  lineHeight: 1,
+                }}
+              >
+                {b.minute}&apos;
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div
+                  style={{
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: 11,
+                    color: PALETTE.inkLight,
+                    marginBottom: 4,
+                    lineHeight: 1.45,
+                  }}
+                >
+                  {b.setup}
+                </div>
+                <div
+                  style={{
+                    fontFamily: 'JetBrains Mono, monospace',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: PALETTE.ink,
+                    lineHeight: 1.4,
+                  }}
+                >
+                  {b.payoff}
+                </div>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
