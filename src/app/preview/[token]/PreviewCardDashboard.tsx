@@ -329,6 +329,27 @@ export function PreviewCardDashboard({
           />
         )}
 
+        {/* Clubhouse — the squad home. Most prominent destination after
+            share because it's where the lads come back to. */}
+        <Link
+          href={`/preview/${encodeURIComponent(token)}/squad`}
+          style={{
+            fontFamily: TYPE.display, fontSize: 16, fontWeight: 800,
+            letterSpacing: '-0.01em', textTransform: 'uppercase',
+            color: PALETTE.ink, textDecoration: 'none',
+            padding: '12px 0', borderBottom: `1px solid ${PALETTE.ink}15`,
+            display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+          }}
+        >
+          <span>The clubhouse →</span>
+          <span style={{
+            fontFamily: TYPE.mono, fontSize: 9, fontWeight: 700,
+            letterSpacing: '0.14em', color: PALETTE.red,
+          }}>
+            EVERYONE
+          </span>
+        </Link>
+
         {remainingCombos > 0 && (
           <Link
             href={`/preview/${encodeURIComponent(token)}?mode=quiz`}
