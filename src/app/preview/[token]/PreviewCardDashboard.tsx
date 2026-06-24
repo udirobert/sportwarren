@@ -7,6 +7,7 @@ import { PALETTE } from '../_components/MiniAvatar';
 import { storePreviewClaim } from '@/lib/preview-claim';
 import {
   TYPE,
+  TRACKING,
   buildPlayerCardData,
   type Attrs,
 } from '@/components/v3';
@@ -309,16 +310,13 @@ export function PreviewCardDashboard({
         </div>
       )}
 
-      {/* Keep rating + share + customize CTAs */}
+      {/* ── Primary CTAs — clubhouse first, then rate, rest tertiary ── */}
       <div style={{
         ...secStyle(2), display: 'flex', flexDirection: 'column', gap: 8,
         paddingTop: 24, borderTop: `1px solid ${PALETTE.ink}15`,
         marginTop: 16,
       }}>
-        {/* Share CTA — only at Tier 2+ (when the PNG has a real card to
-            show). The wa.me deep-link pattern matches the existing
-            broadcast UI; the card PNG URL pulls the rendered card from
-            /api/og/card/[token] which respects the same tier rules. */}
+        {/* Share CTA — only at Tier 2+ */}
         {tier >= 2 && (
           <ShareToWhatsApp
             baseUrl={baseUrl}
@@ -329,27 +327,38 @@ export function PreviewCardDashboard({
           />
         )}
 
-        {/* Clubhouse — the squad home. Most prominent destination after
-            share because it's where the lads come back to. */}
+        {/* PRIMARY: Clubhouse — the squad home. The destination the lads
+            keep coming back to. Highest prominence. */}
         <Link
           href={`/preview/${encodeURIComponent(token)}/squad`}
           style={{
-            fontFamily: TYPE.display, fontSize: 16, fontWeight: 800,
-            letterSpacing: '-0.01em', textTransform: 'uppercase',
-            color: PALETTE.ink, textDecoration: 'none',
-            padding: '12px 0', borderBottom: `1px solid ${PALETTE.ink}15`,
-            display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+            fontFamily: TYPE.display,
+            fontSize: 20,
+            fontWeight: 800,
+            letterSpacing: '-0.01em',
+            textTransform: 'uppercase',
+            color: PALETTE.ink,
+            textDecoration: 'none',
+            padding: '18px 20px',
+            background: PALETTE.mustard,
+            border: `2px solid ${PALETTE.red}`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            gap: 12,
+            marginBottom: 8,
           }}
         >
-          <span>The clubhouse →</span>
+          <span>The clubhouse</span>
           <span style={{
-            fontFamily: TYPE.mono, fontSize: 9, fontWeight: 700,
-            letterSpacing: '0.14em', color: PALETTE.red,
+            fontFamily: TYPE.mono, fontSize: 11, fontWeight: 700,
+            letterSpacing: '0.08em', opacity: 0.7,
           }}>
-            EVERYONE
+            THE SQUAD →
           </span>
         </Link>
 
+        {/* SECONDARY: Rate more lads */}
         {remainingCombos > 0 && (
           <Link
             href={`/preview/${encodeURIComponent(token)}?mode=quiz`}
@@ -357,8 +366,10 @@ export function PreviewCardDashboard({
               fontFamily: TYPE.display, fontSize: 16, fontWeight: 800,
               letterSpacing: '-0.01em', textTransform: 'uppercase',
               color: PALETTE.ink, textDecoration: 'none',
-              padding: '12px 0', borderBottom: `1px solid ${PALETTE.ink}15`,
+              padding: '12px 16px',
+              border: `2px solid ${PALETTE.navy}`,
               display: 'flex', justifyContent: 'space-between',
+              marginBottom: 8,
             }}
           >
             <span>Rate more lads</span>
@@ -367,37 +378,56 @@ export function PreviewCardDashboard({
             </span>
           </Link>
         )}
-        <Link
-          href={`/preview/${encodeURIComponent(token)}/customize`}
-          style={{
-            fontFamily: TYPE.display, fontSize: 16, fontWeight: 800,
-            letterSpacing: '-0.01em', textTransform: 'uppercase',
-            color: PALETTE.ink, textDecoration: 'none',
-            padding: '12px 0', borderBottom: `1px solid ${PALETTE.ink}15`,
-          }}
-        >
-          Pick your kit →
-        </Link>
-        {isCaptain && (
+
+        {/* TERTIARY: remaining links — smaller, subdued */}
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', padding: '4px 0' }}>
           <Link
-            href={`/preview/${encodeURIComponent(token)}/doctrine`}
+            href={`/preview/${encodeURIComponent(token)}/customize`}
             style={{
-              fontFamily: TYPE.display, fontSize: 16, fontWeight: 800,
-              letterSpacing: '-0.01em', textTransform: 'uppercase',
-              color: PALETTE.ink, textDecoration: 'none',
-              padding: '12px 0', borderBottom: `1px solid ${PALETTE.ink}15`,
-              display: 'flex', justifyContent: 'space-between', alignItems: 'baseline',
+              fontFamily: TYPE.mono, fontSize: 11, fontWeight: 700,
+              letterSpacing: TRACKING.cap, textTransform: 'uppercase',
+              color: PALETTE.inkLight, textDecoration: 'none',
+              padding: '6px 0',
             }}
           >
-            <span>The group&apos;s read →</span>
-            <span style={{
-              fontFamily: TYPE.mono, fontSize: 9, fontWeight: 700,
-              letterSpacing: '0.14em', color: PALETTE.red,
-            }}>
-              CAPTAIN
-            </span>
+            Pick your kit
           </Link>
-        )}
+          {isCaptain && (
+            <Link
+              href={`/preview/${encodeURIComponent(token)}/doctrine`}
+              style={{
+                fontFamily: TYPE.mono, fontSize: 11, fontWeight: 700,
+                letterSpacing: TRACKING.cap, textTransform: 'uppercase',
+                color: PALETTE.inkLight, textDecoration: 'none',
+                padding: '6px 0',
+              }}
+            >
+              The group&apos;s read
+            </Link>
+          )}
+          <Link
+            href={`/preview/${encodeURIComponent(token)}/drill`}
+            style={{
+              fontFamily: TYPE.mono, fontSize: 11, fontWeight: 700,
+              letterSpacing: TRACKING.cap, textTransform: 'uppercase',
+              color: PALETTE.inkLight, textDecoration: 'none',
+              padding: '6px 0',
+            }}
+          >
+            Daily drill
+          </Link>
+          <Link
+            href={`/preview/${encodeURIComponent(token)}/sim`}
+            style={{
+              fontFamily: TYPE.mono, fontSize: 11, fontWeight: 700,
+              letterSpacing: TRACKING.cap, textTransform: 'uppercase',
+              color: PALETTE.inkLight, textDecoration: 'none',
+              padding: '6px 0',
+            }}
+          >
+            Match sim
+          </Link>
+        </div>
       </div>
 
       {/* Auth explanation + claim bridge */}

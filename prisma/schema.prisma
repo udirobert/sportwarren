@@ -979,6 +979,16 @@ model Session {
   name String // e.g. "Wednesday Night Football"
   date DateTime @default(now())
 
+  // Twin-attribute snapshots: before (session start) and after (session end).
+  // Each stores { profileId: { pace: 55, shooting: 50, passing: 60, ... } }
+  // captured by startSession() and endSession() respectively. The analysis
+  // page compares these to show real before/after deltas — by the time a
+  // player views the analysis page, the twin may have moved further due to
+  // peer ratings or drills, so the after-snapshot preserves the exact state
+  // the card was in when the session concluded.
+  beforeAttributes Json? @map("before_attributes")
+  afterAttributes  Json? @map("after_attributes")
+
   // Attendance (pool of players available for this session)
   attendees SessionAttendee[]
 
