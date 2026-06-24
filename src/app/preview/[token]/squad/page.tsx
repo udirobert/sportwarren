@@ -40,8 +40,7 @@ import {
 } from '@/server/services/personalization/position-baselines';
 import {
   aggregateSquadDoctrine,
-  topChoice,
-  type ChoiceCounts,
+  findSquadHotTake,
 } from '@/server/services/perception/aggregate';
 import { SCENARIOS } from '@/server/services/perception/scenarios';
 
@@ -88,45 +87,6 @@ const SCENARIO_PAYLOAD = SCENARIOS.map((s) => ({
   hasPrescriptive: s.hasPrescriptive,
   options: s.options.map((o) => ({ id: o.id, label: o.label })),
 }));
-
-/** Find the single best hot take from a set of perceptions (all-time or time-windowed). */
-function findHotTake(
-  byPosition: Record<string, Record<string, { descriptive: ChoiceCounts; prescriptive: ChoiceCounts }>>,
-): {
-  position: string;
-  scenarioId: string;
-  choice: string;
-  label: string;
-  count: number;
-  total: number;
-} | null {
-  let best: {
-    position: string;
-    scenarioId: string;
-    choice: string;
-    label: string;
-    count: number;
-    total: number;
-  } | null = null;
-  for (const [position, scenarios] of Object.entries(byPosition)) {
-    for (const [scenarioId, buckets] of Object.entries(scenarios)) {
-      const top = topChoice(buckets.descriptive);
-      if (!top) continue;
-      const scenario = SCENARIOS.find((s) => s.id === scenarioId);
-      if (!scenario) continue;
-      const opt = scenario.options.find((o) => o.id === top);
-      if (!opt) continue;
-      const count = buckets.descriptive[top];
-      const total = buckets.descriptive.total;
-      if (total < 2) continue;
-      const score = total * (count / total);
-      if (!best || score > best.count) {
-        best = { position, scenarioId, choice: top, label: opt.label, count, total };
-      }
-    }
-  }
-  return best;
-}
 
 export default async function SquadClubhousePage({ params, searchParams }: PageProps) {
   const { token } = await params;
@@ -253,7 +213,7 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
         bucket.total += 1;
       }
     }
-    sessionHotTake = findHotTake(sessionByPosition);
+    sessionHotTake = findSquadHotTake(sessionByPosition, SCENARIOS);
   }
 
   // Build per-member rows with everything we need to render + sort.
@@ -320,7 +280,7 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
   const tier3Lads = rows.filter((r) => r.tier === 3);
 
   // Biggest overall hot take (all-time)
-  const topHotTake = findHotTake(doctrineResult.byPosition);
+  const topHotTake = findSquadHotTake(doctrineResult.byPosition, SCENARIOS);
 
   // ── Apply roster filters
   const filtered = rows.filter((r) => {
@@ -338,7 +298,8 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
     return b.overall - a.overall;
   });
 
-  // ── Filter chip URLs
+  // ── Filter chip URLs (relative — used with <Link> for internal nav)
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? '';
   const squadUrl = `/preview/${encodeURIComponent(token)}/squad`;
   const previewUrl = `/preview/${encodeURIComponent(token)}`;
   const buildUrl = (overrides: Partial<{ sort: string; position: string; tier: string; unrated: string }>) => {
@@ -368,8 +329,22 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
     ? Math.round(rows.reduce((s, r) => s + r.overall, 0) / rows.length)
     : 0;
 
+  // ── Build wa.me URL for a hot take (absolute URL so recipients can tap from WhatsApp) ──
+  const buildHotTakeShareUrl = (take: typeof topHotTake): string | null => {
+    if (!take) return null;
+    const clubhouseUrl = `${baseUrl}${squadUrl}`;
+    const shareText = [
+      `oi check the clubhouse — the lads reckon`,  // continues on next line
+      `your ${take.position}s always ${take.label.toLowerCase()}`,
+      `(${take.count}/${take.total} votes).`,
+      `whats your number?`,
+      clubhouseUrl,
+    ].join(' ');
+    return `https://wa.me/?text=${encodeURIComponent(shareText)}`;
+  };
+
   // Build the leaderboard tiles
-  type Leader = { label: string; player: string; meta: string | null; accent: 'mustard' | 'navy' | 'sage' | 'red' };
+  type Leader = { label: string; player: string; meta: string | null; accent: 'mustard' | 'navy' | 'sage' | 'red'; shareWaUrl?: string };
   const leaderTiles: Leader[] = [];
 
   if (sortByOverall[0]) {
@@ -386,6 +361,7 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
       player: `${topHotTake.position}s`,
       meta: `${topHotTake.count}/${topHotTake.total} say ${topHotTake.label.toLowerCase()}`,
       accent: 'red',
+      shareWaUrl: buildHotTakeShareUrl(topHotTake) ?? undefined,
     });
   }
   if (sessionHotTake) {
@@ -394,6 +370,7 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
       player: `${sessionHotTake.position}s`,
       meta: `${sessionHotTake.count}/${sessionHotTake.total} say ${sessionHotTake.label.toLowerCase()}`,
       accent: 'navy',
+      shareWaUrl: buildHotTakeShareUrl(sessionHotTake) ?? undefined,
     });
   }
   // Lads drilled stat as a leader tile
@@ -653,11 +630,13 @@ function LeaderTile({
   player,
   meta,
   accent,
+  shareWaUrl,
 }: {
   label: string;
   player: string;
   meta: string | null;
   accent: 'navy' | 'mustard' | 'sage' | 'red';
+  shareWaUrl?: string;
 }) {
   return (
     <div
@@ -700,22 +679,63 @@ function LeaderTile({
           {player}
         </div>
       </div>
-      {meta && (
-        <div
-          style={{
-            fontFamily: TYPE.mono,
-            fontSize: 10,
-            fontWeight: 700,
-            color: PALETTE[accent],
-            textAlign: 'right',
-            flexShrink: 0,
-            maxWidth: '50%',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {meta}
+      {shareWaUrl ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+          {meta && (
+            <div
+              style={{
+                fontFamily: TYPE.mono,
+                fontSize: 10,
+                fontWeight: 700,
+                color: PALETTE[accent],
+                textAlign: 'right',
+                maxWidth: '40%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+              }}
+            >
+              {meta}
+            </div>
+          )}
+          <a
+            href={shareWaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontFamily: TYPE.mono,
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: '0.06em',
+              textTransform: 'uppercase',
+              color: PALETTE.cream,
+              background: PALETTE[accent],
+              padding: '4px 8px',
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+              border: `1px solid ${PALETTE[accent]}`,
+            }}
+          >
+            ⚡ Share
+          </a>
         </div>
+      ) : (
+        meta && (
+          <div
+            style={{
+              fontFamily: TYPE.mono,
+              fontSize: 10,
+              fontWeight: 700,
+              color: PALETTE[accent],
+              textAlign: 'right',
+              flexShrink: 0,
+              maxWidth: '50%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {meta}
+          </div>
+        )
       )}
     </div>
   );
@@ -762,7 +782,8 @@ function RosterRow({
   // WhatsApp compare intent — opens wa.me with a challenge message.
   // The message links to the clubhouse so the recipient lands on the
   // shared squad home, not a personal auth URL.
-  const compareMessage = `Oi, I'm on the SportWarren clubhouse. Overall: ${row.overall} · ${row.position ?? '—'}. What's your number? Check the lads: ${previewUrl}/squad`;
+  // Uses absolute baseUrl so the link works when tapped on mobile.
+  const compareMessage = `Oi, I'm on the SportWarren clubhouse. Overall: ${row.overall} · ${row.position ?? '—'}. What's your number? Check the lads: ${baseUrl}${previewUrl}/squad`;
   const compareWaUrl = `https://wa.me/?text=${encodeURIComponent(compareMessage)}`;
 
   return Wrap(

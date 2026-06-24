@@ -271,3 +271,51 @@ export function topChoice(counts: ChoiceCounts): ChoiceLetter | null {
   }
   return best;
 }
+
+/**
+ * Find the single strongest hot take from aggregated squad doctrine data.
+ * Scores each (position, scenario) pair by consensus strength and returns
+ * the winner, or null if there aren't enough data points (fewer than 2
+ * total responses in any bucket).
+ *
+ * Used by the clubhouse leaderboard tiles, the broadcast flow, and future
+ * surfaces that need to surface "what the lads agree on about each role."
+ */
+export function findSquadHotTake(
+  byPosition: SquadDoctrineAggregate,
+  scenarios: Array<{ id: string; options: Array<{ id: string; label: string }> }>,
+): {
+  position: string;
+  scenarioId: string;
+  choice: string;
+  label: string;
+  count: number;
+  total: number;
+} | null {
+  let best: {
+    position: string;
+    scenarioId: string;
+    choice: string;
+    label: string;
+    count: number;
+    total: number;
+  } | null = null;
+  for (const [position, scenariosMap] of Object.entries(byPosition)) {
+    for (const [scenarioId, buckets] of Object.entries(scenariosMap)) {
+      const top = topChoice(buckets.descriptive);
+      if (!top) continue;
+      const scenario = scenarios.find((s) => s.id === scenarioId);
+      if (!scenario) continue;
+      const opt = scenario.options.find((o) => o.id === top);
+      if (!opt) continue;
+      const count = buckets.descriptive[top];
+      const total = buckets.descriptive.total;
+      if (total < 2) continue;
+      const score = total * (count / total);
+      if (!best || score > best.count) {
+        best = { position, scenarioId, choice: top, label: opt.label, count, total };
+      }
+    }
+  }
+  return best;
+}

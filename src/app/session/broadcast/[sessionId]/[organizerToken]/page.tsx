@@ -17,6 +17,11 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
+import {
+  aggregateSquadDoctrine,
+  findSquadHotTake,
+} from '@/server/services/perception/aggregate';
+import { SCENARIOS } from '@/server/services/perception/scenarios';
 import { BroadcastClient } from './BroadcastClient';
 
 interface PageProps {
@@ -78,6 +83,21 @@ export default async function BroadcastPage({ params }: PageProps) {
     year: 'numeric',
   });
 
+  // ── Hot take from the squad's perception data ──
+  // Find the strongest consensus topic to inject into broadcast messages
+  // as debate fuel. "What the lads agree on about their own roles."
+  let hotTakeLine: string | null = null;
+  try {
+    const doctrineResult = await aggregateSquadDoctrine(session.squadId);
+    const hotTake = findSquadHotTake(doctrineResult.byPosition, SCENARIOS);
+    if (hotTake) {
+      const countPct = Math.round((hotTake.count / hotTake.total) * 100);
+      hotTakeLine = `The lads agree: ${hotTake.position}s ${hotTake.label.toLowerCase()} (${countPct}% of ${hotTake.total} votes).`;
+    }
+  } catch {
+    // Doctrine aggregation is best-effort for broadcast
+  }
+
   // Build per-player messages + WA URLs
   const playerMessages = ranked.map((stats) => {
     const u = stats.profile.user;
@@ -105,7 +125,14 @@ export default async function BroadcastPage({ params }: PageProps) {
       recapUrl,
       '',
       `Pick your team of the night when you tap through — 90 seconds, no faffing.`,
-    ].join('\n');
+    ];
+
+    // Inject the hot take after the recap URL if available
+    if (hotTakeLine) {
+      message.splice(message.length - 1, 0, '', hotTakeLine);
+    }
+
+    const messageStr = message.join('\n');
 
     const phone = u.platformIdentities[0]?.platformUserId ?? null;
 
@@ -114,7 +141,7 @@ export default async function BroadcastPage({ params }: PageProps) {
       name: u.name ?? 'Player',
       goals,
       phone,
-      message,
+      message: messageStr,
     };
   });
 
@@ -125,14 +152,23 @@ export default async function BroadcastPage({ params }: PageProps) {
     .map((s, i) => `${i + 1}. ${s.profile.user.name} — ${s.goals}`)
     .join('\n');
 
-  const groupMessage = [
+  const groupLines = [
     `🟢 ${session.squad.name} · ${dateLabel}`,
     '',
     `${totalGoals} goals tonight. Top of the scoresheet:`,
     scorerLines,
-    '',
-    `Each of you is getting a personal recap link — pick your team of the night while it's fresh. 90 seconds.`,
-  ].join('\n');
+  ];
+
+  // Inject the hot take into the group message as debate fuel
+  if (hotTakeLine) {
+    groupLines.push('');
+    groupLines.push(hotTakeLine);
+  }
+
+  groupLines.push('');
+  groupLines.push(`Each of you is getting a personal recap link — pick your team of the night while it's fresh. 90 seconds.`);
+
+  const groupMessage = groupLines.join('\n');
 
   return (
     <BroadcastClient
