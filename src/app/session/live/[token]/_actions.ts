@@ -33,6 +33,12 @@ export async function startSession(token: string): Promise<{ sessionId: string; 
   if (!captain) throw new Error('Captain not found');
 
   // Check for an active session already open for this squad
+  // NOTE: If an existing open session is found and it's missing the
+  // beforeAttributes snapshot (e.g. from a pre-migration session or a
+  // partial flow), we do NOT retroactively capture it — the snapshot
+  // only covers the moment the captain triggers a fresh start. This is
+  // an edge case that degrades gracefully on the analysis page (no
+  // delta shown).
   const existingOpen = await prisma.session.findFirst({
     where: { squadId: captain.squadId, status: { in: ['open', 'balanced'] } },
     include: { matches: true },
@@ -108,6 +114,29 @@ export async function startSession(token: string): Promise<{ sessionId: string; 
     });
   }
 
+  // ── Capture pre-session twin attribute snapshot ──
+  // Freeze each player's baseAttributes at the moment the session starts.
+  // The analysis page compares this snapshot against current twin state
+  // to show real before/after deltas — goals scored → shooting bumped,
+  // minutes played → physical moved, etc. — rather than estimated projections.
+  const profileIdsWithTwins = members
+    .filter((m) => m.user.playerProfile?.twin)
+    .map((m) => ({
+      profileId: m.user.playerProfile!.id,
+      attrs: (m.user.playerProfile!.twin!.baseAttributes as Record<string, number>) ?? {},
+    }));
+
+  if (profileIdsWithTwins.length > 0) {
+    const beforeAttributes: Record<string, Record<string, number>> = {};
+    for (const p of profileIdsWithTwins) {
+      beforeAttributes[p.profileId] = p.attrs;
+    }
+    await prisma.session.update({
+      where: { id: session.id },
+      data: { beforeAttributes },
+    });
+  }
+
   revalidatePath(`/session/live/${token}`);
   return { sessionId: session.id, matchId: match.id };
 }
@@ -180,9 +209,29 @@ export async function endSession(token: string, sessionId: string, matchId: stri
     },
   });
 
+  // ── Capture post-session twin attribute snapshot ──
+  // Freeze each player's baseAttributes at the moment the session ends so
+  // the analysis page can show the exact end-of-session state. This is the
+  // "after" half of the before/after delta computation — the before snapshot
+  // was captured by startSession().
+  const playerProfiles = await prisma.playerProfile.findMany({
+    where: { id: { in: stats.map((s) => s.profileId) } },
+    include: { twin: true },
+  });
+
+  const afterAttributes: Record<string, Record<string, number>> = {};
+  for (const profile of playerProfiles) {
+    if (profile.twin?.baseAttributes) {
+      afterAttributes[profile.id] = profile.twin.baseAttributes as Record<string, number>;
+    }
+  }
+
   await prisma.session.update({
     where: { id: sessionId },
-    data: { status: 'completed' },
+    data: {
+      status: 'completed',
+      ...(Object.keys(afterAttributes).length > 0 ? { afterAttributes } : {}),
+    },
   });
 
   // Bump PlayerProfile.totalGoals + totalMatches for everyone who scored

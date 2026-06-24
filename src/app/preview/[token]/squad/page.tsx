@@ -30,6 +30,7 @@ import {
   V3Heading,
   V3SectionLabel,
   V3CTAButton,
+  V3SolidCard,
   type Attrs,
 } from '@/components/v3';
 import { PerceptionBars } from '@/components/perception/PerceptionBars';
@@ -40,6 +41,7 @@ import {
 import {
   aggregateSquadDoctrine,
   topChoice,
+  type ChoiceCounts,
 } from '@/server/services/perception/aggregate';
 import { SCENARIOS } from '@/server/services/perception/scenarios';
 
@@ -57,7 +59,6 @@ type SortKey = 'overall' | 'name' | 'ratings' | 'tier';
 
 const VALID_SORTS: SortKey[] = ['overall', 'name', 'ratings', 'tier'];
 const POSITION_ORDER = ['GK', 'CB', 'LB', 'RB', 'CDM', 'CM', 'CAM', 'LW', 'RW', 'ST', 'CF'];
-const TIER_THRESHOLDS = { 1: 5, 2: 10, 3: 20 } as const;
 
 function tierFromGiven(given: number): 0 | 1 | 2 | 3 {
   if (given >= 20) return 3;
@@ -74,6 +75,12 @@ function timeAgo(ts: Date): string {
   return `${Math.floor(seconds / 86400)}d ago`;
 }
 
+function isSameUTCDay(a: Date, b: Date): boolean {
+  return a.getUTCFullYear() === b.getUTCFullYear() &&
+    a.getUTCMonth() === b.getUTCMonth() &&
+    a.getUTCDate() === b.getUTCDate();
+}
+
 const SCENARIO_PAYLOAD = SCENARIOS.map((s) => ({
   id: s.id,
   prompt: s.prompt,
@@ -81,6 +88,45 @@ const SCENARIO_PAYLOAD = SCENARIOS.map((s) => ({
   hasPrescriptive: s.hasPrescriptive,
   options: s.options.map((o) => ({ id: o.id, label: o.label })),
 }));
+
+/** Find the single best hot take from a set of perceptions (all-time or time-windowed). */
+function findHotTake(
+  byPosition: Record<string, Record<string, { descriptive: ChoiceCounts; prescriptive: ChoiceCounts }>>,
+): {
+  position: string;
+  scenarioId: string;
+  choice: string;
+  label: string;
+  count: number;
+  total: number;
+} | null {
+  let best: {
+    position: string;
+    scenarioId: string;
+    choice: string;
+    label: string;
+    count: number;
+    total: number;
+  } | null = null;
+  for (const [position, scenarios] of Object.entries(byPosition)) {
+    for (const [scenarioId, buckets] of Object.entries(scenarios)) {
+      const top = topChoice(buckets.descriptive);
+      if (!top) continue;
+      const scenario = SCENARIOS.find((s) => s.id === scenarioId);
+      if (!scenario) continue;
+      const opt = scenario.options.find((o) => o.id === top);
+      if (!opt) continue;
+      const count = buckets.descriptive[top];
+      const total = buckets.descriptive.total;
+      if (total < 2) continue;
+      const score = total * (count / total);
+      if (!best || score > best.count) {
+        best = { position, scenarioId, choice: top, label: opt.label, count, total };
+      }
+    }
+  }
+  return best;
+}
 
 export default async function SquadClubhousePage({ params, searchParams }: PageProps) {
   const { token } = await params;
@@ -102,8 +148,10 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
   const squad = user.squads[0]?.squad;
   if (!squad) notFound();
 
-  // Pull everything in parallel. Three queries cover the surface.
-  const [members, doctrineResult, recentPerceptions, viewerGiven] = await Promise.all([
+  const profileId = user.playerProfile.id;
+
+  // Pull everything in parallel.
+  const [members, doctrineResult, recentPerceptions, viewerGiven, lastSession] = await Promise.all([
     prisma.squadMember.findMany({
       where: { squadId: squad.id },
       include: {
@@ -128,12 +176,85 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
       },
     }),
     prisma.playerPerception.findMany({
-      where: { raterId: user.playerProfile.id },
+      where: { raterId: profileId },
       select: { targetId: true },
+    }),
+    prisma.session.findFirst({
+      where: { squadId: squad.id },
+      orderBy: { date: 'desc' },
+      select: { date: true },
     }),
   ]);
 
   const givenTargetIds = new Set(viewerGiven.map((g) => g.targetId));
+
+  // ── "X lads drilled today" stat ──
+  const memberTwinIds = members
+    .map((m) => m.user.playerProfile?.twin?.id)
+    .filter((id): id is string => !!id);
+
+  let ladsDrilledCount = 0;
+  if (memberTwinIds.length > 0) {
+    const now = new Date();
+    const twinsWithDrill = await prisma.playerTwin.findMany({
+      where: {
+        id: { in: memberTwinIds },
+        lastDailyDrillAt: { not: null },
+      },
+      select: { lastDailyDrillAt: true },
+    });
+    ladsDrilledCount = twinsWithDrill.filter(
+      (t) => t.lastDailyDrillAt && isSameUTCDay(t.lastDailyDrillAt, now),
+    ).length;
+  }
+
+  // ── "Hot take from last session" ──
+  // Query perceptions created since the last session date (or last 48h if no session)
+  let sessionHotTake: {
+    position: string;
+    scenarioId: string;
+    choice: string;
+    label: string;
+    count: number;
+    total: number;
+  } | null = null;
+  if (lastSession) {
+    const sinceDate = lastSession.date;
+    const recentPerceptionsRaw = await prisma.playerPerception.findMany({
+      where: {
+        createdAt: { gte: sinceDate },
+        target: { user: { squads: { some: { squadId: squad.id } } } },
+      },
+      select: {
+        scenarioId: true,
+        choice: true,
+        kind: true,
+        target: { select: { user: { select: { position: true } } } },
+      },
+    });
+
+    // Build a mini position→scenario aggregate from session perceptions
+    const sessionByPosition: Record<string, Record<string, { descriptive: ChoiceCounts; prescriptive: ChoiceCounts }>> = {};
+    for (const r of recentPerceptionsRaw) {
+      const position = r.target?.user?.position ?? 'Unknown';
+      if (!sessionByPosition[position]) sessionByPosition[position] = {};
+      if (!sessionByPosition[position][r.scenarioId]) {
+        sessionByPosition[position][r.scenarioId] = {
+          descriptive: { a: 0, b: 0, c: 0, d: 0, total: 0 },
+          prescriptive: { a: 0, b: 0, c: 0, d: 0, total: 0 },
+        };
+      }
+      const bucket = r.kind === 'prescriptive'
+        ? sessionByPosition[position][r.scenarioId].prescriptive
+        : sessionByPosition[position][r.scenarioId].descriptive;
+      const c = r.choice as 'a' | 'b' | 'c' | 'd';
+      if (c === 'a' || c === 'b' || c === 'c' || c === 'd') {
+        bucket[c] += 1;
+        bucket.total += 1;
+      }
+    }
+    sessionHotTake = findHotTake(sessionByPosition);
+  }
 
   // Build per-member rows with everything we need to render + sort.
   type Row = {
@@ -198,39 +319,8 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
   const sortByGiven = [...rows].sort((a, b) => b.perceptionsGiven - a.perceptionsGiven);
   const tier3Lads = rows.filter((r) => r.tier === 3);
 
-  // Biggest hot take — scenario+position bucket with highest (total · dominance)
-  let topHotTake: {
-    position: string;
-    scenarioId: string;
-    choice: string;
-    label: string;
-    count: number;
-    total: number;
-  } | null = null;
-  for (const [position, scenarios] of Object.entries(doctrineResult.byPosition)) {
-    for (const [scenarioId, buckets] of Object.entries(scenarios)) {
-      const top = topChoice(buckets.descriptive);
-      if (!top) continue;
-      const scenario = SCENARIOS.find((s) => s.id === scenarioId);
-      if (!scenario) continue;
-      const opt = scenario.options.find((o) => o.id === top);
-      if (!opt) continue;
-      const count = buckets.descriptive[top];
-      const total = buckets.descriptive.total;
-      if (total < 2) continue;
-      const score = total * (count / total);
-      if (!topHotTake || score > topHotTake.count) {
-        topHotTake = {
-          position,
-          scenarioId,
-          choice: top,
-          label: opt.label,
-          count,
-          total,
-        };
-      }
-    }
-  }
+  // Biggest overall hot take (all-time)
+  const topHotTake = findHotTake(doctrineResult.byPosition);
 
   // ── Apply roster filters
   const filtered = rows.filter((r) => {
@@ -249,7 +339,8 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
   });
 
   // ── Filter chip URLs
-  const baseUrl = `/preview/${encodeURIComponent(token)}/squad`;
+  const squadUrl = `/preview/${encodeURIComponent(token)}/squad`;
+  const previewUrl = `/preview/${encodeURIComponent(token)}`;
   const buildUrl = (overrides: Partial<{ sort: string; position: string; tier: string; unrated: string }>) => {
     const params = new URLSearchParams();
     const current = { sort, position: positionFilter ?? undefined, tier: tierFilter !== null ? String(tierFilter) : undefined, unrated: unratedOnly ? '1' : undefined };
@@ -258,7 +349,7 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
       if (v !== undefined && v !== null && v !== '') params.set(k, String(v));
     }
     const q = params.toString();
-    return q ? `${baseUrl}?${q}` : baseUrl;
+    return q ? `${squadUrl}?${q}` : squadUrl;
   };
 
   // Distinct positions present in the roster, ordered
@@ -277,13 +368,12 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
     ? Math.round(rows.reduce((s, r) => s + r.overall, 0) / rows.length)
     : 0;
 
-  // Build the inline leaderboard list — top 2 always visible, rest collapsed.
+  // Build the leaderboard tiles
   type Leader = { label: string; player: string; meta: string | null; accent: 'mustard' | 'navy' | 'sage' | 'red' };
-  const inlineLeaders: Leader[] = [];
-  const collapsedLeaders: Leader[] = [];
+  const leaderTiles: Leader[] = [];
 
   if (sortByOverall[0]) {
-    inlineLeaders.push({
+    leaderTiles.push({
       label: 'Top of the pile',
       player: sortByOverall[0].name,
       meta: `${sortByOverall[0].position ?? ''} · ${sortByOverall[0].overall} OVR`.trim(),
@@ -291,15 +381,32 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
     });
   }
   if (topHotTake) {
-    inlineLeaders.push({
-      label: 'Biggest hot take',
+    leaderTiles.push({
+      label: 'Biggest hot take (all-time)',
       player: `${topHotTake.position}s`,
       meta: `${topHotTake.count}/${topHotTake.total} say ${topHotTake.label.toLowerCase()}`,
       accent: 'red',
     });
   }
+  if (sessionHotTake) {
+    leaderTiles.push({
+      label: 'Last session hot take',
+      player: `${sessionHotTake.position}s`,
+      meta: `${sessionHotTake.count}/${sessionHotTake.total} say ${sessionHotTake.label.toLowerCase()}`,
+      accent: 'navy',
+    });
+  }
+  // Lads drilled stat as a leader tile
+  if (ladsDrilledCount > 0) {
+    leaderTiles.push({
+      label: 'Drilled today',
+      player: `${ladsDrilledCount} lad${ladsDrilledCount === 1 ? '' : 's'}`,
+      meta: ladsDrilledCount === 1 ? 'completed the daily drill' : 'completed the daily drill',
+      accent: 'sage',
+    });
+  }
   if (sortByReceived[0] && sortByReceived[0].perceptionsReceived > 0) {
-    collapsedLeaders.push({
+    leaderTiles.push({
       label: 'Most rated',
       player: sortByReceived[0].name,
       meta: `${sortByReceived[0].perceptionsReceived} ratings received`,
@@ -307,7 +414,7 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
     });
   }
   if (sortByGiven[0] && sortByGiven[0].perceptionsGiven > 0) {
-    collapsedLeaders.push({
+    leaderTiles.push({
       label: 'Most active rater',
       player: sortByGiven[0].name,
       meta: `${sortByGiven[0].perceptionsGiven} given`,
@@ -315,7 +422,7 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
     });
   }
   if (tier3Lads.length > 0) {
-    collapsedLeaders.push({
+    leaderTiles.push({
       label: 'Tier 3 unlocked',
       player: tier3Lads.map((t) => t.name.split(' ')[0]).join(', '),
       meta: `${tier3Lads.length} lad${tier3Lads.length === 1 ? '' : 's'}`,
@@ -323,15 +430,33 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
     });
   }
 
-  const visibleActivity = recentPerceptions.slice(0, 4);
-  const hiddenActivity = recentPerceptions.slice(4);
+  // ── Session hot take narrative (inline detail for the session hot take) ──
+  let sessionHotTakeNarrative: { scenarioId: string; prompt: string; descLabel: string; prescLabel: string } | null = null;
+  if (sessionHotTake) {
+    const scenario = SCENARIOS.find((s) => s.id === sessionHotTake.scenarioId);
+    if (scenario) {
+      const opt = scenario.options.find((o) => o.id === sessionHotTake.choice);
+      if (opt) {
+        sessionHotTakeNarrative = {
+          scenarioId: sessionHotTake.scenarioId,
+          prompt: scenario.prompt.replace(/\{name\}/g, `the ${sessionHotTake.position}`),
+          descLabel: opt.label,
+          prescLabel: '',
+        };
+      }
+    }
+  }
+
+  // Build the inline leaderboard list — show all non-empty tiles.
+  const visibleActivity = recentPerceptions.slice(0, 5);
+  const hiddenActivity = recentPerceptions.slice(5);
 
   return (
     <V3PageShell maxWidth={720}>
       <V3Ribbon order={['red', 'mustard', 'navy', 'sage']} marginBottom={20} />
       <V3IdentityLine context={`${squad.name} · clubhouse`} marginBottom={10} />
 
-      <V3Heading size="medium">The lads.</V3Heading>
+      <V3Heading size="medium">The clubhouse.</V3Heading>
 
       <p
         style={{
@@ -346,39 +471,16 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
         }}
       >
         {rows.length} lads · {squadAvgOverall} avg · {doctrineResult.totalRows} ratings · {doctrineResult.uniqueRaters} voices
+        {ladsDrilledCount === 0 ? ' · 0 drilled today' : ''}
       </p>
 
-      {/* ── Leaderboards (top 2 inline, rest behind details) ──────── */}
-      {inlineLeaders.length > 0 && (
-        <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}>
-          {inlineLeaders.map((l) => (
+      {/* ── Leaderboards (all inline now, no collapsed) ────────────── */}
+      {leaderTiles.length > 0 && (
+        <div style={{ display: 'grid', gap: 8, marginBottom: 28 }}>
+          {leaderTiles.map((l) => (
             <LeaderTile key={l.label} {...l} />
           ))}
         </div>
-      )}
-      {collapsedLeaders.length > 0 && (
-        <details style={{ marginBottom: 28 }}>
-          <summary
-            style={{
-              cursor: 'pointer',
-              listStyle: 'none',
-              fontFamily: TYPE.mono,
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: TRACKING.cap,
-              textTransform: 'uppercase',
-              color: PALETTE.inkLight,
-              padding: '6px 0',
-            }}
-          >
-            + {collapsedLeaders.length} more leaderboard{collapsedLeaders.length === 1 ? '' : 's'}
-          </summary>
-          <div style={{ display: 'grid', gap: 8, marginTop: 8 }}>
-            {collapsedLeaders.map((l) => (
-              <LeaderTile key={l.label} {...l} />
-            ))}
-          </div>
-        </details>
       )}
 
       {/* ── Roster filters ────────────────────────────────────────── */}
@@ -440,58 +542,54 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
             <RosterRow
               key={r.userId}
               row={r}
-              quizHref={`/preview/${encodeURIComponent(token)}?mode=quiz`}
+              token={token}
+              quizHref={`${previewUrl}?mode=quiz`}
+              previewUrl={previewUrl}
             />
           ))
         )}
       </div>
 
-      {/* ── Doctrine (collapsed) ──────────────────────────────────── */}
+      {/* ── Doctrine (ALWAYS OPEN — the hottest debate fuel) ──────── */}
       {doctrineResult.totalRows > 0 && (
-        <details style={{ marginBottom: 32 }}>
-          <summary
-            style={{
-              cursor: 'pointer',
-              listStyle: 'none',
-              fontFamily: TYPE.mono,
-              fontSize: 11,
-              fontWeight: 700,
-              letterSpacing: TRACKING.cap,
-              textTransform: 'uppercase',
-              color: PALETTE.navy,
-              padding: '10px 12px',
-              border: `1.5px solid ${PALETTE.navy}`,
-              borderLeft: `6px solid ${PALETTE.navy}`,
-              background: PALETTE.cream,
-              display: 'flex',
-              justifyContent: 'space-between',
-            }}
-          >
-            <span>What the group says by role</span>
-            <span style={{ opacity: 0.7 }}>tap →</span>
-          </summary>
-          <div style={{ marginTop: 14 }}>
-            <p style={{ fontFamily: TYPE.mono, fontSize: 11, color: PALETTE.inkLight, lineHeight: 1.55, marginBottom: 18 }}>
-              Anonymized positional read — no names attached.
+        <div style={{ marginBottom: 32 }}>
+          <V3SolidCard accent="navy" padding="14px 16px" marginBottom={16}>
+            <div
+              style={{
+                fontFamily: TYPE.mono,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: TRACKING.cap,
+                textTransform: 'uppercase',
+                color: PALETTE.navy,
+                marginBottom: 4,
+              }}
+            >
+              What the group says by role
+            </div>
+            <p style={{ fontFamily: TYPE.mono, fontSize: 11, color: PALETTE.inkLight, lineHeight: 1.55 }}>
+              Anonymized positional read — no names attached. This is where the lads
+              agree and disagree about what each role should do.
             </p>
-            {Object.entries(doctrineResult.byPosition).map(([position, scenarios]) => (
-              <div key={position} style={{ marginBottom: 24 }}>
-                <V3SectionLabel marginBottom={10} color={PALETTE.red}>
-                  {position}
-                </V3SectionLabel>
-                <PerceptionBars
-                  aggregate={scenarios}
-                  scenarios={SCENARIO_PAYLOAD}
-                  nameSubstitution={`the ${position}`}
-                  emptyMessage="No ratings for this role yet."
-                />
-              </div>
-            ))}
-          </div>
-        </details>
+          </V3SolidCard>
+
+          {Object.entries(doctrineResult.byPosition).map(([position, scenarios]) => (
+            <div key={position} style={{ marginBottom: 24 }}>
+              <V3SectionLabel marginBottom={10} color={PALETTE.red}>
+                {position}
+              </V3SectionLabel>
+              <PerceptionBars
+                aggregate={scenarios}
+                scenarios={SCENARIO_PAYLOAD}
+                nameSubstitution={`the ${position}`}
+                emptyMessage="No ratings for this role yet."
+              />
+            </div>
+          ))}
+        </div>
       )}
 
-      {/* ── Activity ticker (4 inline + collapse) ─────────────────── */}
+      {/* ── Activity ticker (5 inline + collapse) ─────────────────── */}
       {visibleActivity.length > 0 && (
         <>
           <V3SectionLabel marginBottom={10}>Recent activity</V3SectionLabel>
@@ -625,10 +723,13 @@ function LeaderTile({
 
 function RosterRow({
   row,
+  token,
   quizHref,
+  previewUrl,
 }: {
   row: {
     userId: string;
+    profileId: string | null;
     name: string;
     position: string | null;
     overall: number;
@@ -636,9 +737,10 @@ function RosterRow({
     isViewer: boolean;
     viewerHasRated: boolean;
   };
+  token: string;
   quizHref: string;
+  previewUrl: string;
 }) {
-  // One row, one shape — same skeleton for everyone, status pip on the right.
   const ratedTag = row.isViewer
     ? { text: 'YOU', color: PALETTE.ink, bg: PALETTE.mustard }
     : row.viewerHasRated
@@ -656,6 +758,12 @@ function RosterRow({
     ) : (
       <div>{children}</div>
     );
+
+  // WhatsApp compare intent — opens wa.me with a challenge message.
+  // The message links to the clubhouse so the recipient lands on the
+  // shared squad home, not a personal auth URL.
+  const compareMessage = `Oi, I'm on the SportWarren clubhouse. Overall: ${row.overall} · ${row.position ?? '—'}. What's your number? Check the lads: ${previewUrl}/squad`;
+  const compareWaUrl = `https://wa.me/?text=${encodeURIComponent(compareMessage)}`;
 
   return Wrap(
     <div
@@ -710,34 +818,56 @@ function RosterRow({
           {row.position ?? '—'} · L{row.level}
         </div>
       </div>
-      {ratedTag ? (
-        <span
-          style={{
-            fontFamily: TYPE.mono,
-            fontSize: 9,
-            fontWeight: 700,
-            letterSpacing: TRACKING.cap,
-            color: ratedTag.color,
-            background: ratedTag.bg,
-            padding: ratedTag.bg !== 'transparent' ? '2px 6px' : 0,
-            flexShrink: 0,
-          }}
-        >
-          {ratedTag.text}
-        </span>
-      ) : (
-        <span
-          style={{
-            fontFamily: TYPE.mono,
-            fontSize: 11,
-            fontWeight: 700,
-            color: PALETTE.red,
-            flexShrink: 0,
-          }}
-        >
-          Rate →
-        </span>
-      )}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+        {/* Compare button — opens WhatsApp with a challenge */}
+        {!row.isViewer && (
+          <a
+            href={compareWaUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontFamily: TYPE.mono,
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: '0.08em',
+              textTransform: 'uppercase',
+              color: PALETTE.navy,
+              border: `1px solid ${PALETTE.navy}`,
+              padding: '3px 7px',
+              textDecoration: 'none',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            ⚡ Compare
+          </a>
+        )}
+        {ratedTag ? (
+          <span
+            style={{
+              fontFamily: TYPE.mono,
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: TRACKING.cap,
+              color: ratedTag.color,
+              background: ratedTag.bg,
+              padding: ratedTag.bg !== 'transparent' ? '2px 6px' : 0,
+            }}
+          >
+            {ratedTag.text}
+          </span>
+        ) : (
+          <span
+            style={{
+              fontFamily: TYPE.mono,
+              fontSize: 11,
+              fontWeight: 700,
+              color: PALETTE.red,
+            }}
+          >
+            Rate →
+          </span>
+        )}
+      </div>
     </div>,
   );
 }
