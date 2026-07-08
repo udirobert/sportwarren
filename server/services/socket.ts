@@ -1,11 +1,38 @@
 import { Server as SocketIOServer } from 'socket.io';
+import type { PrismaClient } from '@prisma/client';
 
 export class SocketService {
   private io: SocketIOServer;
+  private prisma?: PrismaClient;
 
-  constructor(io: SocketIOServer) {
+  constructor(io: SocketIOServer, prisma?: PrismaClient) {
     this.io = io;
+    this.prisma = prisma;
     this.setupEventHandlers();
+  }
+
+  /**
+   * Verify the caller holds a preview token (walletAddress) belonging to
+   * a member of the squad. The `squad:{id}` room carries teammates' first
+   * names + live perception activity, so an unauthenticated join would
+   * leak the group's activity to anyone who guesses a squadId. Fail
+   * closed: if the check errors or no prisma is wired, deny.
+   */
+  private async isSquadMember(token: string, squadId: string): Promise<boolean> {
+    if (!this.prisma) {
+      console.error('🚫 join-squad auth unavailable: no prisma client injected');
+      return false;
+    }
+    try {
+      const member = await this.prisma.squadMember.findFirst({
+        where: { squadId, user: { walletAddress: token } },
+        select: { id: true },
+      });
+      return member !== null;
+    } catch (err) {
+      console.error('🚫 join-squad auth check failed:', err);
+      return false;
+    }
   }
 
   private setupEventHandlers(): void {
@@ -24,8 +51,26 @@ export class SocketService {
         console.log(`👤 User ${socket.id} left match ${matchId}`);
       });
 
-      // Join squad room for updates
-      socket.on('join-squad', (squadId: string) => {
+      // Join squad room for updates — membership-gated. Requires a preview
+      // token (walletAddress) whose holder is a member of the squad. Bare
+      // string joins (the old unauthenticated shape) are rejected.
+      socket.on('join-squad', async (payload: { squadId?: string; token?: string } | string) => {
+        const squadId = typeof payload === 'string' ? payload : payload?.squadId;
+        const token = typeof payload === 'string' ? undefined : payload?.token;
+
+        if (!squadId || !token) {
+          socket.emit('join-squad-denied', { squadId: squadId ?? null, reason: 'auth_required' });
+          console.warn(`🚫 join-squad denied (no token) for socket ${socket.id}`);
+          return;
+        }
+
+        const authorized = await this.isSquadMember(token, squadId);
+        if (!authorized) {
+          socket.emit('join-squad-denied', { squadId, reason: 'not_a_member' });
+          console.warn(`🚫 join-squad denied (not a member) squad ${squadId}, socket ${socket.id}`);
+          return;
+        }
+
         socket.join(`squad:${squadId}`);
         console.log(`👤 User ${socket.id} joined squad ${squadId}`);
       });
