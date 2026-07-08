@@ -213,7 +213,7 @@ async function startServer() {
     }
   });
 
-  const socketService = new SocketService(io);
+  const socketService = new SocketService(io, prisma);
 
   // Create Apollo Server
   const server = new ApolloServer({

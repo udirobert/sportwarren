@@ -40,9 +40,6 @@ export default async function BroadcastPage({ params }: PageProps) {
 
   if (!organizer) notFound();
 
-  const captainMembership = organizer.squads.find((m) => m.role === 'captain') ?? organizer.squads[0];
-  if (!captainMembership) notFound();
-
   const session = await prisma.session.findUnique({
     where: { id: sessionId },
     include: {
@@ -69,7 +66,16 @@ export default async function BroadcastPage({ params }: PageProps) {
   });
 
   if (!session) notFound();
-  if (session.squad.id !== captainMembership.squadId) notFound();
+
+  // Phone numbers are rendered on this surface, so the gate must be
+  // strict: only a captain of THIS session's squad may load it. The
+  // organizerToken is the holder's own walletAddress — i.e. every
+  // player's preview token — so there is deliberately NO fallback to
+  // `squads[0]`; a non-captain member of the squad must not pass.
+  const isCaptainOfSession = organizer.squads.some(
+    (m) => m.squadId === session.squad.id && m.role === 'captain',
+  );
+  if (!isCaptainOfSession) notFound();
 
   const allStats = session.matches.flatMap((m) => m.playerStats);
   const totalGoals = allStats.reduce((s, st) => s + st.goals, 0);
