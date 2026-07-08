@@ -30,6 +30,7 @@ import {
   V3CTAButton,
   V3SolidCard,
   V3HollowCard,
+  V3Reveal,
   type Attrs,
 } from '@/components/v3';
 import {
@@ -236,75 +237,80 @@ export default async function AnalysisPage({ params }: PageProps) {
         </div>
       </div>
 
-      <V3SectionLabel marginTop={32}>What you did tonight</V3SectionLabel>
+      <V3Reveal delay={100}>
+        <V3SectionLabel marginTop={32}>What you did tonight</V3SectionLabel>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 24 }}>
-        <StatCell label="Goals" value={myGoals} accent={myGoals > 0 ? PALETTE.red : PALETTE.inkLight} />
-        <StatCell label="Assists" value={myAssists} accent={myAssists > 0 ? PALETTE.sage : PALETTE.inkLight} />
-        <StatCell label="Minutes" value={myMinutes} accent={PALETTE.navy} />
-      </div>
-
-      {myRank && totalScorers > 0 && myGoals > 0 && (
-        <div
-          style={{
-            background: 'rgba(28,58,94,0.06)',
-            padding: 12,
-            borderLeft: `4px solid ${PALETTE.navy}`,
-            marginBottom: 24,
-            fontFamily: TYPE.mono,
-            fontSize: 12,
-            color: PALETTE.ink,
-          }}
-        >
-          #{myRank} of {totalScorers} scorers on the night
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 24 }}>
+          <StatCell label="Goals" value={myGoals} accent={myGoals > 0 ? PALETTE.red : PALETTE.inkLight} />
+          <StatCell label="Assists" value={myAssists} accent={myAssists > 0 ? PALETTE.sage : PALETTE.inkLight} />
+          <StatCell label="Minutes" value={myMinutes} accent={PALETTE.navy} />
         </div>
-      )}
 
-      <V3SectionLabel marginTop={12}>What the lads said</V3SectionLabel>
-
-      {ratersCount === 0 ? (
-        <V3HollowCard>
-          <div style={{ fontFamily: TYPE.mono, fontSize: 12, lineHeight: 1.55, color: PALETTE.ink }}>
-            <strong>0 lads have rated you yet.</strong> Your card moves
-            when at least 5 weigh in — rate teammates first to unlock
-            yours back. <em>SubmitHub rules apply.</em>
-          </div>
-        </V3HollowCard>
-      ) : (
-        <V3SolidCard accent="sage" padding="16px 18px" marginBottom={24}>
+        {myRank && totalScorers > 0 && myGoals > 0 && (
           <div
             style={{
-              fontFamily: TYPE.display,
-              fontSize: 28,
-              fontWeight: 800,
-              lineHeight: 1.05,
-              textTransform: 'uppercase',
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {ratersCount} lad{ratersCount === 1 ? '' : 's'} weighed in
-            {avgScore !== null && (
-              <span style={{ color: PALETTE.sage }}> · avg {avgScore.toFixed(1)}/10</span>
-            )}
-          </div>
-          <div
-            style={{
+              background: 'rgba(28,58,94,0.06)',
+              padding: 12,
+              borderLeft: `4px solid ${PALETTE.navy}`,
+              marginBottom: 24,
               fontFamily: TYPE.mono,
-              fontSize: 11,
-              lineHeight: 1.5,
-              color: PALETTE.inkLight,
-              marginTop: 6,
+              fontSize: 12,
+              color: PALETTE.ink,
             }}
           >
-            {ratingsReceived.length} ratings across attributes.
-            Once the consensus window closes, your card adjusts.
+            #{myRank} of {totalScorers} scorers on the night
           </div>
-        </V3SolidCard>
-      )}
+        )}
+      </V3Reveal>
 
-      <V3SectionLabel marginTop={12}>Where your card stands</V3SectionLabel>
+      <V3Reveal delay={150}>
+        <V3SectionLabel marginTop={12}>What the lads said</V3SectionLabel>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+        {ratersCount === 0 ? (
+          <V3HollowCard>
+            <div style={{ fontFamily: TYPE.mono, fontSize: 12, lineHeight: 1.55, color: PALETTE.ink }}>
+              <strong>0 lads have rated you yet.</strong> Your card moves
+              when at least 5 weigh in — rate teammates first to unlock
+              yours back. <em>SubmitHub rules apply.</em>
+            </div>
+          </V3HollowCard>
+        ) : (
+          <V3SolidCard accent="sage" padding="16px 18px" marginBottom={24}>
+            <div
+              style={{
+                fontFamily: TYPE.display,
+                fontSize: 28,
+                fontWeight: 800,
+                lineHeight: 1.05,
+                textTransform: 'uppercase',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              {ratersCount} lad{ratersCount === 1 ? '' : 's'} weighed in
+              {avgScore !== null && (
+                <span style={{ color: PALETTE.sage }}> · avg {avgScore.toFixed(1)}/10</span>
+              )}
+            </div>
+            <div
+              style={{
+                fontFamily: TYPE.mono,
+                fontSize: 11,
+                lineHeight: 1.5,
+                color: PALETTE.inkLight,
+                marginTop: 6,
+              }}
+            >
+              {ratingsReceived.length} ratings across attributes.
+              Once the consensus window closes, your card adjusts.
+            </div>
+          </V3SolidCard>
+        )}
+      </V3Reveal>
+
+      <V3Reveal delay={200}>
+        <V3SectionLabel marginTop={12}>Where your card stands</V3SectionLabel>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
         {ATTRIBUTE_KEYS.map((k) => (
           <div
             key={k}
@@ -381,8 +387,10 @@ export default async function AnalysisPage({ params }: PageProps) {
           </div>
         ))}
       </div>
+      </V3Reveal>
 
       {/* What to drill next */}
+      <V3Reveal delay={250}>
       <V3SolidCard
         accent="red"
         background={PALETTE.ink}
@@ -483,7 +491,10 @@ export default async function AnalysisPage({ params }: PageProps) {
         </p>
       )}
 
+      </V3Reveal>
+
       {/* Alternate reality sim — "what if" anchor */}
+      <V3Reveal delay={300}>
       <V3SolidCard accent="navy" padding="16px 18px" marginBottom={16}>
         <div
           style={{
@@ -543,7 +554,9 @@ export default async function AnalysisPage({ params }: PageProps) {
           Run the alternate sim →
         </Link>
       </V3SolidCard>
+      </V3Reveal>
 
+      <V3Reveal delay={350}>
       <V3CTAButton href={`/preview/${encodeURIComponent(playerToken)}/drill`} marginBottom={12}>
         Go drill → +1 {weakestLabel.short}
       </V3CTAButton>
@@ -555,6 +568,7 @@ export default async function AnalysisPage({ params }: PageProps) {
       <V3CTAButton href={`/preview/${encodeURIComponent(playerToken)}/squad`} variant="tertiary">
         The clubhouse →
       </V3CTAButton>
+      </V3Reveal>
 
       <p
         style={{
