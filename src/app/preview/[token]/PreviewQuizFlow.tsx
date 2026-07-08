@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { MiniAvatar, PALETTE } from '../_components/MiniAvatar';
 import { TYPE } from '@/components/v3';
 import { submitPerception, type PerceptionPeek } from './_actions';
+import { socketService } from '@/lib/socket';
 
 const EASE_OUT = 'cubic-bezier(0.23, 1, 0.32, 1)';
 const STAGGER_STEP = 50;
@@ -34,6 +35,7 @@ interface ScenarioPayload {
   prompt: string;
   context?: string;
   hasPrescriptive: boolean;
+  attributeTag?: string;
   options: Option[];
 }
 
@@ -109,8 +111,10 @@ function injectStyles() {
 
 export function PreviewQuizFlow({
   token,
+  squadId,
   squadName,
   raterName,
+  raterPosition,
   targets,
   scenarios,
   alreadyRated,
@@ -118,8 +122,10 @@ export function PreviewQuizFlow({
   completedInit,
 }: {
   token: string;
+  squadId: string;
   squadName: string;
   raterName: string;
+  raterPosition: string | null;
   targets: Target[];
   scenarios: ScenarioPayload[];
   alreadyRated: RatedRow[];
@@ -150,6 +156,15 @@ export function PreviewQuizFlow({
 
   if (!injected.current) { injectStyles(); injected.current = true; }
 
+  // ── Connect to socket for real-time activity broadcast ──
+  useEffect(() => {
+    socketService.connect();
+    socketService.joinSquad(squadId, token);
+    return () => {
+      socketService.leaveSquad(squadId);
+    };
+  }, [squadId, token]);
+
   const current = queue[0];
   const totalToShow = Math.min(totalCombos, allCombos.length);
 
@@ -172,6 +187,19 @@ export function PreviewQuizFlow({
           kind: combo.kind,
         });
         if (res.ok && res.peek) {
+          // Broadcast to squad room so clubhouse viewers see it live
+          socketService.sendSquadUpdate(squadId, {
+            type: 'perception',
+            perception: {
+              scenarioId: combo.scenario.id,
+              attributeTag: combo.scenario.attributeTag ?? 'play',
+              raterPosition: raterPosition ?? 'a lad',
+              targetFirstName: combo.target.firstName,
+              targetPosition: combo.target.position ?? 'a lad',
+              choice: choiceId,
+              kind: combo.kind,
+            },
+          });
           setPeek({ combo, data: res.peek });
           setTimeout(() => {
             setPeek(null);

@@ -31,9 +31,12 @@ import {
   V3SectionLabel,
   V3CTAButton,
   V3SolidCard,
+  V3Pitch,
+  V3Reveal,
   type Attrs,
 } from '@/components/v3';
 import { PerceptionBars } from '@/components/perception/PerceptionBars';
+import { LiveActivityFeed } from '@/components/clubhouse/LiveActivityFeed';
 import {
   baselineForPosition,
   computeOverall,
@@ -73,6 +76,8 @@ function timeAgo(ts: Date): string {
   if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
   return `${Math.floor(seconds / 86400)}d ago`;
 }
+
+type ChoiceCounts = Record<'a' | 'b' | 'c' | 'd' | 'total', number>;
 
 function isSameUTCDay(a: Date, b: Date): boolean {
   return a.getUTCFullYear() === b.getUTCFullYear() &&
@@ -424,10 +429,6 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
     }
   }
 
-  // Build the inline leaderboard list — show all non-empty tiles.
-  const visibleActivity = recentPerceptions.slice(0, 5);
-  const hiddenActivity = recentPerceptions.slice(5);
-
   return (
     <V3PageShell maxWidth={720}>
       <V3Ribbon order={['red', 'mustard', 'navy', 'sage']} marginBottom={20} />
@@ -451,85 +452,100 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
         {ladsDrilledCount === 0 ? ' · 0 drilled today' : ''}
       </p>
 
+      {/* ── Our shape — compact pitch ──────────────────────────── */}
+      {(squad as unknown as { formation?: string }).formation && (
+        <V3Reveal delay={50}>
+          <div style={{ marginBottom: 28 }}>
+            <V3Pitch formation={(squad as unknown as { formation: string }).formation} />
+          </div>
+        </V3Reveal>
+      )}
+
       {/* ── Leaderboards (all inline now, no collapsed) ────────────── */}
       {leaderTiles.length > 0 && (
-        <div style={{ display: 'grid', gap: 8, marginBottom: 28 }}>
-          {leaderTiles.map((l) => (
-            <LeaderTile key={l.label} {...l} />
-          ))}
-        </div>
+        <V3Reveal delay={100}>
+          <div style={{ display: 'grid', gap: 8, marginBottom: 28 }}>
+            {leaderTiles.map((l) => (
+              <LeaderTile key={l.label} {...l} />
+            ))}
+          </div>
+        </V3Reveal>
       )}
 
       {/* ── Roster filters ────────────────────────────────────────── */}
-      <V3SectionLabel marginBottom={10} marginTop={4}>The roster</V3SectionLabel>
+      <V3Reveal delay={150}>
+        <V3SectionLabel marginBottom={10} marginTop={4}>The roster</V3SectionLabel>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-        <Chip href={buildUrl({ sort: 'overall' })} active={sort === 'overall'}>OVR</Chip>
-        <Chip href={buildUrl({ sort: 'ratings' })} active={sort === 'ratings'}>Ratings</Chip>
-        <Chip href={buildUrl({ sort: 'tier' })} active={sort === 'tier'}>Tier</Chip>
-        <Chip href={buildUrl({ sort: 'name' })} active={sort === 'name'}>A→Z</Chip>
-        <span style={{ width: 8 }} />
-        {unratedOnly ? (
-          <Chip href={buildUrl({ unrated: undefined })} active muted>
-            ✓ Untrated only
-          </Chip>
-        ) : (
-          <Chip href={buildUrl({ unrated: '1' })} active={false} muted>
-            Untrated only
-          </Chip>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+          <Chip href={buildUrl({ sort: 'overall' })} active={sort === 'overall'}>OVR</Chip>
+          <Chip href={buildUrl({ sort: 'ratings' })} active={sort === 'ratings'}>Ratings</Chip>
+          <Chip href={buildUrl({ sort: 'tier' })} active={sort === 'tier'}>Tier</Chip>
+          <Chip href={buildUrl({ sort: 'name' })} active={sort === 'name'}>A→Z</Chip>
+          <span style={{ width: 8 }} />
+          {unratedOnly ? (
+            <Chip href={buildUrl({ unrated: undefined })} active muted>
+              ✓ Untrated only
+            </Chip>
+          ) : (
+            <Chip href={buildUrl({ unrated: '1' })} active={false} muted>
+              Untrated only
+            </Chip>
+          )}
+        </div>
+
+        {presentPositions.length > 1 && (
+          <details style={{ marginBottom: 16 }}>
+            <summary
+              style={{
+                cursor: 'pointer',
+                listStyle: 'none',
+                fontFamily: TYPE.mono,
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: TRACKING.cap,
+                textTransform: 'uppercase',
+                color: PALETTE.inkLight,
+                padding: '4px 0',
+              }}
+            >
+              Filter by position {positionFilter ? `· ${positionFilter}` : ''}
+            </summary>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+              <Chip href={buildUrl({ position: undefined })} active={positionFilter === null} muted>All</Chip>
+              {presentPositions.map((p) => (
+                <Chip key={p} href={buildUrl({ position: p })} active={positionFilter === p} muted>
+                  {p}
+                </Chip>
+              ))}
+            </div>
+          </details>
         )}
-      </div>
 
-      {presentPositions.length > 1 && (
-        <details style={{ marginBottom: 16 }}>
-          <summary
-            style={{
-              cursor: 'pointer',
-              listStyle: 'none',
-              fontFamily: TYPE.mono,
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: TRACKING.cap,
-              textTransform: 'uppercase',
-              color: PALETTE.inkLight,
-              padding: '4px 0',
-            }}
-          >
-            Filter by position {positionFilter ? `· ${positionFilter}` : ''}
-          </summary>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-            <Chip href={buildUrl({ position: undefined })} active={positionFilter === null} muted>All</Chip>
-            {presentPositions.map((p) => (
-              <Chip key={p} href={buildUrl({ position: p })} active={positionFilter === p} muted>
-                {p}
-              </Chip>
-            ))}
-          </div>
-        </details>
-      )}
-
-      {/* ── Roster rows ───────────────────────────────────────────── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 36 }}>
-        {sorted.length === 0 ? (
-          <p style={{ fontFamily: TYPE.mono, fontSize: 12, color: PALETTE.inkLight, fontStyle: 'italic' }}>
-            No lads match those filters.
-          </p>
-        ) : (
-          sorted.map((r) => (
-            <RosterRow
-              key={r.userId}
-              row={r}
-              token={token}
-              quizHref={`${previewUrl}?mode=quiz`}
-              previewUrl={previewUrl}
-            />
-          ))
-        )}
-      </div>
+        {/* ── Roster rows ───────────────────────────────────────────── */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 36 }}>
+          {sorted.length === 0 ? (
+            <p style={{ fontFamily: TYPE.mono, fontSize: 12, color: PALETTE.inkLight, fontStyle: 'italic' }}>
+              No lads match those filters.
+            </p>
+          ) : (
+            sorted.map((r) => (
+              <RosterRow
+                key={r.userId}
+                row={r}
+                token={token}
+                quizHref={`${previewUrl}?mode=quiz`}
+                previewUrl={previewUrl}
+                baseUrl={baseUrl}
+              />
+            ))
+          )}
+        </div>
+      </V3Reveal>
 
       {/* ── Doctrine (ALWAYS OPEN — the hottest debate fuel) ──────── */}
       {doctrineResult.totalRows > 0 && (
-        <div style={{ marginBottom: 32 }}>
+        <V3Reveal delay={200}>
+          <div style={{ marginBottom: 32 }}>
           <V3SolidCard accent="navy" padding="14px 16px" marginBottom={16}>
             <div
               style={{
@@ -564,43 +580,16 @@ export default async function SquadClubhousePage({ params, searchParams }: PageP
             </div>
           ))}
         </div>
+      </V3Reveal>
       )}
 
-      {/* ── Activity ticker (5 inline + collapse) ─────────────────── */}
-      {visibleActivity.length > 0 && (
-        <>
-          <V3SectionLabel marginBottom={10}>Recent activity</V3SectionLabel>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 12 }}>
-            {visibleActivity.map((p) => (
-              <ActivityRow key={p.id} perception={p} />
-            ))}
-          </div>
-          {hiddenActivity.length > 0 && (
-            <details style={{ marginBottom: 32 }}>
-              <summary
-                style={{
-                  cursor: 'pointer',
-                  listStyle: 'none',
-                  fontFamily: TYPE.mono,
-                  fontSize: 10,
-                  fontWeight: 700,
-                  letterSpacing: TRACKING.cap,
-                  textTransform: 'uppercase',
-                  color: PALETTE.inkLight,
-                  padding: '4px 0',
-                }}
-              >
-                + {hiddenActivity.length} more
-              </summary>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
-                {hiddenActivity.map((p) => (
-                  <ActivityRow key={p.id} perception={p} />
-                ))}
-              </div>
-            </details>
-          )}
-        </>
-      )}
+      {/* ── Live activity feed (real-time via socket) ────────────── */}
+      <LiveActivityFeed
+        squadId={squad.id}
+        token={token}
+        initialPerceptions={recentPerceptions}
+        visibleCount={5}
+      />
 
       {/* ── CTAs ──────────────────────────────────────────────────── */}
       <V3CTAButton
@@ -746,6 +735,7 @@ function RosterRow({
   token,
   quizHref,
   previewUrl,
+  baseUrl,
 }: {
   row: {
     userId: string;
@@ -760,6 +750,7 @@ function RosterRow({
   token: string;
   quizHref: string;
   previewUrl: string;
+  baseUrl: string;
 }) {
   const ratedTag = row.isViewer
     ? { text: 'YOU', color: PALETTE.ink, bg: PALETTE.mustard }
@@ -890,38 +881,6 @@ function RosterRow({
         )}
       </div>
     </div>,
-  );
-}
-
-function ActivityRow({
-  perception,
-}: {
-  perception: {
-    id: string;
-    scenarioId: string;
-    createdAt: Date;
-    rater: { user: { position: string | null } | null } | null;
-    target: { user: { position: string | null } | null } | null;
-  };
-}) {
-  const raterPos = perception.rater?.user?.position ?? 'a lad';
-  const targetPos = perception.target?.user?.position ?? 'a lad';
-  const scenario = SCENARIOS.find((s) => s.id === perception.scenarioId);
-  const lens = scenario ? scenario.attributeTag : 'play';
-  return (
-    <div
-      style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        fontFamily: TYPE.mono,
-        fontSize: 11,
-        color: PALETTE.inkLight,
-        padding: '4px 8px',
-      }}
-    >
-      <span>A {raterPos} rated a {targetPos} on {lens}</span>
-      <span style={{ opacity: 0.65 }}>{timeAgo(perception.createdAt)}</span>
-    </div>
   );
 }
 

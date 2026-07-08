@@ -310,6 +310,49 @@ export function PreviewCardDashboard({
         </div>
       )}
 
+      {/* ── "What if I..." — attribute projection sandbox (Tier 2+) ── */}
+      {tier >= 2 && (
+        <div style={{...secStyle(2), marginBottom: 16}}>
+          <details>
+            <summary
+              style={{
+                cursor: 'pointer',
+                listStyle: 'none',
+                fontFamily: TYPE.display,
+                fontSize: 16,
+                fontWeight: 800,
+                letterSpacing: '-0.01em',
+                textTransform: 'uppercase',
+                color: PALETTE.ink,
+                padding: '12px 14px',
+                border: `1.5px solid ${PALETTE.ink}30`,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}
+            >
+              <span>What if I…</span>
+              <span style={{fontFamily: TYPE.mono, fontSize: 9, fontWeight: 700, letterSpacing: '0.1em', color: PALETTE.inkLight,}}>
+                PROJECT
+              </span>
+            </summary>
+            <div style={{padding: '14px 14px 0', borderLeft: `1.5px solid ${PALETTE.ink}30`, borderRight: `1.5px solid ${PALETTE.ink}30`, borderBottom: `1.5px solid ${PALETTE.ink}30`}}>
+              <p style={{fontFamily: TYPE.mono, fontSize: 10, color: PALETTE.inkLight, lineHeight: 1.5, marginBottom: 12}}>
+                Slide the bars to project how your card would change if you
+                focused on different attributes. These are just projections —
+                real movement comes from drills, matches, and peer ratings.
+              </p>
+              <WhatIfSliders
+                currentAttrs={myAttrs}
+                position={user.position}
+                level={myLevel}
+                prestige={profile?.twin?.prestige ?? 0}
+              />
+            </div>
+          </details>
+        </div>
+      )}
+
       {/* ── Primary CTAs — clubhouse first, then rate, rest tertiary ── */}
       <div style={{
         ...secStyle(2), display: 'flex', flexDirection: 'column', gap: 8,
@@ -483,6 +526,165 @@ export function PreviewCardDashboard({
  *   - If the player isn't discoverable, /player/{handle} would 404 —
  *     same fallback to the homepage to avoid a dead link in the wild.
  */
+/**
+ * "What if I…" — attribute projection sliders for the dashboard.
+ * Lets players play with their stats in a sandbox (no persistence).
+ * Reintroduces the homepage's IKEA effect into the authenticated experience.
+ */
+function WhatIfSliders({
+  currentAttrs,
+  position,
+  level,
+  prestige,
+}: {
+  currentAttrs: Attrs;
+  position: string | null;
+  level: number;
+  prestige: number;
+}) {
+  const [deltas, setDeltas] = useState<Partial<Record<typeof ATTRIBUTE_KEYS[number], number>>>({});
+
+  const projectedAttrs: Attrs = { ...currentAttrs };
+  for (const k of ATTRIBUTE_KEYS) {
+    const d = deltas[k] ?? 0;
+    projectedAttrs[k] = Math.max(1, Math.min(99, currentAttrs[k] + d));
+  }
+  const projectedOverall = computeOverall(projectedAttrs, position, level, prestige);
+  const currentOverall = computeOverall(currentAttrs, position, level, prestige);
+  const overallDelta = projectedOverall - currentOverall;
+
+  const handleChange = (key: typeof ATTRIBUTE_KEYS[number], value: number) => {
+    setDeltas((prev) => {
+      const next = { ...prev };
+      if (value === 0) {
+        delete next[key];
+      } else {
+        next[key] = Math.max(-10, Math.min(10, value));
+      }
+      return next;
+    });
+  };
+
+  const resetAll = () => setDeltas({});
+  const hasChanges = Object.keys(deltas).length > 0;
+
+  const accent = ({
+    pace: 'mustard', shooting: 'red', passing: 'navy',
+    dribbling: 'sage', defending: 'navy', physical: 'red',
+  } as const);
+
+  return (
+    <div>
+      {/* Projected overall banner */}
+      <div
+        style={{
+          background: PALETTE.ink,
+          color: PALETTE.cream,
+          padding: '10px 14px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: 14,
+        }}
+      >
+        <span style={{ fontFamily: TYPE.mono, fontSize: 10, fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', opacity: 0.8 }}>
+          Projected Overall
+        </span>
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+          <span style={{ fontFamily: TYPE.display, fontSize: 28, fontWeight: 800, lineHeight: 1, color: PALETTE.mustard }}>
+            {projectedOverall}
+          </span>
+          {hasChanges && (
+            <span
+              style={{
+                fontFamily: TYPE.mono,
+                fontSize: 11,
+                fontWeight: 700,
+                color: overallDelta > 0 ? PALETTE.sage : overallDelta < 0 ? PALETTE.red : PALETTE.inkLight,
+              }}
+            >
+              {overallDelta > 0 ? '+' : ''}{overallDelta}
+            </span>
+          )}
+        </span>
+      </div>
+
+      {/* Attribute sliders */}
+      {ATTRIBUTE_KEYS.map((key) => {
+        const current = currentAttrs[key];
+        const delta = deltas[key] ?? 0;
+        const projected = projectedAttrs[key];
+        return (
+          <div key={key} style={{ marginBottom: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 3 }}>
+              <span style={{ fontFamily: TYPE.display, fontSize: 14, fontWeight: 800, letterSpacing: '-0.01em', color: PALETTE[accent[key]] }}>
+                {key.toUpperCase().slice(0, 3)}
+              </span>
+              <span style={{ fontFamily: TYPE.mono, fontSize: 11, fontWeight: 700, color: PALETTE.ink }}>
+                {projected}
+                {delta !== 0 && (
+                  <span style={{ color: delta > 0 ? PALETTE.sage : PALETTE.red, marginLeft: 4 }}>
+                    {delta > 0 ? '+' : ''}{delta}
+                  </span>
+                )}
+              </span>
+            </div>
+            <div style={{ position: 'relative' }}>
+              <input
+                type="range"
+                min={-10}
+                max={10}
+                step={1}
+                value={delta}
+                onChange={(e) => handleChange(key, parseInt(e.target.value, 10))}
+                style={{
+                  width: '100%',
+                  height: 4,
+                  appearance: 'none',
+                  background: `linear-gradient(to right, ${PALETTE[accent[key]]} ${((delta + 10) / 20) * 100}%, rgba(0,0,0,0.08) ${((delta + 10) / 20) * 100}%)`,
+                  outline: 'none',
+                  cursor: 'pointer',
+                  borderRadius: 2,
+                }}
+              />
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: TYPE.mono, fontSize: 8, color: PALETTE.inkLight, marginTop: 2 }}>
+                <span>-10</span>
+                <span style={{ fontFamily: TYPE.mono, fontSize: 8, fontWeight: 700, color: PALETTE.inkLight }}>
+                  {current} base
+                </span>
+                <span>+10</span>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Revert button */}
+      {hasChanges && (
+        <button
+          onClick={resetAll}
+          style={{
+            fontFamily: TYPE.mono,
+            fontSize: 9,
+            fontWeight: 700,
+            letterSpacing: '0.1em',
+            textTransform: 'uppercase',
+            color: PALETTE.red,
+            background: 'transparent',
+            border: `1px solid ${PALETTE.red}40`,
+            padding: '6px 12px',
+            cursor: 'pointer',
+            marginTop: 6,
+            width: '100%',
+          }}
+        >
+          Revert to current
+        </button>
+      )}
+    </div>
+  );
+}
+
 function ShareToWhatsApp({
   baseUrl,
   firstName,

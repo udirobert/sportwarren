@@ -137,14 +137,17 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
     prompt: s.prompt,
     context: s.context,
     hasPrescriptive: s.hasPrescriptive,
+    attributeTag: s.attributeTag,
     options: s.options.map((o) => ({ id: o.id, label: o.label })),
   }));
 
   return (
     <PreviewQuizFlow
       token={token}
+      squadId={squad.id}
       squadName={squad.name}
       raterName={user.name ?? 'Player'}
+      raterPosition={user.position}
       targets={targets}
       scenarios={scenariosPayload}
       alreadyRated={alreadyRated}

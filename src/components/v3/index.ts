@@ -11,3 +11,5 @@
 export * from './tokens';
 export * from './primitives';
 export { V3PlayerCard, buildPlayerCardData, type V3PlayerCardData, type Attrs } from '../identity/V3PlayerCard';
+export { V3Pitch, type V3PitchProps } from './V3Pitch';
+export { V3Reveal, type V3RevealProps } from './V3Reveal';
