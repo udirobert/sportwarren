@@ -3,8 +3,15 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { getPreviewUser } from '../_lib/get-preview-user';
 import { PreviewQuizFlow } from './PreviewQuizFlow';
+import { PreviewFirstContact } from './PreviewFirstContact';
 import { SCENARIOS } from '@/server/services/perception/scenarios';
 import { aggregateReceivedPerceptions } from '@/server/services/perception/aggregate';
+import {
+  baselineForPosition,
+  computeOverall,
+} from '@/server/services/personalization/position-baselines';
+import { generatePrediction } from '@/server/services/personalization/predictions';
+import type { Attrs } from '@/components/v3';
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -29,7 +36,7 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
 
   const user = await getPreviewUser(token, {
     include: {
-      playerProfile: true,
+      playerProfile: { include: { twin: true } },
       squads: { include: { squad: true } },
     },
   });
@@ -131,7 +138,11 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
     );
   }
 
-  // Tier 0 — quiz only
+  // Tier 0 — first contact. Lead with the player's predicted card + the
+  // app's "bold call" (value first), then the rate-the-lads quiz as the
+  // second action. The peer-verdict card stays gated behind rating 5 (the
+  // reciprocity doctrine is intact) — this surfaces the *prediction*, not
+  // what the group said. See product-calibration.md → "First-contact pass".
   const scenariosPayload = SCENARIOS.map((s) => ({
     id: s.id,
     prompt: s.prompt,
@@ -141,18 +152,53 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
     options: s.options.map((o) => ({ id: o.id, label: o.label })),
   }));
 
+  const quizProps = {
+    token,
+    squadId: squad.id,
+    squadName: squad.name,
+    raterName: user.name ?? 'Player',
+    raterPosition: user.position,
+    targets,
+    scenarios: scenariosPayload,
+    alreadyRated,
+    totalCombos,
+    completedInit: alreadyRated.length,
+  };
+
+  // Force the raw quiz when the dashboard's "Rate more lads" CTA sends the
+  // player back with ?mode=quiz (they've already seen their card).
+  if (forceQuiz) {
+    return <PreviewQuizFlow {...quizProps} />;
+  }
+
+  const attrs: Attrs =
+    (rater.twin?.baseAttributes as Attrs | null) ?? baselineForPosition(user.position);
+  const level = rater.twin?.level ?? 1;
+  const overall = computeOverall(attrs, user.position, level, rater.twin?.prestige ?? 0);
+  const prediction = generatePrediction({
+    position: user.position,
+    attrs,
+    seed: rater.id,
+  });
+
   return (
-    <PreviewQuizFlow
-      token={token}
-      squadId={squad.id}
-      squadName={squad.name}
-      raterName={user.name ?? 'Player'}
-      raterPosition={user.position}
-      targets={targets}
-      scenarios={scenariosPayload}
-      alreadyRated={alreadyRated}
-      totalCombos={totalCombos}
-      completedInit={alreadyRated.length}
+    <PreviewFirstContact
+      cardUser={{
+        name: user.name,
+        position: user.position,
+        avatarKitColor: user.avatarKitColor,
+        avatarAccentColor: user.avatarAccentColor,
+        avatarSkinTone: user.avatarSkinTone,
+        avatarHairColor: user.avatarHairColor,
+        avatarHairStyle: user.avatarHairStyle,
+        avatarNumber: user.avatarNumber,
+      }}
+      attrs={attrs}
+      overall={overall}
+      level={level}
+      prediction={prediction}
+      matesToRate={5}
+      quiz={quizProps}
     />
   );
 }
