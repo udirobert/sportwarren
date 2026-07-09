@@ -1,12 +1,13 @@
 # Flywheel — closed-loop ecosystem
 
-> **Status:** Items #1, #2, #4, #5 shipped 2026-06-21 (commits ac9e0c2
-> → forthcoming). Items #3, #6, #7 remain post-Tuesday — they're
-> either lower-impact for the kickabout cohort (#3 is a Sunday League
-> formation, #7 is a coherence cleanup) or are multi-week builds (#6
-> is the full tactics puzzle library). The bones of the loop are in
-> place; Tuesday's signal informs the prioritisation of the remaining
-> three.
+> **Status:** Items #1, #2, #4, #5 shipped 2026-06-21. Items #8, #9
+> shipped 2026-07-09 — they close the loop the diagram below always
+> pointed at: the post-session surface now pays off the first-contact
+> bet and captures the "next week" commitment at the peak moment,
+> instead of stopping at a read-only delta. Items #3, #6, #7 remain
+> deferred — either lower-impact for the kickabout cohort (#3 is a
+> Sunday League formation, #7 is a coherence cleanup) or multi-week
+> builds (#6 is the full tactics puzzle library).
 
 ## What we're trying to build
 
@@ -53,6 +54,13 @@ platform is in service of moving it.
                  │                     │        │
                  └─────────────────────┴────────┴──→ next session
 ```
+
+**2026-07-09:** the "next session" arrow is now a real loop, not just a
+label. Post-match analysis pays off the first-contact bet
+(`predictions.ts` → `answered`/`unproven`/`open`), is shareable as a
+keepsake (`/api/og/payoff`), and captures "same time next week?" at that
+same peak moment (`commitment-framing.ts` + `SessionAttendee.status`) —
+feeding the Bibs Optimizer's confirmed-player list for the session after.
 
 ## Two wedge shapes, two algorithms
 
@@ -102,6 +110,9 @@ Audit done 2026-06-21. The codebase already has:
 | Daily drill widget | `DailyDrillWidget` | Picks weakest attr, fires `daily_drill` event via TwinService | ⚠️ hidden behind `PHASE_1_HIDDEN_WIDGET_IDS` + duplicated by preview drill |
 | Preview drill (NEW) | `src/app/preview/[token]/drill/` | Same as widget but direct-write | ⚠️ duplicates the widget |
 | Formation-of-Week cron | `/api/cron/formation-of-week` | Weekly Telegram message with deterministic formation | ⚠️ never consults twin state |
+| Bibs broadcast (NEW) | `broadcastTeams` action + `formatBibsForTelegram` | Captain-triggered push of the confirmed-players split to the squad's Telegram group | ✅ consults twin state (Overall); routes through the shared `broadcastToSquadGroups` helper |
+| Prediction payoff (NEW) | `predictions.ts` + analysis page | Resolves the first-contact bold call against the session outcome | ✅ closes gap #2 below |
+| Commitment capture (NEW) | `commitment-framing.ts` + `NextGameCommit.tsx` | Peak-end "same time next week?" RSVP, feeds the next Bibs Optimizer run | ✅ new — no prior equivalent |
 | TwinHeroCard | dashboard widget | Reads twin level/xp/events | ✅ read-only display |
 | PostMatchReaction | dashboard widget | Shows last event's attribute deltas | ✅ read-only display, but only kicks in for fixed-squad matches |
 
@@ -111,10 +122,12 @@ Audit done 2026-06-21. The codebase already has:
    No surface today derives lineup/teams from squad attribute
    distribution. This is the biggest miss — it's where the squad-level
    flywheel lives.
-2. **Post-session analysis surface is missing.** Match → peer ratings
-   → twin updates happens silently. Players only see the delta on
-   their next preview visit, with no story attached. The chess.com
-   equivalent of "you lost 12 rating points because…" doesn't exist.
+2. ~~**Post-session analysis surface is missing.**~~ **Closed 2026-07-09.**
+   The prediction payoff loop is exactly this story: "we said X, here's
+   what happened" resolved against real goals/assists/rating, plus the
+   doubted-attribute callback ("that Defending we doubted? Up 3"). See
+   `predictions.ts` (`resolvePrediction`) and the Flywheel surfaces
+   section of `AGENTS.md`.
 3. **Drill duplication.** Preview-side `/drill` (direct-write) and
    in-app `DailyDrillWidget` (TwinService-routed) do the same thing.
    Pick one.
@@ -127,7 +140,7 @@ Audit done 2026-06-21. The codebase already has:
 ## Shipping order
 
 Each item in dependency order. Times are first-pass estimates. Status
-reflects 2026-06-21 ship.
+reflects the 2026-06-21 and 2026-07-09 ships.
 
 | # | What | Time | Status |
 |---|---|---|---|
@@ -137,7 +150,9 @@ reflects 2026-06-21 ship.
 | 4 | **`bibsOptimizer(squadId, signups, playersPerSide)` for Primary B (kickabout).** Snake-draft by Overall + role-aware swap to tighten balance + bench rotation suggestions. Surface at `/session/live/{token}/teams`. | ~2 days | ✅ Shipped. Captain picks format (5/6/7/8-a-side) + ticks confirmed players → balanced split with reasoning lines. |
 | 5 | **Drill picker biased toward squad-weakest + player-weakest.** Combine player-floor weighting with squad-gap weighting so collective weaknesses become collective drills. | ~3h | ✅ Shipped. `pickTargetAttribute(attrs, seed, squadAvgByAttr)` factors in squad averages; UI shows "Squad-wide weakness" callout when picked attribute reflects a group lag. |
 | 6 | **Tactics puzzle tied to last session scenarios.** Replace the scaffold with a library tagged to match contexts ("you conceded 3 on the left wing — here's what you should have done"). | ~1 week+ | ⏳ Deferred. Scaffold remains the placeholder. Real lib requires schema, content authoring, drag-and-drop board, TACTICS 7th attribute. |
-| 7 | **Deduplicate drill flow.** Pick one path: preview-side `/drill` or in-app `DailyDrillWidget`. | ~1h | ⏳ Deferred. Both surfaces routed through TwinService now (item #1), so they're behaviourally equivalent but textually duplicated. Coherence cleanup after we see which surface Tuesday's cohort uses. |
+| 7 | **Deduplicate drill flow.** Pick one path: preview-side `/drill` or in-app `DailyDrillWidget`. | ~1h | ⏳ Deferred. Both surfaces routed through TwinService now (item #1), so they're behaviourally equivalent but textually duplicated. Coherence cleanup after we see which surface gets used. |
+| 8 | **Prediction payoff loop.** Re-derive the first-contact bold call (seeded, no storage) and resolve it against the session outcome; shareable keepsake card. | ~1 day | ✅ Shipped. `predictions.ts` (`generatePrediction`/`resolvePrediction`) + `session-payoff.ts` + `/api/og/payoff`. Verified end-to-end against real data (both a 0-stat "open" case and a hat-trick "answered" case render correctly). |
+| 9 | **Peak-end commitment capture.** Move the "same time next week?" ask from a mid-week chase to right after the payoff verdict; honest loss-framing of the group's ritual. | ~4h | ✅ Shipped. `commitment-framing.ts` (pure, tested, no bandwagon-shaming) + `NextGameCommit.tsx` + `SessionAttendee.status`/`committedAt` (migration `20260709000000`). Verified writing to the real DB. |
 
 ## Design call to make explicitly
 
@@ -170,13 +185,10 @@ This decision shapes #3 and #4 above.
 
 ## When to revisit
 
-After Tuesday's session — review:
-- What did the three players actually engage with?
-- Did anyone return to /drill on day 2?
-- Did anyone share a sim PNG to WhatsApp?
-- Did the captain use the preview links to inform team allocation
-  on the night (informally) before we even built the Bibs Optimizer?
-
-Whatever Tuesday reveals reshapes the priority order above. The
-shape of the flywheel above is the long-form bet — the order of
-the builds should be driven by where Tuesday's signal is loudest.
+The original Nairobi Tuesday test's notes were lost before a retro was
+written — see `docs/post-tuesday-retro.md` (scaffold, unfilled) for the
+questions that should still be answered whenever cohort data exists.
+A London kickabout test (Sunday) is next; treat it as the first real
+signal source for re-ordering items #3/#6/#7 above. Capture engagement
+data as it happens this time (screenshots, who commits via item #9, who
+returns for the payoff) rather than relying on notes after the fact.
