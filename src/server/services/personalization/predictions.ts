@@ -189,3 +189,113 @@ export function generatePrediction(input: {
     bucket,
   };
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Resolution — closing the loop. "We said X. Here's what happened."
+//
+// The payoff that makes first contact the START of a story rather than a
+// one-off: after a session, resolve the opening bet against what actually
+// happened on the pitch. Pure + deterministic — same prediction + outcome
+// always yields the same verdict, so the analysis page and any broadcast
+// tell an identical story.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** What actually happened for the player this session. Built from
+ *  PlayerMatchStats + peer ratings + the session before/after snapshot. */
+export interface PredictionOutcome {
+  goals: number;
+  assists: number;
+  /** Finished top of the night's scorers (with at least one goal). */
+  wasTopScorer: boolean;
+  /** Average peer rating this session, out of 10, or null if unrated. */
+  avgRating: number | null;
+  /** Movement on the doubted (weakness) attribute this session. */
+  weaknessDelta: number;
+}
+
+export interface PredictionVerdict {
+  /**
+   * answered   = the player delivered — they answered the doubt.
+   * unproven   = they didn't — the doubt stands (for now).
+   * open       = not enough happened to settle it.
+   * The frame is always the message's "prove us wrong" doubt, so the copy
+   * reads right whether the bold call was a compliment or a backhander.
+   */
+  result: 'answered' | 'unproven' | 'open';
+  /** Short punch line for the section header. */
+  headline: string;
+  /** The callback narrative, quoting the bold call + real numbers. */
+  line: string;
+}
+
+/** Did the position's defining bet land? Bucket-keyed so a striker resolves
+ *  on goals, a playmaker on assists, a defender/keeper on how the lads rated
+ *  him. Returns null when there isn't enough signal to call it. */
+function betLanded(bucket: PositionBucket, o: PredictionOutcome): boolean | null {
+  const involvement = o.goals + o.assists;
+  const ratedWell = o.avgRating !== null && o.avgRating >= 6.5;
+  const ratedPoorly = o.avgRating !== null && o.avgRating < 5;
+  switch (bucket) {
+    case 'ST':
+      return o.goals >= 1 ? true : involvement === 0 ? false : true;
+    case 'WING':
+      return involvement >= 1;
+    case 'CAM':
+      return o.assists >= 1 ? true : involvement === 0 ? false : true;
+    case 'FB':
+      return o.assists >= 1 || involvement >= 1;
+    case 'MID':
+      if (involvement >= 1) return true;
+      if (o.avgRating === null) return null;
+      return ratedWell;
+    case 'DEF':
+    case 'GK':
+      if (o.avgRating === null) return involvement >= 1 ? true : null;
+      return ratedWell ? true : ratedPoorly ? false : null;
+  }
+}
+
+/**
+ * Resolve the opening bet against the session outcome. The bold call is
+ * quoted back verbatim so the payoff lands as a direct callback.
+ */
+export function resolvePrediction(
+  prediction: PlayerPrediction,
+  outcome: PredictionOutcome,
+): PredictionVerdict {
+  const landed = betLanded(prediction.bucket, outcome);
+  const bits: string[] = [];
+  if (outcome.goals > 0) bits.push(`${outcome.goals} goal${outcome.goals === 1 ? '' : 's'}`);
+  if (outcome.assists > 0) bits.push(`${outcome.assists} assist${outcome.assists === 1 ? '' : 's'}`);
+  if (outcome.wasTopScorer) bits.push('top scorer on the night');
+  if (outcome.avgRating !== null) bits.push(`rated ${outcome.avgRating.toFixed(1)}/10`);
+  const statLine = bits.length > 0 ? bits.join(', ') : 'a quiet one';
+
+  // The doubted-stat callback — the sweetest payoff when it moves.
+  const weaknessTail =
+    outcome.weaknessDelta > 0
+      ? ` And that ${prediction.weakness.label} we doubted? Up ${outcome.weaknessDelta}.`
+      : '';
+
+  // Copy is anchored on the message's consistent "prove us wrong" doubt, so
+  // it reads right whether the bold call was a compliment or a backhander.
+  if (landed === null) {
+    return {
+      result: 'open',
+      headline: 'Jury’s out',
+      line: `Our call: “${prediction.boldCall}” — not enough happened tonight to settle it. Next time.${weaknessTail}`,
+    };
+  }
+  if (landed) {
+    return {
+      result: 'answered',
+      headline: 'You answered it',
+      line: `Our call: “${prediction.boldCall}” — then you went and put up ${statLine}. Fair play, you answered it.${weaknessTail}`,
+    };
+  }
+  return {
+    result: 'unproven',
+    headline: 'The doubt stands — for now',
+    line: `Our call: “${prediction.boldCall}” — tonight: ${statLine}. The doubt stands. Next week’s your appeal.${weaknessTail}`,
+  };
+}
