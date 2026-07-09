@@ -98,10 +98,10 @@ export async function GET(request: Request) {
         {/* Footer stat strip */}
         <div style={{ display: 'flex', gap: '20px' }}>
           <div style={{ display: 'flex', fontSize: '24px', fontWeight: 700, color: INK, background: 'rgba(0,0,0,0.05)', padding: '10px 20px' }}>
-            {`${payoff.goals} goals`}
+            {`${payoff.goals} goal${payoff.goals === 1 ? '' : 's'}`}
           </div>
           <div style={{ display: 'flex', fontSize: '24px', fontWeight: 700, color: INK, background: 'rgba(0,0,0,0.05)', padding: '10px 20px' }}>
-            {`${payoff.assists} assists`}
+            {`${payoff.assists} assist${payoff.assists === 1 ? '' : 's'}`}
           </div>
         </div>
       </div>
