@@ -292,3 +292,36 @@ export async function bibsOptimizer(input: {
     reasoning,
   };
 }
+
+/**
+ * Render a suggested split as a Telegram-Markdown group-chat message.
+ * Pure — the single BibsResult → text formatter (the on-page view uses
+ * inline JSX; this is its plain-text sibling, kept next to the type so
+ * both renderings stay in sync). Names only — no phone numbers, per the
+ * player-facing-surface rule (the group chat already knows everyone).
+ */
+export function formatBibsForTelegram(result: BibsResult, squadName: string): string {
+  const red = result.teams.find((t) => t.name === 'Reds') ?? result.teams[0];
+  const blue = result.teams.find((t) => t.name === 'Blues') ?? result.teams[1];
+  const names = (t: BibsTeam) => t.players.map((p) => p.name).join(', ') || '—';
+
+  const lines = [
+    `⚽ *Teams are in — ${squadName}*`,
+    `_${result.format.playersPerSide}-a-side · ${result.balance.label}_`,
+    '',
+    `🔴 *Reds* · ${red.aggregateOverall}`,
+    names(red),
+    '',
+    `🔵 *Blues* · ${blue.aggregateOverall}`,
+    names(blue),
+  ];
+
+  if (result.bench.length > 0) {
+    lines.push('', `🪑 *Bench* (winner stays on): ${result.bench.map((p) => p.name).join(', ')}`);
+  }
+  if (result.reasoning[0]) {
+    lines.push('', `_${result.reasoning[0]}_`);
+  }
+
+  return lines.join('\n');
+}
