@@ -19,6 +19,7 @@ import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { SharePayoffButton } from './SharePayoffButton';
+import { NextGameCommit } from './NextGameCommit';
 import { MiniAvatar } from '../../../../preview/_components/MiniAvatar';
 import {
   PALETTE,
@@ -331,6 +332,7 @@ export default async function AnalysisPage({ params }: PageProps) {
           shareText={verdict.line}
           url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://sportwarren.com'}/session/${encodeURIComponent(sessionId)}/analysis/${encodeURIComponent(playerToken)}`}
         />
+        <NextGameCommit playerToken={playerToken} sessionId={sessionId} />
       </V3Reveal>
 
       <V3Reveal delay={100}>

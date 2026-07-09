@@ -1015,6 +1015,13 @@ model SessionAttendee {
   // Preferred color/team for this session
   teamPreference String? @map("team_preference") // "bibs", "no_bibs"
 
+  // RSVP / commitment to a (future) session. Captured at the peak-end
+  // moment — the post-session payoff page — rather than chased mid-week.
+  // 'in' | 'out' | 'maybe'. committedAt records when they committed so
+  // late-drops are visible (gentle accountability, not shaming).
+  status      String    @default("in")
+  committedAt DateTime? @map("committed_at")
+
   createdAt DateTime @default(now()) @map("created_at")
 
   @@unique([sessionId, profileId])
