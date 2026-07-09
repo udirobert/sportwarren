@@ -32,6 +32,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { baselineForPosition } from '../src/server/services/personalization/position-baselines';
+import { generatePrediction } from '../src/server/services/personalization/predictions';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env', override: false });
@@ -442,14 +443,26 @@ async function main() {
     console.log('\n========================================================');
     console.log('  PREVIEW LINKS — paste each into the player\'s WhatsApp');
     console.log('========================================================');
-    for (const { player, token } of provisioned) {
+    for (const { player, profileId, token } of provisioned) {
       const url = `${baseUrl}/preview/${encodeURIComponent(token)}`;
-      // Leads with the hot-take hook, not the stat card — perception
-      // quizzes get more engagement than self-stat-dumps for this
-      // cohort. Stats are still on the page, just below the fold.
-      const message = `${player.name} — quick game for the ${data.group.name} group. Rate the lads on how they actually play (multiple choice, 30 sec each). Your card unlocks once 5 of you have weighed in. Hot takes, no names attached. See you Tuesday. ${url}`;
+      // Lead with a PERSONAL BET, not a chore. First contact should be a
+      // verdict about THEM that they want to argue with in the WhatsApp
+      // thread — the debate starts before they even click. The rate-the-
+      // lads ask lives on the landing page as the second step, not in the
+      // opener. See product-calibration.md → "First-contact pass".
+      const firstName = player.name.split(' ')[0];
+      const attrs = baselineForPosition(player.position);
+      const prediction = generatePrediction({ position: player.position, attrs, seed: profileId });
+      const strong = `${prediction.strength.label.toLowerCase()} (${prediction.strength.value})`;
+      const weak = `${prediction.weakness.label.toLowerCase()} (${prediction.weakness.value})`;
+      const message =
+        `${firstName} — your ${data.group.name} card is live and it's got opinions:\n\n` +
+        `"${prediction.boldCall}"\n\n` +
+        `Backing your ${strong} but that ${weak} is doing you no favours. ` +
+        `Prove us wrong on the night — or don't 👀 ${url}`;
       console.log(`\n${player.name} ${player.phone ? `(${player.phone})` : ''}`);
       console.log(`  URL: ${url}`);
+      console.log(`  Bold call: "${prediction.boldCall}"`);
       console.log(`  Message:\n  ${message}`);
     }
     console.log('\n========================================================\n');

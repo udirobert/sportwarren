@@ -219,6 +219,50 @@ re-shape SportWarren's twin around that model:
 - Bleep test capture with teammate verification — moves PHY/PAC.
 - Full Overall ELO with peer-validated swings and squad-wide ranking.
 
+## First-contact pass (added 2026-07-09)
+
+The London kickabout's first invite got a tepid response. Root cause was
+an **inverted value exchange**: the seed message led with a chore ("rate
+the lads"), and clicking through dropped a brand-new player into the
+rate-5 quiz with their **own card locked**. First contact asked for
+labour before showing them anything about themselves.
+
+The fix reframes first contact as **a personal verdict + a bet**, not a
+chore. Three changes:
+
+1. **The message leads with a bet, not a chore.**
+   `scripts/seed-kickabout-session.ts` now opens with a cheeky,
+   debatable one-liner about *them* + their strong/weak stat — the
+   debate starts in the WhatsApp thread before they even click. Tone
+   level chosen: **spicy** (bold-call one-liner + weakness callout +
+   "prove us wrong on the night"). Shape-agnostic ("on the night", not
+   "Tuesday") so it works for London (Sun) and Nairobi (Tue).
+
+2. **Card-first landing** (`PreviewFirstContact.tsx`). Tier 0 now shows
+   the player's *predicted* card + the bold call first, with the
+   rate-the-lads quiz as the second action (launched from the CTA). The
+   **peer-verdict card stays gated behind rating 5** — the reciprocity
+   doctrine is intact; what's surfaced here is the app's *prediction*,
+   not what the group said.
+
+3. **The prediction engine**
+   (`src/server/services/personalization/predictions.ts`,
+   table-tested). Pure + deterministic (seeded by profileId, so the
+   bold call is stable per player). Position + attribute driven:
+   `generatePrediction({ position, attrs, seed })` → bold call +
+   predicted line + strength/weakness.
+
+**Guardrail (keeps this on-thesis, not the drift the audit flagged):**
+the controversy comes FROM THE APP and resolves through real play —
+never player-vs-player. It's always framed as a *prediction* ("our
+call", "prove us wrong"), never asserted as an earned stat — the
+"stats are never self-editable" rule is untouched.
+
+Also fixed a latent bug: the preview `getPreviewUser` include now loads
+`playerProfile.twin`, so the card reads the player's real baseline
+attributes instead of silently falling back to the position default
+(the Tier-1 dashboard shared the same fallback).
+
 ## Related files
 
 - `docs/makeathon/post-submission-roadmap.md` — earlier roadmap;
