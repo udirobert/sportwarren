@@ -68,18 +68,18 @@ export async function GET(request: Request) {
         {/* Header row: identity + overall */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <div style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '4px', color: NAVY, textTransform: 'uppercase' }}>
+            <div style={{ display: 'flex', fontSize: '22px', fontWeight: 700, letterSpacing: '4px', color: NAVY, textTransform: 'uppercase' }}>
               SportWarren · Our call, settled
             </div>
-            <div style={{ fontSize: '40px', fontWeight: 800, marginTop: '10px' }}>
-              {payoff.name}{payoff.position ? ` · ${payoff.position}` : ''}
+            <div style={{ display: 'flex', fontSize: '40px', fontWeight: 800, marginTop: '10px' }}>
+              {payoff.position ? `${payoff.name} · ${payoff.position}` : payoff.name}
             </div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <div style={{ fontSize: '96px', fontWeight: 800, lineHeight: '1', color: accent }}>
-              {payoff.overall}
+            <div style={{ display: 'flex', fontSize: '96px', fontWeight: 800, lineHeight: '1', color: accent }}>
+              {String(payoff.overall)}
             </div>
-            <div style={{ fontSize: '16px', fontWeight: 700, letterSpacing: '3px', color: INK, textTransform: 'uppercase' }}>
+            <div style={{ display: 'flex', fontSize: '16px', fontWeight: 700, letterSpacing: '3px', color: INK, textTransform: 'uppercase' }}>
               Overall
             </div>
           </div>
@@ -87,10 +87,10 @@ export async function GET(request: Request) {
 
         {/* Verdict */}
         <div style={{ display: 'flex', flexDirection: 'column', borderLeft: `10px solid ${accent}`, paddingLeft: '28px' }}>
-          <div style={{ fontSize: '72px', fontWeight: 800, lineHeight: '1.02', textTransform: 'uppercase', color: INK }}>
+          <div style={{ display: 'flex', fontSize: '72px', fontWeight: 800, lineHeight: '1.02', textTransform: 'uppercase', color: INK }}>
             {payoff.verdict.headline}
           </div>
-          <div style={{ fontSize: '30px', lineHeight: '1.4', color: INK, marginTop: '18px', maxWidth: '900px' }}>
+          <div style={{ display: 'flex', fontSize: '30px', lineHeight: '1.4', color: INK, marginTop: '18px', maxWidth: '900px' }}>
             {payoff.verdict.line}
           </div>
         </div>
@@ -98,10 +98,10 @@ export async function GET(request: Request) {
         {/* Footer stat strip */}
         <div style={{ display: 'flex', gap: '20px' }}>
           <div style={{ display: 'flex', fontSize: '24px', fontWeight: 700, color: INK, background: 'rgba(0,0,0,0.05)', padding: '10px 20px' }}>
-            {payoff.goals} goals
+            {`${payoff.goals} goals`}
           </div>
           <div style={{ display: 'flex', fontSize: '24px', fontWeight: 700, color: INK, background: 'rgba(0,0,0,0.05)', padding: '10px 20px' }}>
-            {payoff.assists} assists
+            {`${payoff.assists} assists`}
           </div>
         </div>
       </div>
