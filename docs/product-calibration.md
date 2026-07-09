@@ -263,6 +263,50 @@ Also fixed a latent bug: the preview `getPreviewUser` include now loads
 attributes instead of silently falling back to the position default
 (the Tier-1 dashboard shared the same fallback).
 
+## Behavioural-design doctrine (added 2026-07-09)
+
+A pass through the lens of cognitive bias / behavioural heuristics — to
+enhance stickiness, retention, and virality **without** becoming the
+dark-pattern gamification the vision rejects (and the perception/clubhouse
+audit already cut).
+
+**The reframe:** preservation is already a behavioural engine. The reason
+the 30-year spreadsheet exists is loss aversion + endowment + sunk cost —
+nobody gamified it. So the move is to *sharpen the biases that already
+align with preservation*, not bolt on tricks.
+
+**The ethical test (apply to every lever):**
+> Does the lever still "work" if the underlying record is empty or fake?
+> If yes → dark pattern (manufactured engagement), cut it. If it only
+> works *because the record is real and theirs* → ethical stickiness.
+
+Variable-ratio dopamine and streak-anxiety pass the "works on an empty
+record" test → off-thesis. Loss aversion over a real accumulating record
+fails it → honest.
+
+**Three tiers:**
+
+- **Leverage (build):** endowment + sunk cost (the accumulating record),
+  Zeigarnik / open loops (the never-finished card, the "open call" that
+  settles next session, empty slots), curiosity gap (the bold call is
+  screenshot-worthy *because* it provokes "is that true?"), commitment &
+  consistency (the app doubts you → you commit to proving it), peak-end
+  (make the last thing each session the keepsake), positive labeling
+  (archetype/bold call).
+- **Calibrate (dual-use):** social proof (real consensus ✅ / vanity
+  boards ❌), social comparison (banter ✅ / rank-anxiety ❌),
+  goal-gradient (the rate-5 reciprocity gate ✅ / deeper unlock-bait ❌).
+- **Resist (dark patterns):** variable-ratio reward, manufactured
+  scarcity / streak anxiety, FOMO-anxiety pushes, bandwagon shaming.
+
+**Virality note (Berger's STEPPS):** high-*arousal* emotion +
+*self-relevance* + *social currency* drive sharing. The spicy bold call
+already nails arousal + self-relevance; the payoff verdict is a *resolved
+curiosity gap* ("we said X → here's what happened") — the most shareable
+shape there is. Hence the one-tap shareable payoff card
+(`/api/og/payoff` + `resolveSessionPayoff` + `buildShareLinks`) is the
+viral primitive built on top of the payoff loop.
+
 ## Related files
 
 - `docs/makeathon/post-submission-roadmap.md` — earlier roadmap;

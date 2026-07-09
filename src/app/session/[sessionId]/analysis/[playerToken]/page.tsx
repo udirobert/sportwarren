@@ -14,9 +14,11 @@
  */
 
 import React from 'react';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/db';
+import { SharePayoffButton } from './SharePayoffButton';
 import { MiniAvatar } from '../../../../preview/_components/MiniAvatar';
 import {
   PALETTE,
@@ -45,6 +47,27 @@ import { ATTRIBUTE_KEYS, type AttributeKey } from '@/server/services/personaliza
 
 interface PageProps {
   params: Promise<{ sessionId: string; playerToken: string }>;
+}
+
+// Rich share preview: the payoff OG image + the player's name. Sharing the
+// analysis link into WhatsApp/Telegram renders the keepsake card.
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { sessionId, playerToken } = await params;
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://sportwarren.com';
+  const player = await prisma.user.findUnique({
+    where: { walletAddress: playerToken },
+    select: { name: true },
+  });
+  const name = player?.name ?? 'A player';
+  const image = `${baseUrl}/api/og/payoff?session=${encodeURIComponent(sessionId)}&token=${encodeURIComponent(playerToken)}`;
+  const title = `${name} · post-session · SportWarren`;
+  const description = 'We made a call. Here’s how it landed.';
+  return {
+    title,
+    description,
+    openGraph: { title, description, images: [{ url: image, width: 1200, height: 630 }] },
+    twitter: { card: 'summary_large_image', title, description, images: [image] },
+  };
 }
 
 const ATTR_LABEL: Record<AttributeKey, { short: string; long: string }> = {
@@ -304,6 +327,10 @@ export default async function AnalysisPage({ params }: PageProps) {
             {verdict.line}
           </div>
         </V3SolidCard>
+        <SharePayoffButton
+          shareText={verdict.line}
+          url={`${process.env.NEXT_PUBLIC_APP_URL ?? 'https://sportwarren.com'}/session/${encodeURIComponent(sessionId)}/analysis/${encodeURIComponent(playerToken)}`}
+        />
       </V3Reveal>
 
       <V3Reveal delay={100}>
