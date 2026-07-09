@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { generatePrediction } from '@/server/services/personalization/predictions';
+import {
+  generatePrediction,
+  resolvePrediction,
+  type PredictionOutcome,
+} from '@/server/services/personalization/predictions';
 import type { AttributeKey } from '@/server/services/personalization/twin-types';
 
 type Attrs = Record<AttributeKey, number>;
@@ -58,5 +62,50 @@ describe('generatePrediction', () => {
     const p = generatePrediction({ position: 'W', attrs: STRIKER, seed: 'winger' });
     expect(p.boldCall.length).toBeGreaterThan(0);
     expect(p.predictedLine.length).toBeGreaterThan(0);
+  });
+});
+
+describe('resolvePrediction', () => {
+  const strikerPred = generatePrediction({ position: 'ST', attrs: STRIKER, seed: 's' });
+  const cbPred = generatePrediction({ position: 'CB', attrs: CB, seed: 'c' });
+
+  const baseOutcome: PredictionOutcome = {
+    goals: 0, assists: 0, wasTopScorer: false, avgRating: null, weaknessDelta: 0,
+  };
+
+  it('marks a striker who scores as answered', () => {
+    const v = resolvePrediction(strikerPred, { ...baseOutcome, goals: 2, wasTopScorer: true });
+    expect(v.result).toBe('answered');
+    expect(v.line).toContain(strikerPred.boldCall);
+    expect(v.line).toContain('2 goals');
+    expect(v.line).toContain('top scorer');
+  });
+
+  it('leaves a striker who did nothing unproven', () => {
+    const v = resolvePrediction(strikerPred, { ...baseOutcome, goals: 0, assists: 0 });
+    expect(v.result).toBe('unproven');
+  });
+
+  it('returns "open" for a keeper with no goals/assists and no rating', () => {
+    const v = resolvePrediction(cbPred, baseOutcome);
+    // CB with no signal → cannot judge
+    expect(v.result).toBe('open');
+  });
+
+  it('resolves a defender on peer rating when unrated by goals', () => {
+    const good = resolvePrediction(cbPred, { ...baseOutcome, avgRating: 7.2 });
+    expect(good.result).toBe('answered');
+    const bad = resolvePrediction(cbPred, { ...baseOutcome, avgRating: 4.0 });
+    expect(bad.result).toBe('unproven');
+  });
+
+  it('appends the doubted-attribute callback when the weakness moved up', () => {
+    const v = resolvePrediction(strikerPred, { ...baseOutcome, goals: 1, weaknessDelta: 3 });
+    expect(v.line).toContain(`${strikerPred.weakness.label} we doubted? Up 3`);
+  });
+
+  it('is deterministic for the same prediction + outcome', () => {
+    const o = { ...baseOutcome, goals: 1, assists: 1 };
+    expect(resolvePrediction(strikerPred, o)).toEqual(resolvePrediction(strikerPred, o));
   });
 });

@@ -37,6 +37,10 @@ import {
   baselineForPosition,
   computeOverall,
 } from '@/server/services/personalization/position-baselines';
+import {
+  generatePrediction,
+  resolvePrediction,
+} from '@/server/services/personalization/predictions';
 import { ATTRIBUTE_KEYS, type AttributeKey } from '@/server/services/personalization/twin-types';
 
 interface PageProps {
@@ -154,6 +158,28 @@ export default async function AnalysisPage({ params }: PageProps) {
   const realDeltas = computeRealDeltas(myBeforeAttrs, currentAttrs);
   const hasRealMovement = Object.values(realDeltas).some((d) => d !== 0);
 
+  // ── Prediction payoff — "we said X, here's what happened" ──
+  // Regenerate the ORIGINAL first-contact bet deterministically (bold call +
+  // strength/weakness were computed from the position baseline, seeded by
+  // profileId) and resolve it against tonight's outcome. No stored prediction
+  // needed — the generator IS the single source of truth (DRY).
+  const prediction = generatePrediction({
+    position: player.position,
+    attrs: baselineForPosition(player.position),
+    seed: profileId,
+  });
+  const verdict = resolvePrediction(prediction, {
+    goals: myGoals,
+    assists: myAssists,
+    wasTopScorer: myRank === 1 && myGoals > 0,
+    avgRating: avgScore,
+    weaknessDelta: realDeltas[prediction.weakness.key] ?? 0,
+  });
+  const verdictAccentKey =
+    verdict.result === 'answered' ? 'sage' : verdict.result === 'unproven' ? 'mustard' : 'navy';
+  const verdictAccent =
+    verdict.result === 'answered' ? PALETTE.sage : verdict.result === 'unproven' ? PALETTE.mustard : PALETTE.navy;
+
   // ── Alternate reality sim seed ──
   // Deterministic from session+player so the same link always produces the
   // same sim outcome. The player can share it and their mates see the same.
@@ -236,6 +262,49 @@ export default async function AnalysisPage({ params }: PageProps) {
           </div>
         </div>
       </div>
+
+      {/* Prediction payoff — the emotional peak: our opening bet, resolved */}
+      <V3Reveal delay={80}>
+        <V3SolidCard accent={verdictAccentKey} padding="18px 20px" marginBottom={24}>
+          <div
+            style={{
+              fontFamily: TYPE.mono,
+              fontSize: 9,
+              fontWeight: 700,
+              letterSpacing: TRACKING.capWide,
+              textTransform: 'uppercase',
+              color: verdictAccent,
+              marginBottom: 8,
+            }}
+          >
+            Our opening call · settled
+          </div>
+          <div
+            style={{
+              fontFamily: TYPE.display,
+              fontSize: 30,
+              fontWeight: 800,
+              lineHeight: 1.02,
+              textTransform: 'uppercase',
+              letterSpacing: '-0.01em',
+              color: PALETTE.ink,
+              marginBottom: 10,
+            }}
+          >
+            {verdict.headline}
+          </div>
+          <div
+            style={{
+              fontFamily: TYPE.mono,
+              fontSize: 13,
+              lineHeight: 1.6,
+              color: PALETTE.ink,
+            }}
+          >
+            {verdict.line}
+          </div>
+        </V3SolidCard>
+      </V3Reveal>
 
       <V3Reveal delay={100}>
         <V3SectionLabel marginTop={32}>What you did tonight</V3SectionLabel>
