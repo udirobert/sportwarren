@@ -9,6 +9,11 @@
 
 import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
+import {
+  bibsOptimizer,
+  formatBibsForTelegram,
+} from '@/server/services/personalization/bibs-optimizer';
+import { broadcastToSquadGroups } from '@/server/services/communication/squad-broadcast';
 
 interface CaptainContext {
   userId: string;
@@ -26,6 +31,53 @@ async function resolveCaptain(token: string): Promise<CaptainContext | null> {
   const captainMembership = user.squads.find((m) => m.role === 'captain') ?? user.squads[0];
   if (!captainMembership) return null;
   return { userId: user.id, squadId: captainMembership.squadId };
+}
+
+/**
+ * Push the suggested Bibs split to the squad's linked Telegram group chat.
+ * Captain-triggered from the teams page — the delightful "here's how the
+ * sides shake out" drop, using the real confirmed players the captain
+ * ticked (not a day-before guess). Recomputes the split server-side from
+ * the same inputs so the message can't be tampered with client-side.
+ */
+export async function broadcastTeams(
+  token: string,
+  playersPerSide: number,
+  confirmedUserIds: string[],
+): Promise<{ ok: boolean; sent?: number; error?: string }> {
+  const captain = await resolveCaptain(token);
+  if (!captain) return { ok: false, error: 'Not authorised' };
+
+  const squad = await prisma.squad.findUnique({
+    where: { id: captain.squadId },
+    select: { name: true },
+  });
+
+  const result = await bibsOptimizer({
+    prisma,
+    squadId: captain.squadId,
+    confirmedUserIds,
+    playersPerSide,
+  });
+  if (!result.ok) return { ok: false, error: result.message };
+
+  const message = formatBibsForTelegram(result, squad?.name ?? 'the squad');
+  const { sent } = await broadcastToSquadGroups({
+    message,
+    squadIds: [captain.squadId],
+    keyboard: {
+      inline_keyboard: [
+        [
+          {
+            text: '⚙️ Adjust the teams',
+            url: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://sportwarren.com'}/session/live/${encodeURIComponent(token)}/teams?format=${playersPerSide}&confirmed=${confirmedUserIds.join(',')}`,
+          },
+        ],
+      ],
+    },
+  });
+
+  return { ok: true, sent };
 }
 
 export async function startSession(token: string): Promise<{ sessionId: string; matchId: string }> {
@@ -75,12 +127,16 @@ export async function startSession(token: string): Promise<{ sessionId: string; 
     },
   });
 
-  // Seed PlayerMatchStats rows for every squad member
+  // Seed PlayerMatchStats rows for every squad member. Include the twin so
+  // the before-attributes snapshot below actually captures baseline stats —
+  // without it `playerProfile.twin` is undefined and beforeAttributes is
+  // never written, silently breaking the analysis-page card-movement delta
+  // and the prediction-payoff weakness callback.
   const members = await prisma.squadMember.findMany({
     where: { squadId: captain.squadId },
     include: {
       user: {
-        include: { playerProfile: true },
+        include: { playerProfile: { include: { twin: true } } },
       },
     },
   });

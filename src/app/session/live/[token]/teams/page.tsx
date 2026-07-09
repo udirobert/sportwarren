@@ -22,6 +22,7 @@ import Link from 'next/link';
 import { PALETTE } from '../../../../preview/_components/MiniAvatar';
 import { bibsOptimizer } from '@/server/services/personalization/bibs-optimizer';
 import { TeamsForm } from './TeamsForm';
+import { BroadcastTeamsButton } from './BroadcastTeamsButton';
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -314,6 +315,14 @@ export default async function TeamsPage({ params, searchParams }: PageProps) {
                 </div>
               ))}
             </div>
+
+            {playersPerSide && (
+              <BroadcastTeamsButton
+                token={token}
+                playersPerSide={playersPerSide}
+                confirmedUserIds={confirmedUserIds}
+              />
+            )}
           </div>
         )}
 
