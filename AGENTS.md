@@ -246,7 +246,7 @@ ONLY on the in-app `/profile` page — marked with a TODO pointing at
 V3PlayerCard. When the rest of `(app)` is ported to V3, delete it.
 `SquadIdentityCard.tsx` was unused and deleted in the harmonization pass.
 
-### Flywheel surfaces (shipped 2026-06-21)
+### Flywheel surfaces (shipped 2026-06-21, extended 2026-07-09)
 
 The closed-loop ecosystem (`docs/flywheel.md`) bound together by:
 
@@ -254,12 +254,35 @@ The closed-loop ecosystem (`docs/flywheel.md`) bound together by:
   — Primary B (kickabout) team allocation. Snake-draft by Overall +
   role-preserving balance swap. Surface at
   `/session/live/{token}/teams` — captain picks format (5/6/7/8-a-side)
-  + ticks confirmed players + reads suggested split.
+  + ticks confirmed players + reads suggested split. `formatBibsForTelegram`
+  renders the same `BibsResult` as a Markdown group-chat message; a
+  "📣 Send teams to the group" button (`BroadcastTeamsButton.tsx` +
+  `broadcastTeams` action) recomputes server-side and pushes it via
+  `broadcastToSquadGroups` (`src/server/services/communication/squad-broadcast.ts`
+  — the single DRY "loop linked SquadGroups → Telegram bot" helper, also
+  used by `formation-of-week`).
 - **Post-session analysis** (`/session/{sessionId}/analysis/{playerToken}`)
   — chess.com "your match" surface. Reads PlayerMatchStats + PeerRating
-  + PlayerTwin to assemble goals/ratings/attributes/weakness story.
-  Linked from recap page; not yet referenced in WhatsApp broadcast
-  templates.
+  + PlayerTwin to assemble goals/ratings/attributes/weakness story, plus
+  two additions:
+  - **Prediction payoff** — re-derives the first-contact "bold call"
+    (`generatePrediction`, seeded by profileId, no storage) and resolves
+    it against the session outcome (`resolvePrediction` — both in
+    `predictions.ts`). Three verdicts: `answered` / `unproven` / `open`,
+    framed on a consistent "prove us wrong" doubt so the copy reads right
+    whether the bold call was a compliment or a backhander. One-tap share
+    (`SharePayoffButton.tsx` + `buildShareLinks`) renders a keepsake via
+    `/api/og/payoff` (`resolveSessionPayoff` in `session-payoff.ts` is the
+    standalone bundle used by the OG route + share metadata).
+  - **Peak-end commitment capture** — `NextGameCommit.tsx` + `commitToNextSession`
+    action. Moves the "same time next week?" ask to the moment right
+    after the payoff verdict (endorphin peak) instead of a mid-week chase.
+    Finds-or-creates the squad's next `Session` (`status: 'scheduled'`)
+    and upserts `SessionAttendee.status`/`committedAt`. Copy from
+    `commitment-framing.ts` (pure, tested) honestly loss-frames the
+    group's ritual ("needs 10 to happen — 7 in, 3 to go") with an
+    explicit no-shaming rule — see `docs/product-calibration.md` →
+    "Behavioural-design doctrine".
 - **Unified twin write path** — preview-tier sim and drill claims
   route through `TwinService.recordEvent` with `skipMoment: true` +
   `skipNotification: true`. The single funnel for twin mutations is
@@ -350,6 +373,17 @@ and have their squad, players, and match history materialize instantly.
 ### Known gotchas
 - `STORAGE_ROOT` env var for custom storage location (defaults to `./storage`)
 - Rate limiting via `src/proxy.ts` (replaces middleware in Next 16)
+- `next/og` (satori) throws `Expected <div> to have explicit display` for
+  any element with more than one child node — including a div whose
+  children are two interpolated expressions (`{a}{b}`) or a number child.
+  Give every multi-child node `display: flex` and collapse text to a
+  single string (`` `${a} ${b}` ``, not `{a}{b}`). Bit the payoff OG card
+  (`src/app/api/og/payoff/route.tsx`) in production-shaped testing —
+  typecheck doesn't catch it, only rendering the route does.
+- Never edit a migration's `.sql` file after it has been applied — the
+  applied DB keeps the old contents forever, so schema.prisma silently
+  drifts from reality (this happened to `Session.afterAttributes`,
+  healed by migration `20260709000000`). Add a new migration instead.
 
 ### Personalization domain
 - Single source of truth for skin + brain lives in `src/server/services/personalization/`
@@ -367,6 +401,10 @@ and have their squad, players, and match history materialize instantly.
   - `season.ts` (`createSeason` / `endSeason` — season lifecycle; endSeason iterates all active twins, fires season_end events via TwinService granting +1 prestige + partner-tier moment; tRPC: `tournament.createSeason`/`getActiveSeason`/`listSeasons`)
   - `narrative.ts` (two-tier: fast sync stubs `generatePlayerNarrative`/`generateSquadNarrative` for hot paths + LLM-driven `buildRichPlayerNarrative`/`buildRichSquadNarrative` with Redis 1h cache keyed on content hash; consumes `generateInference` from `@/lib/ai/inference`)
   - `identity.ts` (`IdentityService.getPlayerIdentity` / `getSquadIdentity` — single read API joining skin (User/Squad) + brain (PlayerTwin/SquadTwin) + moments + attestations + match stats + sync narrative; tRPC: `player.getIdentity`/`player.getMyIdentity`, `squad.getIdentity`)
+  - `bibs-optimizer.ts` (`bibsOptimizer` — kickabout team allocation, snake-draft + balance swap, see Flywheel surfaces above; `formatBibsForTelegram` is its Markdown-message sibling)
+  - `predictions.ts` (`generatePrediction` — deterministic position+attribute-driven "bold call" for first contact, seeded by profileId, no Prisma; `resolvePrediction` — resolves it against a session outcome into an `answered`/`unproven`/`open` verdict. Pure, table-tested, single source of truth for both the preview page and the post-session payoff — never re-implement this logic, re-derive with the same seed)
+  - `session-payoff.ts` (`resolveSessionPayoff` — standalone payoff bundle for surfaces that only need the summary, e.g. the OG card route; delegates resolution to `predictions.ts`, only aggregates the session outcome)
+  - `commitment-framing.ts` (`commitmentFraming` — pure copy logic for the peak-end "same time next week?" capture; honest loss-framing + social proof, explicitly no bandwagon-shaming)
 - Player identity surface: `src/components/identity/PlayerIdentityCard.tsx` + `SquadIdentityCard.tsx` — Tailwind + lucide-react cards consuming `PlayerIdentity`/`SquadIdentity` from `identity.ts`; profile page at `src/app/(app)/profile/page.tsx` calls `player.getMyIdentity`
 - Coaching marketplace (phase 2, gated behind `COACHING` flag): `src/app/(app)/coaching/page.tsx` — coach listing grid + hire modal + active effects with cancel; consumes `coaching.listCoaches`/`getActiveEffects`/`hireCoach`/`cancelEffect`
 - Signal preferences: `src/app/(app)/settings/page.tsx` — Twin Signals card in notifications tab (visible when Telegram connected); consumes `communication.getSignalPreferences`/`setSignalPreference`
