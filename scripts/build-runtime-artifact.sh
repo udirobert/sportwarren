@@ -154,10 +154,11 @@ echo "🩺 Validating artifact module resolution..."
 cd "$BUILD_DIR/.next/standalone"
 _VALIDATION_FAILED=0
 for _mod in '@prisma/client' 'pg' '@resvg/resvg-js' 'sharp' '@swc/helpers/_/_interop_require_default'; do
-  if node -e "require('$_mod')" 2>/dev/null; then
+  _err=$(node -e "require('$_mod')" 2>&1 1>/dev/null)
+  if [ -z "$_err" ]; then
     echo "  ✓ $_mod"
   else
-    echo "  ✗ $_mod — MODULE NOT FOUND"
+    echo "  ✗ $_mod — $(echo "$_err" | head -1)"
     _VALIDATION_FAILED=1
   fi
 done
