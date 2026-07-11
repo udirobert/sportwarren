@@ -116,6 +116,14 @@ jobs:
           ARTIFACT_DIR="$(pwd)/.deploy-artifact/.next/standalone"
           echo "Artifact directory: $ARTIFACT_DIR"
 
+          # sharp's native addon dlopen()s libvips as a genuinely separate
+          # shared object (unlike @resvg/resvg-js's statically-linked Rust
+          # binary), and the OS dynamic linker doesn't go through Node's own
+          # module resolution to find it — LD_LIBRARY_PATH is what points it
+          # at the artifact's bundled copy. See build-runtime-artifact.sh's
+          # validation step, which needs the identical export.
+          export LD_LIBRARY_PATH="$ARTIFACT_DIR/node_modules/@img/sharp-libvips-linux-x64/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
           # Start server in background
           cd "$ARTIFACT_DIR"
           node server.js &
