@@ -15,6 +15,13 @@ module.exports = {
       env: {
         NODE_ENV: 'production',
         PORT: '5200',
+        // sharp's native addon dlopen()s libvips as a genuinely separate
+        // shared object (unlike @resvg/resvg-js's statically-linked Rust
+        // binary) — the OS dynamic linker doesn't go through Node's module
+        // resolution to find it. build-runtime-artifact.sh injects the .so
+        // here; CI's smoke test and this production process both need the
+        // identical export to load sharp.
+        LD_LIBRARY_PATH: __dirname + '/.next/standalone/node_modules/@img/sharp-libvips-linux-x64/lib',
       },
     },
   ],
