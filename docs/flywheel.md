@@ -110,7 +110,7 @@ Audit done 2026-06-21. The codebase already has:
 | Daily drill widget | `DailyDrillWidget` | Picks weakest attr, fires `daily_drill` event via TwinService | ⚠️ hidden behind `PHASE_1_HIDDEN_WIDGET_IDS` + duplicated by preview drill |
 | Preview drill (NEW) | `src/app/preview/[token]/drill/` | Same as widget but direct-write | ⚠️ duplicates the widget |
 | Formation-of-Week cron | `/api/cron/formation-of-week` | Weekly Telegram message with deterministic formation | ⚠️ never consults twin state |
-| Bibs broadcast (NEW) | `broadcastTeams` action + `formatBibsForTelegram` | Captain-triggered push of the confirmed-players split to the squad's Telegram group | ✅ consults twin state (Overall); routes through the shared `broadcastToSquadGroups` helper |
+| Bibs broadcast (NEW) | `broadcastTeams` action + `formatBibsForTelegram` | Captain-triggered push of the confirmed-players split to every linked squad group (Telegram + WhatsApp) | ✅ consults twin state (Overall); routes through the shared channel-agnostic `broadcastToSquadGroups` helper |
 | Prediction payoff (NEW) | `predictions.ts` + analysis page | Resolves the first-contact bold call against the session outcome | ✅ closes gap #2 below |
 | Commitment capture (NEW) | `commitment-framing.ts` + `NextGameCommit.tsx` | Peak-end "same time next week?" RSVP, feeds the next Bibs Optimizer run | ✅ new — no prior equivalent |
 | TwinHeroCard | dashboard widget | Reads twin level/xp/events | ✅ read-only display |

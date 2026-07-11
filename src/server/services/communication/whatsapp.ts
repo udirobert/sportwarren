@@ -1,19 +1,36 @@
 import { WhatsAppClient } from '@kapso/whatsapp-cloud-api';
 import { prisma } from "@/lib/db";
-import type { 
-  MatchAvailabilityRequest, 
-  MessagingProvider, 
-  MessagingButton, 
-  MessagingListSection 
-} from './provider-types.js';
 import { dispatchWhatsAppCommand } from './whatsapp-agent';
 import { redisService } from '../redis';
 import { generateRateToken } from '@/lib/auth/rate-token';
+import { makeGroupVerificationStore } from './verification-store';
 
 export interface WhatsAppConfig {
   apiKey?: string;
   phoneNumberId?: string;
   baseUrl?: string;
+}
+
+// ── Message shapes ──
+// These were previously in the (now-deleted) provider-types.ts adapter layer.
+// WhatsAppService is the sole consumer, so they live here as the single source.
+export interface MatchAvailabilityRequest {
+  matchId: string;
+  matchDetails: string;
+}
+
+export interface MessagingButton {
+  id: string;
+  title: string;
+}
+
+export interface MessagingListSection {
+  title?: string;
+  rows: {
+    id: string;
+    title: string;
+    description?: string;
+  }[];
 }
 
 interface PendingWhatsAppVerification {
@@ -26,20 +43,20 @@ interface PendingWhatsAppVerification {
   awayScore: number;
   homeGroupJid?: string;
   awayGroupJid?: string;
-  confirms: Set<string>;
-  disputes: Set<string>;
+  confirms: string[];
+  disputes: string[];
   createdAt: number;
   totalMembers: number;
 }
 
-export class WhatsAppService implements MessagingProvider {
+export class WhatsAppService {
   readonly platform = 'whatsapp' as const;
   private client: WhatsAppClient;
   private phoneNumberId: string;
   private readonly DEFAULT_FOOTER = "Marcus, Academy Director";
 
-  // ── Group verification state ──
-  private pendingVerifications = new Map<string, PendingWhatsAppVerification>();
+  // ── Group verification state (Redis-backed; shared across serverless instances) ──
+  private verifStore = makeGroupVerificationStore<PendingWhatsAppVerification>('whatsapp');
 
   constructor(config?: WhatsAppConfig) {
     const apiKey = config?.apiKey || process.env.KAPSO_API_KEY;
@@ -430,7 +447,7 @@ export class WhatsAppService implements MessagingProvider {
       ? Math.max(2, Math.ceil(totalMembers * 0.5))
       : 3;
 
-    this.pendingVerifications.set(matchId, {
+    await this.verifStore.save({
       matchId,
       homeSquadId,
       awaySquadId,
@@ -440,8 +457,8 @@ export class WhatsAppService implements MessagingProvider {
       awayScore,
       homeGroupJid: homeGroupJid || undefined,
       awayGroupJid: awayGroupJid || undefined,
-      confirms: new Set(),
-      disputes: new Set(),
+      confirms: [],
+      disputes: [],
       createdAt: Date.now(),
       totalMembers,
     });
@@ -485,7 +502,7 @@ export class WhatsAppService implements MessagingProvider {
     action: 'confirm' | 'dispute',
     matchId: string,
   ): Promise<void> {
-    const pending = this.pendingVerifications.get(matchId);
+    const pending = await this.verifStore.get(matchId);
     if (!pending) {
       await this.sendText(from, 'This verification has expired or been resolved.');
       return;
@@ -518,22 +535,19 @@ export class WhatsAppService implements MessagingProvider {
 
     const userId = from;
 
-    // Toggle behavior: adding to one set removes from the other
+    // Toggle behavior: adding to one set removes from the other. A repeat press
+    // of the same button toggles that vote off.
+    const hasConfirm = pending.confirms.includes(userId);
+    const hasDispute = pending.disputes.includes(userId);
+    pending.confirms = pending.confirms.filter((u) => u !== userId);
+    pending.disputes = pending.disputes.filter((u) => u !== userId);
     if (action === 'confirm') {
-      if (pending.confirms.has(userId)) {
-        pending.confirms.delete(userId);
-      } else {
-        pending.confirms.add(userId);
-        pending.disputes.delete(userId);
-      }
+      if (!hasConfirm) pending.confirms.push(userId);
     } else {
-      if (pending.disputes.has(userId)) {
-        pending.disputes.delete(userId);
-      } else {
-        pending.disputes.add(userId);
-        pending.confirms.delete(userId);
-      }
+      if (!hasDispute) pending.disputes.push(userId);
     }
+
+    await this.verifStore.save(pending);
 
     // Send updated count as a text message (WhatsApp can't edit interactive messages)
     const threshold = pending.totalMembers <= 4
@@ -541,7 +555,7 @@ export class WhatsAppService implements MessagingProvider {
       : 3;
 
     const statusMsg = [
-      `📊 Verification update: ${pending.confirms.size}/${threshold} confirms, ${pending.disputes.size} disputes`,
+      `📊 Verification update: ${pending.confirms.length}/${threshold} confirms, ${pending.disputes.length} disputes`,
     ].join('\n');
 
     // Send to the group where the vote happened
@@ -555,9 +569,9 @@ export class WhatsAppService implements MessagingProvider {
     }
 
     // Check thresholds
-    if (pending.confirms.size >= threshold && pending.disputes.size === 0) {
+    if (pending.confirms.length >= threshold && pending.disputes.length === 0) {
       await this.resolveGroupVerification(matchId, 'verified');
-    } else if (pending.disputes.size >= 2) {
+    } else if (pending.disputes.length >= 2) {
       await this.resolveGroupVerification(matchId, 'disputed');
     }
   }
@@ -569,10 +583,10 @@ export class WhatsAppService implements MessagingProvider {
     matchId: string,
     resolution: 'verified' | 'disputed',
   ): Promise<void> {
-    const pending = this.pendingVerifications.get(matchId);
+    const pending = await this.verifStore.get(matchId);
     if (!pending) return;
 
-    this.pendingVerifications.delete(matchId);
+    await this.verifStore.remove(matchId);
 
     if (resolution === 'disputed') {
       await prisma.match.update({
@@ -589,7 +603,7 @@ export class WhatsAppService implements MessagingProvider {
     // Verified: run full verification workflow
     try {
       const { verifyMatchResult } = await import('@/server/services/match-workflow');
-      const verifierIds = Array.from(pending.confirms);
+      const verifierIds = pending.confirms;
 
       for (const verifierId of verifierIds) {
         try {
@@ -695,29 +709,20 @@ export class WhatsAppService implements MessagingProvider {
   }
 
   /**
-   * Get expired group verifications (for cron integration).
-   */
-  getExpiredGroupVerifications(): PendingWhatsAppVerification[] {
-    const sixHoursAgo = Date.now() - 6 * 60 * 60 * 1000;
-    return Array.from(this.pendingVerifications.values()).filter(
-      (v) => v.createdAt <= sixHoursAgo,
-    );
-  }
-
-  /**
-   * External trigger to resolve a verification (called by cron).
+   * External trigger to resolve a verification (called by the expiry cron to
+   * update the group cards + send the match card once the DB match is settled).
    */
   async resolveGroupVerificationExternal(matchId: string): Promise<void> {
-    const pending = this.pendingVerifications.get(matchId);
+    const pending = await this.verifStore.get(matchId);
     if (!pending) return;
 
     const threshold = pending.totalMembers <= 4
       ? Math.max(2, Math.ceil(pending.totalMembers * 0.5))
       : 3;
 
-    if (pending.confirms.size >= threshold) {
+    if (pending.confirms.length >= threshold) {
       await this.resolveGroupVerification(matchId, 'verified');
-    } else if (pending.disputes.size >= 2) {
+    } else if (pending.disputes.length >= 2) {
       await this.resolveGroupVerification(matchId, 'disputed');
     } else {
       // Silence = consent after 6 hours

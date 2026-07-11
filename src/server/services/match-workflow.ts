@@ -59,6 +59,14 @@ interface SubmitMatchResultInput {
   // Fluid session: which players were on which team
   // When present, overrides squad-membership-based teamSide derivation
   teamAssignments?: { home: string[]; away: string[] };
+
+  // Pre-resolved per-player goal/assist attribution (e.g. from a chat-logged
+  // match). Applied immediately after the match is created — inside the
+  // seed→XP window — so career totals + XP pick them up on every verification
+  // path (including the social-trust inline path). profileIds must belong to a
+  // participating squad; a profile with no PlayerMatchStats row is skipped.
+  playerGoals?: Array<{ profileId: string; goals: number }>;
+  playerAssists?: Array<{ profileId: string; assists: number }>;
 }
 
 interface VerifyMatchResultInput {
@@ -288,6 +296,8 @@ export async function submitMatchResult({
   sessionId,      isSociallyTrusted = false,
   hasKeeper,
   teamAssignments,
+  playerGoals,
+  playerAssists,
 }: SubmitMatchResultInput) {
   const [homeSquad, awaySquad] = await Promise.all([
     prisma.squad.findUnique({ where: { id: homeSquadId } }),
@@ -380,6 +390,27 @@ export async function submitMatchResult({
       awayFormation,
       teamAssignments,
     });
+
+    // Apply pre-resolved per-player attribution (chat-logged scorers/assisters)
+    // now, before any XP runs. Seeding is idempotent, so the later verification
+    // path no-ops on it; applyMatchXP (which reads these rows) then credits the
+    // goals on whichever path finalizes — including the social-trust inline one
+    // below. Guarded so ordinary aggregate-only submissions are unaffected.
+    if ((playerGoals?.length ?? 0) > 0 || (playerAssists?.length ?? 0) > 0) {
+      await ensureMatchParticipationStats(prisma, match.id);
+      for (const g of playerGoals ?? []) {
+        await prisma.playerMatchStats.updateMany({
+          where: { matchId: match.id, profileId: g.profileId },
+          data: { goals: g.goals },
+        });
+      }
+      for (const a of playerAssists ?? []) {
+        await prisma.playerMatchStats.updateMany({
+          where: { matchId: match.id, profileId: a.profileId },
+          data: { assists: a.assists },
+        });
+      }
+    }
 
     // Internal session scrimmage (bibs vs no-bibs, same squad): skip all
     // squad-level automation (twin sync, rewards, energy, fee lock) because

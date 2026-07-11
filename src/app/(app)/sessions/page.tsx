@@ -61,8 +61,12 @@ export default function SessionsPage() {
 
 
 
-  // Sort: active first (open → balanced), then by date desc
-  const sortedSessions = [...(sessions ?? [])].sort((a, b) => {
+  // Sort: active first (open → balanced), then by date desc.
+  // The row is narrowed to the fields the list actually renders. This decouples
+  // the JSX below from the deep tRPC-inferred query type — without it,
+  // `.sort().map()` re-instantiates a type deep enough to trip TS2589.
+  type SessionRow = { id: string; name: string; status: string; date: string | Date };
+  const sortedSessions: SessionRow[] = [...((sessions ?? []) as SessionRow[])].sort((a, b) => {
     const order: Record<string, number> = { open: 0, balanced: 1, completed: 2 };
     const aOrder = order[a.status] ?? 3;
     const bOrder = order[b.status] ?? 3;

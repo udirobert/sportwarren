@@ -95,14 +95,27 @@ WhatsApp keeps receipts compact. Internal scout commands return SportWarren atte
 
 ---
 
-## ⛓️ Integration Strategy: The Adapter Pattern
-To prevent platform lock-in, SportWarren uses a provider boundary:
+## ⛓️ Integration Strategy: Delivery Layer
 
-1. **Domain Core:** Squads, matches, AI staff, and permissions (Shared).
-2. **Workflow Layer:** `sendReminder`, `routeInboundIntent`, `sendRecap` (Shared).
-3. **Provider Layer:** 
-   - `TelegramProvider` (via Telegraf/TON)
-   - `WhatsAppProvider` (via Kapso)
-   - `SocialProvider` (via Lens SDK)
+SportWarren shares product logic across channels, but delivery is **not**
+routed through a single provider-adapter interface (an earlier
+`CommunicationBridge` / `MessagingProvider` abstraction was aspirational and
+never load-bearing — it was deleted rather than left to mislead). The real,
+in-use delivery model is:
 
-This ensures that adding a new channel (e.g., Discord or Farcaster) requires only a new adapter, not a rewrite of the product logic.
+1. **Domain Core:** Squads, matches, AI staff, permissions (shared).
+2. **Twin-event fan-out — `NotifyService`** (`src/server/services/personalization/notify.ts`):
+   the single funnel for twin milestones/moments. Offers every event to
+   each channel; each channel self-selects via a guard clause (in-app always;
+   Telegram on per-kind opt-in via `TwinSignalPreference`; WhatsApp on a
+   milestone whitelist under a per-twin daily cap).
+3. **Group broadcast — `broadcastToSquadGroups`** (`src/server/services/communication/squad-broadcast.ts`):
+   the single way to push a message to every linked group chat. Channel-agnostic —
+   a squad linked on both Telegram and WhatsApp gets the drop on both. Telegram
+   renders inline keyboards natively; WhatsApp flattens keyboard links into the body.
+4. **Channel services:** `TelegramService` (Telegraf/TON) and `WhatsAppService`
+   (Kapso). Concrete, called directly by the two funnels above.
+
+Adding a channel means teaching `NotifyService` (a new channel guard) and
+`broadcastToSquadGroups` (a new platform branch) — the two chokepoints — rather
+than editing scattered callsites.
