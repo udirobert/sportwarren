@@ -50,7 +50,7 @@ describe('resolveScorers', () => {
       submitterUserId: 'u-kim',
     });
     expect(r.goals).toEqual([]);
-    expect(r.unresolved).toEqual(['Sam']);
+    expect(r.unresolved).toEqual([{ name: 'Sam', goals: 1, assists: 0 }]);
   });
 
   it('does NOT prefix-match a nickname (Sammy must not credit Sam)', () => {
@@ -61,7 +61,7 @@ describe('resolveScorers', () => {
       submitterUserId: 'u-x',
     });
     expect(r.goals).toEqual([]);
-    expect(r.unresolved).toEqual(['Sammy']);
+    expect(r.unresolved).toEqual([{ name: 'Sammy', goals: 1, assists: 0 }]);
   });
 
   it('leaves an unknown name unresolved', () => {
@@ -72,7 +72,7 @@ describe('resolveScorers', () => {
       submitterUserId: 'u-kim',
     });
     expect(r.goals).toEqual([]);
-    expect(r.unresolved).toEqual(['Ronaldo']);
+    expect(r.unresolved).toEqual([{ name: 'Ronaldo', goals: 3, assists: 0 }]);
   });
 
   it('aggregates duplicate entries for the same player', () => {
@@ -94,7 +94,7 @@ describe('resolveScorers', () => {
     });
     expect(r.goals).toEqual([{ profileId: 'p-kim', name: 'Kim', goals: 1 }]);
     expect(r.assists).toEqual([{ profileId: 'p-dave', name: 'Dave Jones', assists: 2 }]);
-    expect(r.unresolved).toEqual(['Ghost']);
+    expect(r.unresolved).toEqual([{ name: 'Ghost', goals: 1, assists: 0 }]);
   });
 
   it('ignores zero/negative goal counts', () => {

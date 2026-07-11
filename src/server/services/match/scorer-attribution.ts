@@ -36,11 +36,21 @@ export interface ResolvedAssist {
   assists: number;
 }
 
+export interface UnresolvedScorer {
+  name: string;
+  goals: number;
+  assists: number;
+}
+
 export interface ScorerResolution {
   goals: ResolvedGoal[];
   assists: ResolvedAssist[];
-  /** Names we could not confidently attribute — surfaced to the user, never guessed. */
-  unresolved: string[];
+  /**
+   * Names we could not confidently attribute — surfaced to the user (and to the
+   * correction flow), never guessed. Carries the counts so a manual reassignment
+   * credits the right number of goals/assists.
+   */
+  unresolved: UnresolvedScorer[];
 }
 
 // First-person / addressee references collapse to the person who logged the match.
@@ -101,13 +111,23 @@ export function resolveScorers(input: {
 
   const goalsByProfile = new Map<string, ResolvedGoal>();
   const assistsByProfile = new Map<string, ResolvedAssist>();
-  const unresolved: string[] = [];
+  const unresolvedByName = new Map<string, UnresolvedScorer>();
+
+  const addUnresolved = (name: string, goals: number, assists: number) => {
+    const key = normalize(name);
+    const prev = unresolvedByName.get(key);
+    unresolvedByName.set(key, {
+      name: prev?.name ?? name,
+      goals: (prev?.goals ?? 0) + goals,
+      assists: (prev?.assists ?? 0) + assists,
+    });
+  };
 
   for (const s of scorers ?? []) {
     if (!s?.name || !(s.goals > 0)) continue;
     const m = resolveName(s.name, members, submitterUserId);
     if (!m) {
-      unresolved.push(s.name);
+      addUnresolved(s.name, s.goals, 0);
       continue;
     }
     const prev = goalsByProfile.get(m.profileId);
@@ -122,7 +142,7 @@ export function resolveScorers(input: {
     if (!a?.name || !(a.assists > 0)) continue;
     const m = resolveName(a.name, members, submitterUserId);
     if (!m) {
-      unresolved.push(a.name);
+      addUnresolved(a.name, 0, a.assists);
       continue;
     }
     const prev = assistsByProfile.get(m.profileId);
@@ -136,6 +156,6 @@ export function resolveScorers(input: {
   return {
     goals: [...goalsByProfile.values()],
     assists: [...assistsByProfile.values()],
-    unresolved,
+    unresolved: [...unresolvedByName.values()],
   };
 }

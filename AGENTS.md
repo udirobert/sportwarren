@@ -272,10 +272,13 @@ The closed-loop ecosystem (`docs/flywheel.md`) bound together by:
   names to squad `PlayerProfile`s via `resolveScorers`
   (`src/server/services/match/scorer-attribution.ts` — deliberately
   conservative: self-reference / exact name / unique first-name only, never
-  guesses; ambiguous or unknown names are logged as plain team goals) and writes
-  goals/assists onto `PlayerMatchStats`. Career totals + XP stay gated behind
-  verification (`applyMatchXP` reads those rows), so nothing counts until the
-  result is verified.
+  guesses; ambiguous or unknown names are logged as plain team goals, with an
+  inline "assign to a player" correction step — Redis-backed via `sfix:`/`sfixa:`
+  callbacks). The resolved goals/assists ride into `submitMatchResult` (optional
+  `playerGoals`/`playerAssists`) so they're written onto `PlayerMatchStats`
+  inside the seed→XP window on every verification path. Career totals + XP stay
+  gated behind verification (`applyMatchXP` reads those rows), so nothing counts
+  until the result is verified.
 - **Post-session analysis** (`/session/{sessionId}/analysis/{playerToken}`)
   — chess.com "your match" surface. Reads PlayerMatchStats + PeerRating
   + PlayerTwin to assemble goals/ratings/attributes/weakness story, plus

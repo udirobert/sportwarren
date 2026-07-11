@@ -39,7 +39,9 @@ import {
   resolveScorers,
   type ScorerResolution,
   type AttributionMember,
+  type UnresolvedScorer,
 } from "@/server/services/match/scorer-attribution";
+import { redisService } from "../redis";
 import {
   buildVerificationNudgeMessage,
   shouldSendNudge,
@@ -1902,6 +1904,155 @@ export class TelegramService {
     };
   }
 
+  // ── Scorer-attribution correction ──────────────────────────────────
+  // Lets the logger hand-assign scorers the resolver couldn't confidently match.
+  // State is Redis-backed (serverless-safe — the tap that resolves a correction
+  // may hit a different instance than the one that offered it).
+
+  private scorerFixKey(token: string): string {
+    return `scorerfix:${token}`;
+  }
+
+  private async storeScorerFix(state: {
+    matchId: string;
+    squadId: string;
+    pending: UnresolvedScorer[];
+  }): Promise<string> {
+    const token = randomBytes(5).toString("hex");
+    await redisService.set(this.scorerFixKey(token), JSON.stringify(state), 60 * 60);
+    return token;
+  }
+
+  private async getScorerFix(token: string): Promise<{
+    matchId: string;
+    squadId: string;
+    pending: UnresolvedScorer[];
+  } | null> {
+    const raw = await redisService.get(this.scorerFixKey(token));
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  private buildScorerFixKeyboard(token: string, pending: UnresolvedScorer[]) {
+    const rows = pending
+      .map((u, idx) => ({ u, idx }))
+      .filter(({ u }) => u.goals > 0 || u.assists > 0)
+      .slice(0, 6)
+      .map(({ u, idx }) => {
+        const tally = [u.goals ? `${u.goals}⚽` : "", u.assists ? `${u.assists}🅰️` : ""]
+          .filter(Boolean)
+          .join(" ");
+        return [{ text: `Assign "${u.name}" ${tally}`.trim(), callback_data: `sfix:${token}:${idx}` }];
+      });
+    return rows.length > 0 ? { inline_keyboard: rows } : null;
+  }
+
+  private async handleScorerFixPick(
+    query: TelegramBot.CallbackQuery,
+    token: string,
+    idx: number,
+  ): Promise<void> {
+    const chatId = query.message?.chat.id;
+    const messageId = query.message?.message_id;
+    const state = await this.getScorerFix(token);
+    const entry = state?.pending[idx];
+    if (!state || !entry || (entry.goals <= 0 && entry.assists <= 0) || !chatId || !messageId) {
+      await this.bot.answerCallbackQuery(query.id, { text: "That correction expired." });
+      return;
+    }
+
+    const members = await prisma.squadMember.findMany({
+      where: { squadId: state.squadId, role: { not: "inactive" } },
+      include: { user: { select: { name: true, playerProfile: { select: { id: true } } } } },
+    });
+
+    const memberButtons = members
+      .filter((m) => m.user?.playerProfile?.id && m.user.name)
+      .slice(0, 16)
+      .map((m) => ({
+        text: m.user!.name!,
+        callback_data: `sfixa:${token}:${idx}:${m.user!.playerProfile!.id}`,
+      }));
+
+    const rows: Array<Array<{ text: string; callback_data: string }>> = [];
+    for (let i = 0; i < memberButtons.length; i += 2) {
+      rows.push(memberButtons.slice(i, i + 2));
+    }
+    rows.push([{ text: "❌ Leave as team goal", callback_data: `sfixa:${token}:${idx}:skip` }]);
+
+    const what = entry.goals > 0 ? `${entry.goals} goal(s)` : `${entry.assists} assist(s)`;
+    await this.bot
+      .editMessageText(`Who gets "${entry.name}"'s ${what}?`, {
+        chat_id: chatId,
+        message_id: messageId,
+        reply_markup: { inline_keyboard: rows },
+      })
+      .catch(() => {});
+    await this.bot.answerCallbackQuery(query.id);
+  }
+
+  private async handleScorerFixAssign(
+    query: TelegramBot.CallbackQuery,
+    token: string,
+    idx: number,
+    target: string,
+  ): Promise<void> {
+    const chatId = query.message?.chat.id;
+    const messageId = query.message?.message_id;
+    const state = await this.getScorerFix(token);
+    const entry = state?.pending[idx];
+    if (!state || !entry || !chatId || !messageId) {
+      await this.bot.answerCallbackQuery(query.id, { text: "That correction expired." });
+      return;
+    }
+
+    let resultText: string;
+    if (target === "skip") {
+      resultText = `"${entry.name}" left as a team goal.`;
+    } else {
+      // Correction credits BEFORE verification on the common pending path, so
+      // applyMatchXP picks it up. (A correction after an auto-verified match
+      // lands on the stat row but not XP — a known edge, same as late edits.)
+      const { ensureMatchParticipationStats } = await import("../match-workflow");
+      await ensureMatchParticipationStats(prisma, state.matchId);
+      if (entry.goals > 0) {
+        await prisma.playerMatchStats.updateMany({
+          where: { matchId: state.matchId, profileId: target },
+          data: { goals: { increment: entry.goals } },
+        });
+      }
+      if (entry.assists > 0) {
+        await prisma.playerMatchStats.updateMany({
+          where: { matchId: state.matchId, profileId: target },
+          data: { assists: { increment: entry.assists } },
+        });
+      }
+      const profile = await prisma.playerProfile.findUnique({
+        where: { id: target },
+        include: { user: { select: { name: true } } },
+      });
+      resultText = `✅ Credited "${entry.name}" to ${profile?.user?.name ?? "that player"}.`;
+    }
+
+    // Mark this entry done and persist, then re-offer any remaining ones.
+    state.pending[idx] = { name: entry.name, goals: 0, assists: 0 };
+    await redisService.set(this.scorerFixKey(token), JSON.stringify(state), 60 * 60);
+
+    const remaining = this.buildScorerFixKeyboard(token, state.pending);
+    await this.bot
+      .editMessageText(remaining ? `${resultText}\n\nAnyone else?` : resultText, {
+        chat_id: chatId,
+        message_id: messageId,
+        ...(remaining ? { reply_markup: remaining } : {}),
+      })
+      .catch(() => {});
+    await this.bot.answerCallbackQuery(query.id, { text: "Updated" });
+  }
+
   private async checkSocialTrust(squadAId: string, squadBId: string): Promise<boolean> {
     try {
       // Logic: Trust if they've played each other more than 3 times
@@ -3004,6 +3155,18 @@ export class TelegramService {
       return;
     }
 
+    // Scorer-attribution correction: pick an unmatched name, then a player.
+    if (data.startsWith("sfixa:")) {
+      const [, token, idxStr, target] = data.split(":");
+      await this.handleScorerFixAssign(query, token, Number(idxStr), target);
+      return;
+    }
+    if (data.startsWith("sfix:")) {
+      const [, token, idxStr] = data.split(":");
+      await this.handleScorerFixPick(query, token, Number(idxStr));
+      return;
+    }
+
     if (data.startsWith("autolink_confirm:")) {
       await this.bot.answerCallbackQuery(query.id, { text: "Group linked!" });
       await this.bot.editMessageReplyMarkup({ inline_keyboard: [] }, { chat_id: chatId, message_id: messageId });
@@ -3118,7 +3281,7 @@ export class TelegramService {
         if (credited.length > 0) {
           attributionLines.push("", `Credited: ${credited.join(", ")}`);
         }
-        const unmatched = [...new Set(result.attribution.unresolved)];
+        const unmatched = result.attribution.unresolved.map((u) => u.name);
         if (unmatched.length > 0) {
           attributionLines.push(`Couldn't match: ${unmatched.join(", ")} — logged as team goals.`);
         }
@@ -3144,6 +3307,26 @@ export class TelegramService {
         },
       );
       await this.bot.answerCallbackQuery(query.id, { text: "Match submitted" });
+
+      // Offer to hand-assign any scorers we couldn't confidently match.
+      const fixable = (result.attribution?.unresolved ?? []).filter(
+        (u) => u.goals > 0 || u.assists > 0,
+      );
+      if (fixable.length > 0) {
+        const token = await this.storeScorerFix({
+          matchId: result.id,
+          squadId: draft.squadId,
+          pending: result.attribution!.unresolved,
+        });
+        const keyboard = this.buildScorerFixKeyboard(token, result.attribution!.unresolved);
+        if (keyboard) {
+          await this.bot
+            .sendMessage(chatId, "Couldn't match some scorers — tap to assign them to a player:", {
+              reply_markup: keyboard,
+            })
+            .catch(() => {});
+        }
+      }
 
       // For non-social-trust matches, post group verification buttons
       if (!result.isSoftVerified) {
