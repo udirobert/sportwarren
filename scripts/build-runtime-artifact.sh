@@ -152,12 +152,31 @@ _inject_native_pkg \
 # The standalone trace misses dynamically-loaded deps; this catches that early.
 echo "🩺 Validating artifact module resolution..."
 cd "$BUILD_DIR/.next/standalone"
+
+# sharp's native addon dlopen()s libvips as a genuinely separate shared object
+# (unlike @resvg/resvg-js's statically-linked Rust binary) — the OS dynamic
+# linker doesn't go through Node's module resolution to find it. Harmless
+# no-op when building on macOS: sharp only looks for a linux-x64 binary when
+# actually running on linux, so this path is simply never consulted locally.
+# The deploy targets (this validation step, the CI smoke-test boot, and
+# production's ecosystem.config.cjs) all need the identical export.
+export LD_LIBRARY_PATH="$(pwd)/node_modules/@img/sharp-libvips-linux-x64/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
 _VALIDATION_FAILED=0
 for _mod in '@prisma/client' 'pg' '@resvg/resvg-js' 'sharp' '@swc/helpers/_/_interop_require_default'; do
-  if node -e "require('$_mod')" 2>/dev/null; then
+  # `|| true` is required: under `set -e`, a failing command inside a plain
+  # `var=$(...)` assignment aborts the script immediately (bash does NOT
+  # suppress -e for assignment command-substitutions) — it skipped straight
+  # to script exit before this loop's own if/else could report which module
+  # failed or why. The try/catch (rather than piping raw stderr through
+  # `head`) surfaces `err.message` directly — a raw Node stack trace's first
+  # line is just a useless `node:internal/...:NNN` frame header, not the
+  # actual error.
+  _err=$(node -e "try { require('$_mod'); } catch (e) { console.error(e.message); process.exit(1); }" 2>&1 1>/dev/null) || true
+  if [ -z "$_err" ]; then
     echo "  ✓ $_mod"
   else
-    echo "  ✗ $_mod — MODULE NOT FOUND"
+    echo "  ✗ $_mod — $_err"
     _VALIDATION_FAILED=1
   fi
 done
