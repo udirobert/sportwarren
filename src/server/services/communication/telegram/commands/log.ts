@@ -1,6 +1,6 @@
 import { BaseCommand } from './base';
 import type { CommandContext, ResolvedIdentity } from '../types';
-import { parseTelegramMatchResult } from "../../telegram-match-parser";
+import { parseMatchResult } from "@/lib/ai/match-parser";
 import { submitMatchResult, MatchWorkflowError } from "@/server/services/match-workflow";
 import { prisma } from "@/lib/db";
 import { getUserSquads } from '../middleware/identity';
@@ -34,8 +34,8 @@ export class LogCommand extends BaseCommand {
     }
 
     // Parse the match result - returns null if invalid
-    const parsed = parseTelegramMatchResult(matchText);
-    
+    const parsed = await parseMatchResult(matchText);
+
     if (!parsed) {
       await ctx.bot.sendMessage(
         ctx.chatId,

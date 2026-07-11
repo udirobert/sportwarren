@@ -246,7 +246,7 @@ ONLY on the in-app `/profile` page — marked with a TODO pointing at
 V3PlayerCard. When the rest of `(app)` is ported to V3, delete it.
 `SquadIdentityCard.tsx` was unused and deleted in the harmonization pass.
 
-### Flywheel surfaces (shipped 2026-06-21, extended 2026-07-09)
+### Flywheel surfaces (shipped 2026-06-21, extended 2026-07-09 & 2026-07-11)
 
 The closed-loop ecosystem (`docs/flywheel.md`) bound together by:
 
@@ -259,8 +259,26 @@ The closed-loop ecosystem (`docs/flywheel.md`) bound together by:
   "📣 Send teams to the group" button (`BroadcastTeamsButton.tsx` +
   `broadcastTeams` action) recomputes server-side and pushes it via
   `broadcastToSquadGroups` (`src/server/services/communication/squad-broadcast.ts`
-  — the single DRY "loop linked SquadGroups → Telegram bot" helper, also
-  used by `formation-of-week`).
+  — the single DRY, channel-agnostic "loop linked SquadGroups → send" helper:
+  it fans out to every linked Telegram AND WhatsApp group (WhatsApp has no
+  inline URL buttons, so the keyboard's links are flattened into the message
+  body), also used by `formation-of-week`).
+- **Chat match capture → player stats** — casual chat ("we won 4-2, I got 2,
+  Sammy the other") is turned into a match by the single-source
+  `parseMatchResult` (`src/lib/ai/match-parser.ts` — deterministic pattern pass
+  first, LLM fallback for messy phrasing; `ParsedMatch` carries scorers/assists).
+  Every channel routes through this one parser — never re-implement score
+  parsing at a call site. On confirm, `processMatchLog` resolves the scorer
+  names to squad `PlayerProfile`s via `resolveScorers`
+  (`src/server/services/match/scorer-attribution.ts` — deliberately
+  conservative: self-reference / exact name / unique first-name only, never
+  guesses; ambiguous or unknown names are logged as plain team goals, with an
+  inline "assign to a player" correction step — Redis-backed via `sfix:`/`sfixa:`
+  callbacks). The resolved goals/assists ride into `submitMatchResult` (optional
+  `playerGoals`/`playerAssists`) so they're written onto `PlayerMatchStats`
+  inside the seed→XP window on every verification path. Career totals + XP stay
+  gated behind verification (`applyMatchXP` reads those rows), so nothing counts
+  until the result is verified.
 - **Post-session analysis** (`/session/{sessionId}/analysis/{playerToken}`)
   — chess.com "your match" surface. Reads PlayerMatchStats + PeerRating
   + PlayerTwin to assemble goals/ratings/attributes/weakness story, plus
@@ -384,6 +402,23 @@ and have their squad, players, and match history materialize instantly.
   applied DB keeps the old contents forever, so schema.prisma silently
   drifts from reality (this happened to `Session.afterAttributes`,
   healed by migration `20260709000000`). Add a new migration instead.
+- Group-verification confirm/dispute state is Redis-backed
+  (`communication/verification-store.ts` — `makeGroupVerificationStore`), NOT an
+  in-memory `Map`. The webhook that creates a pending verification and the
+  button-press / expiry-cron that resolves it routinely hit different serverless
+  instances, so instance-local state silently drops votes. Never reintroduce a
+  `Map` for cross-request conversation state — persist to Redis.
+- There are TWO `communication/` trees: `src/server/services/communication/`
+  (the Next.js / production path — edit this one) and a legacy
+  `server/services/communication/` used only by `dev:server` (`server/index.ts`).
+  They keep independent copies (e.g. their own `bridge.ts`), so a grep can show
+  a symbol as "still used" when only the dead legacy tree references it.
+- Deeply-inferred tRPC output types can trip `TS2589` ("Type instantiation is
+  excessively deep") at an *unrelated* call site when the project's type graph
+  shifts — the reported line is where the budget ran out, not the cause (bit
+  `sessions/page.tsx`). Fix by annotating the consuming variable with an
+  explicit shallow row type, or giving a factory an explicit return interface —
+  don't chase the reported line or trim your own change.
 
 ### Personalization domain
 - Single source of truth for skin + brain lives in `src/server/services/personalization/`

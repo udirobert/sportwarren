@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { WhatsAppService } from '@/server/services/communication/whatsapp';
-
-const whatsappService = new WhatsAppService();
+import { getWhatsAppService } from '@/server/services/communication/whatsapp';
 
 /**
  * GET /api/platform/whatsapp/webhook
@@ -30,10 +28,17 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    
-    // Process the webhook asynchronously
+
+    // Use the shared singleton so the webhook and cron sweeps observe the
+    // same in-flight verification state (not a per-request throwaway instance).
+    const whatsappService = getWhatsAppService();
+    if (!whatsappService) {
+      console.warn('[WHATSAPP WEBHOOK] service unconfigured — dropping update');
+      return NextResponse.json({ status: 'ignored' });
+    }
+
     await whatsappService.handleWebhook(body);
-    
+
     return NextResponse.json({ status: 'ok' });
   } catch (error) {
     console.error('[WHATSAPP WEBHOOK ERROR]', error);

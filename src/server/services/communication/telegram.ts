@@ -11,6 +11,7 @@ type LatestMatch =
   | null;
 
 // Modular commands (DRY: Auto-discovered command registry)
+import { makeGroupVerificationStore } from "./verification-store";
 import { registerCommands, wireCommandHandlers } from "./telegram/commands/registry";
 import { buildWelcomeMessage } from "./telegram/commands/help-text";
 import { setupGeneralChatHandler } from "./telegram/commands/ask";
@@ -30,10 +31,17 @@ import {
   isTelegramConnectToken,
 } from "./platform-connections";
 import {
-  parseTelegramMatchResult,
-  type ParsedTelegramMatchResult,
-} from "./telegram-match-parser";
-import { parseNaturalLanguageMatch } from "@/lib/ai/match-parser";
+  parseMatchResult,
+  parseMatchPattern,
+  type ParsedMatch,
+} from "@/lib/ai/match-parser";
+import {
+  resolveScorers,
+  type ScorerResolution,
+  type AttributionMember,
+  type UnresolvedScorer,
+} from "@/server/services/match/scorer-attribution";
+import { redisService } from "../redis";
 import {
   buildVerificationNudgeMessage,
   shouldSendNudge,
@@ -46,7 +54,7 @@ import {
   TreasuryBalanceError,
 } from "../economy/treasury-ledger";
 
-interface PendingMatchDraft extends ParsedTelegramMatchResult {
+interface PendingMatchDraft extends ParsedMatch {
   id: string;
   chatId: number;
   squadId: string;
@@ -66,13 +74,12 @@ interface PendingGroupVerification {
   awayMessageId?: number;
   homeChatId?: string;
   awayChatId?: string;
-  confirms: Set<string>;   // userId set
-  disputes: Set<string>;   // userId set
+  confirms: string[];      // userIds who confirmed
+  disputes: string[];      // userIds who disputed
   createdAt: number;
   totalMembers: number;    // combined squad member count for threshold
 }
 
-const GROUP_VERIFICATION_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 type LinkedSquadGroup = NonNullable<
   Awaited<ReturnType<typeof findSquadGroupByChatId>>
@@ -130,7 +137,8 @@ export class TelegramService {
   private bot: TelegramBot;
   private redisService: TelegramRedisStore | null;
   private pendingMatchDrafts = new Map<string, PendingMatchDraft>();
-  private pendingGroupVerifications = new Map<string, PendingGroupVerification>();
+  // Redis-backed so confirm/dispute votes survive across serverless instances.
+  private verifStore = makeGroupVerificationStore<PendingGroupVerification>('telegram');
   private aiParseRateLimit = new Map<string, number[]>();
   private pendingSquadSelectText = new Map<string, { text: string; expiresAt: number }>();
   private generalChatMemory = new Map<number, GeneralChatMessage[]>();
@@ -762,38 +770,36 @@ export class TelegramService {
     // ── Proactive match result detection ──────────────────────────────
     // Before falling through to AI chat, check if this looks like a match result.
     // Regex first (fast, exact), then AI parser (slower, fuzzy).
-    const regexParsed = parseTelegramMatchResult(text);
-    if (regexParsed) {
-      await this.handleMatchLog(chatId, text);
+    // Pattern pass first (free, deterministic) — no inference budget consumed.
+    const patternParsed = parseMatchPattern(text);
+    if (patternParsed) {
+      await this.handleMatchLog(chatId, text, patternParsed);
       return;
     }
 
-    // Only try AI parser for messages that might contain score-like patterns
-    // (numbers present, reasonable length) to avoid wasting inference on greetings.
-    // Rate-limited: max 3 AI parse attempts per chat per minute to control costs.
+    // LLM fallback, gated to score-like messages and rate-limited (max 3 parse
+    // attempts per chat per minute) so casual chatter never burns inference.
     const looksLikeScore = /\d/.test(text) && text.length >= 5 && text.length <= 120;
     if (looksLikeScore) {
       const aiParseKey = `ai-parse:${chatId}`;
       const recent = this.aiParseRateLimit.get(aiParseKey) || [];
       const now = Date.now();
-      const windowMs = 60_000;
-      const recentInWindow = recent.filter((t) => now - t < windowMs);
+      const recentInWindow = recent.filter((t) => now - t < 60_000);
 
       if (recentInWindow.length < 3) {
         recentInWindow.push(now);
         this.aiParseRateLimit.set(aiParseKey, recentInWindow);
 
         try {
-          const aiParsed = await parseNaturalLanguageMatch(text);
-          if (aiParsed && aiParsed.confidence >= 0.75) {
-            await this.handleMatchLog(chatId, text);
+          const aiParsed = await parseMatchResult(text);
+          if (aiParsed) {
+            await this.handleMatchLog(chatId, text, aiParsed);
             return;
           }
         } catch {
-          // AI parser failed — fall through to normal chat
+          // Parser failed — fall through to normal chat
         }
       }
-      // else: rate limited, skip AI parser and fall through to normal chat
     }
 
     // ── Normal AI chat ────────────────────────────────────────────────
@@ -964,15 +970,6 @@ export class TelegramService {
     }
   }
 
-  private pruneExpiredGroupVerifications(): void {
-    const cutoff = Date.now() - GROUP_VERIFICATION_TTL_MS;
-    for (const [matchId, verification] of this.pendingGroupVerifications.entries()) {
-      if (verification.createdAt < cutoff) {
-        this.pendingGroupVerifications.delete(matchId);
-      }
-    }
-  }
-
   /**
    * Get the confirm threshold for group verification based on squad size.
    * Small squads (<=4 members) need fewer confirms.
@@ -994,8 +991,6 @@ export class TelegramService {
     awayScore: number,
     submittedByName: string,
   ): Promise<void> {
-    this.pruneExpiredGroupVerifications();
-
     const squads = await prisma.squad.findMany({
       where: { id: { in: [homeSquadId, awaySquadId] } },
       include: {
@@ -1019,8 +1014,8 @@ export class TelegramService {
       awaySquadName: awaySquad.name,
       homeScore,
       awayScore,
-      confirms: new Set(),
-      disputes: new Set(),
+      confirms: [],
+      disputes: [],
       createdAt: Date.now(),
       totalMembers,
     };
@@ -1074,7 +1069,7 @@ export class TelegramService {
       }
     }
 
-    this.pendingGroupVerifications.set(matchId, verification);
+    await this.verifStore.save(verification);
   }
 
   /**
@@ -1097,7 +1092,7 @@ export class TelegramService {
       return;
     }
 
-    const verification = this.pendingGroupVerifications.get(matchId);
+    const verification = await this.verifStore.get(matchId);
     if (!verification) {
       await this.bot.answerCallbackQuery(query.id, {
         text: 'This verification has expired.',
@@ -1123,22 +1118,25 @@ export class TelegramService {
       return;
     }
 
-    // Toggle behavior: remove from the other set if present
+    // Move the user to the chosen side (idempotent — no toggle-off on Telegram).
+    const uid = identity.userId;
+    verification.disputes = verification.disputes.filter((u) => u !== uid);
+    verification.confirms = verification.confirms.filter((u) => u !== uid);
     if (action === 'confirm') {
-      verification.disputes.delete(identity.userId);
-      verification.confirms.add(identity.userId);
+      verification.confirms.push(uid);
     } else {
-      verification.confirms.delete(identity.userId);
-      verification.disputes.add(identity.userId);
+      verification.disputes.push(uid);
     }
+
+    await this.verifStore.save(verification);
 
     // Update button counts on both messages
     const threshold = this.getGroupVerificationThreshold(verification.totalMembers);
     const updatedKeyboard = {
       inline_keyboard: [
         [
-          { text: `✅ Confirm (${verification.confirms.size})`, callback_data: `verify_match_confirm:${matchId}` },
-          { text: `❌ Dispute (${verification.disputes.size})`, callback_data: `verify_match_dispute:${matchId}` },
+          { text: `✅ Confirm (${verification.confirms.length})`, callback_data: `verify_match_confirm:${matchId}` },
+          { text: `❌ Dispute (${verification.disputes.length})`, callback_data: `verify_match_dispute:${matchId}` },
         ],
       ],
     };
@@ -1165,9 +1163,9 @@ export class TelegramService {
     });
 
     // Check if thresholds are met
-    if (verification.confirms.size >= threshold && verification.disputes.size === 0) {
+    if (verification.confirms.length >= threshold && verification.disputes.length === 0) {
       await this.resolveGroupVerification(matchId, 'verified');
-    } else if (verification.disputes.size >= 2) {
+    } else if (verification.disputes.length >= 2) {
       await this.resolveGroupVerification(matchId, 'disputed');
     }
   }
@@ -1179,13 +1177,13 @@ export class TelegramService {
     matchId: string,
     resolution: 'verified' | 'disputed',
   ): Promise<void> {
-    const verification = this.pendingGroupVerifications.get(matchId);
+    const verification = await this.verifStore.get(matchId);
     if (!verification) return;
 
-    // Use the first confirmer as the synthetic verifier
+    // Use the confirmers/disputers as the synthetic verifiers
     const verifierIds = resolution === 'verified'
-      ? Array.from(verification.confirms)
-      : Array.from(verification.disputes);
+      ? verification.confirms
+      : verification.disputes;
 
     if (verifierIds.length === 0) return;
 
@@ -1217,7 +1215,7 @@ export class TelegramService {
       `*${verification.homeSquadName}* ${verification.homeScore} - ${verification.awayScore} *${verification.awaySquadName}*`,
       ``,
       resolution === 'verified'
-        ? `Confirmed by ${verification.confirms.size} players. Peer rating window is now open!`
+        ? `Confirmed by ${verification.confirms.length} players. Peer rating window is now open!`
         : `This result has been disputed. Captains will need to resolve.`,
     ].join('\n');
 
@@ -1238,32 +1236,19 @@ export class TelegramService {
       }
     }
 
-    this.pendingGroupVerifications.delete(matchId);
+    await this.verifStore.remove(matchId);
   }
 
   /**
-   * Get all pending group verifications that have expired (for the cron to auto-verify).
-   */
-  public getExpiredGroupVerifications(): PendingGroupVerification[] {
-    const cutoff = Date.now() - GROUP_VERIFICATION_TTL_MS;
-    const expired: PendingGroupVerification[] = [];
-    for (const [, verification] of this.pendingGroupVerifications.entries()) {
-      if (verification.createdAt < cutoff) {
-        expired.push(verification);
-      }
-    }
-    return expired;
-  }
-
-  /**
-   * Resolve a group verification externally (called by the expiry cron).
+   * Resolve a group verification externally (called by the expiry cron to edit
+   * the group cards once the DB match has been settled).
    */
   public async resolveGroupVerificationExternal(matchId: string): Promise<void> {
-    const verification = this.pendingGroupVerifications.get(matchId);
+    const verification = await this.verifStore.get(matchId);
     if (!verification) return;
 
     // If no disputes, auto-verify (silence = consent)
-    if (verification.disputes.size < 2) {
+    if (verification.disputes.length < 2) {
       await this.resolveGroupVerification(matchId, 'verified');
     } else {
       await this.resolveGroupVerification(matchId, 'disputed');
@@ -1497,10 +1482,8 @@ export class TelegramService {
       return false;
     }
 
-    const parsed = parseTelegramMatchResult(trimmed);
-    const aiParsed = parsed ? null : await parseNaturalLanguageMatch(trimmed);
-
-    if (!parsed && (!aiParsed || aiParsed.confidence <= 0.7)) {
+    const parsed = await parseMatchResult(trimmed);
+    if (!parsed) {
       return false;
     }
 
@@ -1514,11 +1497,7 @@ export class TelegramService {
         expiresAt: Date.now() + 10 * 60 * 1000,
       });
 
-      const preview = parsed
-        ? `${parsed.teamScore}-${parsed.opponentScore} vs ${parsed.opponent}`
-        : aiParsed
-          ? `${aiParsed.homeScore}-${aiParsed.awayScore} (${aiParsed.opponent})`
-          : trimmed;
+      const preview = `${parsed.teamScore}-${parsed.opponentScore} vs ${parsed.opponent}`;
 
       const keyboard = {
         inline_keyboard: [
@@ -1537,13 +1516,14 @@ export class TelegramService {
       return true;
     }
 
-    await this.handleMatchLog(chatId, trimmed);
+    await this.handleMatchLog(chatId, trimmed, parsed);
     return true;
   }
 
   private async handleMatchLog(
     chatId: number,
     matchText: string,
+    preParsed?: ParsedMatch,
   ): Promise<void> {
     try {
       this.pruneExpiredDrafts();
@@ -1614,20 +1594,9 @@ export class TelegramService {
         return;
       }
 
-      let parsed: ParsedTelegramMatchResult | null = parseTelegramMatchResult(matchText);
-
-      if (!parsed) {
-        // Try AI-powered natural language parsing
-        const aiParsed = await parseNaturalLanguageMatch(matchText);
-        if (aiParsed && aiParsed.confidence > 0.7) {
-          parsed = {
-            teamScore: aiParsed.isHome ? aiParsed.homeScore : aiParsed.awayScore,
-            opponentScore: aiParsed.isHome ? aiParsed.awayScore : aiParsed.homeScore,
-            opponent: aiParsed.opponent,
-            outcome: aiParsed.homeScore > aiParsed.awayScore ? 'win' : (aiParsed.homeScore < aiParsed.awayScore ? 'loss' : 'draw')
-          };
-        }
-      }
+      // Reuse the parse from the detection step when provided; otherwise parse
+      // now (pattern + LLM). Single source of truth: @/lib/ai/match-parser.
+      const parsed: ParsedMatch | null = preParsed ?? await parseMatchResult(matchText);
 
       if (!parsed) {
         await this.bot.sendMessage(
@@ -1668,11 +1637,15 @@ export class TelegramService {
       };
 
       const squadLabel = targetSquadName || "Your squad";
+      const reportedScorers = draft.scorers.length > 0
+        ? [`Scorers: ${draft.scorers.map((s) => `${s.name} ${s.goals}`).join(", ")}`]
+        : [];
       const message = [
         "Match log draft",
         "",
         `${squadLabel} ${draft.teamScore} - ${draft.opponentScore} ${draft.opponent}`,
         `Outcome: ${draft.outcome}`,
+        ...reportedScorers,
         "",
         "Submit this result to the verification queue?",
       ].join("\n");
@@ -1718,21 +1691,8 @@ export class TelegramService {
         return;
       }
 
-      // Parse the match result
-      let parsed: ParsedTelegramMatchResult | null = parseTelegramMatchResult(matchText);
-
-      if (!parsed) {
-        // Try AI-powered natural language parsing
-        const aiParsed = await parseNaturalLanguageMatch(matchText);
-        if (aiParsed && aiParsed.confidence > 0.7) {
-          parsed = {
-            teamScore: aiParsed.isHome ? aiParsed.homeScore : aiParsed.awayScore,
-            opponentScore: aiParsed.isHome ? aiParsed.awayScore : aiParsed.homeScore,
-            opponent: aiParsed.opponent,
-            outcome: aiParsed.homeScore > aiParsed.awayScore ? 'win' : (aiParsed.homeScore < aiParsed.awayScore ? 'loss' : 'draw')
-          };
-        }
-      }
+      // Parse the match result (single source of truth: @/lib/ai/match-parser)
+      const parsed: ParsedMatch | null = await parseMatchResult(matchText);
 
       if (!parsed) {
         await this.bot.sendMessage(
@@ -1771,11 +1731,15 @@ export class TelegramService {
       };
 
       const squadLabel = membership.squad.name;
+      const reportedScorers = draft.scorers.length > 0
+        ? [`Scorers: ${draft.scorers.map((s) => `${s.name} ${s.goals}`).join(", ")}`]
+        : [];
       const message = [
         "Match log draft",
         "",
         `${squadLabel} ${draft.teamScore} - ${draft.opponentScore} ${draft.opponent}`,
         `Outcome: ${draft.outcome}`,
+        ...reportedScorers,
         "",
         "Submit this result to the verification queue?",
       ].join("\n");
@@ -1858,6 +1822,7 @@ export class TelegramService {
     opponentName: string;
     awaySquadId: string;
     isSoftVerified: boolean;
+    attribution: ScorerResolution | null;
   }> {
     const membership = await getSquadMembership(
       prisma,
@@ -1885,6 +1850,33 @@ export class TelegramService {
 
     const isSociallyTrusted = await this.checkSocialTrust(squad.id, opponent.id);
 
+    // Resolve chat-parsed scorers/assisters to squad players BEFORE submitting,
+    // so submitMatchResult can apply them inside its seed→XP window (this is what
+    // credits goal-XP on the social-trust inline-verify path too). Conservative:
+    // ambiguous/unknown names stay unresolved and log as plain team goals.
+    let attribution: ScorerResolution | null = null;
+    if (draft.scorers.length > 0 || draft.assists.length > 0) {
+      const squadMembers = await prisma.squadMember.findMany({
+        where: { squadId: squad.id },
+        include: {
+          user: { select: { id: true, name: true, playerProfile: { select: { id: true } } } },
+        },
+      });
+      const attrMembers: AttributionMember[] = squadMembers
+        .filter((m) => m.user?.playerProfile?.id)
+        .map((m) => ({
+          profileId: m.user!.playerProfile!.id,
+          userId: m.user!.id,
+          name: m.user!.name,
+        }));
+      attribution = resolveScorers({
+        members: attrMembers,
+        scorers: draft.scorers,
+        assists: draft.assists,
+        submitterUserId: draft.submittedBy,
+      });
+    }
+
     const { submitMatchResult } = await import("../match-workflow");
     const match = await submitMatchResult({
       prisma,
@@ -1896,6 +1888,8 @@ export class TelegramService {
       submittedByMembershipId: membership.id, // Multi-squad attribution
       matchDate: new Date(),
       isSociallyTrusted,
+      playerGoals: attribution?.goals.map((g) => ({ profileId: g.profileId, goals: g.goals })),
+      playerAssists: attribution?.assists.map((a) => ({ profileId: a.profileId, assists: a.assists })),
     });
 
     await this.deletePendingDraft(draft.id);
@@ -1906,7 +1900,157 @@ export class TelegramService {
       opponentName: opponent.name,
       awaySquadId: opponent.id,
       isSoftVerified: match.status === 'verified',
+      attribution,
     };
+  }
+
+  // ── Scorer-attribution correction ──────────────────────────────────
+  // Lets the logger hand-assign scorers the resolver couldn't confidently match.
+  // State is Redis-backed (serverless-safe — the tap that resolves a correction
+  // may hit a different instance than the one that offered it).
+
+  private scorerFixKey(token: string): string {
+    return `scorerfix:${token}`;
+  }
+
+  private async storeScorerFix(state: {
+    matchId: string;
+    squadId: string;
+    pending: UnresolvedScorer[];
+  }): Promise<string> {
+    const token = randomBytes(5).toString("hex");
+    await redisService.set(this.scorerFixKey(token), JSON.stringify(state), 60 * 60);
+    return token;
+  }
+
+  private async getScorerFix(token: string): Promise<{
+    matchId: string;
+    squadId: string;
+    pending: UnresolvedScorer[];
+  } | null> {
+    const raw = await redisService.get(this.scorerFixKey(token));
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
+  }
+
+  private buildScorerFixKeyboard(token: string, pending: UnresolvedScorer[]) {
+    const rows = pending
+      .map((u, idx) => ({ u, idx }))
+      .filter(({ u }) => u.goals > 0 || u.assists > 0)
+      .slice(0, 6)
+      .map(({ u, idx }) => {
+        const tally = [u.goals ? `${u.goals}⚽` : "", u.assists ? `${u.assists}🅰️` : ""]
+          .filter(Boolean)
+          .join(" ");
+        return [{ text: `Assign "${u.name}" ${tally}`.trim(), callback_data: `sfix:${token}:${idx}` }];
+      });
+    return rows.length > 0 ? { inline_keyboard: rows } : null;
+  }
+
+  private async handleScorerFixPick(
+    query: TelegramBot.CallbackQuery,
+    token: string,
+    idx: number,
+  ): Promise<void> {
+    const chatId = query.message?.chat.id;
+    const messageId = query.message?.message_id;
+    const state = await this.getScorerFix(token);
+    const entry = state?.pending[idx];
+    if (!state || !entry || (entry.goals <= 0 && entry.assists <= 0) || !chatId || !messageId) {
+      await this.bot.answerCallbackQuery(query.id, { text: "That correction expired." });
+      return;
+    }
+
+    const members = await prisma.squadMember.findMany({
+      where: { squadId: state.squadId, role: { not: "inactive" } },
+      include: { user: { select: { name: true, playerProfile: { select: { id: true } } } } },
+    });
+
+    const memberButtons = members
+      .filter((m) => m.user?.playerProfile?.id && m.user.name)
+      .slice(0, 16)
+      .map((m) => ({
+        text: m.user!.name!,
+        callback_data: `sfixa:${token}:${idx}:${m.user!.playerProfile!.id}`,
+      }));
+
+    const rows: Array<Array<{ text: string; callback_data: string }>> = [];
+    for (let i = 0; i < memberButtons.length; i += 2) {
+      rows.push(memberButtons.slice(i, i + 2));
+    }
+    rows.push([{ text: "❌ Leave as team goal", callback_data: `sfixa:${token}:${idx}:skip` }]);
+
+    const what = entry.goals > 0 ? `${entry.goals} goal(s)` : `${entry.assists} assist(s)`;
+    await this.bot
+      .editMessageText(`Who gets "${entry.name}"'s ${what}?`, {
+        chat_id: chatId,
+        message_id: messageId,
+        reply_markup: { inline_keyboard: rows },
+      })
+      .catch(() => {});
+    await this.bot.answerCallbackQuery(query.id);
+  }
+
+  private async handleScorerFixAssign(
+    query: TelegramBot.CallbackQuery,
+    token: string,
+    idx: number,
+    target: string,
+  ): Promise<void> {
+    const chatId = query.message?.chat.id;
+    const messageId = query.message?.message_id;
+    const state = await this.getScorerFix(token);
+    const entry = state?.pending[idx];
+    if (!state || !entry || !chatId || !messageId) {
+      await this.bot.answerCallbackQuery(query.id, { text: "That correction expired." });
+      return;
+    }
+
+    let resultText: string;
+    if (target === "skip") {
+      resultText = `"${entry.name}" left as a team goal.`;
+    } else {
+      // Correction credits BEFORE verification on the common pending path, so
+      // applyMatchXP picks it up. (A correction after an auto-verified match
+      // lands on the stat row but not XP — a known edge, same as late edits.)
+      const { ensureMatchParticipationStats } = await import("../match-workflow");
+      await ensureMatchParticipationStats(prisma, state.matchId);
+      if (entry.goals > 0) {
+        await prisma.playerMatchStats.updateMany({
+          where: { matchId: state.matchId, profileId: target },
+          data: { goals: { increment: entry.goals } },
+        });
+      }
+      if (entry.assists > 0) {
+        await prisma.playerMatchStats.updateMany({
+          where: { matchId: state.matchId, profileId: target },
+          data: { assists: { increment: entry.assists } },
+        });
+      }
+      const profile = await prisma.playerProfile.findUnique({
+        where: { id: target },
+        include: { user: { select: { name: true } } },
+      });
+      resultText = `✅ Credited "${entry.name}" to ${profile?.user?.name ?? "that player"}.`;
+    }
+
+    // Mark this entry done and persist, then re-offer any remaining ones.
+    state.pending[idx] = { name: entry.name, goals: 0, assists: 0 };
+    await redisService.set(this.scorerFixKey(token), JSON.stringify(state), 60 * 60);
+
+    const remaining = this.buildScorerFixKeyboard(token, state.pending);
+    await this.bot
+      .editMessageText(remaining ? `${resultText}\n\nAnyone else?` : resultText, {
+        chat_id: chatId,
+        message_id: messageId,
+        ...(remaining ? { reply_markup: remaining } : {}),
+      })
+      .catch(() => {});
+    await this.bot.answerCallbackQuery(query.id, { text: "Updated" });
   }
 
   private async checkSocialTrust(squadAId: string, squadBId: string): Promise<boolean> {
@@ -3011,6 +3155,18 @@ export class TelegramService {
       return;
     }
 
+    // Scorer-attribution correction: pick an unmatched name, then a player.
+    if (data.startsWith("sfixa:")) {
+      const [, token, idxStr, target] = data.split(":");
+      await this.handleScorerFixAssign(query, token, Number(idxStr), target);
+      return;
+    }
+    if (data.startsWith("sfix:")) {
+      const [, token, idxStr] = data.split(":");
+      await this.handleScorerFixPick(query, token, Number(idxStr));
+      return;
+    }
+
     if (data.startsWith("autolink_confirm:")) {
       await this.bot.answerCallbackQuery(query.id, { text: "Group linked!" });
       await this.bot.editMessageReplyMarkup({ inline_keyboard: [] }, { chat_id: chatId, message_id: messageId });
@@ -3116,6 +3272,21 @@ export class TelegramService {
         ? "✅ *Verified!* (Trusted matchup history detected)"
         : "⏳ *Pending* — your squad is confirming";
 
+      const attributionLines: string[] = [];
+      if (result.attribution) {
+        const credited = [
+          ...result.attribution.goals.map((g) => `${g.name} ${g.goals}⚽`),
+          ...result.attribution.assists.map((a) => `${a.name} ${a.assists}🅰️`),
+        ];
+        if (credited.length > 0) {
+          attributionLines.push("", `Credited: ${credited.join(", ")}`);
+        }
+        const unmatched = result.attribution.unresolved.map((u) => u.name);
+        if (unmatched.length > 0) {
+          attributionLines.push(`Couldn't match: ${unmatched.join(", ")} — logged as team goals.`);
+        }
+      }
+
       await this.bot.editMessageText(
         [
           `⚽ *Match Logged!*`,
@@ -3123,6 +3294,7 @@ export class TelegramService {
           `ID: \`${result.id}\``,
           `Opponent: *${result.opponentName}*`,
           `Status: ${statusMessage}`,
+          ...attributionLines,
           "",
           result.isSoftVerified
             ? "Your match history has automatically verified this result. Legacy updated! 🥂"
@@ -3135,6 +3307,26 @@ export class TelegramService {
         },
       );
       await this.bot.answerCallbackQuery(query.id, { text: "Match submitted" });
+
+      // Offer to hand-assign any scorers we couldn't confidently match.
+      const fixable = (result.attribution?.unresolved ?? []).filter(
+        (u) => u.goals > 0 || u.assists > 0,
+      );
+      if (fixable.length > 0) {
+        const token = await this.storeScorerFix({
+          matchId: result.id,
+          squadId: draft.squadId,
+          pending: result.attribution!.unresolved,
+        });
+        const keyboard = this.buildScorerFixKeyboard(token, result.attribution!.unresolved);
+        if (keyboard) {
+          await this.bot
+            .sendMessage(chatId, "Couldn't match some scorers — tap to assign them to a player:", {
+              reply_markup: keyboard,
+            })
+            .catch(() => {});
+        }
+      }
 
       // For non-social-trust matches, post group verification buttons
       if (!result.isSoftVerified) {
