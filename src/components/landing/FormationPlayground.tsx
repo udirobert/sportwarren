@@ -11,7 +11,12 @@ import { useActiveSquad } from "@/contexts/ActiveSquadContext";
 import { FORMATIONS, getFormationsBySquadSize, getDefaultFormationForSize, PLAY_STYLE_LABELS } from "@/lib/formations";
 import { POSITIONS_BY_SQUAD_SIZE, DEFAULT_PLAYER_NAMES, SQUAD_SIZES, PLAY_STYLES, SQUAD_COLORS } from "@/lib/pitch.constants";
 import { patchPendingPersona, getPendingPersona } from "@/lib/claims/persona";
-import { decodeFormationFromUrl, suggestCounterFormation, encodeChallengeUrl } from "@/lib/pitch/shareUrl";
+import {
+  decodeFormationFromUrl,
+  suggestCounterFormation,
+  buildChallengeSharePath,
+  decodeChallengeSlugFromUrl,
+} from "@/lib/pitch/shareUrl";
 import { storePlaygroundDraft, getPlaygroundDraft } from "@/lib/pitch/playgroundDraft";
 import type { PlaygroundFlow } from "@/lib/pitch/shareUrl";
 import type { Formation, PlayStyle, SquadSize, PlayerPosition } from "@/types";
@@ -142,7 +147,39 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
     // The sync-to-URL effect below will strip them if we run formation decode now.
     if (window.location.search.includes("privy_oauth_state=")) return;
 
-    const parsed = decodeFormationFromUrl(new URLSearchParams(window.location.search));
+    const sp = new URLSearchParams(window.location.search);
+
+    // Short challenge link (`/?challenge={slug}`) — resolve the opponent's
+    // plan async and skip the sync path below entirely. Old long-form links
+    // (raw vs_f/vs_s/vs_c/vs_n params) still work via decodeFormationFromUrl
+    // further down — this only intercepts the new short format.
+    const challengeSlug = decodeChallengeSlugFromUrl(sp);
+    if (challengeSlug) {
+      urlStateApplied.current = true;
+      (async () => {
+        try {
+          const res = await fetch(`/api/tactics/share?slug=${encodeURIComponent(challengeSlug)}`);
+          const payload = await res.json().catch(() => null);
+          if (res.ok && payload?.ok && payload.plan) {
+            setOpponent({
+              formation: payload.plan.formation,
+              style: payload.plan.style,
+              color: payload.plan.color || "#ef4444",
+              names: payload.plan.names || [],
+            });
+            setFlow("challenge_received");
+          }
+        } catch {
+          // Slug fetch failed — fall through to a normal build session
+          // rather than leaving the playground stuck loading.
+        } finally {
+          setUrlStateReady(true);
+        }
+      })();
+      return;
+    }
+
+    const parsed = decodeFormationFromUrl(sp);
     const hasUrlState = Boolean(
       parsed.formation || parsed.style || parsed.color || parsed.size ||
       parsed.vs_formation || (parsed.names && parsed.names.length > 0),
@@ -343,20 +380,48 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
 
   const handleChallengeBack = useCallback(() => {
     if (!opponent) return;
-    const url = encodeChallengeUrl(
-      { formation, style: playStyle, color: primaryColor, size: squadSize, names: personalization.names },
-      { formation: opponent.formation, style: opponent.style, color: opponent.color, names: opponent.names },
-    );
-    const fullUrl = `${window.location.origin}${url}`;
-    navigator.clipboard.writeText(fullUrl).catch(() => {});
-    trackFeatureUsed("challenge_back", { formation, vs: opponent.formation });
-    setFlow("build");
-    setOpponent(null);
-    setMatchResult(null);
-    setToastMessage("Challenge link copied — send it to your opponent!");
-    setShowCopiedToast(true);
-    setTimeout(() => setShowCopiedToast(false), 3000);
-  }, [opponent, formation, playStyle, primaryColor, squadSize, personalization.names]);
+    const currentOpponent = opponent;
+    (async () => {
+      // Only the opponent's plan needs to be resolvable — challenge_received
+      // only ever renders opponent.* (ChallengeOverlay), and the recipient's
+      // counter suggestion is always suggestCounterFormation(opponent.formation),
+      // computed fresh client-side. The old long URL also encoded "mine"
+      // (formation/style/color/size/names) but nothing ever read it back —
+      // dropping it here is shorter with no behaviour change.
+      let path = window.location.pathname;
+      try {
+        const response = await fetch("/api/tactics/share", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            plan: {
+              formation: currentOpponent.formation,
+              style: currentOpponent.style,
+              size: squadSize,
+              color: currentOpponent.color,
+              names: currentOpponent.names,
+            },
+          }),
+        });
+        const payload = await response.json().catch(() => null);
+        if (response.ok && payload?.ok && payload.slug) {
+          path = buildChallengeSharePath(payload.slug);
+        }
+      } catch {
+        // Slug creation failed — fall back to the plain build URL rather
+        // than leaving the share button stuck.
+      }
+      const fullUrl = `${window.location.origin}${path}`;
+      navigator.clipboard.writeText(fullUrl).catch(() => {});
+      trackFeatureUsed("challenge_back", { formation, vs: currentOpponent.formation });
+      setFlow("build");
+      setOpponent(null);
+      setMatchResult(null);
+      setToastMessage("Challenge link copied — send it to your opponent!");
+      setShowCopiedToast(true);
+      setTimeout(() => setShowCopiedToast(false), 3000);
+    })();
+  }, [opponent, formation, squadSize]);
 
   const handleSharePlan = useCallback(async () => {
     const fallbackUrl = `${window.location.origin}${window.location.pathname}?${planQuery}`;

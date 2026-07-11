@@ -19,27 +19,25 @@ export interface FormationUrlState {
 const VALID_SIZES: SquadSize[] = [5, 6, 7, 11];
 
 /**
- * Encode a challenge URL: my formation vs opponent's formation.
+ * Short challenge links: `/?challenge={slug}`, where the slug resolves
+ * (via GET /api/tactics/share?slug=) to the opponent's plan — the only
+ * thing a challenge_received recipient actually reads (ChallengeOverlay
+ * shows just the opponent's formation; the recipient's own counter is
+ * always suggestCounterFormation(opponent.formation), computed fresh,
+ * never read from the URL). Replaces the old raw vs_f/vs_s/vs_c/vs_n
+ * (+ a redundant, unused "mine" formation/style/color/size/names) encoding.
+ * decodeFormationFromUrl below is UNCHANGED and still decodes that old long
+ * form, so links already sent/saved before this change keep working.
  */
-export function encodeChallengeUrl(
-  mine: FormationUrlState,
-  opponent: { formation: Formation; style: PlayStyle; color: string; names: string[] },
-): string {
-  const sp = new URLSearchParams();
-  // My formation (the challenger's)
-  sp.set("formation", mine.formation);
-  sp.set("style", mine.style);
-  sp.set("color", mine.color);
-  sp.set("size", String(mine.size));
-  if (mine.names.length > 0) sp.set("names", mine.names.join(","));
-  // Opponent's formation
-  sp.set("vs_f", opponent.formation);
-  sp.set("vs_s", opponent.style);
-  sp.set("vs_c", opponent.color);
-  if (opponent.names.length > 0) sp.set("vs_n", opponent.names.join(","));
-  // Flow marker
-  sp.set("flow", "counter");
-  return `${window.location.pathname}?${sp.toString()}`;
+export function buildChallengeSharePath(slug: string): string {
+  return `/?challenge=${encodeURIComponent(slug)}`;
+}
+
+const SLUG_RE = /^[a-zA-Z0-9_-]{4,32}$/;
+
+export function decodeChallengeSlugFromUrl(sp: URLSearchParams): string | null {
+  const slug = sp.get("challenge");
+  return slug && SLUG_RE.test(slug) ? slug : null;
 }
 
 /**
