@@ -11,6 +11,7 @@ type LatestMatch =
   | null;
 
 // Modular commands (DRY: Auto-discovered command registry)
+import { makeGroupVerificationStore } from "./verification-store";
 import { registerCommands, wireCommandHandlers } from "./telegram/commands/registry";
 import { buildWelcomeMessage } from "./telegram/commands/help-text";
 import { setupGeneralChatHandler } from "./telegram/commands/ask";
@@ -66,13 +67,12 @@ interface PendingGroupVerification {
   awayMessageId?: number;
   homeChatId?: string;
   awayChatId?: string;
-  confirms: Set<string>;   // userId set
-  disputes: Set<string>;   // userId set
+  confirms: string[];      // userIds who confirmed
+  disputes: string[];      // userIds who disputed
   createdAt: number;
   totalMembers: number;    // combined squad member count for threshold
 }
 
-const GROUP_VERIFICATION_TTL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 type LinkedSquadGroup = NonNullable<
   Awaited<ReturnType<typeof findSquadGroupByChatId>>
@@ -130,7 +130,8 @@ export class TelegramService {
   private bot: TelegramBot;
   private redisService: TelegramRedisStore | null;
   private pendingMatchDrafts = new Map<string, PendingMatchDraft>();
-  private pendingGroupVerifications = new Map<string, PendingGroupVerification>();
+  // Redis-backed so confirm/dispute votes survive across serverless instances.
+  private verifStore = makeGroupVerificationStore<PendingGroupVerification>('telegram');
   private aiParseRateLimit = new Map<string, number[]>();
   private pendingSquadSelectText = new Map<string, { text: string; expiresAt: number }>();
   private generalChatMemory = new Map<number, GeneralChatMessage[]>();
@@ -964,15 +965,6 @@ export class TelegramService {
     }
   }
 
-  private pruneExpiredGroupVerifications(): void {
-    const cutoff = Date.now() - GROUP_VERIFICATION_TTL_MS;
-    for (const [matchId, verification] of this.pendingGroupVerifications.entries()) {
-      if (verification.createdAt < cutoff) {
-        this.pendingGroupVerifications.delete(matchId);
-      }
-    }
-  }
-
   /**
    * Get the confirm threshold for group verification based on squad size.
    * Small squads (<=4 members) need fewer confirms.
@@ -994,8 +986,6 @@ export class TelegramService {
     awayScore: number,
     submittedByName: string,
   ): Promise<void> {
-    this.pruneExpiredGroupVerifications();
-
     const squads = await prisma.squad.findMany({
       where: { id: { in: [homeSquadId, awaySquadId] } },
       include: {
@@ -1019,8 +1009,8 @@ export class TelegramService {
       awaySquadName: awaySquad.name,
       homeScore,
       awayScore,
-      confirms: new Set(),
-      disputes: new Set(),
+      confirms: [],
+      disputes: [],
       createdAt: Date.now(),
       totalMembers,
     };
@@ -1074,7 +1064,7 @@ export class TelegramService {
       }
     }
 
-    this.pendingGroupVerifications.set(matchId, verification);
+    await this.verifStore.save(verification);
   }
 
   /**
@@ -1097,7 +1087,7 @@ export class TelegramService {
       return;
     }
 
-    const verification = this.pendingGroupVerifications.get(matchId);
+    const verification = await this.verifStore.get(matchId);
     if (!verification) {
       await this.bot.answerCallbackQuery(query.id, {
         text: 'This verification has expired.',
@@ -1123,22 +1113,25 @@ export class TelegramService {
       return;
     }
 
-    // Toggle behavior: remove from the other set if present
+    // Move the user to the chosen side (idempotent — no toggle-off on Telegram).
+    const uid = identity.userId;
+    verification.disputes = verification.disputes.filter((u) => u !== uid);
+    verification.confirms = verification.confirms.filter((u) => u !== uid);
     if (action === 'confirm') {
-      verification.disputes.delete(identity.userId);
-      verification.confirms.add(identity.userId);
+      verification.confirms.push(uid);
     } else {
-      verification.confirms.delete(identity.userId);
-      verification.disputes.add(identity.userId);
+      verification.disputes.push(uid);
     }
+
+    await this.verifStore.save(verification);
 
     // Update button counts on both messages
     const threshold = this.getGroupVerificationThreshold(verification.totalMembers);
     const updatedKeyboard = {
       inline_keyboard: [
         [
-          { text: `✅ Confirm (${verification.confirms.size})`, callback_data: `verify_match_confirm:${matchId}` },
-          { text: `❌ Dispute (${verification.disputes.size})`, callback_data: `verify_match_dispute:${matchId}` },
+          { text: `✅ Confirm (${verification.confirms.length})`, callback_data: `verify_match_confirm:${matchId}` },
+          { text: `❌ Dispute (${verification.disputes.length})`, callback_data: `verify_match_dispute:${matchId}` },
         ],
       ],
     };
@@ -1165,9 +1158,9 @@ export class TelegramService {
     });
 
     // Check if thresholds are met
-    if (verification.confirms.size >= threshold && verification.disputes.size === 0) {
+    if (verification.confirms.length >= threshold && verification.disputes.length === 0) {
       await this.resolveGroupVerification(matchId, 'verified');
-    } else if (verification.disputes.size >= 2) {
+    } else if (verification.disputes.length >= 2) {
       await this.resolveGroupVerification(matchId, 'disputed');
     }
   }
@@ -1179,13 +1172,13 @@ export class TelegramService {
     matchId: string,
     resolution: 'verified' | 'disputed',
   ): Promise<void> {
-    const verification = this.pendingGroupVerifications.get(matchId);
+    const verification = await this.verifStore.get(matchId);
     if (!verification) return;
 
-    // Use the first confirmer as the synthetic verifier
+    // Use the confirmers/disputers as the synthetic verifiers
     const verifierIds = resolution === 'verified'
-      ? Array.from(verification.confirms)
-      : Array.from(verification.disputes);
+      ? verification.confirms
+      : verification.disputes;
 
     if (verifierIds.length === 0) return;
 
@@ -1217,7 +1210,7 @@ export class TelegramService {
       `*${verification.homeSquadName}* ${verification.homeScore} - ${verification.awayScore} *${verification.awaySquadName}*`,
       ``,
       resolution === 'verified'
-        ? `Confirmed by ${verification.confirms.size} players. Peer rating window is now open!`
+        ? `Confirmed by ${verification.confirms.length} players. Peer rating window is now open!`
         : `This result has been disputed. Captains will need to resolve.`,
     ].join('\n');
 
@@ -1238,32 +1231,19 @@ export class TelegramService {
       }
     }
 
-    this.pendingGroupVerifications.delete(matchId);
+    await this.verifStore.remove(matchId);
   }
 
   /**
-   * Get all pending group verifications that have expired (for the cron to auto-verify).
-   */
-  public getExpiredGroupVerifications(): PendingGroupVerification[] {
-    const cutoff = Date.now() - GROUP_VERIFICATION_TTL_MS;
-    const expired: PendingGroupVerification[] = [];
-    for (const [, verification] of this.pendingGroupVerifications.entries()) {
-      if (verification.createdAt < cutoff) {
-        expired.push(verification);
-      }
-    }
-    return expired;
-  }
-
-  /**
-   * Resolve a group verification externally (called by the expiry cron).
+   * Resolve a group verification externally (called by the expiry cron to edit
+   * the group cards once the DB match has been settled).
    */
   public async resolveGroupVerificationExternal(matchId: string): Promise<void> {
-    const verification = this.pendingGroupVerifications.get(matchId);
+    const verification = await this.verifStore.get(matchId);
     if (!verification) return;
 
     // If no disputes, auto-verify (silence = consent)
-    if (verification.disputes.size < 2) {
+    if (verification.disputes.length < 2) {
       await this.resolveGroupVerification(matchId, 'verified');
     } else {
       await this.resolveGroupVerification(matchId, 'disputed');
