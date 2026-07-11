@@ -6,6 +6,18 @@ const nextConfig = {
   reactStrictMode: true,
   productionBrowserSourceMaps: false,
   serverExternalPackages: ['sharp', '@resvg/resvg-js'],
+  // `sharp` is externalized above (native require, not webpack-bundled), so the
+  // `.next/standalone` output-file trace must physically copy its package dir.
+  // Next's tracer (@vercel/nft) misses this for sharp specifically — a
+  // documented gap (see the Next.js `output` config docs' own "Common include
+  // patterns for native/runtime assets" example) — which is what broke the CI
+  // "Smoke Test (artifact build + server boot)" job with `sharp — MODULE NOT
+  // FOUND` even though its platform binaries were present. `/*` is scoped by
+  // the narrow value, not the route key: it forces every route's trace to
+  // include just the sharp package directory, not the whole repo.
+  outputFileTracingIncludes: {
+    '/*': ['node_modules/sharp/**/*'],
+  },
   typescript: {
     // Type-checking runs in GitHub Actions CI (ci.yml) with 8GB heap — not during
     // the Vercel build, which is limited to 8GB total RAM and OOMs on tsc.
