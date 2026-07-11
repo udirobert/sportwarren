@@ -33,12 +33,14 @@ import {
 } from '@/components/v3';
 import type { PlayerPrediction } from '@/server/services/personalization/predictions';
 import { PreviewQuizFlow } from './PreviewQuizFlow';
+import { PhoneLinkPrompt } from './PhoneLinkPrompt';
 
 // Derive the quiz prop shape from the component itself so the two never
 // drift and there's no nominal-type clash when we spread it through.
 type QuizProps = React.ComponentProps<typeof PreviewQuizFlow>;
 
 export function PreviewFirstContact({
+  token,
   cardUser,
   attrs,
   overall,
@@ -48,6 +50,7 @@ export function PreviewFirstContact({
   // pass-through quiz props
   quiz,
 }: {
+  token: string;
   cardUser: {
     name: string | null;
     position: string | null;
@@ -141,6 +144,17 @@ export function PreviewFirstContact({
         These are our predictions — the lads decide what’s real. Rate {matesToRate} of
         them to unlock what they actually think of you.
       </p>
+
+      {/* Secondary, low-key — never competes with the primary CTA above.
+          Tied to a concrete payoff happening tonight, not an abstract
+          "connect your account" ask. */}
+      <div style={{ marginTop: 28, paddingTop: 20, borderTop: `1px solid ${PALETTE.ink}15` }}>
+        <PhoneLinkPrompt
+          token={token}
+          context="pregame"
+          promptLine={`Want us to tell you tomorrow if you proved us wrong? Link WhatsApp.`}
+        />
+      </div>
     </V3PageShell>
   );
 }

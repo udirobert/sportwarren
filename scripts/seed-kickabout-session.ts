@@ -11,9 +11,23 @@
  *   - N SquadMembers (everyone in the same group)
  *   - 1 synthetic "last week's session" Match
  *   - N PlayerMatchStats rows (per-player goals/games for last week)
+ *   - (if `upcomingSession` is set) 1 open Session for the NEXT game, with
+ *     a SessionAttendee per player (teamPreference carries "Light"/"Dark"/
+ *     whatever team label was given), plus a Redis-backed reveal token —
+ *     the ONE shared "who's who" link (see session-reveal.ts)
+ *
+ * No player phone numbers are required or expected — this script never
+ * seeds a number. Each player voluntarily links their own WhatsApp later,
+ * from their own preview card (see phone-link.ts + preview/[token]/_actions.ts
+ * requestPhoneLink). `player.phone` still exists as an *opt-in* escape hatch
+ * for a captain who already has real numbers for an EXISTING squad — leave
+ * it unset for a cold roster (e.g. players found via a third-party app).
  *
  * Outputs to stdout:
- *   - Per-player preview URL  (https://<host>/preview/<token>)
+ *   - The shared roster-reveal URL (if upcomingSession is set) — the one
+ *     link to post publicly; each player taps their own name on it
+ *   - Per-player preview URL  (https://<host>/preview/<token>) — for a
+ *     captain who DOES already have individual numbers to DM directly
  *   - Per-player WhatsApp message you can copy-paste
  *
  * The auth model: each User gets walletAddress = "kickabout_<token>" and
@@ -21,7 +35,8 @@
  * User by that walletAddress and renders a tailored landing surface.
  *
  * Idempotent: re-running on the same roster.json updates existing rows
- * (matched by walletAddress / squad name).
+ * (matched by walletAddress / squad name). Re-running also mints a NEW
+ * reveal token each time — the old one still resolves until its TTL expires.
  */
 
 import * as dotenv from 'dotenv';
@@ -33,6 +48,7 @@ import path from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { baselineForPosition } from '../src/server/services/personalization/position-baselines';
 import { generatePrediction } from '../src/server/services/personalization/predictions';
+import { saveSessionReveal } from '../src/server/services/personalization/session-reveal';
 
 dotenv.config({ path: '.env.local' });
 dotenv.config({ path: '.env', override: false });
@@ -71,7 +87,12 @@ type HairStyle = (typeof VALID_HAIR_STYLES)[number];
 
 interface RosterPlayer {
   name: string;
+  /** Opt-in only — leave unset for a cold roster. See file header. */
   phone?: string;
+  /** e.g. "Light" / "Dark" for tomorrow's game. Purely a display label on
+   *  the roster-reveal page (SessionAttendee.teamPreference) — not the
+   *  fixed-squad Match.homeSquadId/awaySquadId concept. */
+  team?: string;
   position?: string;
   skillNote?: string;
   lastWeekGoals: number;
@@ -94,12 +115,20 @@ interface RosterFile {
     accentColor?: string;
     founded?: string;
   };
+  /** Last week's completed session — feeds the synthetic match + realistic
+   *  starting stats. Unrelated to `upcomingSession` below. */
   session: {
     date: string;
     format: string;
     playersPerSide: number;
     hasKeeper: boolean;
     totalGoals?: number;
+    notes?: string;
+  };
+  /** The game this roster is actually being seeded FOR. Optional — omit to
+   *  seed only last week's stats with no shared reveal link. */
+  upcomingSession?: {
+    date: string;
     notes?: string;
   };
   organizerWalletAddress?: string;
@@ -439,9 +468,58 @@ async function main() {
     }
     console.log(`  ✓ Per-player session stats logged`);
 
+    // 4b. Upcoming session (the actual game this roster is FOR) + the one
+    // shared reveal link. Distinct from the "last week" Session above —
+    // this one is 'open' (not 'completed') and dated forward.
+    let revealUrl: string | null = null;
+    if (data.upcomingSession) {
+      const upcomingDate = new Date(data.upcomingSession.date);
+      if (Number.isNaN(upcomingDate.getTime())) {
+        console.error(`Invalid upcomingSession.date: ${data.upcomingSession.date}`);
+        process.exit(1);
+      }
+
+      const upcoming = await prisma.session.create({
+        data: {
+          squadId: squad.id,
+          name: data.upcomingSession.notes ?? `${data.group.name} · ${data.upcomingSession.date}`,
+          date: upcomingDate,
+          status: 'open',
+        },
+      });
+
+      for (const { player, profileId } of provisioned) {
+        await prisma.sessionAttendee.upsert({
+          where: { sessionId_profileId: { sessionId: upcoming.id, profileId } },
+          update: { teamPreference: player.team ?? null },
+          create: {
+            sessionId: upcoming.id,
+            profileId,
+            teamPreference: player.team ?? null,
+            status: 'in',
+          },
+        });
+      }
+
+      const revealToken = genToken('reveal');
+      await saveSessionReveal(revealToken, { squadId: squad.id, sessionId: upcoming.id });
+      revealUrl = `${baseUrl}/preview/session/${revealToken}`;
+      console.log(`  ✓ Upcoming session (${data.upcomingSession.date}) + reveal link minted`);
+    }
+
     // 5. Output preview links + WhatsApp messages
+    if (revealUrl) {
+      console.log('\n========================================================');
+      console.log('  ROSTER REVEAL — post this ONE link publicly (game-day');
+      console.log('  comments / group chat). Each player taps their own');
+      console.log('  name on it — no phone numbers needed.');
+      console.log('========================================================');
+      console.log(`  ${revealUrl}`);
+    }
+
     console.log('\n========================================================');
-    console.log('  PREVIEW LINKS — paste each into the player\'s WhatsApp');
+    console.log('  PREVIEW LINKS — only useful if you already have their');
+    console.log('  number to DM directly (existing squad, not a cold roster)');
     console.log('========================================================');
     for (const { player, profileId, token } of provisioned) {
       const url = `${baseUrl}/preview/${encodeURIComponent(token)}`;
