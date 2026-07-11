@@ -2,21 +2,21 @@
  * Scorer → player attribution for chat-logged matches.
  *
  * The match parser (`@/lib/ai/match-parser`) captures goalscorers/assisters by
- * NAME ("I bagged 2, Sammy got the other"). This turns those names into the
- * logging squad's `PlayerProfile`s and writes them onto `PlayerMatchStats`.
+ * NAME ("I bagged 2, Sammy got the other"). This resolves those names to the
+ * logging squad's `PlayerProfile`s. The resolved goals/assists are then handed
+ * to `submitMatchResult`, which writes them onto `PlayerMatchStats` inside the
+ * seed→XP window so career totals + XP pick them up on every verification path.
  *
  * INTEGRITY FIRST — stats are how the group remembers a player, so this resolver
  * is deliberately conservative: it only credits a goal when it is confident who
  * scored (self-reference, an exact name, or a unique first name). Anything
  * ambiguous is returned as `unresolved` and logged as a plain team goal rather
- * than guessed onto the wrong player. Career totals + XP stay gated behind match
- * verification (`applyMatchXP` reads these rows), so nothing counts until the
- * result is verified.
+ * than guessed onto the wrong player.
+ *
+ * Pure — no Prisma, no I/O. The write path lives in `submitMatchResult`.
  */
 
-import type { PrismaClient } from '@prisma/client';
 import type { MatchScorer, MatchAssister } from '@/lib/ai/match-parser';
-import { ensureMatchParticipationStats } from '@/server/services/match-workflow';
 
 export interface AttributionMember {
   profileId: string;
@@ -138,33 +138,4 @@ export function resolveScorers(input: {
     assists: [...assistsByProfile.values()],
     unresolved,
   };
-}
-
-/**
- * Write a resolution onto the match's `PlayerMatchStats` rows. Seeds the
- * zero-goal participation rows first (idempotent), then sets goals/assists for
- * the resolved profiles. `updateMany` is a no-op for a profile without a row
- * (e.g. a member with no PlayerProfile), so this never throws on a miss.
- */
-export async function applyScorerAttribution(
-  prisma: PrismaClient,
-  matchId: string,
-  resolution: ScorerResolution,
-): Promise<void> {
-  if (resolution.goals.length === 0 && resolution.assists.length === 0) return;
-
-  await ensureMatchParticipationStats(prisma, matchId);
-
-  for (const g of resolution.goals) {
-    await prisma.playerMatchStats.updateMany({
-      where: { matchId, profileId: g.profileId },
-      data: { goals: g.goals },
-    });
-  }
-  for (const a of resolution.assists) {
-    await prisma.playerMatchStats.updateMany({
-      where: { matchId, profileId: a.profileId },
-      data: { assists: a.assists },
-    });
-  }
 }

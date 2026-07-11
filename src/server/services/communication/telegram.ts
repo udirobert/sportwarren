@@ -37,7 +37,6 @@ import {
 } from "@/lib/ai/match-parser";
 import {
   resolveScorers,
-  applyScorerAttribution,
   type ScorerResolution,
   type AttributionMember,
 } from "@/server/services/match/scorer-attribution";
@@ -1849,22 +1848,10 @@ export class TelegramService {
 
     const isSociallyTrusted = await this.checkSocialTrust(squad.id, opponent.id);
 
-    const { submitMatchResult } = await import("../match-workflow");
-    const match = await submitMatchResult({
-      prisma,
-      homeSquadId: squad.id,
-      awaySquadId: opponent.id,
-      homeScore: draft.teamScore,
-      awayScore: draft.opponentScore,
-      submittedBy: draft.submittedBy,
-      submittedByMembershipId: membership.id, // Multi-squad attribution
-      matchDate: new Date(),
-      isSociallyTrusted,
-    });
-
-    // Attribute any parsed goalscorers/assisters to the logging squad's players.
-    // Career totals + XP stay gated behind verification (applyMatchXP reads these
-    // rows), so nothing counts until the result is verified.
+    // Resolve chat-parsed scorers/assisters to squad players BEFORE submitting,
+    // so submitMatchResult can apply them inside its seed→XP window (this is what
+    // credits goal-XP on the social-trust inline-verify path too). Conservative:
+    // ambiguous/unknown names stay unresolved and log as plain team goals.
     let attribution: ScorerResolution | null = null;
     if (draft.scorers.length > 0 || draft.assists.length > 0) {
       const squadMembers = await prisma.squadMember.findMany({
@@ -1886,8 +1873,22 @@ export class TelegramService {
         assists: draft.assists,
         submitterUserId: draft.submittedBy,
       });
-      await applyScorerAttribution(prisma, match.id, attribution);
     }
+
+    const { submitMatchResult } = await import("../match-workflow");
+    const match = await submitMatchResult({
+      prisma,
+      homeSquadId: squad.id,
+      awaySquadId: opponent.id,
+      homeScore: draft.teamScore,
+      awayScore: draft.opponentScore,
+      submittedBy: draft.submittedBy,
+      submittedByMembershipId: membership.id, // Multi-squad attribution
+      matchDate: new Date(),
+      isSociallyTrusted,
+      playerGoals: attribution?.goals.map((g) => ({ profileId: g.profileId, goals: g.goals })),
+      playerAssists: attribution?.assists.map((a) => ({ profileId: a.profileId, assists: a.assists })),
+    });
 
     await this.deletePendingDraft(draft.id);
 
