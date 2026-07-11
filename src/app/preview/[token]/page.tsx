@@ -183,6 +183,7 @@ export default async function PreviewPage({ params, searchParams }: PageProps) {
 
   return (
     <PreviewFirstContact
+      token={token}
       cardUser={{
         name: user.name,
         position: user.position,

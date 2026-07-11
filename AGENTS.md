@@ -34,10 +34,13 @@ for that impulse.
 - **Multi-channel:** Meet groups where they already are. WhatsApp for
   casual logging, Telegram for deeper engagement, web for the full record.
 - **Pre-seeded onboarding:** For the kickabout shape, the organizer
-  pre-seeds the roster + last week's results in one go, then sends each
-  player a personal preview link. By the time the group meets, the app
-  already knows them. See `scripts/seed-kickabout-session.ts` +
-  `src/app/preview/[token]/page.tsx`.
+  pre-seeds the roster + last week's results in one go. By the time the
+  group meets, the app already knows them. Two distribution paths: an
+  existing squad with known numbers gets a personal preview link DM'd
+  directly; a cold roster (players found via a third-party app, no numbers
+  known) gets the one shared "who's who" reveal link instead — nobody's
+  phone number is ever seeded. See `scripts/seed-kickabout-session.ts` +
+  `src/app/preview/[token]/page.tsx` + "Cold-roster distribution" below.
 - **Deferred to phase 2:** Coaching marketplace, tournaments/championship
   ladder, agentic-commerce UI. These are optimization layers, not core to
   the preservation thesis.
@@ -124,6 +127,14 @@ Never conflate them in code or in product copy:
   seed scripts catches P2002 and leaves the user with `handle=null`;
   the captain (or the user themselves) sets a custom handle later via
   Settings → Privacy. Seed scripts must never abort on a name clash.
+
+A third, distinct category: `/preview/session/{revealToken}` (see Flywheel
+surfaces → "Cold-roster distribution") is a per-*session* shared URL, not a
+per-player one — it shows names only, never a walletAddress in page source,
+and gates no writes (the tap-through still lands on the real, private
+`/preview/{walletAddress}` for whoever taps their own name). Doesn't
+collapse the two-URL rule above; it's the discovery step that precedes it
+when no player has a personal link yet.
 
 ### Public surfaces (shipped 2026-06-21)
 
@@ -246,7 +257,7 @@ ONLY on the in-app `/profile` page — marked with a TODO pointing at
 V3PlayerCard. When the rest of `(app)` is ported to V3, delete it.
 `SquadIdentityCard.tsx` was unused and deleted in the harmonization pass.
 
-### Flywheel surfaces (shipped 2026-06-21, extended 2026-07-09 & 2026-07-11)
+### Flywheel surfaces (shipped 2026-06-21, extended 2026-07-09, 2026-07-11 & 2026-07-12)
 
 The closed-loop ecosystem (`docs/flywheel.md`) bound together by:
 
@@ -279,6 +290,26 @@ The closed-loop ecosystem (`docs/flywheel.md`) bound together by:
   inside the seed→XP window on every verification path. Career totals + XP stay
   gated behind verification (`applyMatchXP` reads those rows), so nothing counts
   until the result is verified.
+- **Cold-roster distribution + voluntary phone-link** — when the seed script
+  is given an `upcomingSession` block, it creates an `open` `Session` dated
+  forward (distinct from the "last week" one), assigns `team` per player via
+  `SessionAttendee.teamPreference`, and mints a Redis-backed reveal token
+  (`session-reveal.ts`). Output leads with the ONE shared "who's who" URL —
+  `/preview/session/{token}` (`RosterReveal.tsx`) — names only, never raw
+  preview tokens in page source; tapping a name calls `resolveRosterMemberToken`
+  (re-validates + confirms the profileId is actually on that session's roster)
+  before redirecting into that player's own card. No phone number is ever
+  seeded — a player volunteers their own from two placements sharing one
+  component (`PhoneLinkPrompt.tsx`): a low-key line under the pre-game "bold
+  call" (`PreviewFirstContact`, context `pregame`) and a "same time next
+  week?" commit bundle on the returning-visitor dashboard (`PreviewCardDashboard`
+  + `NextKickaboutCommit.tsx`, context `next_week` — reuses `commitmentFraming`
+  and chains onto the same upcoming `Session` the reveal page points at, or
+  creates one a week out). Mechanism (`phone-link.ts` + `preview/[token]/_actions.ts`
+  `requestPhoneLink`): type a number → WhatsApp texts back a football-themed
+  confirm word → replying it is the ONLY proof-of-ownership step, checked in
+  `whatsapp.ts`'s text handler (mirrors the `wa:avail:` pending-lookup
+  pattern) → only then does `PlatformIdentity` get written.
 - **Post-session analysis** (`/session/{sessionId}/analysis/{playerToken}`)
   — chess.com "your match" surface. Reads PlayerMatchStats + PeerRating
   + PlayerTwin to assemble goals/ratings/attributes/weakness story, plus

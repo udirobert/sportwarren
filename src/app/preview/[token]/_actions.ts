@@ -14,6 +14,19 @@ import { prisma } from '@/lib/db';
 import { getPreviewUser } from '../_lib/get-preview-user';
 import { getScenarioById } from '@/server/services/perception/scenarios';
 import { maybeSendTierUnlockNudge } from '@/server/services/perception/nudges';
+import { redisService } from '@/server/services/redis';
+import { getWhatsAppService } from '@/server/services/communication/whatsapp';
+import {
+  normalizePhone,
+  isPlausiblePhone,
+  pickConfirmWord,
+  phoneLinkRedisKey,
+  requestMessage,
+  PHONE_LINK_TTL_SECONDS,
+  type PendingPhoneLink,
+  type PhoneLinkContext,
+} from '@/server/services/personalization/phone-link';
+import { commitmentFraming } from '@/server/services/personalization/commitment-framing';
 
 export interface PerceptionPeek {
   scenarioId: string;
@@ -159,4 +172,124 @@ export async function submitPerception(input: {
       topChoice,
     },
   };
+}
+
+export interface RequestPhoneLinkResult {
+  ok: boolean;
+  error?: string;
+  /** Returned so the UI can show "we sent you BANGER" without a re-fetch. */
+  code?: string;
+}
+
+/**
+ * Voluntary phone-link, step 1 of 2. The player types their own number; we
+ * text THAT number a confirm word via WhatsApp. Nothing is written to
+ * PlatformIdentity yet — that only happens when they reply with the code
+ * (see whatsapp.ts's text handler), proving they actually hold the number.
+ */
+export async function requestPhoneLink(input: {
+  token: string;
+  phone: string;
+  context: PhoneLinkContext;
+}): Promise<RequestPhoneLinkResult> {
+  const { token, phone, context } = input;
+
+  if (!isPlausiblePhone(phone)) {
+    return { ok: false, error: "That doesn't look like a real number" };
+  }
+
+  const user = await getPreviewUser(token);
+  if (!user) return { ok: false, error: 'Could not find your card' };
+
+  const whatsappService = getWhatsAppService();
+  if (!whatsappService?.isConfigured()) {
+    return { ok: false, error: 'WhatsApp linking is not available right now' };
+  }
+
+  const normalized = normalizePhone(phone);
+  const firstName = (user.name ?? 'there').split(' ')[0];
+  const code = pickConfirmWord();
+
+  const pending: PendingPhoneLink = { userId: user.id, previewToken: token, firstName, code, context };
+  await redisService.set(phoneLinkRedisKey(normalized), JSON.stringify(pending), PHONE_LINK_TTL_SECONDS);
+
+  try {
+    await whatsappService.sendText(normalized, requestMessage(firstName, code, context));
+  } catch (err) {
+    console.error('[phone-link] Failed to send confirm message:', err);
+    return { ok: false, error: 'Could not send that WhatsApp message — check the number' };
+  }
+
+  return { ok: true, code };
+}
+
+/** Minimum committed players for a kickabout to happen (both sides of a
+ *  5-a-side + subs). Mirrors session/[sessionId]/analysis/[playerToken]'s
+ *  commitToNextSession — same MIN_TO_PLAY default until per-group config
+ *  exists, but scoped through the preview-token model (guest players)
+ *  rather than a claimed playerToken. */
+const MIN_TO_PLAY = 10;
+const NEXT_SESSION_OFFSET_DAYS = 7;
+
+export interface CommitToNextKickaboutResult {
+  ok: boolean;
+  inCount: number;
+  target: number;
+  line: string;
+  met: boolean;
+  error?: string;
+}
+
+/**
+ * Preview-tier commitment capture: a returning (tier >= 1) guest taps "same
+ * time next week?". Finds the squad's already-seeded upcoming session if
+ * it's still ahead of now (the one the roster-reveal page points at — this
+ * naturally chains onto it, no duplicate session created), otherwise
+ * creates one a week out. Idempotent — tapping again just keeps them 'in'.
+ */
+export async function commitToNextKickabout(token: string): Promise<CommitToNextKickaboutResult> {
+  const empty = { ok: false, inCount: 0, target: MIN_TO_PLAY, line: '', met: false };
+
+  const user = await getPreviewUser(token, {
+    include: { playerProfile: true, squads: true },
+  });
+  if (!user?.playerProfile) return { ...empty, error: 'Could not find your card' };
+
+  // Prefer the squad this guest captains, matching page.tsx's own
+  // resolution — consistent behaviour if a guest is ever seeded into more
+  // than one group.
+  const captainMembership = user.squads.find((m) => m.role === 'captain');
+  const squadId = captainMembership?.squadId ?? user.squads[0]?.squadId;
+  if (!squadId) return { ...empty, error: 'No squad found' };
+
+  let next = await prisma.session.findFirst({
+    where: { squadId, status: { in: ['open', 'scheduled'] }, date: { gt: new Date() } },
+    orderBy: { date: 'asc' },
+    select: { id: true },
+  });
+  if (!next) {
+    const nextDate = new Date(Date.now() + NEXT_SESSION_OFFSET_DAYS * 24 * 60 * 60 * 1000);
+    next = await prisma.session.create({
+      data: { squadId, name: 'Next session', date: nextDate, status: 'scheduled' },
+      select: { id: true },
+    });
+  }
+
+  await prisma.sessionAttendee.upsert({
+    where: { sessionId_profileId: { sessionId: next.id, profileId: user.playerProfile.id } },
+    update: { status: 'in', committedAt: new Date() },
+    create: {
+      sessionId: next.id,
+      profileId: user.playerProfile.id,
+      status: 'in',
+      committedAt: new Date(),
+    },
+  });
+
+  const inCount = await prisma.sessionAttendee.count({
+    where: { sessionId: next.id, status: 'in' },
+  });
+  const framing = commitmentFraming(inCount, MIN_TO_PLAY, true);
+
+  return { ok: true, inCount, target: MIN_TO_PLAY, line: framing.line, met: framing.met };
 }

@@ -21,6 +21,8 @@ import type {
   PerceptionAggregate,
   ChoiceCounts,
 } from '@/server/services/perception/aggregate';
+import { PhoneLinkPrompt } from './PhoneLinkPrompt';
+import { NextKickaboutCommit } from './NextKickaboutCommit';
 
 const EASE_OUT = 'cubic-bezier(0.23, 1, 0.32, 1)';
 
@@ -473,6 +475,21 @@ export function PreviewCardDashboard({
         </div>
       </div>
 
+      {/* Same time next week? + phone-link — the strongest-intent moment:
+          a RETURNING, engaged visitor (tier >= 1 to even see this dashboard)
+          asking for a nudge next week is a want they already have, not an
+          abstract "connect your account" ask. */}
+      <div style={{ ...secStyle(2), marginTop: 32, paddingTop: 24, borderTop: `1px solid ${PALETTE.ink}15` }}>
+        <NextKickaboutCommit token={token} />
+        <div style={{ marginTop: 18 }}>
+          <PhoneLinkPrompt
+            token={token}
+            context="next_week"
+            promptLine="Get a nudge before next week's game instead of relying on remembering."
+          />
+        </div>
+      </div>
+
       {/* Auth explanation + claim bridge */}
       <div style={{ ...secStyle(2), marginTop: 32, paddingTop: 24, borderTop: `1px solid ${PALETTE.ink}15` }}>
         <p style={{
@@ -486,8 +503,8 @@ export function PreviewCardDashboard({
           fontFamily: TYPE.mono, fontSize: 11, lineHeight: 1.55,
           color: PALETTE.inkLight, marginBottom: 16, maxWidth: 400,
         }}>
-          The captain sent this link to your WhatsApp. Only you have it —
-          it's how the app knows it's you. No password needed.
+          This link is yours alone — it's how the app knows it's you.
+          No password needed.
         </p>
         <button
           onClick={handleKeepCard}

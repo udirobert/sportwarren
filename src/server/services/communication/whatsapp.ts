@@ -4,6 +4,12 @@ import { dispatchWhatsAppCommand } from './whatsapp-agent';
 import { redisService } from '../redis';
 import { generateRateToken } from '@/lib/auth/rate-token';
 import { makeGroupVerificationStore } from './verification-store';
+import {
+  normalizePhone,
+  phoneLinkRedisKey,
+  confirmedMessage,
+  type PendingPhoneLink,
+} from '@/server/services/personalization/phone-link';
 
 export interface WhatsAppConfig {
   apiKey?: string;
@@ -275,6 +281,36 @@ export class WhatsAppService {
     if (type === 'text') {
       const text: string = message.text?.body ?? '';
       const senderNumber = message.from_user ?? from;
+
+      // ── Voluntary phone-link confirmation ─────────────────────
+      // A preview-tier player requested this from a preview page (see
+      // requestPhoneLink in preview/[token]/_actions.ts) and was texted a
+      // confirm word. Matching here — replying from the SAME number — is
+      // the only proof-of-ownership step; nothing was written to
+      // PlatformIdentity until this moment.
+      if (!from.endsWith('@g.us')) {
+        try {
+          const normalizedSender = normalizePhone(senderNumber);
+          const pendingRaw = await redisService.get(phoneLinkRedisKey(normalizedSender));
+          if (pendingRaw) {
+            const pending = JSON.parse(pendingRaw) as PendingPhoneLink;
+            if (text.trim().toUpperCase() === pending.code) {
+              await prisma.platformIdentity.upsert({
+                where: {
+                  platform_platformUserId: { platform: 'whatsapp', platformUserId: normalizedSender },
+                },
+                update: { userId: pending.userId },
+                create: { userId: pending.userId, platform: 'whatsapp', platformUserId: normalizedSender },
+              });
+              await redisService.del(phoneLinkRedisKey(normalizedSender));
+              await this.sendText(senderNumber, confirmedMessage(pending.firstName, pending.context));
+              return;
+            }
+          }
+        } catch (err) {
+          console.error('[WHATSAPP] Phone-link confirm check failed:', err);
+        }
+      }
 
       // ── Text-based RSVP (in/out/maybe) ────────────────────────
       const rsvpMatch = text.trim().toLowerCase().match(/^(in|out|maybe|yes|no|nah|yep|yeah|nah|cant|can'?t)$/i);
