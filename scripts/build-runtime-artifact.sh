@@ -154,11 +154,19 @@ echo "🩺 Validating artifact module resolution..."
 cd "$BUILD_DIR/.next/standalone"
 _VALIDATION_FAILED=0
 for _mod in '@prisma/client' 'pg' '@resvg/resvg-js' 'sharp' '@swc/helpers/_/_interop_require_default'; do
-  _err=$(node -e "require('$_mod')" 2>&1 1>/dev/null)
+  # `|| true` is required: under `set -e`, a failing command inside a plain
+  # `var=$(...)` assignment aborts the script immediately (bash does NOT
+  # suppress -e for assignment command-substitutions) — it skipped straight
+  # to script exit before this loop's own if/else could report which module
+  # failed or why. The try/catch (rather than piping raw stderr through
+  # `head`) surfaces `err.message` directly — a raw Node stack trace's first
+  # line is just a useless `node:internal/...:NNN` frame header, not the
+  # actual error.
+  _err=$(node -e "try { require('$_mod'); } catch (e) { console.error(e.message); process.exit(1); }" 2>&1 1>/dev/null) || true
   if [ -z "$_err" ]; then
     echo "  ✓ $_mod"
   else
-    echo "  ✗ $_mod — $(echo "$_err" | head -1)"
+    echo "  ✗ $_mod — $_err"
     _VALIDATION_FAILED=1
   fi
 done
