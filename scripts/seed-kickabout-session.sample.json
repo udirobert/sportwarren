@@ -14,11 +14,15 @@
     "totalGoals": 38,
     "notes": "Winner stays on, 7-min games, two-goal early finish, 2 hours total"
   },
+  "upcomingSession": {
+    "date": "2026-06-23T16:00:00Z",
+    "notes": "6v6 · Finsbury Leisure Centre, Old Street"
+  },
   "organizerWalletAddress": "kickabout_organizer_pete",
   "roster": [
     {
       "name": "Pete",
-      "phone": "+44...",
+      "team": "Light",
       "position": "AM",
       "skillNote": "all-rounder, decent passer",
       "lastWeekGoals": 3,
@@ -29,7 +33,7 @@
     },
     {
       "name": "Tom",
-      "phone": "+44...",
+      "team": "Dark",
       "position": "ST",
       "skillNote": "clinical finisher, best in the group",
       "lastWeekGoals": 8,
@@ -39,7 +43,7 @@
     },
     {
       "name": "Dave",
-      "phone": "+44...",
+      "team": "Light",
       "position": "CB",
       "skillNote": "solid defender, hates losing",
       "lastWeekGoals": 1,
@@ -49,7 +53,7 @@
     },
     {
       "name": "Sami",
-      "phone": "+44...",
+      "team": "Dark",
       "position": "CM",
       "skillNote": "engine, runs all night",
       "lastWeekGoals": 2,
@@ -59,7 +63,7 @@
     },
     {
       "name": "Liam",
-      "phone": "+44...",
+      "team": "Light",
       "position": "ST",
       "skillNote": "quick on the counter",
       "lastWeekGoals": 5,
@@ -69,7 +73,7 @@
     },
     {
       "name": "Marco",
-      "phone": "+44...",
+      "team": "Dark",
       "position": "CM",
       "skillNote": "playmaker, weighted through balls",
       "lastWeekGoals": 4,
@@ -79,7 +83,7 @@
     },
     {
       "name": "Ravi",
-      "phone": "+44...",
+      "team": "Dark",
       "position": "GK",
       "skillNote": "sweeper-keeper when needed",
       "lastWeekGoals": 0,
@@ -89,7 +93,7 @@
     },
     {
       "name": "Chris",
-      "phone": "+44...",
+      "team": "Light",
       "position": "CB",
       "skillNote": "physical, tough in the air",
       "lastWeekGoals": 2,
@@ -99,7 +103,7 @@
     },
     {
       "name": "Jamie",
-      "phone": "+44...",
+      "team": "Light",
       "position": "LB",
       "skillNote": "overlapping fullback",
       "lastWeekGoals": 1,
@@ -109,7 +113,7 @@
     },
     {
       "name": "Nathan",
-      "phone": "+44...",
+      "team": "Dark",
       "position": "ST",
       "skillNote": "poacher in the box",
       "lastWeekGoals": 6,
@@ -119,7 +123,7 @@
     },
     {
       "name": "Will",
-      "phone": "+44...",
+      "team": "Dark",
       "position": "RM",
       "skillNote": "winger, beats his man",
       "lastWeekGoals": 3,
@@ -129,7 +133,7 @@
     },
     {
       "name": "Adam",
-      "phone": "+44...",
+      "team": "Light",
       "position": "CM",
       "skillNote": "tidy player, finds space",
       "lastWeekGoals": 3,

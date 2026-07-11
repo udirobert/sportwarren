@@ -1,0 +1,33 @@
+{
+  "group": {
+    "name": "Old Street Sunday",
+    "shortName": "OSS",
+    "kitColor": "#c91022",
+    "accentColor": "#1c3a5e"
+  },
+  "session": {
+    "date": "2026-07-05",
+    "format": "6v6",
+    "playersPerSide": 6,
+    "hasKeeper": false,
+    "totalGoals": 0,
+    "notes": "First session tracked on SportWarren — no history yet, so this is a zero-goal placeholder week, not a real result."
+  },
+  "upcomingSession": {
+    "date": "2026-07-12T15:00:00Z",
+    "notes": "6v6 · Finsbury Leisure Centre, Old Street (Pitch 1)"
+  },
+  "roster": [
+    { "name": "waynedu", "team": "Light", "lastWeekGoals": 0, "lastWeekWins": 0, "lastWeekGames": 0, "look": { "skin": "mid", "hair": "dark", "hairStyle": "short" } },
+    { "name": "ali-drabu", "team": "Light", "lastWeekGoals": 0, "lastWeekWins": 0, "lastWeekGames": 0, "look": { "skin": "mid", "hair": "dark", "hairStyle": "short" } },
+    { "name": "spencer-caminsky", "team": "Light", "lastWeekGoals": 0, "lastWeekWins": 0, "lastWeekGames": 0, "look": { "skin": "light", "hair": "brown", "hairStyle": "short" } },
+    { "name": "alexemery11", "team": "Light", "lastWeekGoals": 0, "lastWeekWins": 0, "lastWeekGames": 0, "look": { "skin": "light", "hair": "blond", "hairStyle": "short" } },
+    { "name": "jimmyzhang", "team": "Light", "lastWeekGoals": 0, "lastWeekWins": 0, "lastWeekGames": 0, "look": { "skin": "mid", "hair": "dark", "hairStyle": "short" } },
+    { "name": "onlyscoresbangers", "team": "Dark", "position": "CM", "skillNote": "playmaker, weighted through balls", "lastWeekGoals": 0, "lastWeekWins": 0, "lastWeekGames": 0, "look": { "skin": "mid", "hair": "dark", "hairStyle": "short" } },
+    { "name": "lev1", "team": "Dark", "position": "ST", "skillNote": "clinical finisher", "lastWeekGoals": 0, "lastWeekWins": 0, "lastWeekGames": 0, "look": { "skin": "mid", "hair": "brown", "hairStyle": "short" }, "isOrganizer": true },
+    { "name": "arky-osovtsov", "team": "Dark", "lastWeekGoals": 0, "lastWeekWins": 0, "lastWeekGames": 0, "look": { "skin": "light", "hair": "dark", "hairStyle": "short" } },
+    { "name": "a1b2c3", "team": "Dark", "lastWeekGoals": 0, "lastWeekWins": 0, "lastWeekGames": 0, "look": { "skin": "dark", "hair": "dark", "hairStyle": "short" } },
+    { "name": "maxievans95", "team": "Dark", "lastWeekGoals": 0, "lastWeekWins": 0, "lastWeekGames": 0, "look": { "skin": "light", "hair": "blond", "hairStyle": "short" } },
+    { "name": "moeinghorshi", "team": "Dark", "lastWeekGoals": 0, "lastWeekWins": 0, "lastWeekGames": 0, "look": { "skin": "mid", "hair": "dark", "hairStyle": "short" } }
+  ]
+}
