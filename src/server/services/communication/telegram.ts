@@ -31,10 +31,10 @@ import {
   isTelegramConnectToken,
 } from "./platform-connections";
 import {
-  parseTelegramMatchResult,
-  type ParsedTelegramMatchResult,
-} from "./telegram-match-parser";
-import { parseNaturalLanguageMatch } from "@/lib/ai/match-parser";
+  parseMatchResult,
+  parseMatchPattern,
+  type ParsedMatch,
+} from "@/lib/ai/match-parser";
 import {
   buildVerificationNudgeMessage,
   shouldSendNudge,
@@ -47,7 +47,7 @@ import {
   TreasuryBalanceError,
 } from "../economy/treasury-ledger";
 
-interface PendingMatchDraft extends ParsedTelegramMatchResult {
+interface PendingMatchDraft extends ParsedMatch {
   id: string;
   chatId: number;
   squadId: string;
@@ -763,38 +763,36 @@ export class TelegramService {
     // ── Proactive match result detection ──────────────────────────────
     // Before falling through to AI chat, check if this looks like a match result.
     // Regex first (fast, exact), then AI parser (slower, fuzzy).
-    const regexParsed = parseTelegramMatchResult(text);
-    if (regexParsed) {
-      await this.handleMatchLog(chatId, text);
+    // Pattern pass first (free, deterministic) — no inference budget consumed.
+    const patternParsed = parseMatchPattern(text);
+    if (patternParsed) {
+      await this.handleMatchLog(chatId, text, patternParsed);
       return;
     }
 
-    // Only try AI parser for messages that might contain score-like patterns
-    // (numbers present, reasonable length) to avoid wasting inference on greetings.
-    // Rate-limited: max 3 AI parse attempts per chat per minute to control costs.
+    // LLM fallback, gated to score-like messages and rate-limited (max 3 parse
+    // attempts per chat per minute) so casual chatter never burns inference.
     const looksLikeScore = /\d/.test(text) && text.length >= 5 && text.length <= 120;
     if (looksLikeScore) {
       const aiParseKey = `ai-parse:${chatId}`;
       const recent = this.aiParseRateLimit.get(aiParseKey) || [];
       const now = Date.now();
-      const windowMs = 60_000;
-      const recentInWindow = recent.filter((t) => now - t < windowMs);
+      const recentInWindow = recent.filter((t) => now - t < 60_000);
 
       if (recentInWindow.length < 3) {
         recentInWindow.push(now);
         this.aiParseRateLimit.set(aiParseKey, recentInWindow);
 
         try {
-          const aiParsed = await parseNaturalLanguageMatch(text);
-          if (aiParsed && aiParsed.confidence >= 0.75) {
-            await this.handleMatchLog(chatId, text);
+          const aiParsed = await parseMatchResult(text);
+          if (aiParsed) {
+            await this.handleMatchLog(chatId, text, aiParsed);
             return;
           }
         } catch {
-          // AI parser failed — fall through to normal chat
+          // Parser failed — fall through to normal chat
         }
       }
-      // else: rate limited, skip AI parser and fall through to normal chat
     }
 
     // ── Normal AI chat ────────────────────────────────────────────────
@@ -1477,10 +1475,8 @@ export class TelegramService {
       return false;
     }
 
-    const parsed = parseTelegramMatchResult(trimmed);
-    const aiParsed = parsed ? null : await parseNaturalLanguageMatch(trimmed);
-
-    if (!parsed && (!aiParsed || aiParsed.confidence <= 0.7)) {
+    const parsed = await parseMatchResult(trimmed);
+    if (!parsed) {
       return false;
     }
 
@@ -1494,11 +1490,7 @@ export class TelegramService {
         expiresAt: Date.now() + 10 * 60 * 1000,
       });
 
-      const preview = parsed
-        ? `${parsed.teamScore}-${parsed.opponentScore} vs ${parsed.opponent}`
-        : aiParsed
-          ? `${aiParsed.homeScore}-${aiParsed.awayScore} (${aiParsed.opponent})`
-          : trimmed;
+      const preview = `${parsed.teamScore}-${parsed.opponentScore} vs ${parsed.opponent}`;
 
       const keyboard = {
         inline_keyboard: [
@@ -1517,13 +1509,14 @@ export class TelegramService {
       return true;
     }
 
-    await this.handleMatchLog(chatId, trimmed);
+    await this.handleMatchLog(chatId, trimmed, parsed);
     return true;
   }
 
   private async handleMatchLog(
     chatId: number,
     matchText: string,
+    preParsed?: ParsedMatch,
   ): Promise<void> {
     try {
       this.pruneExpiredDrafts();
@@ -1594,20 +1587,9 @@ export class TelegramService {
         return;
       }
 
-      let parsed: ParsedTelegramMatchResult | null = parseTelegramMatchResult(matchText);
-
-      if (!parsed) {
-        // Try AI-powered natural language parsing
-        const aiParsed = await parseNaturalLanguageMatch(matchText);
-        if (aiParsed && aiParsed.confidence > 0.7) {
-          parsed = {
-            teamScore: aiParsed.isHome ? aiParsed.homeScore : aiParsed.awayScore,
-            opponentScore: aiParsed.isHome ? aiParsed.awayScore : aiParsed.homeScore,
-            opponent: aiParsed.opponent,
-            outcome: aiParsed.homeScore > aiParsed.awayScore ? 'win' : (aiParsed.homeScore < aiParsed.awayScore ? 'loss' : 'draw')
-          };
-        }
-      }
+      // Reuse the parse from the detection step when provided; otherwise parse
+      // now (pattern + LLM). Single source of truth: @/lib/ai/match-parser.
+      const parsed: ParsedMatch | null = preParsed ?? await parseMatchResult(matchText);
 
       if (!parsed) {
         await this.bot.sendMessage(
@@ -1698,21 +1680,8 @@ export class TelegramService {
         return;
       }
 
-      // Parse the match result
-      let parsed: ParsedTelegramMatchResult | null = parseTelegramMatchResult(matchText);
-
-      if (!parsed) {
-        // Try AI-powered natural language parsing
-        const aiParsed = await parseNaturalLanguageMatch(matchText);
-        if (aiParsed && aiParsed.confidence > 0.7) {
-          parsed = {
-            teamScore: aiParsed.isHome ? aiParsed.homeScore : aiParsed.awayScore,
-            opponentScore: aiParsed.isHome ? aiParsed.awayScore : aiParsed.homeScore,
-            opponent: aiParsed.opponent,
-            outcome: aiParsed.homeScore > aiParsed.awayScore ? 'win' : (aiParsed.homeScore < aiParsed.awayScore ? 'loss' : 'draw')
-          };
-        }
-      }
+      // Parse the match result (single source of truth: @/lib/ai/match-parser)
+      const parsed: ParsedMatch | null = await parseMatchResult(matchText);
 
       if (!parsed) {
         await this.bot.sendMessage(
