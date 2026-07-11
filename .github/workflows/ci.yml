@@ -134,12 +134,33 @@ jobs:
           cleanup() { kill $SERVER_PID 2>/dev/null || true; }
           trap cleanup EXIT
 
-          # Wait for boot — check / first (static, no DB needed) then /api/health
+          # This artifact is API-only: build-runtime-artifact.sh deliberately
+          # prunes every non-`/api` app route (Vercel serves the frontend), so
+          # `/` has no page.js here and can never be used as a boot probe —
+          # polling it always 500s regardless of artifact health. Poll
+          # /api/health instead. CI has no live Postgres, so it correctly
+          # returns 503 (not 200) once booted — that 503 IS the proof the
+          # server booted, compiled, and routed the request; only "000"
+          # (curl's own sentinel for connection-refused/no-response) means
+          # the server never came up.
           SERVER_UP=false
+          HEALTH="{}"
           for i in $(seq 1 15); do
             sleep 2
-            STATUS=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/ 2>/dev/null || echo "000")
-            if [ "$STATUS" = "200" ]; then
+            # `|| true` is required: under GH Actions' default `set -e`, a
+            # failing command inside a plain `var=$(...)` assignment aborts
+            # the step immediately (bash does not suppress -e for assignment
+            # substitutions) — without it, the very first iteration (curl
+            # exit 7, connection refused, while the server is still starting)
+            # would kill the whole retry loop. curl's own `-w` trailer already
+            # writes a literal "000" for %{http_code} when no response was
+            # received, so no separate `|| echo "000"` fallback is needed —
+            # one WAS here before and it produced a mangled "000000" by
+            # appending onto curl's own partial output instead of replacing it.
+            RESPONSE=$(curl -s --max-time 5 -w '\n%{http_code}' http://localhost:3000/api/health 2>/dev/null) || true
+            STATUS=$(echo "$RESPONSE" | tail -1)
+            HEALTH=$(echo "$RESPONSE" | sed '$d')
+            if [ "$STATUS" != "000" ]; then
               SERVER_UP=true
               echo "✅ Server responding on attempt $i (HTTP $STATUS)"
               break
@@ -147,17 +168,14 @@ jobs:
             echo "⏳ Attempt $i/15 — HTTP $STATUS"
           done
 
+          echo "🩺 /api/health response: $HEALTH"
+
           if [ "$SERVER_UP" = false ]; then
             echo "❌ Server failed to boot — no response on port 3000"
             exit 1
           fi
 
-          # Now validate the health endpoint (requires DATABASE_URL for full DB check)
-          echo "🩺 Checking /api/health..."
-          HEALTH=$(curl -s --max-time 5 http://localhost:3000/api/health 2>/dev/null || echo '{}')
-          echo "  Response: $HEALTH"
-
-          # Server booted + root page serves = artifact is valid.
-          # health endpoint may report partial status if no DB in CI, but that's
-          # an infra concern, not a module-resolution concern.
-          echo "✅ Smoke test passed — server boots, renders pages, and API routes are compiled"
+          # Server booted + routed a compiled API request = artifact is valid.
+          # /api/health's own status (ok/degraded/unhealthy) is an infra
+          # concern (no DB in CI), not a module-resolution concern.
+          echo "✅ Smoke test passed — server boots and API routes are compiled"
