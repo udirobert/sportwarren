@@ -15,9 +15,24 @@ const nextConfig = {
   // FOUND` even though its platform binaries were present. `/*` is scoped by
   // the narrow value, not the route key: it forces every route's trace to
   // include just the sharp package directory, not the whole repo.
-  outputFileTracingIncludes: {
-    '/*': ['node_modules/sharp/**/*'],
-  },
+  //
+  // VERCEL-ONLY GUARD: this is needed for the Hetzner standalone artifact
+  // (built via scripts/build-runtime-artifact.sh in CI) but NOT for Vercel,
+  // which already bundles sharp into its serverless functions correctly on
+  // its own (sharp has worked in Vercel production via the avatar-upload path
+  // — image.ts -> identity.ts -> the player/squad routers — since before this
+  // config existed). Vercel's own packaging step chokes on the extra trace:
+  // it flattened node_modules/sharp's pnpm symlink into the include glob and
+  // failed with "produces files in symlinked directories" on every build from
+  // the point this was added. `process.env.VERCEL` is Vercel's documented,
+  // stable system env var, always set (to '1') during its builds.
+  ...(process.env.VERCEL
+    ? {}
+    : {
+        outputFileTracingIncludes: {
+          '/*': ['node_modules/sharp/**/*'],
+        },
+      }),
   typescript: {
     // Type-checking runs in GitHub Actions CI (ci.yml) with 8GB heap — not during
     // the Vercel build, which is limited to 8GB total RAM and OOMs on tsc.
