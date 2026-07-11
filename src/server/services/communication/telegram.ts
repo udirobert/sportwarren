@@ -36,6 +36,12 @@ import {
   type ParsedMatch,
 } from "@/lib/ai/match-parser";
 import {
+  resolveScorers,
+  applyScorerAttribution,
+  type ScorerResolution,
+  type AttributionMember,
+} from "@/server/services/match/scorer-attribution";
+import {
   buildVerificationNudgeMessage,
   shouldSendNudge,
 } from "@/lib/telegram/verification-nudge";
@@ -1630,11 +1636,15 @@ export class TelegramService {
       };
 
       const squadLabel = targetSquadName || "Your squad";
+      const reportedScorers = draft.scorers.length > 0
+        ? [`Scorers: ${draft.scorers.map((s) => `${s.name} ${s.goals}`).join(", ")}`]
+        : [];
       const message = [
         "Match log draft",
         "",
         `${squadLabel} ${draft.teamScore} - ${draft.opponentScore} ${draft.opponent}`,
         `Outcome: ${draft.outcome}`,
+        ...reportedScorers,
         "",
         "Submit this result to the verification queue?",
       ].join("\n");
@@ -1720,11 +1730,15 @@ export class TelegramService {
       };
 
       const squadLabel = membership.squad.name;
+      const reportedScorers = draft.scorers.length > 0
+        ? [`Scorers: ${draft.scorers.map((s) => `${s.name} ${s.goals}`).join(", ")}`]
+        : [];
       const message = [
         "Match log draft",
         "",
         `${squadLabel} ${draft.teamScore} - ${draft.opponentScore} ${draft.opponent}`,
         `Outcome: ${draft.outcome}`,
+        ...reportedScorers,
         "",
         "Submit this result to the verification queue?",
       ].join("\n");
@@ -1807,6 +1821,7 @@ export class TelegramService {
     opponentName: string;
     awaySquadId: string;
     isSoftVerified: boolean;
+    attribution: ScorerResolution | null;
   }> {
     const membership = await getSquadMembership(
       prisma,
@@ -1847,6 +1862,33 @@ export class TelegramService {
       isSociallyTrusted,
     });
 
+    // Attribute any parsed goalscorers/assisters to the logging squad's players.
+    // Career totals + XP stay gated behind verification (applyMatchXP reads these
+    // rows), so nothing counts until the result is verified.
+    let attribution: ScorerResolution | null = null;
+    if (draft.scorers.length > 0 || draft.assists.length > 0) {
+      const squadMembers = await prisma.squadMember.findMany({
+        where: { squadId: squad.id },
+        include: {
+          user: { select: { id: true, name: true, playerProfile: { select: { id: true } } } },
+        },
+      });
+      const attrMembers: AttributionMember[] = squadMembers
+        .filter((m) => m.user?.playerProfile?.id)
+        .map((m) => ({
+          profileId: m.user!.playerProfile!.id,
+          userId: m.user!.id,
+          name: m.user!.name,
+        }));
+      attribution = resolveScorers({
+        members: attrMembers,
+        scorers: draft.scorers,
+        assists: draft.assists,
+        submitterUserId: draft.submittedBy,
+      });
+      await applyScorerAttribution(prisma, match.id, attribution);
+    }
+
     await this.deletePendingDraft(draft.id);
 
     return {
@@ -1855,6 +1897,7 @@ export class TelegramService {
       opponentName: opponent.name,
       awaySquadId: opponent.id,
       isSoftVerified: match.status === 'verified',
+      attribution,
     };
   }
 
@@ -3065,6 +3108,21 @@ export class TelegramService {
         ? "✅ *Verified!* (Trusted matchup history detected)"
         : "⏳ *Pending* — your squad is confirming";
 
+      const attributionLines: string[] = [];
+      if (result.attribution) {
+        const credited = [
+          ...result.attribution.goals.map((g) => `${g.name} ${g.goals}⚽`),
+          ...result.attribution.assists.map((a) => `${a.name} ${a.assists}🅰️`),
+        ];
+        if (credited.length > 0) {
+          attributionLines.push("", `Credited: ${credited.join(", ")}`);
+        }
+        const unmatched = [...new Set(result.attribution.unresolved)];
+        if (unmatched.length > 0) {
+          attributionLines.push(`Couldn't match: ${unmatched.join(", ")} — logged as team goals.`);
+        }
+      }
+
       await this.bot.editMessageText(
         [
           `⚽ *Match Logged!*`,
@@ -3072,6 +3130,7 @@ export class TelegramService {
           `ID: \`${result.id}\``,
           `Opponent: *${result.opponentName}*`,
           `Status: ${statusMessage}`,
+          ...attributionLines,
           "",
           result.isSoftVerified
             ? "Your match history has automatically verified this result. Legacy updated! 🥂"
