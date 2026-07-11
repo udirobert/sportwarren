@@ -19,28 +19,6 @@ export interface FormationUrlState {
 const VALID_SIZES: SquadSize[] = [5, 6, 7, 11];
 
 /**
- * Encode formation state into URL search params.
- * Player names are comma-separated and URI-encoded.
- */
-export function encodeFormationToUrl(params: FormationUrlState): string {
-  const sp = new URLSearchParams();
-  sp.set("formation", params.formation);
-  sp.set("style", params.style);
-  sp.set("color", params.color);
-  sp.set("size", String(params.size));
-  if (params.names.length > 0) {
-    sp.set("names", params.names.join(","));
-  }
-  if (params.vs_formation) {
-    sp.set("vs_f", params.vs_formation);
-    if (params.vs_style) sp.set("vs_s", params.vs_style);
-    if (params.vs_color) sp.set("vs_c", params.vs_color);
-    if (params.vs_names && params.vs_names.length > 0) sp.set("vs_n", params.vs_names.join(","));
-  }
-  return `${window.location.pathname}?${sp.toString()}`;
-}
-
-/**
  * Encode a challenge URL: my formation vs opponent's formation.
  */
 export function encodeChallengeUrl(
@@ -131,35 +109,6 @@ export function decodeFormationFromUrl(
   }
 
   return result;
-}
-
-/**
- * Sync current formation state to the browser URL without navigation.
- * Preserves non-formation query params (e.g. Privy OAuth state/code) so
- * OAuth callbacks aren't stripped during playground interaction.
- */
-export function syncStateToUrl(params: FormationUrlState): void {
-  if (typeof window === "undefined") return;
-
-  const currentUrl = new URL(window.location.href);
-  const incomingSp = new URLSearchParams(
-    encodeFormationToUrl(params).replace(/^[^?]*\?/, ""),
-  );
-
-  // Copy all existing params, then overlay formation params on top.
-  // This preserves third-party params (privy_oauth_state, etc.) while
-  // keeping formation state up to date.
-  const merged = new URLSearchParams(currentUrl.search);
-  for (const [key, value] of incomingSp) {
-    merged.set(key, value);
-  }
-
-  const mergedQuery = merged.toString();
-  const url = mergedQuery
-    ? `${currentUrl.pathname}?${mergedQuery}`
-    : currentUrl.pathname;
-
-  window.history.replaceState(null, "", url);
 }
 
 /**

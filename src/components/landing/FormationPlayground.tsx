@@ -11,7 +11,8 @@ import { useActiveSquad } from "@/contexts/ActiveSquadContext";
 import { FORMATIONS, getFormationsBySquadSize, getDefaultFormationForSize, PLAY_STYLE_LABELS } from "@/lib/formations";
 import { POSITIONS_BY_SQUAD_SIZE, DEFAULT_PLAYER_NAMES, SQUAD_SIZES, PLAY_STYLES, SQUAD_COLORS } from "@/lib/pitch.constants";
 import { patchPendingPersona, getPendingPersona } from "@/lib/claims/persona";
-import { decodeFormationFromUrl, syncStateToUrl, suggestCounterFormation, encodeChallengeUrl } from "@/lib/pitch/shareUrl";
+import { decodeFormationFromUrl, suggestCounterFormation, encodeChallengeUrl } from "@/lib/pitch/shareUrl";
+import { storePlaygroundDraft, getPlaygroundDraft } from "@/lib/pitch/playgroundDraft";
 import type { PlaygroundFlow } from "@/lib/pitch/shareUrl";
 import type { Formation, PlayStyle, SquadSize, PlayerPosition } from "@/types";
 import {
@@ -142,16 +143,31 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
     if (window.location.search.includes("privy_oauth_state=")) return;
 
     const parsed = decodeFormationFromUrl(new URLSearchParams(window.location.search));
-    const parsedSize = (parsed.size as SquadSize | undefined) || initialSquadSize;
+    const hasUrlState = Boolean(
+      parsed.formation || parsed.style || parsed.color || parsed.size ||
+      parsed.vs_formation || (parsed.names && parsed.names.length > 0),
+    );
 
-    if (parsed.size) setSquadSize(parsedSize);
+    // A real incoming link (someone followed a share/challenge URL) always
+    // wins. Otherwise, restore an in-progress draft from localStorage —
+    // same refresh-survival the old URL-sync gave, without growing the
+    // address bar on every visit. See playgroundDraft.ts.
+    const draft = hasUrlState ? null : getPlaygroundDraft();
+
+    const parsedSize = (parsed.size as SquadSize | undefined) || draft?.size || initialSquadSize;
+
+    if (parsed.size || draft?.size) setSquadSize(parsedSize);
     if (parsed.formation) {
       setFormation(parsed.formation);
+    } else if (draft?.formation) {
+      setFormation(draft.formation);
     } else if (parsed.size) {
       setFormation(getDefaultFormationForSize(parsedSize));
     }
     if (parsed.style) setPlayStyle(parsed.style as PlayStyle);
+    else if (draft?.style) setPlayStyle(draft.style);
     if (parsed.color) setPrimaryColor(parsed.color);
+    else if (draft?.color) setPrimaryColor(draft.color);
     if (parsed.flow) setFlow(parsed.flow);
     if (parsed.vs_formation) {
       setOpponent({
@@ -164,16 +180,22 @@ export const FormationPlayground: React.FC<FormationPlaygroundProps> = ({ initia
     if (parsed.names && parsed.names.length > 0) {
       personalization.setNames(parsed.names);
       personalization.setShowNames(true);
+    } else if (draft?.names && draft.names.length > 0) {
+      personalization.setNames(draft.names);
+      personalization.setShowNames(true);
     }
     urlStateApplied.current = true;
     setUrlStateReady(true);
   }, [initialSquadSize, personalization]);
 
-  // ── Sync state to URL on change (skip during challenge/result) ──
+  // ── Persist state as a draft on change (skip during challenge/result) ──
+  // Was a live URL sync (syncStateToUrl) — every visitor's address bar grew
+  // a long query string just from playing with the widget. localStorage
+  // gives the same refresh-survival without the visible URL pollution.
   useEffect(() => {
     if (!urlStateReady) return;
     if (flow === "challenge_received" || flow === "result") return;
-    syncStateToUrl({
+    storePlaygroundDraft({
       formation,
       style: playStyle,
       color: primaryColor,
