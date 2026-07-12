@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { broadcastToSquadGroups } from '@/server/services/communication/squad-broadcast';
+import { createTacticalPlanShare } from '@/server/services/tactical-plan-share';
+import { buildChallengeSharePath } from '@/lib/pitch/shareUrl';
 import type { Formation } from '@/types';
 
 /**
@@ -52,9 +54,21 @@ export async function GET(request: Request) {
     const formation = FORMATIONS[weekNum % FORMATIONS.length];
     const counter = COUNTER_SUGGESTIONS[formation] || '4-3-3';
 
-    // Build the challenge URL
+    // Build the challenge URL. Only the week's formation needs to be
+    // resolvable — the recipient's counter suggestion is always computed
+    // fresh client-side from it (suggestCounterFormation), never read from
+    // the URL, so there's nothing else worth encoding here. Was a raw
+    // ?formation=&style=&color=&size=&vs_f=&vs_s=&vs_c=&flow=counter query
+    // string sent as a Telegram button link every week; now a short slug.
     const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://sportwarren.com';
-    const challengeUrl = `${baseUrl}?formation=${counter}&style=balanced&color=%2310b981&size=11&vs_f=${formation}&vs_s=balanced&vs_c=%23ef4444&flow=counter`;
+    const share = await createTacticalPlanShare({
+      formation,
+      style: 'balanced',
+      size: 11,
+      color: '#ef4444',
+      names: [],
+    });
+    const challengeUrl = `${baseUrl}${buildChallengeSharePath(share.slug)}`;
 
     const message = [
       `⚽ *Formation of the Week: ${formation}*`,

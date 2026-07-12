@@ -4,8 +4,8 @@ import {
   generateShareCaption,
   generateChallengeCaption,
   suggestCounterFormation,
-  encodeChallengeUrl,
-  type FormationUrlState,
+  buildChallengeSharePath,
+  decodeChallengeSlugFromUrl,
 } from "@/lib/pitch/shareUrl";
 
 describe("shareUrl", () => {
@@ -131,26 +131,25 @@ describe("shareUrl", () => {
     });
   });
 
-  describe("encodeChallengeUrl", () => {
-    it("encodes both formations into the URL", () => {
-      const mine: FormationUrlState = {
-        formation: "4-3-3",
-        style: "counter",
-        color: "#10b981",
-        size: 11,
-        names: ["Salah", "Kane"],
-      };
-      const opponent = {
-        formation: "4-4-2" as const,
-        style: "balanced" as const,
-        color: "#ef4444",
-        names: ["Tunde", "Kofi"],
-      };
-      const url = encodeChallengeUrl(mine, opponent);
-      expect(url).toContain("vs_f=4-4-2");
-      expect(url).toContain("vs_s=balanced");
-      expect(url).toContain("flow=counter");
-      expect(url).toContain("formation=4-3-3");
+  describe("buildChallengeSharePath / decodeChallengeSlugFromUrl", () => {
+    it("builds a short challenge path from a slug", () => {
+      expect(buildChallengeSharePath("aB3xY9")).toBe("/?challenge=aB3xY9");
+    });
+
+    it("URI-encodes the slug", () => {
+      expect(buildChallengeSharePath("a b")).toBe("/?challenge=a%20b");
+    });
+
+    it("round-trips through decode", () => {
+      const path = buildChallengeSharePath("aB3xY9");
+      const sp = new URLSearchParams(path.split("?")[1]);
+      expect(decodeChallengeSlugFromUrl(sp)).toBe("aB3xY9");
+    });
+
+    it("rejects a missing or malformed slug", () => {
+      expect(decodeChallengeSlugFromUrl(new URLSearchParams())).toBeNull();
+      expect(decodeChallengeSlugFromUrl(new URLSearchParams("challenge=ab"))).toBeNull(); // too short
+      expect(decodeChallengeSlugFromUrl(new URLSearchParams("challenge=has spaces"))).toBeNull();
     });
   });
 
