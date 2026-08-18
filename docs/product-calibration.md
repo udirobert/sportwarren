@@ -330,6 +330,10 @@ viral primitive built on top of the payoff loop.
 - The fixed-squad captain shape remains supported by the data model but
   is not the primary acquisition wedge for this phase.
 
+**Next test:** Sunday 2026-08-23 — see `docs/test-2026-08-23.md`
+(pre-registered signals, setup checklist, observation window). Hard rule:
+no feature work between seeding and the retro.
+
 ## Related files
 
 - `docs/makeathon/post-submission-roadmap.md` — earlier roadmap;
