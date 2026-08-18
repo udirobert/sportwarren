@@ -16,8 +16,8 @@ if (!process.env.ALGORAND_INDEXER_URL) {
 }
 
 async function main() {
-  const { AlgorandService } = await import('../server/services/blockchain/algorand');
-  const { yellowService } = await import('../server/services/blockchain/yellow');
+  const { AlgorandService } = await import('../src/server/services/blockchain/algorand');
+  const { yellowService } = await import('../src/server/services/blockchain/yellow');
 
   console.log('🧪 Testing Contracts Integration...');
 

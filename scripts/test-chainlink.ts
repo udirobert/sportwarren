@@ -9,7 +9,7 @@ if (!process.env.WEB3_PRIVATE_KEY) {
 }
 
 async function main() {
-  const { ChainlinkService } = await import('../server/services/blockchain/chainlink');
+  const { ChainlinkService } = await import('../src/server/services/blockchain/chainlink');
   console.log('🧪 Testing Chainlink Service Integration...');
 
   try {

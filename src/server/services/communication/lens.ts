@@ -1,3 +1,9 @@
+/**
+ * Lens Protocol service with HTTP adapter behind env flags.
+ * - Enhancement-first: replaces prior stub without faking responses.
+ * - Consolidation: canonical home — single service used by dev:server and API.
+ * - Modular: pluggable base URL, simple contract, clear error semantics.
+ */
 export class LensServiceUnavailableError extends Error {
   constructor(message = 'Lens social publishing is not enabled on this deployment.') {
     super(message);
@@ -10,12 +16,6 @@ type LensAuthResult = {
   profile: { id: string; handle?: string; name?: string | null } | null;
 };
 
-/**
- * Lens Protocol service with HTTP adapter behind env flags.
- * - Enhancement-first: replaces prior stub without faking responses.
- * - Consolidation: single service used by server and API.
- * - Modular: pluggable base URL, simple contract, clear error semantics.
- */
 export class LensService {
   private readonly enabled: boolean;
   private readonly baseUrl: string | null;

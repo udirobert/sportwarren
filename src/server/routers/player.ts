@@ -529,7 +529,7 @@ export const playerRouter = createTRPCRouter({
 
             // Sync to Algorand
             try {
-              const { algorandService } = await import('../../../server/services/blockchain/algorand');
+              const { algorandService } = await import('@/server/services/blockchain/algorand');
               const user = await ctx.prisma.user.findUnique({ where: { id: gain.userId } });
               if (user?.walletAddress && user.chain === 'algorand') {
                 await algorandService.updatePlayerSkillOnChain(

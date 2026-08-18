@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { prisma } from '../src/lib/db';
-import { yellowService } from '../server/services/blockchain/yellow';
-import { runYellowRecovery } from '../server/services/blockchain/yellow-recovery';
+import { yellowService } from '../src/server/services/blockchain/yellow';
+import { runYellowRecovery } from '../src/server/services/blockchain/yellow-recovery';
 
 function readStaleMinutesArg() {
   const arg = process.argv.find((entry) => entry.startsWith('--stale-minutes='));

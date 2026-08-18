@@ -1,6 +1,6 @@
 import * as dotenv from 'dotenv';
 import { prisma } from '../src/lib/db';
-import { yellowService } from '../server/services/blockchain/yellow';
+import { yellowService } from '../src/server/services/blockchain/yellow';
 
 dotenv.config();
 

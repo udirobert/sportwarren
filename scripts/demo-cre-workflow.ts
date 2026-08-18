@@ -7,7 +7,7 @@
  * Usage: npx tsx scripts/demo-cre-workflow.ts
  */
 
-import { matchVerificationWorkflow } from '../server/services/blockchain/cre/match-verification';
+import { matchVerificationWorkflow } from '../src/server/services/blockchain/cre/match-verification';
 
 // ANSI Color codes for terminal output
 const colors = {

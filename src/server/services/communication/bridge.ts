@@ -1,5 +1,8 @@
-import { TelegramService } from './telegram.js';
-import type { RedisService } from '../redis.js';
+/**
+ * CommunicationBridge — cross-platform message bridge for the dev:server.
+ * Canonical home: src/server/services/communication/ (production + dev share this file).
+ */
+import { TelegramService, type TelegramRedisStore } from './telegram.js';
 
 export interface CommunicationTargets {
   telegram?: { chatId: string };
@@ -42,7 +45,7 @@ export interface MatchReminderData {
 export class CommunicationBridge {
   private telegram: TelegramService | null;
 
-  constructor(redisService: RedisService | null = null) {
+  constructor(redisService: TelegramRedisStore | null = null) {
     this.telegram = process.env.TELEGRAM_BOT_TOKEN ? new TelegramService(redisService) : null;
   }
 

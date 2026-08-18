@@ -4,12 +4,12 @@ import { DatabaseService } from './services/database.js';
 import { RedisService } from './services/redis.js';
 import { AuthService } from './services/auth.js';
 import { SocketService } from './services/socket.js';
-import { CommunicationBridge } from './services/communication/bridge.js';
+import { CommunicationBridge } from '../src/server/services/communication/bridge.js';
 import { VoiceProcessingService } from '../src/server/services/ai/voice';
 import { ComputerVisionService } from '../src/server/services/ai/vision';
-import { AlgorandService } from './services/blockchain/algorand.js';
-import { EventStreamService } from './services/events/kafka.js';
-import { LensService } from './services/communication/lens.js';
+import { AlgorandService } from '../src/server/services/blockchain/algorand.js';
+import { EventStreamService } from '../src/server/services/events/kafka.js';
+import { LensService } from '../src/server/services/communication/lens.js';
 
 export interface Context {
   req: Request | IncomingMessage;

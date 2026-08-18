@@ -19,13 +19,13 @@ import { AuthService } from './services/auth.js';
 import { SocketService } from './services/socket.js';
 
 // Advanced services
-import { CommunicationBridge } from './services/communication/bridge.js';
+import { CommunicationBridge } from '../src/server/services/communication/bridge.js';
 import { VoiceProcessingService } from '../src/server/services/ai/voice';
 import { ComputerVisionService } from '../src/server/services/ai/vision';
-import { AlgorandService } from './services/blockchain/algorand.js';
-import { LensService, LensServiceUnavailableError } from './services/communication/lens.js';
-import { EventStreamService } from './services/events/kafka.js';
-import { TonSettlementWorker } from './services/economy/ton-settlement-worker.js';
+import { AlgorandService } from '../src/server/services/blockchain/algorand.js';
+import { LensService, LensServiceUnavailableError } from '../src/server/services/communication/lens.js';
+import { EventStreamService } from '../src/server/services/events/kafka.js';
+import { TonSettlementWorker } from '../src/server/services/economy/ton-settlement-worker.js';
 import { getStorageAdapter } from '../src/server/services/storage/index';
 
 // Suppress known non-critical warnings

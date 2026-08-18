@@ -11,7 +11,7 @@ import * as dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
-import { matchVerificationWorkflow } from '../server/services/blockchain/cre/match-verification';
+import { matchVerificationWorkflow } from '../src/server/services/blockchain/cre/match-verification';
 
 // Load environment variables from .env.local
 dotenv.config({ path: '.env.local' });

@@ -1,4 +1,4 @@
-import { matchVerificationWorkflow } from '../server/services/blockchain/cre/match-verification';
+import { matchVerificationWorkflow } from '../src/server/services/blockchain/cre/match-verification';
 import * as dotenv from 'dotenv';
 
 dotenv.config();

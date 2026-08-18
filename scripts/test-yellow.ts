@@ -1,4 +1,4 @@
-import { yellowService } from '../server/services/blockchain/yellow';
+import { yellowService } from '../src/server/services/blockchain/yellow';
 
 async function main() {
   const status = yellowService.getRailStatus();

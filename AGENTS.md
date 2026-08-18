@@ -439,11 +439,15 @@ and have their squad, players, and match history materialize instantly.
   button-press / expiry-cron that resolves it routinely hit different serverless
   instances, so instance-local state silently drops votes. Never reintroduce a
   `Map` for cross-request conversation state — persist to Redis.
-- There are TWO `communication/` trees: `src/server/services/communication/`
-  (the Next.js / production path — edit this one) and a legacy
-  `server/services/communication/` used only by `dev:server` (`server/index.ts`).
-  They keep independent copies (e.g. their own `bridge.ts`), so a grep can show
-  a symbol as "still used" when only the dead legacy tree references it.
+- **All production services live in `src/server/services/` — the single tree.**
+  The legacy root `server/` tree is a `dev:server` (`tsx watch server/index.ts`)
+  bootstrap only. Its duplicated service trees (`blockchain/`,
+  `communication/`, `economy/`, `events/`) were consolidated away —
+  `server/index.ts` / `server/context.ts` import them directly from
+  `../src/server/services/...`. Only `auth`, `database`, `match-submission`,
+  `prediction/`, `redis`, `socket` remain legacy-local. Never add a new
+  service under `server/services/` — add it to `src/server/services/` and
+  re-point the dev:server import.
 - Deeply-inferred tRPC output types can trip `TS2589` ("Type instantiation is
   excessively deep") at an *unrelated* call site when the project's type graph
   shifts — the reported line is where the budget ran out, not the cause (bit
