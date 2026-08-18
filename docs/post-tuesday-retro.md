@@ -130,7 +130,7 @@ or chase a tier?* — not a decision already made.
 
 | # | Mechanic | Location | Recommended | Your call |
 |---|---|---|---|---|
-| D2 | `LiveActivityFeed` live ticker (currently non-functional — see audit note; no `squad-update` handler on live server) | `clubhouse/LiveActivityFeed.tsx` | **Cut** unless cohort explicitly wanted a live feed. If keep → wire the handler in `server/services/socket.ts` (one home). | _[ ]_ |
+| D2 | `LiveActivityFeed` live ticker (currently non-functional — see audit note; no `squad-update` handler on live server) | `clubhouse/LiveActivityFeed.tsx` | **Cut** unless cohort explicitly wanted a live feed. If keep → wire the handler in `server/services/socket.ts` (one home). *(2026-08-18: `server/services/socket.ts` was deleted with the dev:server tree — "keep" now means building the socket layer fresh in `src/`.)* | _[ ]_ |
 | D1 | "⚡ Compare" wa.me challenge — "What's your number?" vanity rating comparison | `squad/page.tsx:776-777,835-853` | **Cut** — clearest "Instagram for football" loop; preserves nothing. | _[ ]_ |
 | D3 | Hot-take "⚡ Share" wrapping consensus in "whats your number?" | `squad/page.tsx:338-349,688-708` | **Reframe** — keep sharing the doctrine as a *keepsake/record*; drop the challenge framing. | _[ ]_ |
 | D4 | Engagement leaderboards: "Most active rater", "Drilled today", "Tier 3 unlocked" | `squad/page.tsx:382-413` | **Cut** the activity-volume tiles; **keep** "Top of the pile" (overall rating — record-based). | _[ ]_ |
