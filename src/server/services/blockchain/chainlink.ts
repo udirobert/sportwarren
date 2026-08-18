@@ -1,24 +1,24 @@
 import { runMatchVerification } from './cre/match-verification';
 
 /**
- * Match location/weather verification — thin dispatcher over the CRE workflow.
+ * Match verification service — delegates entirely to the CRE workflow
+ * (Open-Meteo weather + reverse geocoding over plain HTTP).
  *
- * History (chain consolidation, 2026-08): this class used to drive hand-deployed
- * Chainlink oracle contracts on Avalanche (requestWeatherData /
- * requestLocationVerification) as a fallback. Those oracle contracts were never
- * deployed and their env vars (CHAINLINK_WEATHER_ORACLE,
- * CHAINLINK_LOCATION_ORACLE, WEB3_PRIVATE_KEY) were never set, so the fallback
- * always returned `verified: false`. The oracle half was deleted; CRE
- * (`cre/match-verification.ts`) is the single verification engine — Open-Meteo
- * weather + reverse geocoding over plain HTTP, no on-chain hop, no ethers.
+ * History (2026-08 consolidation): this module previously contained a
+ * fallback path that called hand-deployed Chainlink oracle contracts on
+ * Avalanche C-Chain. Those contracts were never deployed to any
+ * environment, the required env vars (CHAINLINK_WEATHER_ORACLE,
+ * CHAINLINK_LOCATION_ORACLE, WEB3_PRIVATE_KEY for oracle txs) were never
+ * set, and the fallback was unreachable dead code. It has been removed.
  *
- * The class keeps its name and the `chainlinkService` singleton because
- * `match-workflow.ts` and the `match` router call it by name; semantically it is
- * now "Chainlink CRE-style verification", not an oracle integration.
+ * The class and singleton names are preserved so that existing call-sites
+ * (`match-workflow.ts`, `routers/match.ts`, `scripts/test-chainlink.ts`)
+ * continue to work without import changes.
  */
 export class ChainlinkService {
   /**
-   * Comprehensive match verification via the CRE workflow.
+   * Verify a match's claimed location and time against real-world weather
+   * and geocoding data via the CRE workflow.
    */
   async verifyMatch(matchData: {
     latitude: number;

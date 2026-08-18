@@ -22,6 +22,11 @@ for that impulse.
   Either (a) a fixed-squad captain (Sunday League team, season-long
   fixtures) or (b) a kickabout organizer (rotating teams, 6/8-a-side,
   weekly session). Both bring 10–18 players with them when they adopt.
+  **Phase-1 focus (2026-08-18):** the kickabout shape, with the target
+  persona refined to the **record keeper** — the person who feels
+  compelled to remember and log every game — who is not necessarily the
+  same person who books the pitch or sends the invites. See
+  `docs/product-calibration.md` → "Wedge refinement".
 - **Unit of preservation:** Squad season for (a), individual session
   for (b). The data model supports both — `Match.playersPerSide` and
   `matchFormat` flex from "11v11" to "6v6", and `PlayerTwin` stats
@@ -439,16 +444,16 @@ and have their squad, players, and match history materialize instantly.
   button-press / expiry-cron that resolves it routinely hit different serverless
   instances, so instance-local state silently drops votes. Never reintroduce a
   `Map` for cross-request conversation state — persist to Redis.
-- **All production services live in `src/server/services/` — the single tree.**
-  The legacy root `server/` tree is a `dev:server` (`tsx watch server/index.ts`)
-  bootstrap only. Its duplicated service trees (`blockchain/`,
-  `communication/`, `economy/`, `events/`, `auth`, `redis`,
-  `match-submission`, `prediction/`) were consolidated away —
-  `server/index.ts` / `server/context.ts` import them directly from
-  `../src/server/services/...`. Only `database.ts` (dev:server DAO layer
-  for GraphQL resolvers) and `socket.ts` remain legacy-local. Never add
-  a new service under `server/services/` — add it to
-  `src/server/services/` and re-point the dev:server import.
+- **All services live in `src/server/services/` — the single tree.** The
+  legacy root `server/` tree (the old `dev:server` Express + GraphQL +
+  socket.io bootstrap) was deleted outright on 2026-08-18, along with its
+  now-orphaned canonical companions (`communication/bridge.ts`,
+  `communication/lens.ts`, `events/kafka.ts`). The `dev:server`,
+  `build:server`, and `dev:analytics` package.json scripts are gone; local
+  development is `next dev` only. The Algorand PyTeal contract sources
+  moved to `contracts/<app>/<File>.py`. The frontend socket client
+  (`src/lib/socket.ts`) degrades gracefully with no server — live
+  first-party updates are a future concern, not a `dev:server` one.
 - Deeply-inferred tRPC output types can trip `TS2589` ("Type instantiation is
   excessively deep") at an *unrelated* call site when the project's type graph
   shifts — the reported line is where the budget ran out, not the cause (bit

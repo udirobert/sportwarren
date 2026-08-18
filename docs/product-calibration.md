@@ -307,6 +307,29 @@ shape there is. Hence the one-tap shareable payoff card
 (`/api/og/payoff` + `resolveSessionPayoff` + `buildShareLinks`) is the
 viral primitive built on top of the payoff loop.
 
+## Wedge refinement (added 2026-08-18)
+
+> **Decision:** Phase-1 focus narrows to the **kickabout shape** (rotating
+> teams, weekly session), and the target persona is refined from "kickabout
+> organizer" to the **record keeper** — the person who feels compelled to
+> remember and log every game. The record keeper is not necessarily the
+> person who books the pitch or sends the invites; they are the one who
+> keeps the spreadsheet / WhatsApp score messages / mental ledger.
+
+**Why this refinement matters:**
+
+- The preservation thesis is anchored to the *recording impulse*, not to
+  logistics. The person who hates the idea of results disappearing is the
+  highest-intent adopter, even if someone else organizes the session.
+- Pre-seeded onboarding still works: whoever has last week's results
+  (organizer or record keeper) can seed the roster + results. The
+  reveal-link flow does not require the seed-er to be the pitch booker.
+- First-contact copy and the "bold call" prediction should speak to the
+  record keeper's identity ("you're the one who remembers") rather than
+  assuming they run the group.
+- The fixed-squad captain shape remains supported by the data model but
+  is not the primary acquisition wedge for this phase.
+
 ## Related files
 
 - `docs/makeathon/post-submission-roadmap.md` — earlier roadmap;

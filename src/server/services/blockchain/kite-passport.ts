@@ -4,6 +4,12 @@
  * WEB3_PRIVATE_KEY in production). Keep wired for phase 2; see the header
  * in x402-client.ts for the re-enable criteria.
  */
+/**
+ * Kite Passport (`kpass` CLI) wrapper for agent-authenticated paid API calls.
+ *
+ * STATUS: DORMANT (phase 2) — only consumed by x402-client.ts, which is
+ * itself parked. Re-enable criteria: see the header in x402-client.ts.
+ */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { homedir } from 'node:os';
