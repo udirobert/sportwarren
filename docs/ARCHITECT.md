@@ -119,6 +119,12 @@ Results escalate from self-reported to cryptographically verified:
 
 ## Kite AI: Autonomous Squad Agents
 
+> **Status (2026-08): DORMANT — parked, not removed.** Production has no
+> `KITE_API_KEY` / `WEB3_PRIVATE_KEY`, so `agenticEconomy` reports `limited`
+> on `/api/health` and no settlement executes. This is the designed phase-2
+> agentic-commerce rail; re-enable only after the preservation wedge proves
+> paying demand. See `x402-client.ts` header for re-enable criteria.
+
 Every squad in SportWarren gets an autonomous AI agent — a **Squad Manager** with its own Kite Passport identity, spending budget, and decision-making capability.
 
 ### What Agents Do

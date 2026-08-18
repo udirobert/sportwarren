@@ -1,3 +1,9 @@
+/**
+ * STATUS: DORMANT (phase 2) — Kite Passport (`kpass` CLI) agent wallet.
+ * Only consumed by x402-client.ts, which is itself parked (no KITE_API_KEY /
+ * WEB3_PRIVATE_KEY in production). Keep wired for phase 2; see the header
+ * in x402-client.ts for the re-enable criteria.
+ */
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { homedir } from 'node:os';

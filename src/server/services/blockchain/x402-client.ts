@@ -1,6 +1,13 @@
 /**
  * Kite x402 client + 402 helpers.
  *
+ * STATUS: DORMANT (phase 2). Parked, not deleted — this is the designed
+ * agentic-commerce rail, but production has neither KITE_API_KEY nor
+ * WEB3_PRIVATE_KEY set, so no settlement ever executes (`agenticEconomy:
+ * limited` on /api/health). Re-enable by setting those keys; do not build
+ * new features on this module until the preservation wedge is proven.
+ * See AGENTS.md → "Onchain attestation" for the dormant-endpoint policy.
+ *
  * - Inbound `/api/x402/*`: issue 402 challenges, settle via Pieverse facilitator.
  * - Outbound paid calls: Kite Passport (`kpass`) for allowlisted merchants, or
  *   EIP-3009 signing with the platform wallet for direct settlement.

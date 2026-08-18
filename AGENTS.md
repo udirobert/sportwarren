@@ -516,4 +516,12 @@ and moment is attested onchain so it's permanently owned by the player.
 - `GET /api/x402/scout` and `GET /api/x402/verify-match` are public x402 discovery endpoints — keep wired for when the protocol matures; currently dormant
 - `readGoatX402Config()` is dormant until a GOAT merchant appears in ksearch catalog
 
+**Chain roster (post-2026-08 consolidation):**
+- **Algorand** (testnet) — permanence layer: squad DAO proposals, match-verification app, per-player skill/reputation writes (gated by `user.chain === 'algorand'`).
+- **Yellow** (nitrolite) — the only *live* payment rail: match-fee settlement via `verifyClientSettlement` in match/squad routers.
+- **TON** — Telegram distribution channel: top-up verification (`verifyTonTopUpTransfer`) + `ton-settlement-worker` in `src/server/services/economy/`.
+- **GOAT Network** — agent identity (`goat-erc8004.ts`) + governance (`governance-indexer.ts`); dormant until a GOAT merchant appears.
+- **x402 / Kite Passport** — PARKED phase-2 agentic-commerce rail (`x402-client.ts`, `kite-passport.ts` carry DORMANT headers). No prod keys → `agenticEconomy: limited`. Re-enable only after the preservation wedge shows paying demand.
+- **Match verification** — `chainlinkService.verifyMatch` (called from `match-workflow.ts` and the match router) is, despite the name, a thin dispatcher over CRE (`blockchain/cre/match-verification.ts` — Open-Meteo weather + reverse geocoding over plain HTTP). The legacy Chainlink-on-Avalanche oracle half was deleted 2026-08 (contracts never deployed, env never set). `NEXT_PUBLIC_CHAINLINK_ENABLED` / `CHAINLINK_*_ORACLE` vars are dead — do not reintroduce.
+
 **User-facing strings must never mention:** x402, Kite, USDC, attestation, Yellow, facilitator, or any protocol jargon. Use plain language: "verified", "receipt confirmed", "permanent record".

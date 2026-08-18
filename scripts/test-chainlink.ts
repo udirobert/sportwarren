@@ -4,10 +4,6 @@ import * as path from 'path';
 dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
 
-if (!process.env.WEB3_PRIVATE_KEY) {
-  process.env.WEB3_PRIVATE_KEY = '0x0123456789012345678901234567890123456789012345678901234567890123';
-}
-
 async function main() {
   const { ChainlinkService } = await import('../src/server/services/blockchain/chainlink');
   console.log('🧪 Testing Chainlink Service Integration...');

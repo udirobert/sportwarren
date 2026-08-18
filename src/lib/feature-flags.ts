@@ -38,7 +38,6 @@ export const FLAGS = {
   TREASURY:            { default: false, description: 'Squad treasury and budget management' },
   YELLOW_PAYMENTS:     { default: false, description: 'Yellow Network instant settlement' },
   KITE_AI:             { default: false, description: 'Kite AI agent marketplace' },
-  CHAINLINK_ORACLE:    { default: false, description: 'Chainlink weather/location verification' },
   COMMUNITY:           { default: false, description: 'Community hub and Lens social feed' },
   ANALYTICS:           { default: false, description: 'Growth funnel and attribute analytics' },
 } as const;
