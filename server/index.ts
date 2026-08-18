@@ -14,8 +14,8 @@ import { typeDefs } from './graphql/schema.js';
 import { resolvers } from './graphql/resolvers.js';
 import { createContext } from './context.js';
 import { DatabaseService } from './services/database.js';
-import { RedisService } from './services/redis.js';
-import { AuthService } from './services/auth.js';
+import { RedisService } from '../src/server/services/redis.js';
+import { AuthService } from '../src/server/services/auth.js';
 import { SocketService } from './services/socket.js';
 
 // Advanced services

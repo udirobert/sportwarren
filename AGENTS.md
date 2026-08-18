@@ -442,12 +442,13 @@ and have their squad, players, and match history materialize instantly.
 - **All production services live in `src/server/services/` — the single tree.**
   The legacy root `server/` tree is a `dev:server` (`tsx watch server/index.ts`)
   bootstrap only. Its duplicated service trees (`blockchain/`,
-  `communication/`, `economy/`, `events/`) were consolidated away —
+  `communication/`, `economy/`, `events/`, `auth`, `redis`,
+  `match-submission`, `prediction/`) were consolidated away —
   `server/index.ts` / `server/context.ts` import them directly from
-  `../src/server/services/...`. Only `auth`, `database`, `match-submission`,
-  `prediction/`, `redis`, `socket` remain legacy-local. Never add a new
-  service under `server/services/` — add it to `src/server/services/` and
-  re-point the dev:server import.
+  `../src/server/services/...`. Only `database.ts` (dev:server DAO layer
+  for GraphQL resolvers) and `socket.ts` remain legacy-local. Never add
+  a new service under `server/services/` — add it to
+  `src/server/services/` and re-point the dev:server import.
 - Deeply-inferred tRPC output types can trip `TS2589` ("Type instantiation is
   excessively deep") at an *unrelated* call site when the project's type graph
   shifts — the reported line is where the budget ran out, not the cause (bit
