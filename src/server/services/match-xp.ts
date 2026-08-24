@@ -113,7 +113,26 @@ async function hydrateExistingMatchXPResults(
   });
 }
 
-export async function applyMatchXP(prisma: PrismaClient, matchId: string) {
+export async function applyMatchXP(
+  prisma: PrismaClient,
+  matchId: string,
+  withinTransaction = false,
+): Promise<{
+  success: boolean;
+  alreadyApplied: boolean;
+  results: MatchXPProfileResult[];
+}> {
+  if (!withinTransaction) {
+    return prisma.$transaction(
+      async (tx) => {
+        // Serialize the one durable award for this match even before the
+        // unique constraint has a chance to reject a concurrent insert.
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${matchId}))`;
+        return applyMatchXP(tx as unknown as PrismaClient, matchId, true);
+      },
+      { isolationLevel: 'Serializable' },
+    );
+  }
   const match = await prisma.match.findUnique({
     where: { id: matchId },
     include: {

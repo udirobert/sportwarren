@@ -11,6 +11,7 @@ import { useWallet } from "@/contexts/WalletContext";
 import { useMySquads, useSquadDetails } from "@/hooks/squad/useSquad";
 import { trpc } from "@/lib/trpc-client";
 import { usePrivy } from "@privy-io/react-auth";
+import { walletAuthHeaders } from '@/lib/auth/client-request-headers';
 
 export default function PublicSquadInvitePage() {
   const params = useParams();
@@ -20,7 +21,7 @@ export default function PublicSquadInvitePage() {
   const playerName = searchParams.get('player') || '';
   const isImportClaim = playerName.trim().length > 0;
 
-  const { address, hasAccount, hasWallet, isGuest, isVerified } = useWallet();
+  const { address, chain, hasAccount, hasWallet, isGuest, isVerified } = useWallet();
   const { authenticated, login } = usePrivy();
   const [showWalletModal, setShowWalletModal] = useState(false);
   const [pendingJoin, setPendingJoin] = useState(false);
@@ -77,7 +78,7 @@ export default function PublicSquadInvitePage() {
 
     const url = `/api/import/claim/${squadId}?player=${encodeURIComponent(playerName)}`;
 
-    fetch(url)
+    fetch(url, { headers: walletAuthHeaders(address, chain) })
       .then(res => res.json())
       .then(data => {
         if (cancelled) return;
@@ -101,7 +102,7 @@ export default function PublicSquadInvitePage() {
       });
 
     return () => { cancelled = true; };
-  }, [isImportClaim, squadId, playerName]);
+  }, [isImportClaim, squadId, playerName, address, chain]);
 
   const handleClaim = async () => {
     if (!address || !squadId || !playerName) {
@@ -115,10 +116,9 @@ export default function PublicSquadInvitePage() {
     try {
       const res = await fetch(`/api/import/claim/${squadId}`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...walletAuthHeaders(address, chain) },
         body: JSON.stringify({
           playerName: playerName.trim(),
-          claimingWalletAddress: address,
         }),
       });
 

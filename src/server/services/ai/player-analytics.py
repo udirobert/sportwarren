@@ -115,7 +115,10 @@ class PlayerAnalyticsService:
                 url,
                 params=params,
                 data=image_base64,
-                headers={"Content-Type": "application/x-www-form-urlencoded"}
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+                # Bound both connection establishment and provider response so
+                # a stalled inference cannot consume a worker indefinitely.
+                timeout=(3.05, 15),
             )
             
             if response.status_code == 200:

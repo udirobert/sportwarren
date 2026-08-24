@@ -1,13 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { autonomyPolicy } from '@/server/services/ai/autonomy-policy';
+import { requireCronAuthorization } from '@/server/services/security/cron-auth';
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('Authorization');
-  const expectedSecret = process.env.CRON_SECRET;
-  if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronAuthorization(request);
+  if (unauthorized) return unauthorized;
 
   console.log('[Cron:autonomy-window] Checking for upcoming matches...');
 

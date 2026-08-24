@@ -22,6 +22,7 @@ import { prisma } from '@/lib/db';
 import { createScoutReport } from '@/server/services/ai/scout-report';
 import { tinyfishService, tinyfishConfigured } from '@/server/services/ai/tinyfish';
 import { WhatsAppService } from '@/server/services/communication/whatsapp';
+import { requireCronAuthorization } from '@/server/services/security/cron-auth';
 
 const EXPLORER_BASE = process.env.KITE_EXPLORER_URL || 'https://testnet.kitescan.ai';
 const SCOUT_AUTO_PRICE_USDC = Number(process.env.KITE_SCOUT_PRICE_USDC || '0.005');
@@ -35,11 +36,8 @@ function fmtTx(txHash: string | undefined | null): string {
 export async function GET(request: Request) {
   console.log('[Cron:auto-scout] Starting autonomous scouting loop...');
 
-  const authHeader = request.headers.get('Authorization');
-  const expectedSecret = process.env.CRON_SECRET;
-  if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronAuthorization(request);
+  if (unauthorized) return unauthorized;
 
   const now = new Date();
   const windowStart = new Date(now.getTime() + 22 * 60 * 60 * 1000);

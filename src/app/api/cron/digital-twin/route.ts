@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { getTwinService } from '@/server/services/personalization/twin-service';
 import { refreshSquadEnergy } from '@/server/services/personalization/squad-energy';
+import { requireCronAuthorization } from '@/server/services/security/cron-auth';
 
 /**
  * Cron endpoint — twin lifecycle housekeeping.
@@ -21,12 +22,8 @@ import { refreshSquadEnergy } from '@/server/services/personalization/squad-ener
  */
 export async function GET(request: Request) {
   console.log('[Cron] Starting twin housekeeping...');
-  const authHeader = request.headers.get('Authorization');
-  const expectedSecret = process.env.CRON_SECRET;
-
-  if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronAuthorization(request);
+  if (unauthorized) return unauthorized;
 
   try {
     const recentMatches = await prisma.match.findMany({

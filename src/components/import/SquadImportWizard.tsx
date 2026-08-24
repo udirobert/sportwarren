@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Card } from '@/components/ui/Card';
 import { useWallet } from '@/contexts/WalletContext';
+import { walletAuthHeaders } from '@/lib/auth/client-request-headers';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -75,7 +76,7 @@ interface SquadImportWizardProps {
 }
 
 export default function SquadImportWizard({ onComplete, onClose }: SquadImportWizardProps) {
-  const { address, isGuest } = useWallet();
+  const { address, chain, isGuest, isVerified } = useWallet();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const matchFileInputRef = useRef<HTMLInputElement>(null);
   const [step, setStep] = useState<WizardStep>('upload');
@@ -226,7 +227,7 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
   }, []);
 
   const handleCommit = useCallback(async () => {
-    if (!address || !squadName.trim()) {
+    if (!address || !isVerified || !squadName.trim()) {
       setCommitError('Please sign in to import your squad.');
       return;
     }
@@ -237,12 +238,11 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
     try {
       const response = await fetch('/api/import/squad', {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...walletAuthHeaders(address, chain) },
         body: JSON.stringify({
           raw: rawText,
           mapping,
           squadName: squadName.trim(),
-          captainWalletAddress: address,
           origin: window.location.origin,
         }),
       });
@@ -264,7 +264,7 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
     } finally {
       setIsCommitting(false);
     }
-  }, [rawText, mapping, squadName, address, onComplete]);
+  }, [rawText, mapping, squadName, address, chain, isVerified, onComplete]);
 
   const handleMatchCommit = useCallback(async () => {
     if (!result?.squadId) return;
@@ -275,7 +275,7 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
     try {
       const response = await fetch(`/api/import/matches/${result.squadId}`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...walletAuthHeaders(address, chain) },
         body: JSON.stringify({
           raw: matchRawText,
           mapping: matchMapping,
@@ -296,7 +296,7 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
     } finally {
       setMatchImporting(false);
     }
-  }, [matchRawText, matchMapping, result]);
+  }, [matchRawText, matchMapping, result, address, chain]);
 
   const handleCopyInvite = useCallback(async (url: string, index: number) => {
     await navigator.clipboard.writeText(url);

@@ -107,7 +107,7 @@ def approval_program():
     current_disputes = ScratchVar(TealType.uint64)
     dispute_key = ScratchVar(TealType.bytes)
     on_dispute_match = Seq([
-        Assert(Txn.application_args.length() == Int(3)),  # match_id, dispute_reason, evidence_hash
+        Assert(Txn.application_args.length() == Int(4)),  # selector, match_id, dispute_reason, evidence_hash
         match_id_dispute.store(Btoi(Txn.application_args[1])),
         Assert(App.globalGet(Concat(Bytes("match_submitter_"), Itob(match_id_dispute.load()))) != Bytes("")),  # Match exists
         
@@ -188,10 +188,10 @@ def clear_state_program():
     return Approve()
 
 if __name__ == "__main__":
-    with open("match_verification_approval.teal", "w") as f:
+    with open("contracts/match_verification/approval.teal", "w") as f:
         compiled = compileTeal(approval_program(), Mode.Application, version=6)
         f.write(compiled)
 
-    with open("match_verification_clear_state.teal", "w") as f:
+    with open("contracts/match_verification/clear_state.teal", "w") as f:
         compiled = compileTeal(clear_state_program(), Mode.Application, version=6)
         f.write(compiled)

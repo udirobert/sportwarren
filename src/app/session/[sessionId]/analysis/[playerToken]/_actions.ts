@@ -43,6 +43,15 @@ export async function commitToNextSession(
   });
   if (!current) return { ...empty, error: 'Session not found' };
 
+  // A preview credential authorizes its owner, not arbitrary session IDs.
+  const attended = await prisma.sessionAttendee.findUnique({
+    where: {
+      sessionId_profileId: { sessionId: currentSessionId, profileId: player.playerProfile.id },
+    },
+    select: { id: true },
+  });
+  if (!attended) return { ...empty, error: 'You did not attend this session' };
+
   // Find the squad's next scheduled session, or create one a week on.
   let next = await prisma.session.findFirst({
     where: { squadId: current.squadId, status: 'scheduled', date: { gt: current.date } },

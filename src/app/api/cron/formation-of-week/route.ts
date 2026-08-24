@@ -3,6 +3,7 @@ import { broadcastToSquadGroups } from '@/server/services/communication/squad-br
 import { createTacticalPlanShare } from '@/server/services/tactical-plan-share';
 import { buildChallengeSharePath } from '@/lib/pitch/shareUrl';
 import type { Formation } from '@/types';
+import { requireCronAuthorization } from '@/server/services/security/cron-auth';
 
 /**
  * Cron endpoint: Formation of the Week
@@ -41,12 +42,8 @@ function getWeekOfYear(): number {
 }
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('Authorization');
-  const expectedSecret = process.env.CRON_SECRET;
-
-  if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronAuthorization(request);
+  if (unauthorized) return unauthorized;
 
   try {
     // Pick formation based on week number (deterministic rotation)

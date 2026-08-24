@@ -43,6 +43,11 @@ async function main() {
   const governorAddress = await squadGovernor.getAddress();
   console.log("SquadGovernor deployed to:", governorAddress);
 
+  // GovernorTimelockControl queues successful proposals through the
+  // timelock, so the governor itself must be a proposer and canceller.
+  await (await timelock.grantRole(await timelock.PROPOSER_ROLE(), governorAddress)).wait();
+  await (await timelock.grantRole(await timelock.CANCELLER_ROLE(), governorAddress)).wait();
+
   // 4. Deploy Achievement NFT
   console.log("Deploying AchievementNFT...");
   const AchievementNFT = await ethers.getContractFactory("AchievementNFT");

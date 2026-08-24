@@ -49,14 +49,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const { handle } = await params;
   const user = await prisma.user.findUnique({
     where: { handle: handle.toLowerCase() },
-    select: { name: true, walletAddress: true, discoverable: true, position: true },
+    select: { name: true, discoverable: true, position: true },
   });
   if (!user || !user.discoverable) {
     return { title: 'SportWarren' };
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'https://sportwarren.com';
-  const cardImageUrl = `${baseUrl}/api/og/card/${encodeURIComponent(user.walletAddress)}`;
+  // Never derive a public URL from walletAddress: it is the private preview
+  // credential. Until a public-card image route exists, use the safe site card.
+  const cardImageUrl = `${baseUrl}/og-image.png`;
   const title = `${user.name ?? handle} · SportWarren`;
   const description = user.position
     ? `${user.position} on SportWarren. Rate the lads back, build your own card.`

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { runSimulation, settleResults } from '@/server/services/personalization/twin-sim';
+import { requireCronAuthorization } from '@/server/services/security/cron-auth';
 
 /**
  * Cron endpoint — runs pending overnight twin simulations.
@@ -13,12 +14,8 @@ import { runSimulation, settleResults } from '@/server/services/personalization/
  */
 export async function GET(request: Request) {
   console.log('[Cron] Starting twin simulation runner...');
-  const authHeader = request.headers.get('Authorization');
-  const expectedSecret = process.env.CRON_SECRET;
-
-  if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronAuthorization(request);
+  if (unauthorized) return unauthorized;
 
   try {
     const pending = await prisma.twinSimulation.findMany({

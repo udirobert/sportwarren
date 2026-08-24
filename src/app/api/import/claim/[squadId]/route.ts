@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getAuthenticatedRequestUser } from '@/server/services/security/request-auth';
 
 type RouteContext = { params: Promise<{ squadId: string }> };
 
@@ -11,6 +12,9 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
   try {
     const { squadId } = await params;
     const playerName = req.nextUrl.searchParams.get('player');
+    if (!await getAuthenticatedRequestUser(req)) {
+      return NextResponse.json({ error: 'Authenticated wallet required' }, { status: 401 });
+    }
 
     if (!playerName?.trim()) {
       return NextResponse.json({ error: 'Missing player name' }, { status: 400 });
@@ -27,10 +31,7 @@ export async function GET(req: NextRequest, { params }: RouteContext) {
           status: 'pending',
           user: { name: { equals: playerName.trim(), mode: 'insensitive' } },
         },
-        include: {
-          user: { select: { id: true, name: true, position: true, walletAddress: true } },
-          squad: { select: { name: true, shortName: true } },
-        },
+        include: { user: { select: { id: true, name: true, position: true, walletAddress: true } } },
       }),
     ]);
 
@@ -79,23 +80,13 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
   try {
     const { squadId } = await params;
     const body = await req.json();
-    const { playerName, claimingWalletAddress } = body;
+    const { playerName } = body;
 
     if (!playerName?.trim()) {
       return NextResponse.json({ error: 'Missing player name' }, { status: 400 });
     }
-    if (!claimingWalletAddress?.trim()) {
-      return NextResponse.json({ error: 'Missing wallet address' }, { status: 400 });
-    }
-
-    // Find the claiming user by wallet address
-    const claimingUser = await prisma.user.findUnique({
-      where: { walletAddress: claimingWalletAddress },
-    });
-
-    if (!claimingUser) {
-      return NextResponse.json({ error: 'User not found. Make sure you are signed in.' }, { status: 404 });
-    }
+    const claimingUser = await getAuthenticatedRequestUser(req);
+    if (!claimingUser) return NextResponse.json({ error: 'Authenticated wallet required' }, { status: 401 });
 
     // Check if claiming user is already a member of this squad
     const existingMembership = await prisma.squadMember.findUnique({

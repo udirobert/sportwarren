@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:migrate:status": "prisma migrate status",
+    "db:match-xp:report": "tsx scripts/maintenance/report-match-xp-reconciliation.ts",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",

@@ -14,7 +14,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <SmartNavigation />
-      <div className="min-h-screen overflow-x-hidden">
+      <div className="min-h-screen overflow-x-hidden nav-spacer-bottom">
         <Suspense fallback={null}>
           <VerificationBanner className="sticky top-16 z-30 mx-4 mt-4 md:mx-6" />
         </Suspense>

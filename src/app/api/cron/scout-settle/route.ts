@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { redisService } from '@/server/services/redis';
 import { prisma } from '@/lib/db';
 import { createPlatformSettlement } from '@/server/services/blockchain/x402-client';
+import { requireCronAuthorization } from '@/server/services/security/cron-auth';
 
 const LOCK_KEY = 'cron:scout-settle:lock';
 const LOCK_TTL = 60;
@@ -17,11 +18,8 @@ function timeoutAfter<T>(ms: number): Promise<T> {
 }
 
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('Authorization');
-  const expectedSecret = process.env.CRON_SECRET;
-  if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronAuthorization(request);
+  if (unauthorized) return unauthorized;
 
   const acquired = await redisService.trySet(LOCK_KEY, '1', LOCK_TTL);
   if (!acquired) {

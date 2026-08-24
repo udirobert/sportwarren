@@ -73,15 +73,15 @@ function createDbStub(opts: { playerTwin?: any; squadTwin?: any } = {}) {
   const $transaction = vi.fn().mockImplementation(async (fn: any) => {
     // Provide a minimal tx stub that forwards to the same models
     const tx = {
-      playerTwin: { update: playerTwinUpdate, create: playerAttestationCreate },
-      squadTwin: { update: squadTwinUpdate, create: squadAttestationCreate },
+      playerTwin: { update: playerTwinUpdate, updateMany: playerTwinUpdate, create: playerAttestationCreate },
+      squadTwin: { update: squadTwinUpdate, updateMany: squadTwinUpdate, create: squadAttestationCreate },
       attestation: { create: vi.fn().mockResolvedValue({ id: 'att-1' }) },
     };
     return fn(tx);
   });
 
-  const playerTwinUpdate = vi.fn().mockResolvedValue({});
-  const squadTwinUpdate = vi.fn().mockResolvedValue({});
+  const playerTwinUpdate = vi.fn().mockResolvedValue({ count: 1 });
+  const squadTwinUpdate = vi.fn().mockResolvedValue({ count: 1 });
   const playerAttestationCreate = vi.fn().mockResolvedValue({ id: 'att-player-1' });
   const squadAttestationCreate = vi.fn().mockResolvedValue({ id: 'att-squad-1' });
 

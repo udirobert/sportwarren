@@ -925,6 +925,7 @@ model XPGain {
 
   createdAt DateTime @default(now()) @map("created_at")
 
+  @@unique([matchId, profileId])
   @@map("xp_gains")
 }
 
@@ -1398,6 +1399,7 @@ model PlayerTwin {
 
   // Daily drill cooldown (PR 11)
   lastDailyDrillAt DateTime? @map("last_daily_drill_at")
+  revision         Int       @default(0)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1432,6 +1434,7 @@ model SquadTwin {
   // PR 2 — squad twin milestones (mirrors player_twins)
   reputation       Int     @default(0)
   attestationCount Int     @default(0) @map("attestation_count")
+  revision         Int     @default(0)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

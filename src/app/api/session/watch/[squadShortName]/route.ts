@@ -5,6 +5,7 @@
 
 import { NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getAuthenticatedRequestUser } from '@/server/services/security/request-auth';
 
 export async function GET(
   req: NextRequest,
@@ -23,6 +24,15 @@ export async function GET(
 
   if (!squad) {
     return Response.json({ error: 'not-found' }, { status: 404 });
+  }
+
+  if (squad.visibility !== 'public') {
+    const actor = await getAuthenticatedRequestUser(req);
+    const membership = actor && await prisma.squadMember.findFirst({
+      where: { squadId: squad.id, userId: actor.id, status: 'active' },
+      select: { id: true },
+    });
+    if (!membership) return Response.json({ error: 'not-found' }, { status: 404 });
   }
 
   const session = await prisma.session.findFirst({

@@ -111,7 +111,7 @@ def approval_program():
     verifier_count = ScratchVar(TealType.uint64)
     skill_points_earned = ScratchVar(TealType.uint64)
     on_update_skill = Seq([
-        Assert(Txn.application_args.length() == Int(4)),  # skill_category, rating, verifier_address, evidence_hash
+        Assert(Txn.application_args.length() == Int(5)),  # selector, skill_category, rating, verifier_address, evidence_hash
         skill_category.store(Txn.application_args[1]),
         skill_rating.store(Btoi(Txn.application_args[2])),
         Assert(skill_rating.load() >= Int(0)),
@@ -148,7 +148,7 @@ def approval_program():
     endorsement_weight = ScratchVar(TealType.uint64)
     reputation_bonus = ScratchVar(TealType.uint64)
     on_endorse_player = Seq([
-        Assert(Txn.application_args.length() == Int(4)),  # target_player, skill_category, rating, comment_hash
+        Assert(Txn.application_args.length() == Int(5)),  # selector, target_player, skill_category, rating, comment_hash
         Assert(Txn.sender() != Txn.application_args[1]),  # Can't endorse yourself
         
         # Check endorser reputation
@@ -191,7 +191,7 @@ def approval_program():
     achievement_points = ScratchVar(TealType.uint64)
     rarity_multiplier = ScratchVar(TealType.uint64)
     on_verify_achievement = Seq([
-        Assert(Txn.application_args.length() == Int(4)),  # player_address, achievement_id, rarity, evidence_hash
+        Assert(Txn.application_args.length() == Int(5)),  # selector, player_address, achievement_id, rarity, evidence_hash
         Assert(Txn.sender() == App.globalGet(SYSTEM_CREATOR)),  # Only system creator can verify achievements
         
         # Calculate points based on rarity (1=common, 2=rare, 3=epic, 4=legendary)
@@ -239,7 +239,7 @@ def approval_program():
     scout_rating = ScratchVar(TealType.uint64)
     professional_bonus = ScratchVar(TealType.uint64)
     on_professional_scout = Seq([
-        Assert(Txn.application_args.length() == Int(4)),  # player_address, scout_organization, interest_level, notes_hash
+        Assert(Txn.application_args.length() == Int(5)),  # selector, player_address, scout_organization, interest_level, notes_hash
         Assert(Txn.sender() == App.globalGet(SYSTEM_CREATOR)),  # Only verified scouts can register interest
         
         # Calculate professional score bonus based on interest level (1=watching, 2=interested, 3=very_interested)
@@ -277,7 +277,7 @@ def approval_program():
     # --- Transfer Reputation (Portable Identity) ---
     transfer_amount = ScratchVar(TealType.uint64)
     on_transfer_reputation = Seq([
-        Assert(Txn.application_args.length() == Int(2)),  # recipient_address, amount
+        Assert(Txn.application_args.length() == Int(3)),  # selector, recipient_address, amount
         transfer_amount.store(Btoi(Txn.application_args[2])),
         Assert(App.localGet(Txn.sender(), PLAYER_REPUTATION) >= transfer_amount.load()),
         
@@ -334,10 +334,10 @@ def clear_state_program():
     return Approve()
 
 if __name__ == "__main__":
-    with open("reputation_system_approval.teal", "w") as f:
+    with open("contracts/reputation_system/approval.teal", "w") as f:
         compiled = compileTeal(approval_program(), Mode.Application, version=6)
         f.write(compiled)
 
-    with open("reputation_system_clear_state.teal", "w") as f:
+    with open("contracts/reputation_system/clear_state.teal", "w") as f:
         compiled = compileTeal(clear_state_program(), Mode.Application, version=6)
         f.write(compiled)

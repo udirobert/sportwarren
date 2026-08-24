@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { calculateConsensus } from '@/lib/match/peer-consensus';
 import { PEER_RATING } from '@/lib/match/constants';
+import { requireCronAuthorization } from '@/server/services/security/cron-auth';
 
 /**
  * Cron endpoint to trigger peer consensus calculations
@@ -17,13 +18,8 @@ import { PEER_RATING } from '@/lib/match/constants';
  */
 export async function GET(request: Request) {
   console.log('[Cron] Starting peer consensus calculation job...');
-  // Verify cron secret (prevent unauthorized access)
-  const authHeader = request.headers.get('Authorization');
-  const expectedSecret = process.env.CRON_SECRET;
-
-  if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronAuthorization(request);
+  if (unauthorized) return unauthorized;
 
   try {
     // Find matches with expired rating windows that haven't been closed

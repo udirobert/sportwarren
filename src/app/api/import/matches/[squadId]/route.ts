@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { commitMatchHistoryImport } from '@/server/services/import/squad-import';
 import type { ColumnMapping } from '@/server/services/import/squad-import';
+import { getAuthenticatedRequestUser } from '@/server/services/security/request-auth';
 
 export async function POST(
   req: NextRequest,
@@ -9,6 +10,8 @@ export async function POST(
 ) {
   try {
     const { squadId } = await params;
+    const actor = await getAuthenticatedRequestUser(req);
+    if (!actor) return NextResponse.json({ error: 'Authenticated wallet required' }, { status: 401 });
 
     const body = await req.json();
     const { raw, mapping, delimiter } = body;
@@ -30,14 +33,13 @@ export async function POST(
       return NextResponse.json({ error: 'Column mapping must include date and opponent fields' }, { status: 400 });
     }
 
-    // Verify squad exists
-    const squad = await prisma.squad.findUnique({
-      where: { id: squadId },
+    const membership = await prisma.squadMember.findFirst({
+      where: { squadId, userId: actor.id, status: 'active', role: { in: ['captain', 'vice_captain'] } },
       select: { id: true },
     });
 
-    if (!squad) {
-      return NextResponse.json({ error: 'Squad not found' }, { status: 404 });
+    if (!membership) {
+      return NextResponse.json({ error: 'Only squad leaders can import match history' }, { status: 403 });
     }
 
     const result = await commitMatchHistoryImport(

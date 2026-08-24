@@ -4,6 +4,7 @@ import {
   renderPendingBatch as renderV2,
   v2HandledKinds,
 } from '@/server/services/personalization/moment-render-v2';
+import { requireCronAuthorization } from '@/server/services/security/cron-auth';
 
 /**
  * Cron endpoint — renders pending moment PNGs.
@@ -36,11 +37,8 @@ import {
  * library is observable.
  */
 export async function GET(request: Request) {
-  const authHeader = request.headers.get('Authorization');
-  const expectedSecret = process.env.CRON_SECRET;
-  if (expectedSecret && authHeader !== `Bearer ${expectedSecret}`) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  const unauthorized = requireCronAuthorization(request);
+  if (unauthorized) return unauthorized;
 
   const url = new URL(request.url);
   const versionParam = url.searchParams.get('v');

@@ -2,11 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
 import { commitSquadImport } from '@/server/services/import/squad-import';
 import type { ColumnMapping } from '@/server/services/import/squad-import';
+import { getAuthenticatedRequestUser } from '@/server/services/security/request-auth';
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { raw, mapping, squadName, captainWalletAddress, delimiter, origin } = body;
+    const { raw, mapping, squadName, delimiter, origin } = body;
 
     if (!raw || typeof raw !== 'string') {
       return NextResponse.json({ error: 'Missing raw data' }, { status: 400 });
@@ -17,23 +18,13 @@ export async function POST(req: NextRequest) {
     if (!squadName || typeof squadName !== 'string' || !squadName.trim()) {
       return NextResponse.json({ error: 'Missing squad name' }, { status: 400 });
     }
-    if (!captainWalletAddress || typeof captainWalletAddress !== 'string') {
-      return NextResponse.json({ error: 'Missing captain wallet address' }, { status: 400 });
-    }
+    const captain = await getAuthenticatedRequestUser(req);
+    if (!captain) return NextResponse.json({ error: 'Authenticated wallet required' }, { status: 401 });
 
     // Validate the mapping has a name column
     const hasName = (mapping as ColumnMapping[]).some(m => m.field === 'name');
     if (!hasName) {
       return NextResponse.json({ error: 'Column mapping must include a name field' }, { status: 400 });
-    }
-
-    // Look up the captain by wallet address
-    const captain = await prisma.user.findUnique({
-      where: { walletAddress: captainWalletAddress },
-    });
-
-    if (!captain) {
-      return NextResponse.json({ error: 'Captain user not found. Make sure you are signed in.' }, { status: 404 });
     }
 
     const result = await commitSquadImport(

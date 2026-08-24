@@ -376,8 +376,8 @@ export class TwinService {
 
     if (scope === 'player') {
       await this.db.$transaction(async (tx) => {
-        await tx.playerTwin.update({
-          where: { id: row.id },
+        const updated = await tx.playerTwin.updateMany({
+          where: { id: row.id, revision: (row as typeof row & { revision?: number }).revision ?? 0 },
           data: {
             level: newLevel,
             xp: newXp,
@@ -390,8 +390,12 @@ export class TwinService {
             // Cooldown for daily_drill is part of the same transaction as the
             // XP mutation — otherwise a partial failure lets the player spam.
             ...(event.kind === 'daily_drill' ? { lastDailyDrillAt: now } : {}),
+            revision: { increment: 1 },
           },
         });
+        if (updated.count !== 1) {
+          throw new Error('Twin mutation conflict; retry the event');
+        }
 
         if (event.kind === 'attestation') {
           await tx.attestation.create({
@@ -419,8 +423,8 @@ export class TwinService {
       // SquadTwin.energy — the sim_completed events that carry energyDelta
       // belong to the deferred agentic-commerce surface.
       await this.db.$transaction(async (tx) => {
-        await tx.squadTwin.update({
-          where: { id: row.id },
+        const updated = await tx.squadTwin.updateMany({
+          where: { id: row.id, revision: (row as typeof row & { revision?: number }).revision ?? 0 },
           data: {
             level: newLevel,
             xp: newXp,
@@ -428,8 +432,12 @@ export class TwinService {
             baseAttributes: newBase as any,
             reputation: newReputation,
             attestationCount: newAttestationCount,
+            revision: { increment: 1 },
           },
         });
+        if (updated.count !== 1) {
+          throw new Error('Twin mutation conflict; retry the event');
+        }
 
         if (event.kind === 'attestation') {
           await tx.attestation.create({

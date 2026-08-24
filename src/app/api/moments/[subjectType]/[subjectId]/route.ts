@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/db';
+import { getAuthenticatedRequestUser } from '@/server/services/security/request-auth';
 
 export async function GET(
   _req: NextRequest,
@@ -7,9 +8,27 @@ export async function GET(
 ) {
   try {
     const { subjectType, subjectId } = await params;
+    const actor = await getAuthenticatedRequestUser(_req);
+    if (!actor) return NextResponse.json({ error: 'Authenticated wallet required' }, { status: 401 });
 
     if (subjectType !== 'player' && subjectType !== 'squad') {
       return NextResponse.json({ error: 'subjectType must be player or squad' }, { status: 400 });
+    }
+
+    if (subjectType === 'squad') {
+      const membership = await prisma.squadMember.findFirst({
+        where: { squadId: subjectId, userId: actor.id, status: 'active' },
+        select: { id: true },
+      });
+      if (!membership) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    } else {
+      const profile = await prisma.playerProfile.findFirst({
+        where: { OR: [{ id: subjectId }, { userId: subjectId }] },
+        select: { userId: true },
+      });
+      if (!profile || profile.userId !== actor.id) {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+      }
     }
 
     const url = new URL(_req.url);
@@ -48,7 +67,6 @@ export async function GET(
         tier: m.tier,
         label: m.label,
         detail: m.detail,
-        renderedKey: m.renderedKey,
         renderedAt: m.renderedAt?.toISOString() ?? null,
         createdAt: m.createdAt.toISOString(),
       })),

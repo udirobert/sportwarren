@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -40,6 +40,13 @@ export const metadata: Metadata = {
     creator: "@sportwarren",
   },
   keywords: ["football", "soccer", "tactics", "squad", "5-a-side", "recreational football", "stats", "simulation"],
+};
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
+  interactiveWidget: 'resizes-visual',
 };
 
 export default function RootLayout({

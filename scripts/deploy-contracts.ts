@@ -250,25 +250,10 @@ class ContractDeployer {
       await this.algodClient.sendRawTransaction(fundTxn.signTxn(this.deployerAccount.sk)).do();
       await this.waitForTransaction(fundTxn.txID());
 
-      // If ReputationSystem or SquadDAO, call initialize
-      if (contractConfig.name === "ReputationSystem" || contractConfig.name === "SquadDAO") {
-        console.log(`🎬 Initializing ${contractConfig.name}...`);
-        const initParams = await this.algodClient.getTransactionParams().do();
-        initParams.fee = 10000n;
-        initParams.flatFee = true;
-        
-        const encoder = new TextEncoder();
-        const initTxn = algosdk.makeApplicationNoOpTxnFromObject({
-          sender: this.deployerAccount.addr.toString(),
-          appIndex: Number(appId),
-          appArgs: [encoder.encode("initialize")],
-          suggestedParams: initParams,
-        });
-        
-        await this.algodClient.sendRawTransaction(initTxn.signTxn(this.deployerAccount.sk)).do();
-        await this.waitForTransaction(initTxn.txID());
-        console.log(`✅ ReputationSystem initialized!`);
-      }
+      // Application creation executes each contract's initialization branch.
+      // Do not send a second `initialize` NoOp: these routers intentionally
+      // expose no such selector, and a rejected post-create call would leave
+      // an irreversible but unrecorded application behind.
 
       console.log(`✅ ${contractConfig.name} deployed successfully!`);
       console.log(`   📋 Application ID: ${appId}`);

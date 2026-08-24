@@ -48,19 +48,6 @@ export async function uploadTelegramMiniAppMedia(
   }
   const mediaKey = unwrapKeyWithMaster(secret.keyEnc, master);
 
-  const media = await prisma.squadMedia.create({
-    data: {
-      squadId,
-      uploaderId: identity.user.id,
-      title: input.title?.trim() || null,
-      kind: input.mimeType.startsWith('video/') ? 'video' : 'image',
-      mimeType: input.mimeType,
-      size: 0, // updated after storage
-      storageKey: 'pending',
-      visibility: input.visibility || 'squad',
-    },
-  });
-
   const ext = extensionFromMime(input.mimeType);
   const storage = getStorageAdapter();
   // Encrypt on server before storing (ciphertext at rest). Enforce size guard.
@@ -83,6 +70,25 @@ export async function uploadTelegramMiniAppMedia(
       throw new Error('QUOTA_EXCEEDED:Squad media quota exceeded');
     }
   }
+  const thumbnailPlain = input.thumbBase64 && input.thumbMimeType
+    ? Buffer.from(input.thumbBase64, 'base64')
+    : null;
+  if (thumbnailPlain && thumbnailPlain.length > 512 * 1024) {
+    throw new Error('THUMB_TOO_LARGE:Thumbnail exceeds 512KB');
+  }
+  // Do not expose a database row until all cheap validation has completed.
+  const media = await prisma.squadMedia.create({
+    data: {
+      squadId,
+      uploaderId: identity.user.id,
+      title: input.title?.trim() || null,
+      kind: input.mimeType.startsWith('video/') ? 'video' : 'image',
+      mimeType: input.mimeType,
+      size: 0, // finalized after storage succeeds
+      storageKey: 'pending',
+      visibility: input.visibility || 'squad',
+    },
+  });
   const stored = await storage.saveBase64({
     ownerType: 'squad',
     ownerId: squadId,
@@ -94,13 +100,8 @@ export async function uploadTelegramMiniAppMedia(
   });
 
   let thumbUpdate: any = {};
-  if (input.thumbBase64 && input.thumbMimeType) {
-    const tPlain = Buffer.from(input.thumbBase64, 'base64');
-    // Keep thumb <= 500KB for snappy loads
-    if (tPlain.length > 512 * 1024) {
-      throw new Error('THUMB_TOO_LARGE:Thumbnail exceeds 512KB');
-    }
-    const tEncrypted = encryptMedia(tPlain, mediaKey);
+  if (thumbnailPlain && input.thumbMimeType) {
+    const tEncrypted = encryptMedia(thumbnailPlain, mediaKey);
     const tExt = extensionFromMime(input.thumbMimeType);
     const tStored = await storage.saveBase64({
       ownerType: 'squad',
@@ -138,7 +139,7 @@ export async function listTelegramMiniAppMedia(
   const squadId = identity.activeSquadId || memberships[0].squad.id;
 
   const items = await prisma.squadMedia.findMany({
-    where: { squadId },
+    where: { squadId, deletedAt: null },
     orderBy: { createdAt: 'desc' },
     take: 100,
     select: {
@@ -150,12 +151,13 @@ export async function listTelegramMiniAppMedia(
       visibility: true,
       createdAt: true,
       thumbStorageKey: true,
+      deletedAt: true,
       uploader: { select: { id: true, name: true } },
     },
   });
 
   return items
-    .filter(i => (i as any).deletedAt == null)
+    .filter(i => i.deletedAt == null)
     .map(i => ({ ...i, hasThumb: Boolean(i.thumbStorageKey) }));
 }
 

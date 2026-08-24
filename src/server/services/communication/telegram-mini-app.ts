@@ -22,6 +22,7 @@ import {
 import {
   applyMatchXP,
   getMatchXPSummariesForProfile,
+  type MatchXPProfileResult,
 } from "../match-xp";
 
 import { maskMatchIntel } from "@/lib/match/intel-disclosure";
@@ -900,7 +901,7 @@ export async function verifyTelegramMiniAppMatch(
     });
 
     const currentUserResult = playerProfile
-      ? xpResult.results.find((result) => result.profileId === playerProfile.id) ?? null
+      ? xpResult.results.find((result: MatchXPProfileResult) => result.profileId === playerProfile.id) ?? null
       : null;
 
     if (currentUserResult) {

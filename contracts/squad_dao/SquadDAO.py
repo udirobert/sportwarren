@@ -142,10 +142,10 @@ def clear_state_program():
     return Approve()
 
 if __name__ == "__main__":
-    with open("squad_dao_approval.teal", "w") as f:
+    with open("contracts/squad_dao/approval.teal", "w") as f:
         compiled = compileTeal(approval_program(), Mode.Application, version=6)
         f.write(compiled)
 
-    with open("squad_dao_clear_state.teal", "w") as f:
+    with open("contracts/squad_dao/clear_state.teal", "w") as f:
         compiled = compileTeal(clear_state_program(), Mode.Application, version=6)
         f.write(compiled)
