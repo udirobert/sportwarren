@@ -325,6 +325,66 @@ export function V3CTAButton({
 }
 
 // ────────────────────────────────────────────────────────────────────
+// V3MiniButton — small inline action (pills, tertiary row actions)
+// ────────────────────────────────────────────────────────────────────
+
+export interface V3MiniButtonProps {
+  children: React.ReactNode;
+  onClick?: () => void;
+  /** Active/selected state — inverted fill. */
+  active?: boolean;
+  disabled?: boolean;
+  title?: string;
+  /** Render a <label> (for file pickers) instead of a <button>. */
+  as?: 'button' | 'label';
+  /** 'dark' for use on ink backgrounds (cream text/border). */
+  tone?: 'light' | 'dark';
+}
+
+/**
+ * Small inline button for rows of choices and tertiary actions. Full-width
+ * calls-to-action stay on V3CTAButton; this is for pills and per-row
+ * actions that sit side by side. Never removes the focus outline.
+ */
+export function V3MiniButton({
+  children,
+  onClick,
+  active = false,
+  disabled = false,
+  title,
+  as = 'button',
+  tone = 'light',
+}: V3MiniButtonProps) {
+  const fg = tone === 'dark' ? PALETTE.cream : PALETTE.ink;
+  const style: React.CSSProperties = {
+    display: 'inline-block',
+    fontFamily: TYPE.mono,
+    fontSize: 10,
+    fontWeight: 700,
+    letterSpacing: TRACKING.cap,
+    textTransform: 'uppercase',
+    padding: '7px 11px',
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    background: active ? fg : 'transparent',
+    color: active ? (tone === 'dark' ? PALETTE.ink : PALETTE.cream) : fg,
+    border: `1.5px solid ${fg}`,
+    opacity: disabled ? 0.5 : 1,
+  };
+  if (as === 'label') {
+    return (
+      <label title={title} style={style}>
+        {children}
+      </label>
+    );
+  }
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} title={title} aria-pressed={active} style={style}>
+      {children}
+    </button>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
 // V3HollowCard — dashed-border accent card (for empty / unknown slots)
 // ────────────────────────────────────────────────────────────────────
 

@@ -230,6 +230,9 @@ Single source of truth lives at `src/components/v3/`:
   - `V3StatBand` — black ink + accent left border + BIG number + label
   - `V3CTAButton` — `primary` (mustard fill) | `secondary` (transparent
     + navy border) | `tertiary` (transparent + thin inkLight border)
+  - `V3MiniButton` — small inline action (style pills, per-row actions;
+    `light` | `dark` tone, `as="label"` for file pickers). Full-width CTAs
+    stay on `V3CTAButton`.
   - `V3HollowCard` — dashed-border accent card (for empty/unknown slots)
   - `V3SolidCard` — bordered solid card with optional accent stripe
 - `index.ts` — barrel export. Import everything via
@@ -337,6 +340,16 @@ The closed-loop ecosystem (`docs/flywheel.md`) bound together by:
     group's ritual ("needs 10 to happen — 7 in, 3 to go") with an
     explicit no-shaming rule — see `docs/product-calibration.md` →
     "Behavioural-design doctrine".
+  - **Clip Review pilot** — `ClipReview.tsx` (`src/components/session/`) +
+    `src/lib/clip-review/` (`detections`/`styles`/`overlay-draw`/`export`,
+    all pure + tested). `<video>` + `<canvas>` overlay on the analysis page
+    over a demo clip with synthetic detections: base tracking rings, one of
+    five overlay styles (Marker/Pundit/Hype/Strap/Data), slow-mo + flash
+    hype pulse on squeeze entry, per-event replay, client-side WebM export,
+    tap-for-commentary (`commentOnPressure` action, deterministic fallback).
+    Events are watch-only — no confirm/dispute on synthetic data (that
+    would manufacture evidence). Full plan:
+    `docs/plans/2026-10-03-clip-review-overlay.md`.
 - **Unified twin write path** — preview-tier sim and drill claims
   route through `TwinService.recordEvent` with `skipMoment: true` +
   `skipNotification: true`. The single funnel for twin mutations is

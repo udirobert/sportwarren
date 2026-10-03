@@ -20,6 +20,8 @@ import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import { SharePayoffButton } from './SharePayoffButton';
 import { NextGameCommit } from './NextGameCommit';
+import { ClipReview } from '@/components/session/ClipReview';
+import { DEMO_CLIP_SRC, generateDemoDetections } from '@/lib/clip-review/demo';
 import { MiniAvatar } from '../../../../preview/_components/MiniAvatar';
 import {
   PALETTE,
@@ -213,6 +215,10 @@ export default async function AnalysisPage({ params }: PageProps) {
     day: '2-digit', month: 'short', year: 'numeric',
   });
 
+  // Clip-review pilot — demo clip + synthetic detections until the
+  // upload → YOLO pipeline lands (docs/plans/2026-10-03-clip-review-overlay.md).
+  const demoDetections = generateDemoDetections();
+
   return (
     <V3PageShell paddingTop={32}>
       <V3Ribbon marginBottom={24} />
@@ -336,6 +342,24 @@ export default async function AnalysisPage({ params }: PageProps) {
       </V3Reveal>
 
       <V3Reveal delay={100}>
+        <V3SectionLabel marginTop={32}>Clip review · pilot</V3SectionLabel>
+        <p
+          style={{
+            fontFamily: TYPE.mono,
+            fontSize: 11,
+            lineHeight: 1.6,
+            color: PALETTE.inkLight,
+            marginBottom: 12,
+          }}
+        >
+          Demo clip with illustrative detections — not your session yet. Rings track every player;
+          a red squeeze under 3m (est.) logs a pressure event — tap one to jump straight to it.
+          When it&apos;s your footage, squeezes become evidence the group verifies before any card moves.
+        </p>
+        <ClipReview src={DEMO_CLIP_SRC} detections={demoDetections} sessionId={sessionId} playerToken={playerToken} />
+      </V3Reveal>
+
+      <V3Reveal delay={120}>
         <V3SectionLabel marginTop={32}>What you did tonight</V3SectionLabel>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 24 }}>
