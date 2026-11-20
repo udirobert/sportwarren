@@ -164,4 +164,54 @@ export const communicationRouter = createTRPCRouter({
         update: { enabled: input.enabled },
       });
     }),
+
+  // ── Taste learner — implicit engagement → learned notification weights ────
+  // Signals land here from any surface (moment gallery, recap, share flows);
+  // the WhatsApp cap gate reads the resulting weights. Never throws — a taste
+  // write must not break the surface that produced the signal.
+
+  recordTasteSignal: protectedProcedure
+    .input(z.object({
+      signal: z.enum(['skip', 'dismiss', 'open', 'dwell', 'share', 'save', 'like']),
+      kind: z.string().min(1),
+      matchId: z.string().optional(),
+      playerId: z.string().optional(),
+    }))
+    .mutation(async ({ ctx, input }) => {
+      const { recordTasteSignal } = await import(
+        '../services/personalization/taste-service'
+      );
+      return recordTasteSignal(ctx.userId!, input.signal, input.kind, {
+        matchId: input.matchId,
+        playerId: input.playerId,
+      });
+    }),
+
+  tasteExplanation: protectedProcedure.query(async ({ ctx }) => {
+    const { explainForUser } = await import(
+      '../services/personalization/taste-service'
+    );
+    return explainForUser(ctx.userId!);
+  }),
+
+  // ── Notification language — user-set locale on all their platform
+  // identities; notify resolves it per-send ('en' when unset).
+
+  notificationLocale: protectedProcedure.query(async ({ ctx }) => {
+    const identity = await ctx.prisma.platformIdentity.findFirst({
+      where: { userId: ctx.userId!, locale: { not: null } },
+      select: { locale: true },
+    });
+    return identity?.locale ?? 'en';
+  }),
+
+  setNotificationLocale: protectedProcedure
+    .input(z.object({ locale: z.enum(['en', 'es', 'fr', 'pt', 'de']) }))
+    .mutation(async ({ ctx, input }) => {
+      await ctx.prisma.platformIdentity.updateMany({
+        where: { userId: ctx.userId! },
+        data: { locale: input.locale },
+      });
+      return { locale: input.locale };
+    }),
 });

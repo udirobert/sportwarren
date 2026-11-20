@@ -890,6 +890,9 @@ export default function SettingsPage() {
           {connections.telegram?.connected && (
             <SignalPreferencesCard />
           )}
+
+          <TasteCard />
+          <NotificationLanguageCard />
         </div>
       )}
 
@@ -1125,6 +1128,91 @@ function SignalPreferencesCard() {
           </label>
         ))}
       </div>
+    </Card>
+  );
+}
+
+/**
+ * "Why am I seeing this?" — the taste learner explains itself. Weights are
+ * learned from implicit signals (moment dismissals, opens, shares) and gate
+ * the WhatsApp 3/day cap; this card makes that legible, per the
+ * preservation-first "why?" affordance the winners all shipped.
+ */
+function TasteCard() {
+  const { data: taste, isLoading } = trpc.communication.tasteExplanation.useQuery();
+
+  if (isLoading) {
+    return (
+      <Card>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Your feed, learned</h2>
+        <div className="space-y-2 animate-pulse">
+          <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded w-3/4" />
+          <div className="h-4 bg-gray-100 dark:bg-gray-800 rounded w-1/2" />
+        </div>
+      </Card>
+    );
+  }
+
+  const learned = (taste?.more.length ?? 0) + (taste?.fewer.length ?? 0) > 0;
+
+  return (
+    <Card>
+      <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Your feed, learned</h2>
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+        {taste?.summary ?? 'Still learning your taste — open, share, or skip moments and we\u2019ll adapt.'}
+      </p>
+      {learned && (
+        <div className="space-y-1 text-xs text-gray-500 dark:text-gray-400">
+          {taste!.more.length > 0 && (
+            <p><span className="font-semibold text-emerald-600 dark:text-emerald-400">More:</span> {taste!.more.join(', ')}</p>
+          )}
+          {taste!.fewer.length > 0 && (
+            <p><span className="font-semibold text-rose-500 dark:text-rose-400">Fewer:</span> {taste!.fewer.join(', ')}</p>
+          )}
+          <p className="pt-1">Learned from what you open, share, and hide in the moments gallery. Quiet kinds stop spending your daily message slots.</p>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/**
+ * Notification language — sets `PlatformIdentity.locale` for all of the
+ * user's linked channels; notify renders localized copy per-send.
+ */
+function NotificationLanguageCard() {
+  const utils = trpc.useUtils();
+  const { data: locale, isLoading } = trpc.communication.notificationLocale.useQuery();
+  const setLocale = trpc.communication.setNotificationLocale.useMutation({
+    onSettled: () => utils.communication.notificationLocale.invalidate(),
+  });
+
+  if (isLoading) {
+    return (
+      <Card>
+        <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Notification language</h2>
+        <div className="h-10 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">Notification language</h2>
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+        WhatsApp and Telegram milestone copy is sent in this language.
+      </p>
+      <select
+        value={locale ?? 'en'}
+        onChange={(e) => setLocale.mutate({ locale: e.target.value as 'en' | 'es' | 'fr' | 'pt' | 'de' })}
+        className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+      >
+        <option value="en">English</option>
+        <option value="es">Español</option>
+        <option value="fr">Français</option>
+        <option value="pt">Português</option>
+        <option value="de">Deutsch</option>
+      </select>
     </Card>
   );
 }

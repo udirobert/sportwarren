@@ -394,6 +394,7 @@ model PlatformIdentity {
   username       String?
   firstName      String? @map("first_name") // Telegram first name
   photoUrl       String? @map("photo_url") // Telegram profile photo URL
+  locale         String? // Notification language for this identity — user-set via Settings; 'en' assumed when null
 
   // Session fields (moved from PlatformConnection)
   miniAppToken          String?   @unique @map("mini_app_token")

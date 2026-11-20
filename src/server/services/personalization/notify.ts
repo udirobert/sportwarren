@@ -18,6 +18,13 @@
 
 import { prisma } from '@/lib/db';
 import { WhatsAppService } from '@/server/services/communication/whatsapp';
+import {
+  milestoneTelegramCopy,
+  milestoneWhatsAppCopy,
+  momentTelegramCopy,
+  resolveLocale,
+  type NotifyLocale,
+} from './notify-i18n';
 import { isKindQuiet } from './taste-service';
 import type { MilestoneHint, MomentHint, TwinScope } from './twin-types';
 
@@ -93,8 +100,8 @@ class TelegramChannel implements NotifyChannel {
   readonly name = 'telegram' as const;
 
   async sendMilestone(ctx: NotifyContext, milestone: MilestoneHint) {
-    const chatId = await this.resolveChatId(ctx);
-    if (!chatId) return false;
+    const target = await this.resolveTarget(ctx);
+    if (!target) return false;
 
     const optedIn = await this.isOptedIn(ctx, milestone.kind);
     if (!optedIn) return false;
@@ -105,8 +112,8 @@ class TelegramChannel implements NotifyChannel {
       const bot = telegramService?.getBot();
       if (!bot) return false;
 
-      const text = formatTelegramMilestone(ctx, milestone);
-      await bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
+      const text = milestoneTelegramCopy(target.locale, ctx.scope, milestone);
+      await bot.sendMessage(target.chatId, text, { parse_mode: 'Markdown' });
       return true;
     } catch (err) {
       console.warn('[telegram] sendMilestone failed:', err);
@@ -114,9 +121,9 @@ class TelegramChannel implements NotifyChannel {
     }
   }
 
-  async sendMoment(ctx: NotifyContext, moment: MomentHint, momentId: string) {
-    const chatId = await this.resolveChatId(ctx);
-    if (!chatId) return false;
+  async sendMoment(ctx: NotifyContext, moment: MomentHint, _momentId: string) {
+    const target = await this.resolveTarget(ctx);
+    if (!target) return false;
 
     const optedIn = await this.isOptedIn(ctx, moment.kind);
     if (!optedIn) return false;
@@ -127,9 +134,8 @@ class TelegramChannel implements NotifyChannel {
       const bot = telegramService?.getBot();
       if (!bot) return false;
 
-      const subject = ctx.scope === 'player' ? 'Your twin' : 'Your squad twin';
-      const text = `✨ *${moment.label}*\n${subject} unlocked a new moment.`;
-      await bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
+      const text = momentTelegramCopy(target.locale, ctx.scope, moment.label);
+      await bot.sendMessage(target.chatId, text, { parse_mode: 'Markdown' });
       return true;
     } catch (err) {
       console.warn('[telegram] sendMoment failed:', err);
@@ -137,17 +143,22 @@ class TelegramChannel implements NotifyChannel {
     }
   }
 
-  private async resolveChatId(ctx: NotifyContext): Promise<number | null> {
+  private async resolveTarget(
+    ctx: NotifyContext,
+  ): Promise<{ chatId: number; locale: NotifyLocale } | null> {
     if (ctx.scope === 'player') {
       const identity = await prisma.platformIdentity.findFirst({
         where: { platform: 'telegram', user: { playerProfile: { id: ctx.ownerId } } },
       });
-      return identity?.chatId ? parseInt(identity.chatId, 10) : null;
+      return identity?.chatId
+        ? { chatId: parseInt(identity.chatId, 10), locale: resolveLocale(identity.locale) }
+        : null;
     }
+    // Squad groups have no single language preference — default copy.
     const group = await prisma.squadGroup.findFirst({
       where: { squadId: ctx.ownerId, platform: 'telegram' },
     });
-    return group?.chatId ? parseInt(group.chatId, 10) : null;
+    return group?.chatId ? { chatId: parseInt(group.chatId, 10), locale: 'en' } : null;
   }
 
   private async isOptedIn(ctx: NotifyContext, kind: string): Promise<boolean> {
@@ -171,21 +182,6 @@ class TelegramChannel implements NotifyChannel {
       where: { userId_channel_kind: { userId, channel: 'telegram', kind } },
     });
     return pref?.enabled ?? false;
-  }
-}
-
-function formatTelegramMilestone(ctx: NotifyContext, m: MilestoneHint): string {
-  const subject = ctx.scope === 'player' ? 'Your twin' : 'Your squad twin';
-  switch (m.kind) {
-    case 'twin_created': return `🎮 *${subject} just woke up*\nTime to train.`;
-    case 'level_up': return `📈 *Level up!*\n${subject} reached L${(m.payload as any).to ?? '?'}.`;
-    case 'sim_win': return `🏆 *Sim champion*\n${subject} won the tournament.`;
-    case 'sim_podium': return `🥉 *Sim podium*\n${subject} placed in the top 3.`;
-    case 'attestation_milestone': return `✅ *Attestation milestone*\n${subject} crossed a verification threshold.`;
-    case 'record_broken': return `🔥 *Record broken*\n${subject} set a new record.`;
-    case 'season_end': return `🏁 *Season complete*\n${subject} closed the season.`;
-    case 'coaching_expired': return `⏰ *Coaching ended*\nA coaching boost has expired.`;
-    default: return `⭐ *Milestone*\n${subject} hit a milestone.`;
   }
 }
 
@@ -225,7 +221,7 @@ class WhatsAppChannel implements NotifyChannel {
     if (!withinCap) return false;
 
     try {
-      const text = formatMilestoneText(ctx, milestone);
+      const text = milestoneWhatsAppCopy(recipient.locale, ctx.scope, milestone);
       await this.whatsapp.sendText(recipient.platformUserId, text);
       return true;
     } catch (err) {
@@ -242,19 +238,26 @@ class WhatsAppChannel implements NotifyChannel {
 
   private async resolveRecipient(
     ctx: NotifyContext,
-  ): Promise<{ platformUserId: string; userId: string | null } | null> {
+  ): Promise<{ platformUserId: string; userId: string | null; locale: NotifyLocale } | null> {
     if (ctx.scope === 'player') {
-      // Player's WhatsApp identity — also carries the userId for the taste gate
+      // Player's WhatsApp identity — also carries userId for the taste gate
+      // and locale for localized copy.
       const identity = await prisma.platformIdentity.findFirst({
         where: { platform: 'whatsapp', user: { playerProfile: { id: ctx.ownerId } } },
       });
-      return identity ? { platformUserId: identity.platformUserId, userId: identity.userId } : null;
+      return identity
+        ? {
+            platformUserId: identity.platformUserId,
+            userId: identity.userId,
+            locale: resolveLocale(identity.locale),
+          }
+        : null;
     }
-    // Squad WhatsApp identity
+    // Squad WhatsApp identity — no single language preference.
     const group = await prisma.squadGroup.findFirst({
       where: { squadId: ctx.ownerId, platform: 'whatsapp' },
     });
-    return group?.chatId ? { platformUserId: group.chatId, userId: null } : null;
+    return group?.chatId ? { platformUserId: group.chatId, userId: null, locale: 'en' } : null;
   }
 
   private async checkAndRecordCap(twinId: string): Promise<boolean> {
@@ -267,19 +270,6 @@ class WhatsAppChannel implements NotifyChannel {
     // errors so a failed send is silently dropped (no record).
     await prisma.whatsAppNotification.create({ data: { twinId } });
     return true;
-  }
-}
-
-function formatMilestoneText(ctx: NotifyContext, m: MilestoneHint): string {
-  const subject = ctx.scope === 'player' ? 'Your twin' : 'Your squad twin';
-  switch (m.kind) {
-    case 'twin_created': return `${subject} just woke up. Time to train.`;
-    case 'level_up': return `${subject} leveled up — L${(m.payload as any).to ?? '?'}. Keep stacking.`;
-    case 'sim_win': return `${subject} won the sim. Receipt on chain, trophy in app.`;
-    case 'attestation_milestone': return `${subject} crossed a milestone. Reputation growing.`;
-    case 'record_broken': return `${subject} broke a record. The timeline is watching.`;
-    case 'season_end': return `${subject} closed the season. Receipts are live.`;
-    default: return `${subject} hit a milestone.`;
   }
 }
 
