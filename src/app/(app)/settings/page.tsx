@@ -1204,7 +1204,7 @@ function NotificationLanguageCard() {
       </p>
       <select
         value={locale ?? 'en'}
-        onChange={(e) => setLocale.mutate({ locale: e.target.value as 'en' | 'es' | 'fr' | 'pt' | 'de' })}
+        onChange={(e) => setLocale.mutate({ locale: e.target.value as 'en' | 'es' | 'fr' | 'pt' | 'de' | 'sw' | 'ha' | 'yo' | 'zu' })}
         className="w-full p-3 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
       >
         <option value="en">English</option>
@@ -1212,6 +1212,10 @@ function NotificationLanguageCard() {
         <option value="fr">Français</option>
         <option value="pt">Português</option>
         <option value="de">Deutsch</option>
+        <option value="sw">Kiswahili</option>
+        <option value="ha">Hausa</option>
+        <option value="yo">Yorùbá</option>
+        <option value="zu">isiZulu</option>
       </select>
     </Card>
   );

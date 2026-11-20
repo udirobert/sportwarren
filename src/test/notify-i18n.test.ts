@@ -14,7 +14,8 @@ const m = (kind: MilestoneHint['kind'], payload: unknown = {}): MilestoneHint =>
 describe('resolveLocale', () => {
   it.each([
     ['es', 'es'], ['es-MX', 'es'], ['pt_BR', 'pt'], ['FR', 'fr'],
-    ['de-CH', 'de'], [null, 'en'], [undefined, 'en'], ['', 'en'], ['zh', 'en'],
+    ['de-CH', 'de'], ['sw-KE', 'sw'], ['ha_NG', 'ha'], ['yo-NG', 'yo'],
+    ['zu-ZA', 'zu'], [null, 'en'], [undefined, 'en'], ['', 'en'], ['zh', 'en'],
   ])('normalizes %s → %s', (raw, expected) => {
     expect(resolveLocale(raw as string)).toBe(expected);
   });
@@ -60,5 +61,20 @@ describe('momentTelegramCopy', () => {
     const out = momentTelegramCopy('de', 'player', 'Hat-trick hero');
     expect(out).toContain('Hat-trick hero'); // labels are data, verbatim
     expect(out).toContain('freigeschaltet');
+  });
+});
+
+describe('African locale coverage', () => {
+  // every locale must produce copy for every milestone kind + moment frame —
+  // a missing template would silently fall to 'default' and look English-ish
+  it.each(NOTIFY_LOCALES)('covers all milestone kinds for %s', (locale) => {
+    const kinds: MilestoneHint['kind'][] = [
+      'twin_created', 'level_up', 'sim_win', 'sim_podium',
+      'attestation_milestone', 'record_broken', 'season_end', 'coaching_expired',
+    ];
+    for (const kind of kinds) {
+      const out = milestoneTelegramCopy(locale, 'player', m(kind, { to: 3 }));
+      expect(out.length).toBeGreaterThan(10);
+    }
   });
 });

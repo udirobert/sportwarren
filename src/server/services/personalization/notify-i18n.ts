@@ -12,7 +12,7 @@
 
 import type { MilestoneHint } from './twin-types';
 
-export const NOTIFY_LOCALES = ['en', 'es', 'fr', 'pt', 'de'] as const;
+export const NOTIFY_LOCALES = ['en', 'es', 'fr', 'pt', 'de', 'sw', 'ha', 'yo', 'zu'] as const;
 export type NotifyLocale = (typeof NOTIFY_LOCALES)[number];
 
 /** Normalize any BCP-47-ish tag ('es-MX', 'es_mx') to a supported locale. */
@@ -29,6 +29,10 @@ const SUBJECTS: Record<NotifyLocale, { player: string; squad: string }> = {
   fr: { player: 'Ton jumeau', squad: 'Le jumeau de ton équipe' },
   pt: { player: 'Seu gêmeo', squad: 'O gêmeo do seu time' },
   de: { player: 'Dein Zwilling', squad: 'Der Zwilling deines Teams' },
+  sw: { player: 'Pacha yako', squad: 'Pacha ya kikosi chako' },
+  ha: { player: 'Taguwar ka', squad: 'Taguwar ƙungiyar ka' },
+  yo: { player: 'Ibeji rẹ', squad: 'Ibeji ẹgbẹ rẹ' },
+  zu: { player: 'Iwele lakho', squad: 'Iwele leqembu lakho' },
 };
 
 function subject(locale: NotifyLocale, scope: 'player' | 'squad'): string {
@@ -96,6 +100,50 @@ const TELEGRAM_TEMPLATES: Record<NotifyLocale, Record<string, MilestoneTemplate>
     coaching_expired: () => `⏰ *Coaching beendet*\nEin Coaching-Boost ist abgelaufen.`,
     default: s => `⭐ *Meilenstein*\n${s} hat einen Meilenstein erreicht.`,
   },
+  sw: {
+    twin_created: s => `🎮 *${s} imeamka*\nWakati wa mazoezi.`,
+    level_up: (s, l) => `📈 *Umeongezeka kiwango!*\n${s} imefika kiwango ${l}.`,
+    sim_win: s => `🏆 *Bingwa wa sim*\n${s} imeshinda mashindano.`,
+    sim_podium: s => `🥉 *Podium ya sim*\n${s} imefika nafasi 3 bora.`,
+    attestation_milestone: s => `✅ *Hatua ya uthibitisho*\n${s} imevuka kizingiti cha uthibitishaji.`,
+    record_broken: s => `🔥 *Rekodi imevunjwa*\n${s} imeweka rekodi mpya.`,
+    season_end: s => `🏁 *Msimu umekamilika*\n${s} imefunga msimu.`,
+    coaching_expired: () => `⏰ *Ukocha umekwisha*\nOngezeko la ukocha limekwisha muda.`,
+    default: s => `⭐ *Hatua*\n${s} imefikia hatua.`,
+  },
+  ha: {
+    twin_created: s => `🎮 *${s} ta farka*\nLokacin horo ne.`,
+    level_up: (s, l) => `📈 *An hau mataki!*\n${s} ta isa mataki ${l}.`,
+    sim_win: s => `🏆 *Zakara na sim*\n${s} ta ci gasar.`,
+    sim_podium: s => `🥉 *Podium na sim*\n${s} ta shiga cikin 3 na farko.`,
+    attestation_milestone: s => `✅ *Matakin tabbaci*\n${s} ta wuce iyakar tabbatarwa.`,
+    record_broken: s => `🔥 *An karya rikodi*\n${s} ta kafa sabon rikodi.`,
+    season_end: s => `🏁 *Kakar ta kare*\n${s} ta kammala kakar.`,
+    coaching_expired: () => `⏰ *Horo ya kare*\nWani ƙarin horo ya ƙare.`,
+    default: s => `⭐ *Mataki*\n${s} ta isa wani mataki.`,
+  },
+  yo: {
+    twin_created: s => `🎮 *${s} jí*\nÀkókò ikẹkọ ni.`,
+    level_up: (s, l) => `📈 *Ipele tuntun!*\n${s} ti dé ipele ${l}.`,
+    sim_win: s => `🏆 *Aṣíwájú sim*\n${s} borí ìdíje náà.`,
+    sim_podium: s => `🥉 *Podium sim*\n${s} wá lára àwọn mẹ́ta àkókọ́.`,
+    attestation_milestone: s => `✅ *Ìfìdájọ́ ńlá*\n${s} ti kọjá ààlà ìfìdájọ́.`,
+    record_broken: s => `🔥 *Ìgbasilẹ̀ tuntun*\n${s} ṣe ìgbasilẹ̀ tuntun.`,
+    season_end: s => `🏁 *Ìgbà parí*\n${s} ti parí ìgbà náà.`,
+    coaching_expired: () => `⏰ *Ikẹkọ parí*\nÌfikún ikẹkọ kan ti parí.`,
+    default: s => `⭐ *Iṣẹ́lẹ̀*\n${s} dé iṣẹ́lẹ̀ pàtàkì kan.`,
+  },
+  zu: {
+    twin_created: s => `🎮 *${s} selivuke*\nIsikhathi sokuqeqesha.`,
+    level_up: (s, l) => `📈 *Izinga eliphakeme!*\n${s} lifiké kwizinga ${l}.`,
+    sim_win: s => `🏆 *Unqoba sim*\n${s} liwine umqhudelwano.`,
+    sim_podium: s => `🥉 *Ipodium ye-sim*\n${s} lafinyelela ema-3 aphezulu.`,
+    attestation_milestone: s => `✅ *Imilestone yokuqinisekisa*\n${s} lidlulele emngcelweni wokuqinisekisa.`,
+    record_broken: s => `🔥 *Irekhodi lephuliwe*\n${s} lishaye irekhodi elisha.`,
+    season_end: s => `🏁 *Isizini isiphelile*\n${s} livale isizini.`,
+    coaching_expired: () => `⏰ *Ukuqeqeshwa kuphelile*\nInhlalakahle yokuqeqeshwa iphelile.`,
+    default: s => `⭐ *Imilestone*\n${s} lifinyelele emilestone.`,
+  },
 };
 
 const WHATSAPP_TEMPLATES: Record<NotifyLocale, Record<string, MilestoneTemplate>> = {
@@ -144,6 +192,42 @@ const WHATSAPP_TEMPLATES: Record<NotifyLocale, Record<string, MilestoneTemplate>
     season_end: s => `${s} hat die Saison abgeschlossen. Die Belege sind live.`,
     default: s => `${s} hat einen Meilenstein erreicht.`,
   },
+  sw: {
+    twin_created: s => `${s} imeamka. Wakati wa mazoezi.`,
+    level_up: (s, l) => `${s} imepanda kiwango — kiwango ${l}. Endelea hivyo.`,
+    sim_win: s => `${s} imeshinda sim. Risiti kwenye mnyororo, trofei kwenye app.`,
+    attestation_milestone: s => `${s} imevuka hatua. Sifa inakua.`,
+    record_broken: s => `${s} imevunja rekodi. Ratiba inaangalia.`,
+    season_end: s => `${s} imefunga msimu. Risiti ziko tayari.`,
+    default: s => `${s} imefikia hatua.`,
+  },
+  ha: {
+    twin_created: s => `${s} ta farka. Lokacin horo ne.`,
+    level_up: (s, l) => `${s} ta hau mataki — mataki ${l}. Ci gaba haka.`,
+    sim_win: s => `${s} ta ci sim. Rasit a kan sarkar, kofi a app.`,
+    attestation_milestone: s => `${s} ta wuce mataki. Suna yana ƙaruwa.`,
+    record_broken: s => `${s} ta karya rikodi. Jadawalin yana kallo.`,
+    season_end: s => `${s} ta kammala kakar. Rasitoci suna nan.`,
+    default: s => `${s} ta isa wani mataki.`,
+  },
+  yo: {
+    twin_created: s => `${s} jí. Àkókò ikẹkọ ni.`,
+    level_up: (s, l) => `${s} ti gòkè ipele — ipele ${l}. Ṣi máa ṣe bẹ́ẹ̀.`,
+    sim_win: s => `${s} borí sim náà. Ìgbasilẹ̀ lórí ìdíjà, àṣẹ̀yìn nínú app.`,
+    attestation_milestone: s => `${s} ti kọjá ìpolówó kan. Òlá àsí rìn.`,
+    record_broken: s => `${s} ṣe ìgbasilẹ̀ tuntun. Ìtàn ń wo ọ.`,
+    season_end: s => `${s} ti parí ìgbà. Àwọn ìgbasilẹ̀ wà lórí ayélujára.`,
+    default: s => `${s} dé iṣẹ́lẹ̀ pàtàkì kan.`,
+  },
+  zu: {
+    twin_created: s => `${s} selivuke. Isikhathi sokuqeqesha.`,
+    level_up: (s, l) => `${s} likhuphuke izinga — izinga ${l}. Qhubeka kanjalo.`,
+    sim_win: s => `${s} liwine i-sim. Irisidi ku-chain, indondo ku-app.`,
+    attestation_milestone: s => `${s} lidlulele emilestone. Idumeko liyakhula.`,
+    record_broken: s => `${s} liphule irekhodi. Ithayimlayini iyabuka.`,
+    season_end: s => `${s} livale isizini. Amarisidi akhona.`,
+    default: s => `${s} lifinyelele emilestone.`,
+  },
 };
 
 const MOMENT_FRAMES: Record<NotifyLocale, (subject: string, label: string) => string> = {
@@ -152,6 +236,10 @@ const MOMENT_FRAMES: Record<NotifyLocale, (subject: string, label: string) => st
   fr: (s, l) => `✨ *${l}*\n${s} a débloqué un nouveau moment.`,
   pt: (s, l) => `✨ *${l}*\n${s} desbloqueou um novo momento.`,
   de: (s, l) => `✨ *${l}*\n${s} hat einen neuen Moment freigeschaltet.`,
+  sw: (s, l) => `✨ *${l}*\n${s} imefungua tukio jipya.`,
+  ha: (s, l) => `✨ *${l}*\n${s} ta buɗe sabon loki.`,
+  yo: (s, l) => `✨ *${l}*\n${s} ṣí iṣẹ́lẹ̀ tuntun kan.`,
+  zu: (s, l) => `✨ *${l}*\n${s} livule okusha okukhangayo.`,
 };
 
 export function momentTelegramCopy(

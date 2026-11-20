@@ -206,7 +206,7 @@ export const communicationRouter = createTRPCRouter({
   }),
 
   setNotificationLocale: protectedProcedure
-    .input(z.object({ locale: z.enum(['en', 'es', 'fr', 'pt', 'de']) }))
+    .input(z.object({ locale: z.enum(['en', 'es', 'fr', 'pt', 'de', 'sw', 'ha', 'yo', 'zu']) }))
     .mutation(async ({ ctx, input }) => {
       await ctx.prisma.platformIdentity.updateMany({
         where: { userId: ctx.userId! },
