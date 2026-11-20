@@ -14,6 +14,8 @@ import { getPreviewUser } from '../../_lib/get-preview-user';
 import Link from 'next/link';
 import { PALETTE } from '../../_components/MiniAvatar';
 import { SimReveal } from './SimReveal';
+import { PreviewFeatureDeferred } from '../_components/PreviewFeatureDeferred';
+import { isEnabled } from '@/lib/feature-flags';
 import { aggregatePerceptionsForPlayers } from '@/server/services/perception/aggregate';
 import {
   generateMatchCommentary,
@@ -104,6 +106,9 @@ function teamRate(team: PlayerData[]): number {
 
 export default async function SimPage({ params, searchParams }: PageProps) {
   const { token } = await params;
+  if (!isEnabled('SIMULATION')) {
+    return <PreviewFeatureDeferred token={token} title="Simulation is not part of the record yet." description="Imagined outcomes can wait until your group has a few real ones saved." />;
+  }
   const { r } = await searchParams;
   const seed = parseInt(r ?? String(Date.now() % 100000), 10) || 1;
   const rng = makeRng(seed);

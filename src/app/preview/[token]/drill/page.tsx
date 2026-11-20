@@ -30,6 +30,8 @@ import {
 } from '@/components/v3';
 import { ATTRIBUTE_KEYS, type AttributeKey } from '@/server/services/personalization/twin-types';
 import { DrillClient } from './DrillClient';
+import { PreviewFeatureDeferred } from '../_components/PreviewFeatureDeferred';
+import { isEnabled } from '@/lib/feature-flags';
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -98,6 +100,9 @@ const ATTR_LABEL: Record<AttributeKey, { short: string; label: string }> = {
 
 export default async function DrillPage({ params }: PageProps) {
   const { token } = await params;
+  if (!isEnabled('PROGRESSION_LOOPS')) {
+    return <PreviewFeatureDeferred token={token} title="Drills are not part of the record yet." description="Your card changes first through real, group-verified football." />;
+  }
 
   const user = await getPreviewUser(token, {
     include: {

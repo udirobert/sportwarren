@@ -39,6 +39,8 @@ import {
   V3HollowCard,
 } from '@/components/v3';
 import { TacticsPuzzleClient } from './TacticsPuzzleClient';
+import { PreviewFeatureDeferred } from '../_components/PreviewFeatureDeferred';
+import { isEnabled } from '@/lib/feature-flags';
 
 interface PageProps {
   params: Promise<{ token: string }>;
@@ -64,6 +66,9 @@ const PUZZLE = {
 
 export default async function TacticsPage({ params }: PageProps) {
   const { token } = await params;
+  if (!isEnabled('TACTICS_ADVANCED')) {
+    return <PreviewFeatureDeferred token={token} title="Tactics can wait for a later season." description="The first job is to make sure this week’s real match is remembered." />;
+  }
 
   const user = await getPreviewUser(token, {
     include: { playerProfile: { include: { twin: true } } },

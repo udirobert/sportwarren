@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { trpc } from "@/lib/trpc-client";
 import TournamentBracket from "@/components/landing/pitch/TournamentBracket";
 import { FORMATIONS } from "@/lib/formations";
 import type { Formation, PlayStyle } from "@/types";
+import { FeatureGate } from '@/components/common/FeatureGate';
 
 const PLAY_STYLES: { value: PlayStyle; label: string }[] = [
   { value: "balanced", label: "Balanced" },
@@ -19,7 +20,7 @@ const FORMATION_LIST = Object.keys(FORMATIONS) as unknown as Formation[];
 
 type FlowState = "browse" | "create" | "enter" | "bracket";
 
-export default function TournamentPage() {
+function TournamentPageContent() {
   const [flow, setFlow] = useState<FlowState>("browse");
   const [selectedTournamentId, setSelectedTournamentId] = useState<string | null>(null);
 
@@ -388,5 +389,19 @@ export default function TournamentPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function TournamentPage() {
+  return (
+    <FeatureGate
+      flag="TOURNAMENTS"
+      title="Tournaments are not part of the record experience yet"
+      description="We are focused on helping groups preserve the matches they actually play before introducing competition layers."
+      href="/dashboard"
+      actionLabel="Back to your record"
+    >
+      <TournamentPageContent />
+    </FeatureGate>
   );
 }

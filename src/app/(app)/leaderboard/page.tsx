@@ -13,6 +13,7 @@ import { useJourneyState } from "@/hooks/useJourneyState";
 import { PlayerAvatar } from "@/components/ui/PlayerAvatar";
 import { buildAvatarPresentationFromSummary } from "@/lib/avatar/adapters";
 import type { AvatarPresentation } from "@/lib/avatar/types";
+import { FeatureGate } from '@/components/common/FeatureGate';
 
 function buildLeaderboardAvatar(player: {
   userId: string;
@@ -210,8 +211,16 @@ function LeaderboardPageInner() {
 
 export default function LeaderboardPage() {
   return (
-    <TrpcErrorBoundary>
-      <LeaderboardPageInner />
-    </TrpcErrorBoundary>
+    <FeatureGate
+      flag="PROGRESSION_LOOPS"
+      title="The leaderboard is taking a back seat"
+      description="SportWarren is currently about the record your own group keeps, not a global race between players."
+      href="/dashboard"
+      actionLabel="Back to your record"
+    >
+      <TrpcErrorBoundary>
+        <LeaderboardPageInner />
+      </TrpcErrorBoundary>
+    </FeatureGate>
   );
 }

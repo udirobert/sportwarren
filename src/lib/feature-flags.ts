@@ -40,6 +40,11 @@ export const FLAGS = {
   KITE_AI:             { default: false, description: 'Kite AI agent marketplace' },
   COMMUNITY:           { default: false, description: 'Community hub and Lens social feed' },
   ANALYTICS:           { default: false, description: 'Growth funnel and attribute analytics' },
+  // ── Preservation-first containment (disabled by default) ────────────
+  TOURNAMENTS:         { default: false, description: 'Tournament brackets and competition flow' },
+  SIMULATION:          { default: false, description: 'Simulated matches and outcomes' },
+  TACTICS_ADVANCED:    { default: false, description: 'Tactics puzzles and advanced match planning' },
+  PROGRESSION_LOOPS:   { default: false, description: 'Drills, rankings, XP-led challenges, and reputation loops' },
 } as const;
 
 export type FeatureFlag = keyof typeof FLAGS;
@@ -73,6 +78,11 @@ export function getAllFlags(): Record<FeatureFlag, boolean> {
  * Returns null if the route has no flag requirement (always available).
  */
 export function getFlagForRoute(pathname: string): FeatureFlag | null {
+  if (pathname.startsWith('/preview/') && pathname.endsWith('/sim')) return 'SIMULATION';
+  if (pathname.startsWith('/preview/') && pathname.endsWith('/tactics')) return 'TACTICS_ADVANCED';
+  if (pathname.startsWith('/preview/') && pathname.endsWith('/drill')) return 'PROGRESSION_LOOPS';
+  if (pathname === '/match/preview' || pathname.startsWith('/match/preview/')) return 'TACTICS_ADVANCED';
+
   const segment = pathname.split('/').filter(Boolean)[0];
   if (!segment) return null;
 
@@ -82,7 +92,10 @@ export function getFlagForRoute(pathname: string): FeatureFlag | null {
     community:     'COMMUNITY',
     analytics:     'ANALYTICS',
     rivalries:     'TERRITORY_CONTROL',
-    challenges:    'DAO_GOVERNANCE',
+    challenges:    'PROGRESSION_LOOPS',
+    leaderboard:   'PROGRESSION_LOOPS',
+    reputation:    'PROGRESSION_LOOPS',
+    tournament:    'TOURNAMENTS',
   };
 
   return routeFlagMap[segment] ?? null;

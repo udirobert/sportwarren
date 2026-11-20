@@ -61,6 +61,8 @@ describe('Feature Flags', () => {
       expect(getFlagForRoute('/broadcast')).toBe('DIGITAL_TWIN_3D');
       expect(getFlagForRoute('/community')).toBe('COMMUNITY');
       expect(getFlagForRoute('/analytics')).toBe('ANALYTICS');
+      expect(getFlagForRoute('/tournament')).toBe('TOURNAMENTS');
+      expect(getFlagForRoute('/leaderboard')).toBe('PROGRESSION_LOOPS');
     });
 
     it('returns null for ungated routes', () => {
@@ -72,6 +74,10 @@ describe('Feature Flags', () => {
 
     it('handles nested paths', () => {
       expect(getFlagForRoute('/broadcast/abc')).toBe('DIGITAL_TWIN_3D');
+      expect(getFlagForRoute('/preview/kim-abc123/sim')).toBe('SIMULATION');
+      expect(getFlagForRoute('/preview/kim-abc123/drill')).toBe('PROGRESSION_LOOPS');
+      expect(getFlagForRoute('/preview/kim-abc123/tactics')).toBe('TACTICS_ADVANCED');
+      expect(getFlagForRoute('/match/preview/example')).toBe('TACTICS_ADVANCED');
     });
   });
 });

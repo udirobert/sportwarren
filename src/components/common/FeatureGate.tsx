@@ -10,9 +10,18 @@ interface FeatureGateProps {
   flag: FeatureFlag;
   children: React.ReactNode;
   fallback?: React.ReactNode;
+  title?: string;
+  description?: string;
+  href?: string;
+  actionLabel?: string;
 }
 
-function DefaultFallback({ flag }: { flag: FeatureFlag }) {
+function DefaultFallback({
+  title = 'Coming Soon',
+  description = 'This feature is not yet available. Check back soon.',
+  href = '/dashboard',
+  actionLabel = 'Back to Dashboard',
+}: Pick<FeatureGateProps, 'title' | 'description' | 'href' | 'actionLabel'>) {
   return (
     <div className="min-h-[60vh] flex items-center justify-center px-4">
       <div className="text-center max-w-sm">
@@ -20,26 +29,26 @@ function DefaultFallback({ flag }: { flag: FeatureFlag }) {
           <Shield className="w-7 h-7 text-gray-400" />
         </div>
         <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-2">
-          Coming Soon
+          {title}
         </h2>
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-          This feature is not yet available. Check back soon.
+          {description}
         </p>
         <Link
-          href="/dashboard"
+          href={href}
           className="inline-flex items-center gap-2 text-sm font-medium text-green-600 hover:text-green-500 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
+          {actionLabel}
         </Link>
       </div>
     </div>
   );
 }
 
-export function FeatureGate({ flag, children, fallback }: FeatureGateProps) {
+export function FeatureGate({ flag, children, fallback, title, description, href, actionLabel }: FeatureGateProps) {
   if (!isEnabled(flag)) {
-    return <>{fallback ?? <DefaultFallback flag={flag} />}</>;
+    return <>{fallback ?? <DefaultFallback title={title} description={description} href={href} actionLabel={actionLabel} />}</>;
   }
   return <>{children}</>;
 }
