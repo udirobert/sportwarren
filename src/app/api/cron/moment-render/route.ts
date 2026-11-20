@@ -64,7 +64,7 @@ export async function GET(request: Request) {
 
     const result = await renderV2(20);
     console.log(
-      `[Cron] Moment render complete via v2: processed=${result.processed} failed=${result.failed} fallbackCount=${result.fallbackCount} byKind=${JSON.stringify(result.byKind)}`,
+      `[Cron] Moment render complete via v2: processed=${result.processed} failed=${result.failed} qaRejected=${result.qaRejected} fallbackCount=${result.fallbackCount} byKind=${JSON.stringify(result.byKind)}`,
     );
     return NextResponse.json({
       processed: result.processed,
@@ -73,6 +73,7 @@ export async function GET(request: Request) {
       byKind: result.byKind,
       fallbackCount: result.fallbackCount,
       failed: result.failed,
+      qaRejected: result.qaRejected,
     });
   } catch (error) {
     console.error(`[Cron] Moment render failed (${renderer}):`, error);

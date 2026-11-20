@@ -71,6 +71,7 @@ model User {
   availabilities     SquadAvailability[]
   matchRsvps         MatchRsvp[]
   twinSignalPreferences TwinSignalPreference[]
+  twinTasteWeights     TwinTasteWeight[]
 
   @@map("users")
 }
@@ -1217,6 +1218,30 @@ model TwinSignalPreference {
   @@unique([userId, channel, kind])
   @@index([userId, channel])
   @@map("twin_signal_preferences")
+}
+
+// ============================================================================
+// TWIN TASTE WEIGHTS — learned per-kind notification weights from implicit
+// engagement signals (skip/dismiss/open/share). Engine: taste-learner.ts
+// (multiplicative, floor 0.1 / ceiling 2.0, neutral 0.5). Written by
+// taste-service.ts; read by the WhatsApp cap gate in notify.ts.
+// ============================================================================
+
+model TwinTasteWeight {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind      String   // MilestoneKind or MomentKind value
+  weight    Float    @default(0.5)
+  signals   Int      @default(0) // count of signals applied (weight encodes direction)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([userId, kind])
+  @@index([userId])
+  @@map("twin_taste_weights")
 }
 
 // ============================================================================

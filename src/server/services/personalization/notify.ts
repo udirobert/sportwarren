@@ -18,6 +18,7 @@
 
 import { prisma } from '@/lib/db';
 import { WhatsAppService } from '@/server/services/communication/whatsapp';
+import { isKindQuiet } from './taste-service';
 import type { MilestoneHint, MomentHint, TwinScope } from './twin-types';
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -213,15 +214,19 @@ class WhatsAppChannel implements NotifyChannel {
     if (!WHATSAPP_TIER_WHITELIST.has(milestone.kind)) return false;
     if (!this.whatsapp.isConfigured()) return false;
 
+    const recipient = await this.resolveRecipient(ctx);
+    if (!recipient) return false;
+
+    // Taste gate — a kind the player keeps skipping shouldn't burn one of the
+    // 3/day slots. Squad-scope has no single taste profile, so it always sends.
+    if (recipient.userId && (await isKindQuiet(recipient.userId, milestone.kind))) return false;
+
     const withinCap = await this.checkAndRecordCap(ctx.twinId);
     if (!withinCap) return false;
 
-    const platformUserId = await this.resolveRecipient(ctx);
-    if (!platformUserId) return false;
-
     try {
       const text = formatMilestoneText(ctx, milestone);
-      await this.whatsapp.sendText(platformUserId, text);
+      await this.whatsapp.sendText(recipient.platformUserId, text);
       return true;
     } catch (err) {
       console.warn('[whatsapp] sendMilestone failed:', err);
@@ -235,19 +240,21 @@ class WhatsAppChannel implements NotifyChannel {
     return false;
   }
 
-  private async resolveRecipient(ctx: NotifyContext): Promise<string | null> {
+  private async resolveRecipient(
+    ctx: NotifyContext,
+  ): Promise<{ platformUserId: string; userId: string | null } | null> {
     if (ctx.scope === 'player') {
-      // Player's WhatsApp identity
+      // Player's WhatsApp identity — also carries the userId for the taste gate
       const identity = await prisma.platformIdentity.findFirst({
         where: { platform: 'whatsapp', user: { playerProfile: { id: ctx.ownerId } } },
       });
-      return identity?.platformUserId ?? null;
+      return identity ? { platformUserId: identity.platformUserId, userId: identity.userId } : null;
     }
     // Squad WhatsApp identity
     const group = await prisma.squadGroup.findFirst({
       where: { squadId: ctx.ownerId, platform: 'whatsapp' },
     });
-    return group?.chatId ?? null;
+    return group?.chatId ? { platformUserId: group.chatId, userId: null } : null;
   }
 
   private async checkAndRecordCap(twinId: string): Promise<boolean> {

@@ -45,6 +45,113 @@ export interface ParsedMatch {
 // different thresholds (0.5 / 0.7 / 0.75) were scattered across call sites.
 const MIN_LLM_CONFIDENCE = 0.7;
 
+/**
+ * THE GATE — deterministic verification of a parse before it can reach the
+ * write path. The model picks and phrases; code checks. Nothing leaves
+ * `parseMatchResult` without passing these checks, on the LLM path AND the
+ * pattern path, so every caller inherits the gate for free.
+ *
+ * The core rule is groundedness: a scorer/assist name the model returns must
+ * literally appear in the user's message (or be a self-reference). The LLM has
+ * no roster access, so a name not in the text can only be a hallucination —
+ * crediting it would write a goal to a player who was never mentioned.
+ */
+export type ParseVerifyResult = { ok: true } | { ok: false; reason: string };
+
+const SELF_REFS = new Set(['i', 'me', 'my', 'myself', 'self', 'you', 'us', 'we']);
+const MAX_PLAUSIBLE_SCORE = 20;
+
+function normalizeName(s: string): string {
+  return s
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function nameGroundedInText(name: string, normalizedText: string): boolean {
+  const n = normalizeName(name);
+  if (!n) return false;
+  if (SELF_REFS.has(n)) return true;
+  return normalizedText.includes(n);
+}
+
+function checkCounted(
+  entries: { name: string; count: number }[],
+  label: string,
+  normalizedText: string,
+  teamScore: number,
+): ParseVerifyResult {
+  let total = 0;
+  for (const e of entries) {
+    if (!e.name || !Number.isInteger(e.count) || e.count < 1) {
+      return { ok: false, reason: `bad ${label} entry: ${JSON.stringify(e)}` };
+    }
+    if (!nameGroundedInText(e.name, normalizedText)) {
+      return { ok: false, reason: `${label} "${e.name}" not mentioned in the message` };
+    }
+    total += e.count;
+  }
+  if (total > teamScore) {
+    return {
+      ok: false,
+      reason: `${label} total ${total} exceeds team score ${teamScore}`,
+    };
+  }
+  return { ok: true };
+}
+
+/**
+ * Verify a `ParsedMatch` against the message it claims to describe.
+ * Pure, deterministic, and deliberately the LAST thing a parse passes through
+ * — this is the recount, not the author.
+ */
+export function verifyParsedMatch(
+  parsed: ParsedMatch,
+  rawText: string,
+): ParseVerifyResult {
+  const normalizedText = normalizeName(rawText);
+
+  if (
+    !Number.isInteger(parsed.teamScore) ||
+    !Number.isInteger(parsed.opponentScore) ||
+    parsed.teamScore < 0 ||
+    parsed.opponentScore < 0 ||
+    parsed.teamScore > MAX_PLAUSIBLE_SCORE ||
+    parsed.opponentScore > MAX_PLAUSIBLE_SCORE
+  ) {
+    return { ok: false, reason: `implausible scoreline ${parsed.teamScore}-${parsed.opponentScore}` };
+  }
+
+  const opponent = String(parsed.opponent ?? '').trim();
+  if (opponent.length < 2 || opponent.length > 60 || !/[a-z]/i.test(opponent)) {
+    return { ok: false, reason: `implausible opponent "${opponent}"` };
+  }
+
+  if (typeof parsed.confidence !== 'number' || parsed.confidence < 0 || parsed.confidence > 1) {
+    return { ok: false, reason: `implausible confidence ${parsed.confidence}` };
+  }
+
+  const scorers = checkCounted(
+    (parsed.scorers ?? []).map((s) => ({ name: s?.name, count: s?.goals })),
+    'scorer',
+    normalizedText,
+    parsed.teamScore,
+  );
+  if (!scorers.ok) return scorers;
+
+  const assists = checkCounted(
+    (parsed.assists ?? []).map((a) => ({ name: a?.name, count: a?.assists })),
+    'assist',
+    normalizedText,
+    parsed.teamScore,
+  );
+  if (!assists.ok) return assists;
+
+  return { ok: true };
+}
+
 const SCORE = String.raw`(\d{1,2})\s*[-–xX]\s*(\d{1,2})`;
 const OPP = String.raw`(?:vs|v|against|to|with)\s+(.+)`;
 // NB: "beat" = we won; "beaten"/"beaten by" = we lost (opponent is the subject),
@@ -168,7 +275,7 @@ async function parseViaLLM(text: string): Promise<ParsedMatch | null> {
       return null;
     }
 
-    return {
+    const parsed: ParsedMatch = {
       outcome: outcomeFromScores(raw.teamScore, raw.opponentScore),
       opponent: String(raw.opponent).trim(),
       teamScore: raw.teamScore,
@@ -179,6 +286,16 @@ async function parseViaLLM(text: string): Promise<ParsedMatch | null> {
       confidence,
       source: 'llm',
     };
+
+    // The gate: recount the model's claims against the message itself.
+    // Fail closed — an unverifiable parse behaves as "not a match result"
+    // and the caller falls through to its normal reprompt path.
+    const verdict = verifyParsedMatch(parsed, text);
+    if (!verdict.ok) {
+      console.warn(`[match-parser] LLM parse rejected by gate: ${verdict.reason}`);
+      return null;
+    }
+    return parsed;
   } catch (error) {
     console.error('[match-parser] LLM parse failed:', error);
     return null;
@@ -197,7 +314,10 @@ export async function parseMatchResult(
   const { allowLLM = true } = opts;
 
   const pattern = parseMatchPattern(text);
-  if (pattern) return pattern;
+  // Uniform gate: pattern output is produced by code and always passes, but
+  // running it through the same verifier keeps one invariant — nothing that
+  // leaves this function is unverified.
+  if (pattern && verifyParsedMatch(pattern, text).ok) return pattern;
 
   if (!allowLLM) return null;
   return parseViaLLM(text);

@@ -24,12 +24,19 @@ import {
   resolveCrestData,
   resolvePlayerSquadId,
 } from './avatar';
+import {
+  MomentQaError,
+  verifyMomentPng,
+  verifyMomentRow,
+} from './moment-qa';
 
 export interface BatchResult {
   processed: number;
   byKind: Record<string, number>;
   fallbackCount: number;
   failed: number;
+  /** Renders rejected by the QA gate (row unrenderable or bad PNG). */
+  qaRejected: number;
 }
 
 interface FontSet {
@@ -160,7 +167,12 @@ export async function renderMoment(momentId: string): Promise<{ renderedKey: str
   if (!moment) throw new Error(`Moment not found: ${momentId}`);
   if (moment.renderedKey) return { renderedKey: moment.renderedKey };
 
+  // QA gate — verify the row before rendering and the artifact before
+  // storing. A rejected moment keeps renderedKey: null and is counted as
+  // qaRejected in the batch; nothing unverified reaches storage.
+  verifyMomentRow(moment);
   const png = await renderToPng(moment as RenderableMoment);
+  verifyMomentPng(png, { width: CARD_WIDTH * 2, height: CARD_HEIGHT * 2 });
 
   const adapter = getStorageAdapter();
   const stored = await adapter.saveBase64({
@@ -193,6 +205,7 @@ export async function renderPendingBatch(limit = 20): Promise<BatchResult> {
     byKind: {},
     fallbackCount: 0,
     failed: 0,
+    qaRejected: 0,
   };
 
   for (const moment of pending) {
@@ -204,6 +217,7 @@ export async function renderPendingBatch(limit = 20): Promise<BatchResult> {
       if (usedFallback) result.fallbackCount++;
     } catch (e) {
       result.failed++;
+      if (e instanceof MomentQaError) result.qaRejected++;
       console.error(`[MomentRenderV2] Failed to render ${moment.id}:`, e);
     }
   }

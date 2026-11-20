@@ -46,7 +46,7 @@ async function main() {
 
     const result = await renderV2(BATCH_SIZE);
     console.log(
-      `[Maintenance] Moment render complete via v2: processed=${result.processed} failed=${result.failed} fallbackCount=${result.fallbackCount} byKind=${JSON.stringify(result.byKind)}`,
+      `[Maintenance] Moment render complete via v2: processed=${result.processed} failed=${result.failed} qaRejected=${result.qaRejected} fallbackCount=${result.fallbackCount} byKind=${JSON.stringify(result.byKind)}`,
     );
   } catch (error) {
     console.error(`[Maintenance] Moment render failed (${renderer}):`, error);

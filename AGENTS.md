@@ -287,7 +287,11 @@ The closed-loop ecosystem (`docs/flywheel.md`) bound together by:
   `parseMatchResult` (`src/lib/ai/match-parser.ts` — deterministic pattern pass
   first, LLM fallback for messy phrasing; `ParsedMatch` carries scorers/assists).
   Every channel routes through this one parser — never re-implement score
-  parsing at a call site. On confirm, `processMatchLog` resolves the scorer
+  parsing at a call site. LLM output is gated by `verifyParsedMatch` — a
+  deterministic recount inside the parser, not the model: scorer/assist names
+  must literally appear in the message (or be a self-reference), goals/assists
+  can't exceed the team score, and scores must be plausible integers. Fails
+  closed — a rejected parse returns null and the normal reprompt path applies. On confirm, `processMatchLog` resolves the scorer
   names to squad `PlayerProfile`s via `resolveScorers`
   (`src/server/services/match/scorer-attribution.ts` — deliberately
   conservative: self-reference / exact name / unique first-name only, never
@@ -483,7 +487,8 @@ and have their squad, players, and match history materialize instantly.
   - `moments.ts` (Moment row CRUD; `render` delegates to `moment-render.ts` which generates PNG via satori/resvg)
   - `image.ts` (avatar upload + sharp variant generation (square 256×256, thumb 64×64, wide 512×288) + key/variant URL resolution; writes storage key to `User.avatar`)
   - `moment-render.ts` (satori HTML→SVG + @resvg/resvg-js SVG→PNG; `renderMoment` for single, `renderPendingBatch` for cron; font fetched from Google Fonts CDN and cached in-memory; LEGACY — kept as rollback path)
-  - `moment-render-v2.ts` (per-archetype satori pipeline; resolves card from `src/components/moments/cards/` CARDS registry, falls back to `DefaultCard` for unmapped kinds; uses Space Grotesk; `renderPendingBatch` returns `{ processed, byKind, fallbackCount, failed }` so the cron log shows archetype coverage; this is the default for both the Vercel API route and the Hetzner production cron — see `scripts/maintenance/moment-render.ts` and the `MOMENT_RENDER_V1_FALLBACK` env var)
+  - `moment-qa.ts` (deterministic QA gate shared by v1 + v2 — `verifyMomentRow` before render, `verifyMomentPng` (signature + IHDR dimensions + byte floor) before storage; throws `MomentQaError`, fail-closed so nothing unverified is stored; batch reports `qaRejected`)
+  - `moment-render-v2.ts` (per-archetype satori pipeline; resolves card from `src/components/moments/cards/` CARDS registry, falls back to `DefaultCard` for unmapped kinds; uses Space Grotesk; `renderPendingBatch` returns `{ processed, byKind, fallbackCount, failed, qaRejected }` so the cron log shows archetype coverage and gate rejections; this is the default for both the Vercel API route and the Hetzner production cron — see `scripts/maintenance/moment-render.ts` and the `MOMENT_RENDER_V1_FALLBACK` env var)
   - `squad-energy.ts` (bypasses `TwinService` — energy is a squad-level operational metric, not a twin brain mutation)
   - `twin-sim.ts` (`createRoundRobin` / `runSimulation` / `settleResults` — overnight round-robin tournaments between player twins; derives team strength from baseAttributes, uses `simulateTournamentMatch` engine, settles via `TwinService.recordEvent({ kind: 'sim_completed' })`)
   - `coaching.ts` (`hireCoach` / `cancelEffect` / `getActiveEffects` / `listAvailableCoaches` — coaching marketplace; creates CoachingEffect rows, fires coaching_hired/coaching_expired events via TwinService; coach agents are AiAgent rows with type 'coach_external')
@@ -492,6 +497,7 @@ and have their squad, players, and match history materialize instantly.
   - `identity.ts` (`IdentityService.getPlayerIdentity` / `getSquadIdentity` — single read API joining skin (User/Squad) + brain (PlayerTwin/SquadTwin) + moments + attestations + match stats + sync narrative; tRPC: `player.getIdentity`/`player.getMyIdentity`, `squad.getIdentity`)
   - `bibs-optimizer.ts` (`bibsOptimizer` — kickabout team allocation, snake-draft + balance swap, see Flywheel surfaces above; `formatBibsForTelegram` is its Markdown-message sibling)
   - `predictions.ts` (`generatePrediction` — deterministic position+attribute-driven "bold call" for first contact, seeded by profileId, no Prisma; `resolvePrediction` — resolves it against a session outcome into an `answered`/`unproven`/`open` verdict. Pure, table-tested, single source of truth for both the preview page and the post-session payoff — never re-implement this logic, re-derive with the same seed)
+  - `taste-learner.ts` + `taste-service.ts` (implicit-signal taste learning — Footballytics personal-director pattern: multiplicative per-kind weights, floor 0.1 / ceiling 2.0 / neutral 0.5, `isQuiet` (<0.35) mutes a kind for scarce slots, `explainTaste` is the "why am I seeing this" surface; service persists to `TwinTasteWeight` + logs each signal to `ActivityEvent`, every DB read fail-soft to neutral; the WhatsApp cap gate skips kinds a player has quieted *before* the 3/day cap burns a slot — squad-scope always sends. Signals land via `recordTasteSignal`; no UI wires them yet)
   - `session-payoff.ts` (`resolveSessionPayoff` — standalone payoff bundle for surfaces that only need the summary, e.g. the OG card route; delegates resolution to `predictions.ts`, only aggregates the session outcome)
   - `commitment-framing.ts` (`commitmentFraming` — pure copy logic for the peak-end "same time next week?" capture; honest loss-framing + social proof, explicitly no bandwagon-shaming)
 - Player identity surface: `src/components/identity/PlayerIdentityCard.tsx` + `SquadIdentityCard.tsx` — Tailwind + lucide-react cards consuming `PlayerIdentity`/`SquadIdentity` from `identity.ts`; profile page at `src/app/(app)/profile/page.tsx` calls `player.getMyIdentity`

@@ -15,6 +15,7 @@ import { html } from 'satori-html';
 import { Resvg } from '@resvg/resvg-js';
 import { prisma } from '@/lib/db';
 import { getStorageAdapter } from '../storage';
+import { verifyMomentPng, verifyMomentRow } from './moment-qa';
 
 const WIDTH = 600;
 const HEIGHT = 400;
@@ -101,6 +102,9 @@ export async function renderMoment(momentId: string): Promise<{ renderedKey: str
   if (!moment) throw new Error(`Moment not found: ${momentId}`);
   if (moment.renderedKey) return { renderedKey: moment.renderedKey };
 
+  // QA gate (same gate as v2 — the rollback path is not exempt).
+  verifyMomentRow(moment);
+
   const fonts = await loadFonts();
   // satori-html returns its own VNode type; satori's parameter is typed as
   // ReactNode. They are structurally compatible at runtime, so cast.
@@ -117,6 +121,7 @@ export async function renderMoment(momentId: string): Promise<{ renderedKey: str
 
   const resvg = new Resvg(svg, { fitTo: { mode: 'width', value: WIDTH * 2 } });
   const png = resvg.render().asPng();
+  verifyMomentPng(Buffer.from(png), { width: WIDTH * 2, height: HEIGHT * 2 });
 
   const adapter = getStorageAdapter();
   const stored = await adapter.saveBase64({
