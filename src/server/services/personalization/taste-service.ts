@@ -34,29 +34,35 @@ export async function recordTasteSignal(
 ) {
   if (!kind || !(signal in TASTE_FACTORS)) return null;
 
-  const row = await prisma.twinTasteWeight.findUnique({
-    where: { userId_kind: { userId, kind } },
-  });
-  const applied = recordSignal({ [kind]: row?.weight ?? 0.5 }, signal, kind);
+  try {
+    const row = await prisma.twinTasteWeight.findUnique({
+      where: { userId_kind: { userId, kind } },
+    });
+    const applied = recordSignal({ [kind]: row?.weight ?? 0.5 }, signal, kind);
 
-  await prisma.twinTasteWeight.upsert({
-    where: { userId_kind: { userId, kind } },
-    create: { userId, kind, weight: applied.after, signals: 1 },
-    update: { weight: applied.after, signals: { increment: 1 } },
-  });
+    await prisma.twinTasteWeight.upsert({
+      where: { userId_kind: { userId, kind } },
+      create: { userId, kind, weight: applied.after, signals: 1 },
+      update: { weight: applied.after, signals: { increment: 1 } },
+    });
 
-  // Audit trail — what drove each weight, replayable for the "why" surface
-  await prisma.activityEvent.create({
-    data: {
-      type: 'taste_signal',
-      matchId: context.matchId ?? null,
-      playerId: context.playerId ?? null,
-      source: 'app',
-      data: { userId, signal, kind, before: applied.before, after: applied.after },
-    },
-  });
+    // Audit trail — what drove each weight, replayable for the "why" surface
+    await prisma.activityEvent.create({
+      data: {
+        type: 'taste_signal',
+        matchId: context.matchId ?? null,
+        playerId: context.playerId ?? null,
+        source: 'app',
+        data: { userId, signal, kind, before: applied.before, after: applied.after },
+      },
+    });
 
-  return applied;
+    return applied;
+  } catch (err) {
+    // A taste write must never break the surface that produced the signal.
+    console.warn('[taste] recordTasteSignal failed:', err);
+    return null;
+  }
 }
 
 // ────────────────────────────────────────────────────────────────────────────

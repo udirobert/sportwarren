@@ -1,5 +1,18 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { storePlaygroundDraft, getPlaygroundDraft } from "../lib/pitch/playgroundDraft";
+
+// Node 22+ injects its own experimental `localStorage` global ahead of
+// jsdom's, and without --localstorage-file it throws on access. Stub a real
+// in-memory implementation so the module's window-guarded paths execute.
+const store = new Map<string, string>();
+vi.stubGlobal("localStorage", {
+  getItem: (k: string) => store.get(k) ?? null,
+  setItem: (k: string, v: string) => void store.set(k, String(v)),
+  removeItem: (k: string) => void store.delete(k),
+  clear: () => store.clear(),
+  key: (i: number) => [...store.keys()][i] ?? null,
+  get length() { return store.size; },
+});
 
 describe("playgroundDraft", () => {
   beforeEach(() => localStorage.clear());

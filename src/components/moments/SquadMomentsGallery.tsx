@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trophy,
@@ -15,7 +15,11 @@ import {
   Filter,
   Clock,
   CalendarDays,
+  Share2,
+  EyeOff,
 } from 'lucide-react';
+import { trpc } from '@/lib/trpc-client';
+import { trackCoreGrowthEvent } from '@/lib/analytics';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -142,6 +146,56 @@ export default function SquadMomentsGallery({ subjectType, subjectId }: SquadMom
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeKindFilter, setActiveKindFilter] = useState<string | null>(null);
+
+  // Taste signals — implicit engagement feeds the notification gate.
+  // Rendered-keepsake display is the client-visible point the plan's
+  // `moment_rendered` funnel event measures; dedupe per moment id.
+  const reportTaste = trpc.communication.recordTasteSignal.useMutation();
+  const renderedReported = useRef(new Set<string>());
+
+  useEffect(() => {
+    for (const m of moments) {
+      if (m.renderedKey && !renderedReported.current.has(m.id)) {
+        renderedReported.current.add(m.id);
+        trackCoreGrowthEvent('moment_rendered', { kind: m.kind, moment_id: m.id });
+      }
+    }
+  }, [moments]);
+
+  const signal = useCallback(
+    (kind: string, sig: 'open' | 'share' | 'dismiss') => {
+      // Fire-and-forget: a taste write must never block the surface.
+      reportTaste.mutate({ signal: sig, kind });
+    },
+    [reportTaste],
+  );
+
+  const handleShare = useCallback(
+    async (moment: MomentItem) => {
+      if (!moment.renderedKey) return;
+      const url = `${window.location.origin}/api/storage/${moment.renderedKey}`;
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: 'SportWarren moment', url });
+        } else {
+          await navigator.clipboard.writeText(url);
+        }
+        signal(moment.kind, 'share');
+      } catch {
+        // User cancelled the share sheet — no signal.
+      }
+    },
+    [signal],
+  );
+
+  const handleDismiss = useCallback(
+    (moment: MomentItem) => {
+      signal(moment.kind, 'dismiss');
+      setMoments((prev) => prev.filter((m) => m.id !== moment.id));
+      setTotalCount((c) => Math.max(0, c - 1));
+    },
+    [signal],
+  );
 
   const fetchMoments = useCallback(async (cursor?: string) => {
     const params = new URLSearchParams();
@@ -348,15 +402,32 @@ export default function SquadMomentsGallery({ subjectType, subjectId }: SquadMom
                       </span>
                     )}
                     {moment.renderedKey && (
-                      <a
-                        href={`/api/storage/${moment.renderedKey}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="rounded-lg bg-white/10 px-2 py-1 text-[9px] font-bold text-emerald-400 hover:bg-white/15 transition-colors"
-                      >
-                        View
-                      </a>
+                      <>
+                        <a
+                          href={`/api/storage/${moment.renderedKey}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => signal(moment.kind, 'open')}
+                          className="rounded-lg bg-white/10 px-2 py-1 text-[9px] font-bold text-emerald-400 hover:bg-white/15 transition-colors"
+                        >
+                          View
+                        </a>
+                        <button
+                          onClick={() => handleShare(moment)}
+                          title="Share this moment"
+                          className="rounded-lg bg-white/10 p-1.5 text-slate-400 opacity-0 transition-opacity hover:text-emerald-300 group-hover:opacity-100"
+                        >
+                          <Share2 className="h-3 w-3" />
+                        </button>
+                      </>
                     )}
+                    <button
+                      onClick={() => handleDismiss(moment)}
+                      title="Show fewer moments like this"
+                      className="rounded-lg bg-white/10 p-1.5 text-slate-500 opacity-0 transition-opacity hover:text-rose-300 group-hover:opacity-100"
+                    >
+                      <EyeOff className="h-3 w-3" />
+                    </button>
                     <span className="text-[10px] text-slate-600 whitespace-nowrap font-mono">
                       {formatDate(new Date(moment.createdAt))}
                     </span>

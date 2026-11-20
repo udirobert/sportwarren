@@ -52,10 +52,10 @@ vi.mock('@/server/services/communication/whatsapp', () => ({
 
 import { GET } from '@/app/api/cron/scout-settle/route';
 
-function fakeRequest(auth?: string) {
+function fakeRequest(auth: string | null = 'Bearer test-secret') {
   return {
     headers: {
-      get: (key: string) => (key === 'Authorization' ? auth ?? null : null),
+      get: (key: string) => (key === 'Authorization' ? auth : null),
     },
   } as any;
 }
@@ -63,7 +63,7 @@ function fakeRequest(auth?: string) {
 describe('scout-settle worker', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    delete process.env.CRON_SECRET;
+    process.env.CRON_SECRET = 'test-secret';
   });
 
   afterEach(() => {
@@ -71,9 +71,17 @@ describe('scout-settle worker', () => {
   });
 
   describe('auth and feature flag', () => {
-    it('returns 401 when CRON_SECRET is set and auth header is missing', async () => {
-      process.env.CRON_SECRET = 'secret123';
+    it('returns 503 when CRON_SECRET is not configured', async () => {
+      delete process.env.CRON_SECRET;
       await GET(fakeRequest());
+      expect(mockNextResponseJson).toHaveBeenCalledWith(
+        expect.objectContaining({ error: 'Cron is not configured' }),
+        expect.objectContaining({ status: 503 }),
+      );
+    });
+
+    it('returns 401 when CRON_SECRET is set and auth header is missing', async () => {
+      await GET(fakeRequest(null));
       expect(mockNextResponseJson).toHaveBeenCalledWith(
         expect.objectContaining({ error: 'Unauthorized' }),
         expect.objectContaining({ status: 401 }),

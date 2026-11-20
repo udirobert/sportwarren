@@ -31,6 +31,7 @@ export const CORE_GROWTH_EVENTS = {
   session_created: { stage: "retention" as GrowthStage },
   match_submitted: { stage: "activation" as GrowthStage },
   match_verified: { stage: "activation" as GrowthStage },
+  moment_rendered: { stage: "retention" as GrowthStage },
   recap_opened: { stage: "retention" as GrowthStage },
   keepsake_shared: { stage: "viral" as GrowthStage },
   next_session_committed: { stage: "retention" as GrowthStage },
