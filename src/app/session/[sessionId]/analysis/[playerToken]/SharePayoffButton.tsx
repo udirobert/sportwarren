@@ -3,6 +3,7 @@
 import React from 'react';
 import { PALETTE, TYPE, TRACKING } from '@/components/v3';
 import { buildShareLinks } from '@/lib/share/links';
+import { trackCoreGrowthEvent } from '@/lib/analytics';
 
 /**
  * One-tap share for the prediction payoff — the viral primitive. The
@@ -42,11 +43,11 @@ export function SharePayoffButton({ shareText, url }: { shareText: string; url: 
         Settle it in the group chat
       </div>
       <div style={{ display: 'flex', gap: 8 }}>
-        <a href={links.whatsapp} target="_blank" rel="noopener noreferrer"
+        <a href={links.whatsapp} target="_blank" rel="noopener noreferrer" onClick={() => trackCoreGrowthEvent('keepsake_shared', { channel: 'whatsapp' })}
           style={{ ...base, background: PALETTE.ink, color: PALETTE.cream }}>
           📣 WhatsApp
         </a>
-        <a href={links.telegram} target="_blank" rel="noopener noreferrer"
+        <a href={links.telegram} target="_blank" rel="noopener noreferrer" onClick={() => trackCoreGrowthEvent('keepsake_shared', { channel: 'telegram' })}
           style={{ ...base, background: 'transparent', color: PALETTE.ink }}>
           Telegram
         </a>

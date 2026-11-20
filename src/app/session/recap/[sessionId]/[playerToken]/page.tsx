@@ -11,7 +11,6 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
-import Link from 'next/link';
 import { MiniAvatar } from '../../../../preview/_components/MiniAvatar';
 import {
   PALETTE,
@@ -20,7 +19,6 @@ import {
   V3PageShell,
   V3Ribbon,
   V3IdentityLine,
-  V3Heading,
   V3SectionLabel,
   V3StatBand,
   V3CTAButton,
@@ -31,6 +29,7 @@ import {
   topChoice,
 } from '@/server/services/perception/aggregate';
 import { getScenarioById } from '@/server/services/perception/scenarios';
+import { RecapViewedTracker } from './RecapViewedTracker';
 
 interface PageProps {
   params: Promise<{ sessionId: string; playerToken: string }>;
@@ -112,8 +111,13 @@ export default async function RecapPage({ params }: PageProps) {
     where: { id: sessionId },
     include: {
       squad: true,
+      attendees: {
+        select: { status: true },
+      },
       matches: {
         include: {
+          homeSquad: { select: { name: true } },
+          awaySquad: { select: { name: true } },
           playerStats: {
             include: {
               profile: {
@@ -135,6 +139,25 @@ export default async function RecapPage({ params }: PageProps) {
 
   const myGoals = myStats.goals;
   const myAssists = myStats.assists;
+
+  // The recap is an archive entry first. Prefer the verified/finalized result
+  // when a session has more than one match, then fall back to the newest
+  // submitted result so the actual evening is still visible during review.
+  const archivedMatch = [...session.matches]
+    .sort((a, b) => {
+      const aVerified = a.status === 'verified' || a.status === 'finalized' ? 1 : 0;
+      const bVerified = b.status === 'verified' || b.status === 'finalized' ? 1 : 0;
+      return bVerified - aVerified || b.matchDate.getTime() - a.matchDate.getTime();
+    })[0];
+  const archivedResult = archivedMatch && archivedMatch.homeScore !== null && archivedMatch.awayScore !== null
+    ? `${archivedMatch.homeSquad.name} ${archivedMatch.homeScore}–${archivedMatch.awayScore} ${archivedMatch.awaySquad.name}`
+    : null;
+  const matchState = archivedMatch?.status === 'verified' || archivedMatch?.status === 'finalized'
+    ? 'Verified by the group'
+    : archivedMatch?.status === 'disputed'
+    ? 'Result needs a correction'
+    : 'Result awaiting group verification';
+  const attendeesIn = session.attendees.filter((attendee) => attendee.status !== 'out').length;
 
   // Compute session totals
   const totalGoals = allStats.reduce((s, st) => s + st.goals, 0);
@@ -191,10 +214,62 @@ export default async function RecapPage({ params }: PageProps) {
 
   return (
     <V3PageShell maxWidth={640}>
+      <RecapViewedTracker sessionId={sessionId} />
       <V3Ribbon marginBottom={24} />
       <V3IdentityLine context={`Session recap · ${date}`} marginBottom={24} />
 
-      {/* Hero — big goal number with perception narrative attached */}
+      {/* Archive identity comes before individual performance: the player is
+          seeing a saved night with their group, not a leaderboard result. */}
+      <V3SolidCard accent="navy" padding="18px 20px" marginBottom={28}>
+        <div
+          style={{
+            fontFamily: TYPE.mono,
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: TRACKING.capWide,
+            textTransform: 'uppercase',
+            color: PALETTE.navy,
+            marginBottom: 8,
+          }}
+        >
+          Match saved · {date}
+        </div>
+        <div
+          style={{
+            fontFamily: TYPE.display,
+            fontSize: 34,
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
+            lineHeight: 1,
+            textTransform: 'uppercase',
+            color: PALETTE.ink,
+            marginBottom: 12,
+          }}
+        >
+          {archivedResult ?? session.name}
+        </div>
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: 8,
+            fontFamily: TYPE.mono,
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: '0.08em',
+            textTransform: 'uppercase',
+          }}
+        >
+          <span style={{ border: `1px solid ${PALETTE.inkLight}`, padding: '5px 7px', color: PALETTE.ink }}>
+            {attendeesIn} there
+          </span>
+          <span style={{ border: `1px solid ${PALETTE.sage}`, padding: '5px 7px', color: PALETTE.ink }}>
+            {matchState}
+          </span>
+        </div>
+      </V3SolidCard>
+
+      {/* Personal contribution */}
       <div style={{ display: 'flex', gap: 28, alignItems: 'center', marginBottom: 28 }}>
         <MiniAvatar
           kit={player.avatarKitColor ?? undefined}
@@ -249,7 +324,7 @@ export default async function RecapPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Perception narrative — the hook */}
+      {/* Peer memory enriches the archive after the result is established. */}
       {narrativeLine && (
         <div
           style={{
@@ -462,26 +537,25 @@ export default async function RecapPage({ params }: PageProps) {
         </div>
       </div>
 
-      {/* Primary CTA — Pick your Team of the Night */}
-      <V3CTAButton
-        href={`/session/${encodeURIComponent(sessionId)}/rate/${encodeURIComponent(playerToken)}`}
-        variant={givenEnough ? 'secondary' : 'primary'}
-        marginBottom={12}
-      >
-        {givenEnough
-          ? 'Edit your picks →'
-          : givenCount === 0
-          ? 'Pick your Team of the Night →'
-          : `Keep rating · ${RATING_THRESHOLD - givenCount} to go →`}
-      </V3CTAButton>
-
-      {/* Secondary CTA — Analysis */}
+      {/* Keep the saved-match/share route ahead of optional rating work. */}
       <V3CTAButton
         href={`/session/${encodeURIComponent(sessionId)}/analysis/${encodeURIComponent(playerToken)}`}
+        variant="primary"
+        marginBottom={12}
+      >
+        Save or share this match →
+      </V3CTAButton>
+
+      <V3CTAButton
+        href={`/session/${encodeURIComponent(sessionId)}/rate/${encodeURIComponent(playerToken)}`}
         variant="secondary"
         marginBottom={16}
       >
-        See how your card moved tonight →
+        {givenEnough
+          ? 'Edit your group picks →'
+          : givenCount === 0
+          ? 'Rate the group’s match →'
+          : `Keep rating · ${RATING_THRESHOLD - givenCount} to go →`}
       </V3CTAButton>
 
       <p
@@ -494,8 +568,8 @@ export default async function RecapPage({ params }: PageProps) {
           textAlign: 'center',
         }}
       >
-        Takes 90 seconds. Could be skill, could be vibes. Top picks across
-        the night form the XI — and your votes are what unlock yours.
+        Rating the group takes 90 seconds. The people who were there keep the
+        record honest — and their picks are what unlock yours.
       </p>
 
       <div

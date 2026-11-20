@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Card } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Plus, Minus, Zap } from 'lucide-react';
+import { Plus, Zap } from 'lucide-react';
 import { trpc } from '@/lib/trpc-client';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { PlayerAvatar } from '@/components/ui/PlayerAvatar';
@@ -97,7 +97,7 @@ export const QuickLogWidget: React.FC<QuickLogWidgetProps> = ({
       <div className="absolute top-0 right-0 p-2">
         <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500 text-[10px] font-bold text-white uppercase tracking-tighter">
           <Zap className="w-2.5 h-2.5" />
-          Quick Log
+          Preserve result
         </div>
       </div>
 
@@ -212,7 +212,7 @@ export const QuickLogWidget: React.FC<QuickLogWidgetProps> = ({
           disabled={isSubmitting || !selectedOpponentId}
           className="w-full h-10 text-sm font-bold shadow-md shadow-emerald-500/20"
         >
-          {isSubmitting ? 'Logging...' : 'Log Result'}
+          {isSubmitting ? 'Saving...' : 'Save this match'}
         </Button>
       </div>
     </Card>

@@ -19,14 +19,12 @@ import { useMatchCenterData } from "@/hooks/match/useMatchCenterData";
 import { useWallet } from "@/contexts/WalletContext";
 import { JourneyGateCard } from "@/components/common/JourneyGateCard";
 import { PageShell } from "@/components/common/PageShell";
-import { ChainLabel } from "@/components/common/ChainLabel";
 import { TelegramContextualTip } from "@/components/common/TelegramContextualTip";
 import {
   Trophy,
   Shield,
   Activity,
   Sparkles,
-  Cpu,
   AlertCircle,
   Clock3,
   CheckCircle2,
@@ -52,7 +50,7 @@ type XPResultState = "idle" | "pending" | "available";
 export default function MatchPage() {
   const [requestedMode, setRequestedMode] = useState<string | null>(null);
   const [requestedMatchId, setRequestedMatchId] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<ViewMode>("preview");
+  const [viewMode, setViewMode] = useState<ViewMode>("capture");
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null);
   const [showXPSummary, setShowXPSummary] = useState(false);
   const [xpSummaryData, setXpSummaryData] = useState<{ totalXP: number; attributeGains: { attribute: string; xp: number; oldRating: number; newRating: number }[] } | null>(null);
@@ -84,7 +82,6 @@ export default function MatchPage() {
     matches,
     pendingMatches,
     settledMatches,
-    railEnabledCount,
     submitMatchResult,
     verifyMatch,
     getMatchById,
@@ -191,7 +188,10 @@ export default function MatchPage() {
       }
     }
 
-    setViewMode(pendingMatches.length > 0 ? "verify" : settledMatches.length > 0 ? "history" : "preview");
+    // The default is always the next real match. Verification remains urgent
+    // when required, but past results are a record to revisit—not the first
+    // task when someone opens the match centre.
+    setViewMode(pendingMatches.length > 0 ? "verify" : "capture");
   }, [pendingMatches.length, settledMatches.length, requestedMatchId, requestedMode, matches.length]);
 
   useEffect(() => {
@@ -298,6 +298,10 @@ export default function MatchPage() {
       style: importedPlan?.style ?? null,
       size: importedPlan?.size ?? null,
     });
+    trackCoreGrowthEvent("match_submitted", {
+      match_id: submittedMatchId,
+      source: "match_capture",
+    });
 
     // Auto-copy share link
     const shareUrl = buildShareUrl(shareSlug);
@@ -360,6 +364,7 @@ export default function MatchPage() {
       }
       setXpSummaryData(nextSummary);
       setXpResultState(nextSummary ? "available" : "pending");
+      trackCoreGrowthEvent("match_verified", { match_id: matchId, source: "match_center" });
       completeChecklistItem("log_match");
       setShowXPSummary(true);
       setViewMode("xp-summary");
@@ -410,20 +415,16 @@ export default function MatchPage() {
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="section-kicker mb-3 bg-white/80 dark:bg-gray-800/80 text-emerald-700">
-              Match Day
+              Preserve a match
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Match Preview</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Keep this week&apos;s result</h1>
             <p className="mt-2 max-w-2xl text-gray-600">
-              Review tactics, scouting reports, and upcoming fixtures before you hit the pitch.
+              Save the score while it&apos;s fresh, let the people who played verify it, and keep it in your group&apos;s record.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Link href={tacticsHref}>
-              <Button>Customize Lineup</Button>
-            </Link>
-            <Link href="/match/preview/next">
-              <Button variant="outline">Tactical Preview</Button>
-            </Link>
+            <Button onClick={() => setViewMode("capture")}>Save a result</Button>
+            <Button variant="outline" onClick={openVerificationQueue}>Review verification</Button>
           </div>
         </div>
       </div>
@@ -447,24 +448,14 @@ export default function MatchPage() {
             <CheckCircle2 className="h-8 w-8 text-emerald-600" />
           </div>
         </Card>
-        <Card className="border-blue-200 bg-blue-50/70">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-blue-700"><ChainLabel chain="yellow" /> Fee Rail</p>
-              <p className="text-3xl font-bold text-gray-900">{railEnabledCount}</p>
-            </div>
-            <Cpu className="h-8 w-8 text-blue-600" />
-          </div>
-        </Card>
       </div>
 
       <div className="sticky top-14 md:top-0 z-10 -mx-4 px-4 py-2 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm border-b border-gray-100 dark:border-gray-700 md:static md:mx-0 md:px-0 md:py-0 md:bg-transparent md:backdrop-blur-none md:border-0">
         <div className="flex flex-wrap gap-2 rounded-2xl bg-gray-100 p-1">
         {[
-          { key: "preview", label: "Match Preview", icon: Cpu },
+          { key: "capture", label: "Save result", icon: Activity },
           { key: "verify", label: `Review (${pendingMatches.length})`, icon: Shield },
-          { key: "history", label: `History (${settledMatches.length})`, icon: Trophy },
-          { key: "capture", label: "Submit Result", icon: Activity },
+          { key: "history", label: `Record (${settledMatches.length})`, icon: Trophy },
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -492,22 +483,14 @@ export default function MatchPage() {
           <div className="flex items-start gap-3">
             <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
             <div className="flex-1">
-              <p className="font-semibold text-emerald-900">Season Kickoff Path</p>
+              <p className="font-semibold text-emerald-900">Your group&apos;s first saved match</p>
               <p className="mt-1 text-sm text-emerald-700">
-                Your provisional stats are waiting — log your first match and verify it with the opposing team to make them real.
+                Log the result, share it with the group for verification, and give everyone a first entry in the record.
               </p>
               <div className="mt-3 space-y-2">
                 {[
-                  {
-                    label: "Complete your player card",
-                    done: checklistItems.find((i) => i.id === "complete_card")?.completed ?? false,
-                  },
-                  {
-                    label: "Set your formation",
-                    done: checklistItems.find((i) => i.id === "set_formation")?.completed ?? false,
-                  },
                   { label: "Log your first match result", done: firstMatchSubmitted },
-                  { label: "Verify with opponent", done: verificationInviteShared },
+                  { label: "Let the group verify it", done: verificationInviteShared },
                 ].map((step) => (
                   <div key={step.label} className="flex items-center gap-2 text-sm">
                     <CheckCircle2 className={`h-4 w-4 ${step.done ? "text-emerald-600" : "text-gray-300"}`} />
@@ -516,11 +499,8 @@ export default function MatchPage() {
                 ))}
               </div>
               <div className="mt-4 flex flex-wrap gap-2">
-                <Link href={tacticsHref}>
-                  <Button size="sm">Set your formation</Button>
-                </Link>
                 {!firstMatchSubmitted && (
-                  <Button size="sm" onClick={() => setViewMode("capture")}>Log first match</Button>
+                  <Button size="sm" onClick={() => setViewMode("capture")}>Save first result</Button>
                 )}
                 {firstMatchSubmitted && !verificationInviteShared && (
                   <Button size="sm" onClick={handleShareVerificationInvite}>
@@ -549,9 +529,9 @@ export default function MatchPage() {
           <div className="flex items-start gap-3">
             <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
             <div className="flex-1">
-              <p className="font-semibold text-blue-900">Submit your first match result</p>
+              <p className="font-semibold text-blue-900">Save your first match</p>
               <p className="mt-1 text-sm text-blue-700">
-                Use <strong>Submit Match</strong> to log a result. Your opponent will receive a verification request — once both sides confirm, XP and reputation are awarded automatically.
+                Add the score now. The people who played can verify it, and your group keeps the result for next season.
               </p>
             </div>
             <button onClick={() => setViewMode("capture")} className="shrink-0 rounded-lg bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 transition-colors">
@@ -565,20 +545,17 @@ export default function MatchPage() {
         <Card className="border-emerald-200 bg-emerald-50/80 py-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
             <div>
-              <p className="font-semibold text-emerald-900">Match plan loaded from playground</p>
+              <p className="font-semibold text-emerald-900">Optional match setup loaded</p>
               <p className="mt-1 text-sm text-emerald-700">
-                {importedPlan.size}v{importedPlan.size} · {importedPlan.formation} · {PLAY_STYLE_LABELS[importedPlan.style]?.name ?? importedPlan.style} will be attached to this session&apos;s analytics.
+                {importedPlan.size}v{importedPlan.size} · {importedPlan.formation} · {PLAY_STYLE_LABELS[importedPlan.style]?.name ?? importedPlan.style}. You can save the real result without changing this setup.
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <Link href={tacticsHref}>
-                <Button size="sm" variant="outline">Adjust tactics</Button>
-              </Link>
               <Button
                 size="sm"
                 onClick={() => setViewMode("capture")}
               >
-                Submit result
+                Save result
               </Button>
             </div>
           </div>
@@ -597,11 +574,11 @@ export default function MatchPage() {
               <div className="grid gap-4 md:grid-cols-[1.1fr,0.9fr] md:items-end">
                 <div>
                   <div className="section-kicker bg-emerald-50 text-emerald-700">
-                    Match Setup
+                    Match record
                   </div>
-                  <h2 className="mt-3 text-lg font-semibold text-gray-900">New Match Submission</h2>
+                  <h2 className="mt-3 text-lg font-semibold text-gray-900">Save what happened</h2>
                   <p className="mt-1 text-sm text-gray-600">
-                    Use your active squad and pick the opponent before you start tracking the match.
+                    Pick the opponent and score. You can add proof if it helps, but the group verification is what makes this a trusted record.
                   </p>
                   {importedPlan && (
                     <div className="mt-3 inline-flex flex-wrap items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
@@ -784,7 +761,7 @@ export default function MatchPage() {
                 <div>
                   <h4 className="text-sm font-bold text-emerald-900">Verification Flow</h4>
                   <p className="text-sm text-emerald-700 mt-1">
-                    Submit the result, the opposing captain confirms, and XP + reputation update automatically.
+                    Submit the result, let the other side confirm it, and the record becomes something the whole group recognises.
                   </p>
                 </div>
               </div>

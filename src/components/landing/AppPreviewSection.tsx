@@ -1,35 +1,35 @@
 "use client";
 
 import React from 'react';
-import { Monitor, Smartphone, Trophy, TrendingUp, Users, Target, ArrowRight } from 'lucide-react';
+import { Monitor, FileText, CheckCircle2, Users, Target, ArrowRight } from 'lucide-react';
 import { ScrollReveal } from '@/components/landing/ScrollReveal';
 
 const features = [
   {
-    icon: Trophy,
-    title: 'Live Stats & XP',
-    description: 'Every goal, assist, and clean sheet earns XP. Watch your attributes grow after each match.',
+    icon: FileText,
+    title: 'Your Group’s Record',
+    description: 'Keep scores, contributions, and the people who were there in one lasting match history.',
     color: 'text-green-400',
     bg: 'bg-green-500/10',
   },
   {
     icon: Target,
-    title: 'Tactical Simulation',
-    description: 'Set formations, assign roles, and simulate match outcomes before kickoff.',
+    title: 'Simple Match Capture',
+    description: 'Log a result from the pitch or from the group chat while the match is still fresh.',
     color: 'text-blue-400',
     bg: 'bg-blue-500/10',
   },
   {
-    icon: TrendingUp,
-    title: 'Player Progression',
-    description: 'Six attributes (pace, shooting, passing, dribbling, defending, physical) that evolve with every game.',
+    icon: CheckCircle2,
+    title: 'Verified by the Group',
+    description: 'The people who played confirm what happened, so the record means something.',
     color: 'text-purple-400',
     bg: 'bg-purple-500/10',
   },
   {
     icon: Users,
-    title: 'Squad Hub',
-    description: 'Roster management, availability tracking, and team chemistry all in one place.',
+    title: 'Player Keepsakes',
+    description: 'Every player has a personal place in the story — without having to maintain the record themselves.',
     color: 'text-amber-400',
     bg: 'bg-amber-500/10',
   },
@@ -45,10 +45,10 @@ export const AppPreviewSection: React.FC = () => (
             <span>The App</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 sm:mb-6">
-            Your <span className="text-green-400">Command Center</span>
+            Your group’s <span className="text-green-400">football record</span>
           </h2>
           <p className="text-sm sm:text-base lg:text-xl text-gray-300 max-w-3xl mx-auto">
-            Dashboard, match center, tactics board, and squad management — everything you need to run your team like a pro.
+            A calm home for the scores, people, and memories your group would otherwise lose.
           </p>
         </ScrollReveal>
       </div>
@@ -100,18 +100,14 @@ export const AppPreviewSection: React.FC = () => (
                 {/* Sidebar stats */}
                 <div className="col-span-12 md:col-span-4 space-y-3">
                   <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                    <div className="text-xs text-gray-500 mb-1">Level</div>
-                    <div className="text-2xl font-black text-white">12</div>
-                    <div className="w-full h-1.5 bg-white/10 rounded-full mt-2">
-                      <div className="w-3/5 h-full bg-gradient-to-r from-green-400 to-emerald-500 rounded-full" />
-                    </div>
+                    <div className="text-xs text-gray-500 mb-1">Record since</div>
+                    <div className="text-2xl font-black text-white">2024</div>
+                    <div className="text-xs text-gray-400 mt-2">14 matches kept together</div>
                   </div>
                   <div className="bg-white/5 rounded-xl p-4 border border-white/5">
-                    <div className="text-xs text-gray-500 mb-1">Season XP</div>
-                    <div className="text-2xl font-black text-white">2,450</div>
-                    <div className="flex items-center gap-1 text-xs text-green-400 mt-1">
-                      <TrendingUp className="w-3 h-3" /> +340 this week
-                    </div>
+                    <div className="text-xs text-gray-500 mb-1">Latest result</div>
+                    <div className="text-2xl font-black text-white">4–2</div>
+                    <div className="text-xs text-green-400 mt-1">Verified by 8 players</div>
                   </div>
                   <div className="bg-white/5 rounded-xl p-4 border border-white/5">
                     <div className="text-xs text-gray-500 mb-1">Matches</div>
@@ -144,9 +140,9 @@ export const AppPreviewSection: React.FC = () => (
                     <div className="text-sm font-bold text-white mb-3">Recent Matches</div>
                     <div className="space-y-2">
                       {[
-                        { opponent: 'Red Lions', score: '4-2', result: 'W', xp: '+85' },
-                        { opponent: 'City Rangers', score: '1-1', result: 'D', xp: '+50' },
-                        { opponent: 'United FC', score: '3-0', result: 'W', xp: '+110' },
+                        { opponent: 'Red Lions', score: '4-2', result: 'W', date: '18 Aug' },
+                        { opponent: 'City Rangers', score: '1-1', result: 'D', date: '11 Aug' },
+                        { opponent: 'United FC', score: '3-0', result: 'W', date: '04 Aug' },
                       ].map((m) => (
                         <div key={m.opponent} className="flex items-center justify-between py-1.5 border-b border-white/5 last:border-0">
                           <div className="flex items-center gap-2">
@@ -159,7 +155,7 @@ export const AppPreviewSection: React.FC = () => (
                           </div>
                           <div className="flex items-center gap-3">
                             <span className="text-sm font-bold text-white">{m.score}</span>
-                            <span className="text-xs text-green-400">{m.xp}</span>
+                            <span className="text-xs text-gray-500">{m.date}</span>
                           </div>
                         </div>
                       ))}

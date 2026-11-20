@@ -119,8 +119,9 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
   });
   const journeyContent = getJourneyContent(journeyStage);
   const isPublicVisitor = journeyStage === 'public_visitor';
-  // New visitors lead with the low-friction persona path (build a card as a guest)
-  // rather than a wallet gate. Returning users sign in via the secondary link/header.
+  // Phase-one acquisition leads with the record keeper: a captain can start
+  // from the roster/history they already maintain. The personal card remains
+  // an important secondary path, never an account gate.
   const handlePrimaryCta = () => {
     if (isTelegram) {
       // Telegram Mini App users already have a session — go straight in
@@ -131,15 +132,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
       return;
     }
     if (isPublicVisitor) {
-      // Public visitors: the section CTA drives the same persona-save
-      // conversion as the card. Falls back to onGetStarted when no
-      // onSavePlayerCard handler is wired (defensive — should not happen
-      // in practice since page.tsx always passes both).
-      if (onSavePlayerCard) {
-        onSavePlayerCard();
-      } else {
-        onGetStarted?.();
-      }
+      document.getElementById('squad-import-wizard')?.scrollIntoView({ behavior: 'smooth' });
     } else {
       onGetStarted?.();
     }
@@ -192,14 +185,14 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
 
         <div className="relative z-10 max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-12 sm:py-20 text-center">
           <h1 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black mb-3 sm:mb-4 leading-tight">
-            <span className="block text-white">Claim Your Spot.</span>
+            <span className="block text-white">Keep the matches your group</span>
             <span className="block bg-gradient-to-r from-green-400 via-emerald-500 to-green-600 bg-clip-text text-transparent">
-              Build Your Player Card.
+              would otherwise forget.
             </span>
           </h1>
 
           <p className="text-sm sm:text-base text-gray-300 mb-6 sm:mb-8 max-w-2xl mx-auto">
-            Start with a 5s, 6s, or 7s setup. Put yourself in the team, share the card to the group, then turn matchdays into verified stats, XP, and squad history.
+            Bring the names and scores you already remember. Log each game, let the group verify it, and give every player a lasting record of the matches that mattered.
           </p>
 
           {/* Dual CTA — two wedges, one above-the-fold choice. Captain
@@ -213,7 +206,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               >
                 <span className="min-w-0">
                   <div className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">Captain / organiser</div>
-                  <div className="text-sm font-bold text-white">Set up your group</div>
+                  <div className="text-sm font-bold text-white">Start your record</div>
                 </span>
                 <ArrowRight className="h-4 w-4 text-emerald-300 transition-transform group-hover:translate-x-1" aria-hidden="true" />
               </a>
@@ -224,7 +217,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               >
                 <span className="min-w-0">
                   <div className="text-[10px] font-black uppercase tracking-[0.18em] text-white/70">Player</div>
-                  <div className="text-sm font-bold text-white">Build your card</div>
+                  <div className="text-sm font-bold text-white">See my player card</div>
                 </span>
                 <ArrowRight className="h-4 w-4 text-white/70 transition-transform group-hover:translate-x-1" aria-hidden="true" />
               </button>
@@ -241,8 +234,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
 
           <div className="mx-auto mb-6 grid max-w-sm gap-2 text-left sm:grid-cols-2">
             {[
-              { icon: Target, label: "Pick a role", detail: "Small-sided shapes first, 11v11 when the squad grows." },
-              { icon: Users, label: "Bring the squad", detail: "Every teammate gets a native spot to claim and share." },
+              { icon: Target, label: "Keep the result", detail: "A match record that survives the group chat." },
+              { icon: Users, label: "Bring the people", detail: "Every teammate gets their place in the shared record." },
             ].map(({ icon: Icon, label, detail }) => (
               <div key={label} className="rounded-xl border border-white/10 bg-black/20 p-3 backdrop-blur-sm">
                 <Icon className="h-4 w-4 text-emerald-300" aria-hidden="true" />
@@ -267,7 +260,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                   layout="row"
                   channels={platform === 'mobile' ? ['whatsapp', 'telegram'] : ['telegram', 'whatsapp']}
                   payload={{
-                    text: 'Join me on SportWarren — build a player card and log real matches with the squad.',
+                    text: 'Join me on SportWarren — keep every match our group plays.',
                     url: typeof window === 'undefined' ? undefined : `${window.location.origin}/?connect=1`,
                     telegramDeepLink: buildTelegramDeepLink({ tab: 'squad' }),
                   }}
@@ -281,7 +274,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               className="group relative inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 text-sm sm:text-base font-bold text-white bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl shadow-2xl shadow-green-500/50 hover:shadow-green-500/70 transition-all duration-300 hover:scale-105"
             >
               <Zap className="w-4 h-4 sm:w-5 sm:h-5 mr-2" aria-hidden="true" />
-              {isTelegram ? 'Open in Telegram' : journeyContent.hero.primaryCtaLabel}
+              {isTelegram ? 'Open in Telegram' : isPublicVisitor ? 'Start your record' : journeyContent.hero.primaryCtaLabel}
               <ArrowRight className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" aria-hidden="true" />
             </button>
             {isPublicVisitor && (
@@ -292,14 +285,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
                 onClick={() => document.getElementById('formation-playground')?.scrollIntoView({ behavior: 'smooth' })}
                 className="group inline-flex items-center gap-2 text-sm text-gray-400 hover:text-gray-200 transition-colors"
               >
-                <span>Or scroll down to try the playground</span>
+                <span>Or see how the record works</span>
                 <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" aria-hidden="true" />
               </button>
             )}
 
-          {/* Captain import CTA — second entry path for squad leaders
-              who already have a roster in a spreadsheet. Low-emphasis so
-              the primary funnel (build card → personalize) stays dominant. */}
+          {/* Spreadsheet import remains immediately available for organisers
+              who already carry the group's record. */}
           <p className="mt-3 text-center">
             <button
               onClick={() => {
@@ -312,8 +304,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted, onGuestS
               className="group inline-flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-300 underline underline-offset-4 decoration-gray-700 hover:decoration-gray-400 transition-colors"
             >
               <FileSpreadsheet className="w-3 h-3" />
-              Already have a squad?
-              <span className="font-bold text-emerald-400 group-hover:text-emerald-300">Import your roster</span>
+              Already keep a spreadsheet?
+              <span className="font-bold text-emerald-400 group-hover:text-emerald-300">Bring it with you</span>
             </button>
           </p>
           </div>

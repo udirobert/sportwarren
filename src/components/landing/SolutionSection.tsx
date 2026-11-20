@@ -1,19 +1,19 @@
 import React from 'react';
-import { CheckCircle2, Trophy, Users, Sparkles, ArrowRight, TrendingUp, Target } from 'lucide-react';
+import { CheckCircle2, Users, Sparkles, ArrowRight, CalendarDays, FileText } from 'lucide-react';
 import { ScrollReveal } from '@/components/landing/ScrollReveal';
 
 const coreFeatures = [
-  { label: 'Build Your Card', Icon: Target },
-  { label: 'Bring Your Squad', Icon: Users },
-  { label: 'Log Real Matches', Icon: CheckCircle2 },
-  { label: 'Watch Stats Grow', Icon: TrendingUp },
+  { label: 'Bring the names you remember', Icon: Users },
+  { label: 'Log the real match', Icon: CheckCircle2 },
+  { label: 'Let the group verify it', Icon: Users },
+  { label: 'Keep it for the next season', Icon: CalendarDays },
 ];
 
 const impactItems = [
-  { label: 'Verified Squad Stats', Icon: Users, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
-  { label: 'XP & Attribute Growth', Icon: TrendingUp, color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
-  { label: 'Shareable Player Card', Icon: Sparkles, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30' },
-  { label: 'Tournament Brackets', Icon: Trophy, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
+  { label: 'Verified match history', Icon: FileText, color: 'text-blue-400', bg: 'bg-blue-500/10', border: 'border-blue-500/30' },
+  { label: 'A record your group recognises', Icon: CheckCircle2, color: 'text-green-400', bg: 'bg-green-500/10', border: 'border-green-500/30' },
+  { label: 'Shareable player keepsakes', Icon: Sparkles, color: 'text-purple-400', bg: 'bg-purple-500/10', border: 'border-purple-500/30' },
+  { label: 'The stories behind the score', Icon: CalendarDays, color: 'text-yellow-400', bg: 'bg-yellow-500/10', border: 'border-yellow-500/30' },
 ];
 
 export const SolutionSection: React.FC = () => (
@@ -26,10 +26,10 @@ export const SolutionSection: React.FC = () => (
             <span>The Solution</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 sm:mb-6">
-            Build. <span className="bg-gradient-to-r from-blue-400 to-cyan-500 bg-clip-text text-transparent">Verify.</span> Grow.
+            Log it. <span className="bg-gradient-to-r from-blue-400 to-cyan-500 bg-clip-text text-transparent">Verify it.</span> Keep it.
           </h2>
           <p className="text-sm sm:text-base lg:text-xl text-gray-300 max-w-3xl mx-auto">
-            Your player card is the centre of everything. Build it, bring your squad to verify the stats, log real matches, and watch your attributes level up.
+            SportWarren gives the games your group cares about a permanent home — with a trusted score, the people who were there, and a keepsake worth sharing.
           </p>
         </ScrollReveal>
       </div>
@@ -37,7 +37,7 @@ export const SolutionSection: React.FC = () => (
       <div className="relative">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           <ScrollReveal direction="left" className="space-y-4 sm:space-y-6">
-            <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-4 sm:mb-6">The Card Lifecycle</h3>
+            <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-4 sm:mb-6">The Record Loop</h3>
             {coreFeatures.map((item) => (
               <div key={item.label} className="flex items-center space-x-3 sm:space-x-4 bg-white/5 backdrop-blur-sm border border-white/10 rounded-xl p-3 sm:p-4">
                 <div className="w-8 sm:w-10 h-8 sm:h-10 rounded-lg sm:rounded-xl bg-white/5 flex items-center justify-center">

@@ -7,6 +7,7 @@ import { PageShell } from '@/components/common/PageShell';
 import { Card } from '@/components/ui/Card';
 import { useActiveSquad } from '@/contexts/ActiveSquadContext';
 import { Calendar, Plus, ArrowRight, X } from 'lucide-react';
+import { trackCoreGrowthEvent } from '@/lib/analytics';
 
 // ── Loading ────────────────────────────────────────────────────────────────
 
@@ -52,9 +53,10 @@ export default function SessionsPage() {
 
   // Create session mutation
   const createSession = trpc.session.create.useMutation({
-    onSuccess: () => {
+    onSuccess: (session: { id: string }) => {
       setShowCreate(false);
       setNewName('');
+      trackCoreGrowthEvent('session_created', { session_id: session.id, source: 'sessions_page' });
       refetch();
     },
   });
@@ -84,9 +86,9 @@ export default function SessionsPage() {
               <Calendar className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Sessions</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Your match record</h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                Manage your game sessions with rotating teams
+                Keep the games your group plays, one session at a time
               </p>
             </div>
           </div>
@@ -95,7 +97,7 @@ export default function SessionsPage() {
             className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-bold transition-colors"
           >
             <Plus className="w-4 h-4" />
-            New
+            Add session
           </button>
         </div>
 

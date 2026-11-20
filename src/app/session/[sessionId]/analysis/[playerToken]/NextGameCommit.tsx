@@ -3,6 +3,7 @@
 import React, { useState, useTransition } from 'react';
 import { PALETTE, TYPE, TRACKING } from '@/components/v3';
 import { commitToNextSession } from './_actions';
+import { trackCoreGrowthEvent } from '@/lib/analytics';
 
 /**
  * Peak-end "next game" capture. Placed right after the payoff verdict —
@@ -29,6 +30,7 @@ export function NextGameCommit({
     startTransition(async () => {
       const res = await commitToNextSession(playerToken, sessionId);
       if (res.ok) {
+        trackCoreGrowthEvent('next_session_committed', { session_id: sessionId });
         setCommitted(true);
         setLine(res.line);
       } else {

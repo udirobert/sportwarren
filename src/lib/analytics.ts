@@ -25,6 +25,15 @@ type EventProperties = Record<
 export type GrowthStage = "activation" | "conversion" | "retention" | "viral";
 
 export const CORE_GROWTH_EVENTS = {
+  record_import_started: { stage: "activation" as GrowthStage },
+  record_import_completed: { stage: "activation" as GrowthStage },
+  history_import_completed: { stage: "activation" as GrowthStage },
+  session_created: { stage: "retention" as GrowthStage },
+  match_submitted: { stage: "activation" as GrowthStage },
+  match_verified: { stage: "activation" as GrowthStage },
+  recap_opened: { stage: "retention" as GrowthStage },
+  keepsake_shared: { stage: "viral" as GrowthStage },
+  next_session_committed: { stage: "retention" as GrowthStage },
   tactics_customized: { stage: "activation" as GrowthStage },
   first_match_submitted: { stage: "activation" as GrowthStage },
   opponent_verification_invite_shared: { stage: "viral" as GrowthStage },

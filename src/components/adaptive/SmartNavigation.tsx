@@ -91,21 +91,21 @@ export const SmartNavigation: React.FC = () => {
     { 
       path: '/dashboard', 
       icon: Home, 
-      label: 'Dashboard', 
+      label: 'Record',
       priority: 100,
       unlockLevel: 'basic' as const,
     },
     { 
       path: '/match', 
       icon: Target, 
-      label: 'Matches', 
+      label: 'Log match',
       priority: 90,
       unlockLevel: 'basic' as const,
     },
     { 
       path: '/stats', 
       icon: BarChart3, 
-      label: 'Stats', 
+      label: 'Player card',
       priority: 80,
       unlockLevel: 'basic' as const,
     },
@@ -120,7 +120,7 @@ export const SmartNavigation: React.FC = () => {
     { 
       path: '/squad', 
       icon: Users, 
-      label: 'Squad', 
+      label: 'Your group',
       priority: 70,
       unlockLevel: 'basic' as const,
     },

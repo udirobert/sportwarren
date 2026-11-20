@@ -5,29 +5,29 @@ import { ScrollReveal } from '@/components/landing/ScrollReveal';
 const steps = [
   {
     icon: Target,
-    title: 'Build Your Card',
-    description: 'Pick your name, position, and formation. Get provisional stats based on your role — six attributes that define you on the pitch.',
+    title: 'Bring the Names',
+    description: 'Start with the people and past results you already remember — from a spreadsheet or a quick roster.',
     color: 'from-blue-500 to-blue-600',
     hoverBorder: 'hover:border-blue-500/50',
   },
   {
     icon: Users,
-    title: 'Bring the Squad',
-    description: 'Create or join a squad. Teammates verify each other\'s stats — what starts as provisional becomes a real, trusted record.',
+    title: 'Log the Match',
+    description: 'Capture the score and the moments that mattered before they disappear into the group chat.',
     color: 'from-purple-500 to-purple-600',
     hoverBorder: 'hover:border-purple-500/50',
   },
   {
     icon: CheckCircle2,
-    title: 'Log & Verify',
-    description: 'After your real match, log the result. Squadmates confirm or dispute via group verification — on Telegram or WhatsApp.',
+    title: 'Let the Group Verify',
+    description: 'Teammates confirm the result in the channels they already use, so the record is something everyone recognises.',
     color: 'from-green-500 to-green-600',
     hoverBorder: 'hover:border-green-500/50',
   },
   {
     icon: Trophy,
-    title: 'Grow & Compete',
-    description: 'Every verified match grows your card. Earn XP, level up attributes, enter tournaments, and build your squad\'s reputation.',
+    title: 'Keep the Record',
+    description: 'Every verified match becomes a shareable keepsake for the players who were there.',
     color: 'from-amber-500 to-amber-600',
     hoverBorder: 'hover:border-amber-500/50',
   },
@@ -43,10 +43,10 @@ export const HowItWorksSection: React.FC = () => (
             <span>How It Works</span>
           </div>
           <h2 className="text-2xl sm:text-3xl md:text-5xl lg:text-6xl font-black text-white mb-4 sm:mb-6">
-            From <span className="text-blue-400">Card</span> to <span className="text-amber-400">Trophy</span>
+            From first match to a <span className="text-amber-400">lasting record</span>
           </h2>
           <p className="text-sm sm:text-base lg:text-xl text-gray-300 max-w-2xl mx-auto">
-            Four steps. Every stat verified. Every match counts.
+            Four steps. Every match leaves a mark.
           </p>
         </ScrollReveal>
       </div>

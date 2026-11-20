@@ -91,11 +91,19 @@ const PHASE_1_HIDDEN_WIDGET_IDS = new Set<string>([
   // Sim/analysis (phase 2)
   'squad-dynamics',
   'scouting-report',
+  'match-engine',
+  'squad-digital-twin',
+  'digital-twin-3d-gate',
   // Gamification/streak loops
   'weekly-challenges',
   'sharpness-streak',
   'daily-drill',
   'post-match-reaction',
+  'peer-rating-tasks',
+  'prestige-progress',
+  'achievements',
+  'referral',
+  'squad-challenge',
   // Training + comms surfaces
   'training',
   'communication-hub',
@@ -1045,10 +1053,8 @@ export const AdaptiveDashboard: React.FC = () => {
     // For new users, show only essential widgets
     const isNewUser = preferences.featureDiscoveryLevel < 10 && preferences.dashboardLayout === 'minimal';
     const essentialWidgets = isGuest
-      ? ['onboarding-checklist', 'match-engine', 'upcoming-fixtures', 'quick-stats', 'recent-matches', 'staff-feed', 'lens-social']
-      : (entryState.id === 'account_ready'
-          ? ['onboarding-checklist', 'match-engine', 'quick-stats', 'staff-feed']
-          : ['onboarding-checklist', 'match-engine', 'upcoming-fixtures', 'quick-stats', 'recent-matches']);
+      ? ['onboarding-checklist']
+      : ['onboarding-checklist', 'match-coordination', 'quick-log', 'recent-session', 'pending-actions', 'recent-matches', 'quick-stats', 'captains-log'];
 
     return allWidgets
       .filter(widget => {
@@ -1104,7 +1110,7 @@ export const AdaptiveDashboard: React.FC = () => {
 
         return b.priority - a.priority;
       });
-  }, [allWidgets, hasOperationalSquad, isGuest, preferences, entryState.id]);
+  }, [allWidgets, hasOperationalSquad, isGuest, preferences]);
 
   if (showCreateSquadFlow) {
     return (
@@ -1381,7 +1387,7 @@ export const AdaptiveDashboard: React.FC = () => {
         const otherWidgets = visibleWidgets.filter(w => ![...todayIds, ...squadIds, ...progressIds].includes(w.id));
 
         const sectionLayouts = {
-          Today: {
+          'This week': {
             'quick-log': 'md:col-span-12',
             'match-engine': 'md:col-span-12',
             'upcoming-fixtures': 'md:col-span-12',
@@ -1392,7 +1398,7 @@ export const AdaptiveDashboard: React.FC = () => {
             'staff-feed': 'md:col-span-12 lg:col-span-6',
             'achievements': 'md:col-span-12 lg:col-span-6',
           },
-          Squad: {
+          'Your group': {
             'captains-log': 'md:col-span-12 lg:col-span-7',
             'communication-hub': 'md:col-span-12 lg:col-span-5',
             'squad-dynamics': 'md:col-span-12 lg:col-span-6',
@@ -1400,7 +1406,7 @@ export const AdaptiveDashboard: React.FC = () => {
             'squad-digital-twin': 'md:col-span-12 lg:col-span-6',
             'digital-twin-3d-gate': 'md:col-span-12 lg:col-span-6',
           },
-          Progress: {
+          'Later': {
             'training': 'md:col-span-12 lg:col-span-6',
             'scouting-report': 'md:col-span-12 lg:col-span-6',
             'lens-social': 'md:col-span-12 lg:col-span-6',
@@ -1410,16 +1416,16 @@ export const AdaptiveDashboard: React.FC = () => {
         };
 
         const featuredBySection: Record<string, string[]> = {
-          Today: ['onboarding-checklist', 'match-engine', 'upcoming-fixtures'],
-          Squad: [],
-          Progress: [],
+          'This week': ['onboarding-checklist', 'quick-log', 'match-coordination'],
+          'Your group': [],
+          Later: [],
         };
 
         const sections = [
-          { title: 'Today', widgets: todayWidgets },
-          { title: 'Squad', widgets: squadWidgets },
-          { title: 'Progress', widgets: progressWidgets },
-        ] as const;
+          { title: 'This week', widgets: todayWidgets },
+          { title: 'Your group', widgets: squadWidgets },
+          { title: 'Later', widgets: progressWidgets },
+        ].filter(({ widgets }) => widgets.length > 0);
 
         return (
           <div className="space-y-3 md:space-y-5">
@@ -1428,7 +1434,7 @@ export const AdaptiveDashboard: React.FC = () => {
                 key={title}
                 title={title}
                 widgets={widgets}
-                isExpanded={expandedSections[title] ?? (title === 'Today')}
+                isExpanded={expandedSections[title] ?? (title === 'This week')}
                 onToggle={() => setExpandedSections(prev => ({ ...prev, [title]: !prev[title] }))}
                 layoutMap={sectionLayouts}
                 featuredIds={featuredBySection[title] ?? []}
@@ -1441,11 +1447,11 @@ export const AdaptiveDashboard: React.FC = () => {
 
       {/* Floating Action Button — primary action on mobile */}
       <Link
-        href="/squad?tab=tactics"
+        href="/match?mode=capture"
         className="fixed bottom-6 left-6 z-50 md:hidden bg-emerald-600 hover:bg-emerald-700 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-xl shadow-emerald-600/40 transition-all active:scale-95"
-        aria-label="Set up your lineup"
+        aria-label="Preserve a match"
       >
-        <Users className="w-6 h-6" />
+        <Activity className="w-6 h-6" />
       </Link>
 
       {/* Desktop right sidebar quick-actions strip — always visible */}
@@ -1453,10 +1459,10 @@ export const AdaptiveDashboard: React.FC = () => {
         <Link
           href="/match"
           className="group flex flex-col items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-l-xl px-3 py-3 shadow-lg shadow-emerald-600/30 transition-all"
-          title="Match Center"
+          title="Preserve a match"
         >
           <Activity className="w-5 h-5" />
-          <span className="text-[9px] font-black uppercase tracking-widest leading-none">Match</span>
+          <span className="text-[9px] font-black uppercase tracking-widest leading-none">Log</span>
         </Link>
         <Link
           href="/settings?tab=notifications"

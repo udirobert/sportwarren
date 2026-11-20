@@ -18,8 +18,8 @@ const problems = [
     bg: 'bg-orange-500/10',
   },
   {
-    title: 'No Growth',
-    description: 'Without verified matches, your attributes never level up. No XP, no progression, no way to see yourself improve over time.',
+    title: 'No History',
+    description: 'Without a shared record, the seasons, rivalries, and small moments that made the group yours quietly disappear.',
     icon: HelpCircle,
     color: 'text-amber-400',
     bg: 'bg-amber-500/10',
@@ -39,7 +39,7 @@ export const ProblemSection: React.FC = () => (
             Rec Players Are <span className="text-red-400">Invisible</span>
           </h2>
           <p className="text-sm sm:text-base lg:text-xl text-gray-300 max-w-3xl mx-auto">
-            You play every week. You score goals. You build chemistry with your squad. But none of it matters beyond the pitch.
+            You play every week. You build stories with your group. But without a record, most of it is gone by the next fixture.
           </p>
         </ScrollReveal>
       </div>

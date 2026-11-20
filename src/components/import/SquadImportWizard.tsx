@@ -21,6 +21,7 @@ import {
 import { Card } from '@/components/ui/Card';
 import { useWallet } from '@/contexts/WalletContext';
 import { walletAuthHeaders } from '@/lib/auth/client-request-headers';
+import { trackCoreGrowthEvent } from '@/lib/analytics';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Types
@@ -128,12 +129,13 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
     }
 
     setSquadError(null);
+    trackCoreGrowthEvent('record_import_started', { source: fileName ? 'file' : 'paste' });
     setHeaders(hdrs);
     setPreviewRows(rows.slice(0, 5));
     setTotalRows(rows.length);
     setMapping(autoMap);
     setStep('mapping');
-  }, []);
+  }, [fileName]);
 
   // Parse match-history data client-side
   const parseMatchPreview = useCallback((text: string) => {
@@ -255,6 +257,10 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
       const data: ImportResult = await response.json();
       setResult(data);
       setStep('complete');
+      trackCoreGrowthEvent('record_import_completed', {
+        player_count: data.players.length,
+        source: fileName ? 'file' : 'paste',
+      });
 
       setTimeout(() => {
         onComplete?.(data);
@@ -264,7 +270,7 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
     } finally {
       setIsCommitting(false);
     }
-  }, [rawText, mapping, squadName, address, chain, isVerified, onComplete]);
+  }, [rawText, mapping, squadName, address, chain, fileName, isVerified, onComplete]);
 
   const handleMatchCommit = useCallback(async () => {
     if (!result?.squadId) return;
@@ -291,6 +297,7 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
       setMatchResult(data);
       setMatchStep('done');
       setMatchHistoryImported(true);
+      trackCoreGrowthEvent('history_import_completed', { match_count: data.momentsCreated });
     } catch (err) {
       setMatchError(err instanceof Error ? err.message : 'Match import failed. Please try again.');
     } finally {
@@ -394,14 +401,14 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
             >
               <div className="text-[10px] font-black text-green-400 uppercase tracking-[0.3em] mb-2 flex items-center gap-2">
                 <FileSpreadsheet className="w-3 h-3" />
-                Import Your Squad
+                Bring Your Existing Record
               </div>
               <h2 className="text-xl font-black uppercase tracking-tight mb-2">
-                Upload Your Roster
+                Bring the Names You Remember
               </h2>
               <p className="text-sm text-gray-400 mb-6">
-                Upload a CSV file or paste in data from your spreadsheet. We&apos;ll
-                detect player names, positions, and stats.
+                Upload a CSV file or paste in the spreadsheet your group already uses. We&apos;ll
+                detect the people, positions, and history worth keeping.
               </p>
 
               {/* File upload */}
@@ -702,8 +709,8 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
                 Confirm Import
               </h2>
               <p className="text-sm text-gray-400 mb-6">
-                This will create your squad, register all players, and generate
-                invite links for each player to claim their spot.
+                This will create your group record, register the players, and generate
+                private links that give each person their place in it.
               </p>
 
               <div className="mb-6 space-y-3 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
@@ -781,10 +788,10 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
                   <CheckCircle2 className="h-8 w-8 text-emerald-400" />
                 </motion.div>
                 <h2 className="text-xl font-black uppercase tracking-tight text-white mb-1">
-                  Squad Created!
+                  Your Record Has a Home
                 </h2>
                 <p className="text-sm text-gray-400">
-                  {result.squadName} is ready with {result.players.length} players.
+                  {result.squadName} is ready with {result.players.length} players. Now add the games you do not want to lose.
                 </p>
               </div>
 
@@ -797,12 +804,12 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-bold text-white mb-1">
-                      Import match history
+                      Add the games you do not want to lose
                     </p>
                     <p className="text-xs text-gray-400 mb-3">
                       {matchHistoryImported
                         ? 'Match history has already been imported for this squad.'
-                        : 'Add historical match results as moments — they\'ll appear in your squad\'s gallery as retroactive entries.'
+                        : 'Bring in past scores now. Each one becomes a dated record your group can keep and revisit.'
                       }
                     </p>
                     {!matchHistoryImported && (
@@ -811,7 +818,7 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
                         className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-500/20 px-3 py-1.5 text-xs font-bold text-indigo-300 hover:bg-indigo-500/30 transition-colors"
                       >
                         <Calendar className="w-3.5 h-3.5" />
-                        Add match history
+                        Add past matches
                       </button>
                     )}
                     {matchHistoryImported && (
@@ -828,7 +835,7 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
               <div className="mb-6">
                 <div className="mb-3 flex items-center justify-between">
                   <span className="text-[10px] font-black uppercase tracking-widest text-gray-500">
-                    Player Invite Links
+                    Give each player their place in the record
                   </span>
                   <div className="flex gap-2">
                     <button
@@ -880,19 +887,19 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
                   }}
                   className="w-full py-3.5 bg-white text-black rounded-2xl font-black uppercase tracking-[0.2em] text-sm hover:bg-green-400 transition-all flex items-center justify-center gap-2"
                 >
-                  Go to Squad Dashboard
+                  Open your group record
                   <ArrowRight className="w-4 h-4" />
                 </button>
 
                 <div className="rounded-xl border border-white/10 bg-white/[0.04] p-3">
                   <p className="text-[10px] font-bold uppercase tracking-widest text-gray-500 mb-2 flex items-center gap-2">
                     <Share2 className="w-3 h-3" />
-                    Share to Group Chat
+                    Send the record to the group
                   </p>
                   <div className="flex gap-2">
                     <button
                       onClick={() => {
-                        const text = `I just created ${result.squadName} on SportWarren! Join the squad and claim your spot.\n`;
+                        const text = `I've started ${result.squadName}'s match record on SportWarren. Your place in the record is ready.\n`;
                         window.open(
                           `https://wa.me/?text=${encodeURIComponent(text)}`,
                           '_blank',
@@ -904,7 +911,7 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
                     </button>
                     <button
                       onClick={() => {
-                        const text = `I just created ${result.squadName} on SportWarren! Join the squad and claim your spot.`;
+                        const text = `I've started ${result.squadName}'s match record on SportWarren. Your place in the record is ready.`;
                         const telegramUrl = `https://t.me/share/url?url=${encodeURIComponent(result.captainInviteUrl)}&text=${encodeURIComponent(text)}`;
                         window.open(telegramUrl, '_blank');
                       }}
@@ -940,14 +947,13 @@ export default function SquadImportWizard({ onComplete, onClose }: SquadImportWi
                 <div>
                   <div className="text-[10px] font-black text-indigo-400 uppercase tracking-[0.3em] mb-2 flex items-center gap-2">
                     <Trophy className="w-3 h-3" />
-                    Import Match History
+                    Add Past Matches
                   </div>
                   <h2 className="text-xl font-black uppercase tracking-tight mb-2">
                     Upload Match Results
                   </h2>
                   <p className="text-sm text-gray-400 mb-6">
-                    Upload a CSV with your squad&apos;s historical match results. Each row
-                    becomes a moment in your squad gallery.
+                    Upload historical match results. Each row becomes a dated entry in your group&apos;s permanent record.
                   </p>
 
                   <div className="mb-4 rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-3">
