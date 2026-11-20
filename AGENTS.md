@@ -56,6 +56,29 @@ post-Tuesday closed-loop architecture (team allocation, post-session
 analysis, twin write-path unification, Bibs Optimizer for kickabouts
 + formation recommendation for fixed squads).
 
+### Phase-one containment (shipped 2026-11-20, plan: `docs/plans/2026-08-24-preservation-first.md`)
+
+The record-keeper loop is the only default journey; progression layers stay
+in the codebase but are flag-gated off the default path. This is containment,
+not deletion — features must remain functional behind their flags.
+
+- **Containment flags** (all default off, `FF_<NAME>=true` to re-enable):
+  `TOURNAMENTS`, `SIMULATION`, `TACTICS_ADVANCED`, `PROGRESSION_LOOPS`
+  (drills, leaderboards, reputation, challenges). Route→flag map in
+  `src/lib/feature-flags.ts#getFlagForRoute`.
+- **Gate surfaces:** `FeatureGate` takes `title`/`description`/`href`/
+  `actionLabel` — gated pages must explain themselves as *deferred* and
+  route back to the record, never a dead end. Private-token pages use
+  `PreviewFeatureDeferred` (`src/app/preview/[token]/_components/`).
+- **Record-loop analytics:** `trackCoreGrowthEvent` at real touchpoints —
+  `record_import_started/completed`, `history_import_completed`,
+  `session_created`, `match_submitted`, `match_verified`, `recap_opened`,
+  `keepsake_shared`, `next_session_committed` (`src/lib/analytics.ts`).
+  `moment_rendered` is in the plan's list but not yet instrumented.
+- **UX consequences:** match centre defaults to `capture`, the web3
+  fee-rail card is off the default surface, landing/marketing lead with
+  the record-keeper wedge (player card is the secondary path).
+
 ## Engagement rules
 
 Non-negotiable design rules for every player-facing surface (preview,
